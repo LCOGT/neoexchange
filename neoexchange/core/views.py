@@ -3614,6 +3614,7 @@ def run_hotpants_subtraction(ref, sci_dir, configs_dir, dest_dir, sci_files=None
                 status = -3
     return status
 
+
 def find_block_for_frame(catfile):
     """Try and find a Block for the original passed <catfile> filename (new style with
     filename directly stored in the DB. If that fails, try and determine the filename

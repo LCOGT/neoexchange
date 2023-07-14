@@ -2074,3 +2074,219 @@ class TestFrameAperturePhotometry(ExternalCodeUnitTest):
         self.compare_tables(expected_results, results, column = 'magerr',num_to_check= 0)
         self.compare_tables(expected_results, results, column = 'filter',num_to_check= 0)
         self.compare_tables(expected_results, results, column = 'aperture_radius',num_to_check= 0)
+
+
+class TestDetermineImageStats(ExternalCodeUnitTest):
+    def setUp(self):
+        super(TestDetermineImageStats, self).setUp()
+
+        shutil.copy(os.path.abspath(self.test_banzai_file), self.test_dir)
+        self.test_banzai_file_COPIED = os.path.join(self.test_dir, 'banzai_test_frame.fits')
+
+    def test_1(self):
+        expected_mean = 405.2504
+        expected_std = 36.74769
+
+        mean, std = determine_image_stats(self.test_banzai_file_COPIED)
+
+        self.assertEqual(expected_mean, mean)
+        self.assertEqual(expected_std, std)
+
+    def test_null_filename(self):
+        filename = None
+        expected_mean = None
+        expected_std = None
+
+        mean, std = determine_image_stats(filename)
+
+        self.assertEqual(expected_mean, mean)
+        self.assertEqual(expected_std, std)
+
+class TestDetermineAstconverttOptions(SimpleTestCase):
+    def setUp(self):
+        self.test_dir = '/tmp/foo'
+        self.test_file = 'tfn1m014-fa20-20221104-0213-e91.fits'
+
+    def test_1(self):
+        mean = 2207.726
+        std = 50.70005
+        low = mean - 0.5 * std
+        high = mean + 25 * std
+
+        expected_cmdline = f'{self.test_file} -L {low} -H {high} -hSCI --colormap=sls-inverse --output={self.test_dir}/{self.test_file.replace(".fits", ".pdf")}'
+
+        output_filename, cmdline = determine_astconvertt_options(self.test_file, self.test_dir, mean, std)
+
+        self.assertEqual(expected_cmdline, cmdline)
+
+    def test_change_inputs(self):
+        mean = 3000
+        std = 25
+        low = mean - 0.5 * std
+        high = mean + 25 * std
+
+        expected_cmdline = f'{self.test_file} -L {low} -H {high} -hSCI --colormap=sls-inverse --output={self.test_dir}/{self.test_file.replace(".fits", ".pdf")}'
+
+        output_filename, cmdline = determine_astconvertt_options(self.test_file, self.test_dir, mean, std)
+
+        self.assertEqual(expected_cmdline, cmdline)
+
+    def test_change_hdu(self):
+        mean = 2207.726
+        std = 50.70005
+        low = mean - 0.5 * std
+        high = mean + 25 * std
+
+        expected_cmdline = f'{self.test_file} -L {low} -H {high} -hALIGNED --colormap=sls-inverse --output={self.test_dir}/{self.test_file.replace(".fits", ".pdf")}'
+
+        output_filename, cmdline = determine_astconvertt_options(self.test_file, self.test_dir, mean, std, hdu='ALIGNED')
+
+        self.assertEqual(expected_cmdline, cmdline)
+
+
+class TestRunAstarithmetic(ExternalCodeUnitTest):
+    def setUp(self):
+        super(TestRunAstarithmetic, self).setUp()
+
+        self.center_RA = 272.9615245
+        self.center_DEC = 1.2784917
+
+        # needs to modify the original image when running astarithmetic
+        shutil.copy(os.path.abspath(self.test_banzai_file), self.test_dir)
+        self.test_banzai_file_COPIED = os.path.join(self.test_dir, 'banzai_test_frame.fits')
+
+        self.test_filenames = []
+        for frame_num in range(200,205):
+            new_filename = f'tfn1m042-fa42-20230707-{frame_num:04d}-e91.fits'
+            new_filename = os.path.join(self.test_dir, new_filename)
+            shutil.copy(self.test_banzai_file_COPIED, new_filename)
+            run_astwarp(new_filename, self.test_dir, self.center_RA, self.center_DEC)
+            self.test_filenames.append(new_filename.replace('.fits', '-crop.fits'))
+
+        self.output_filename = os.path.join(self.test_dir, self.test_filenames[0].replace('-crop', '-combine'))
+
+        # Disable anything below CRITICAL level
+        logging.disable(logging.CRITICAL)
+
+        self.remove = True
+        self.maxDiff = None
+
+    def touch(self, fname, times=None):
+        with open(fname, 'a'):
+            os.utime(fname, times)
+
+    def test_1(self):
+        expected_status = 0
+
+        combined_filename, status = run_astarithmetic(self.test_filenames, self.test_dir)
+
+        self.assertEquals(expected_status, status)
+        self.assertTrue(os.path.exists(self.output_filename))
+        self.assertEquals(self.output_filename, combined_filename)
+
+    def test_nonexistent_filenames(self):
+        expected_status = -1
+        expected_filename = None
+        filenames = ['filename1.foo', 'filename2.foo', 'filename3.foo']
+
+        combined_filename, status = run_astarithmetic(filenames, self.test_dir)
+
+        self.assertEquals(expected_status, status)
+        self.assertEquals(expected_filename, combined_filename)
+
+    def test_existing_output_filename(self):
+        expected_status = 1
+        self.touch(self.output_filename)
+
+        combined_filename, status = run_astarithmetic(self.test_filenames, self.test_dir)
+
+        self.assertEquals(expected_status, status)
+        self.assertTrue(os.path.exists(self.output_filename))
+
+
+class TestRunAststatistics(ExternalCodeUnitTest):
+    def setUp(self):
+        super(TestRunAststatistics, self).setUp()
+
+        shutil.copy(os.path.abspath(self.test_banzai_file), self.test_dir)
+        self.test_banzai_file_COPIED = os.path.join(self.test_dir, 'banzai_test_frame.fits')
+
+        # Disable anything below CRITICAL level
+        logging.disable(logging.CRITICAL)
+
+        self.remove = True
+        self.maxDiff = None
+
+    def test_cmdline(self):
+        expected_cmdline_mean = f'aststatistics {self.test_banzai_file_COPIED} -hSCI --sigclip-mean'
+        expected_cmdline_std = f'aststatistics {self.test_banzai_file_COPIED} -hSCI --sigclip-std'
+
+        mean, cmdline_mean = run_aststatistics(self.test_banzai_file_COPIED, 'mean', dbg=True)
+        std, cmdline_std = run_aststatistics(self.test_banzai_file_COPIED, 'std', dbg=True)
+
+        self.assertEquals(expected_cmdline_mean, cmdline_mean)
+        self.assertEquals(expected_cmdline_std, cmdline_std)
+
+    def test_change_hdu(self):
+        expected_cmdline_mean = f'aststatistics {self.test_banzai_file_COPIED} -hALIGNED --sigclip-mean'
+        expected_cmdline_std = f'aststatistics {self.test_banzai_file_COPIED} -hALIGNED --sigclip-std'
+
+        mean, cmdline_mean = run_aststatistics(self.test_banzai_file_COPIED, 'mean', hdu='ALIGNED', dbg=True)
+        std, cmdline_std = run_aststatistics(self.test_banzai_file_COPIED, 'std', hdu='ALIGNED', dbg=True)
+
+        self.assertEquals(expected_cmdline_mean, cmdline_mean)
+        self.assertEquals(expected_cmdline_std, cmdline_std)
+
+    def test_outputs(self):
+        expected_mean = b'4.052504e+02\n'
+        expected_std = b'3.674769e+01\n'
+        expected_status = 0
+
+        mean, status_m = run_aststatistics(self.test_banzai_file_COPIED, 'mean')
+        std, status_s = run_aststatistics(self.test_banzai_file_COPIED, 'std')
+
+        self.assertEquals(expected_mean, mean)
+        self.assertEquals(expected_std, std)
+        self.assertEquals(expected_status, status_m)
+        self.assertEquals(expected_status, status_s)
+
+class TestRunAstconvertt(ExternalCodeUnitTest):
+    def setUp(self):
+        super(TestRunAstconvertt, self).setUp()
+
+        # needs to modify the original image when running astconvertt
+        shutil.copy(os.path.abspath(self.test_banzai_file), self.test_dir)
+        self.test_banzai_file_COPIED = os.path.join(self.test_dir, 'banzai_test_frame.fits')
+
+        self.output_filename = os.path.join(self.test_dir, self.test_banzai_file_COPIED.replace('.fits', '.pdf'))
+
+        self.mean = 405.2504
+        self.std = 36.74769
+
+        # Disable anything below CRITICAL level
+        logging.disable(logging.CRITICAL)
+
+        self.remove = True
+        self.maxDiff = None
+
+    def touch(self, fname, times=None):
+        with open(fname, 'a'):
+            os.utime(fname, times)
+
+    def test_1(self):
+        expected_status = 0
+
+        pdf_filename, status = run_astconvertt(self.test_banzai_file_COPIED, self.test_dir, self.mean, self.std)
+
+        self.assertEquals(expected_status, status)
+        self.assertTrue(os.path.exists(self.output_filename))
+        self.assertEquals(pdf_filename, self.output_filename)
+
+    def test_existing_output_filename(self):
+        expected_status = 1
+        self.touch(self.output_filename)
+
+        pdf_filename, status = run_astconvertt(self.test_banzai_file_COPIED, self.test_dir, self.mean, self.std)
+
+        self.assertEquals(expected_status, status)
+        self.assertTrue(os.path.exists(self.output_filename))
