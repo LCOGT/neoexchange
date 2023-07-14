@@ -578,16 +578,17 @@ def determine_astnoisechisel_options(filename, dest_dir, tilesize = '30,30', ero
     options = f'--tilesize={tilesize} --erode={erode} --detgrowquant={detgrowquant} --detgrowmaxholesize={maxholesize} --output={output_filename} {filename}'
     return output_filename, options
 
-def determine_image_stats(filename):
-    mean, status = run_aststatistics(filename, 'mean')
-    std, status = run_aststatistics(filename, 'std')
+def determine_image_stats(filename, hdu='SCI'):
+    mean, status = run_aststatistics(filename, 'mean', hdu)
+    std, status = run_aststatistics(filename, 'std', hdu)
 
-    mean = float(mean)
-    std = float(std)
+    if mean is not None and std is not None:
+        mean = float(mean)
+        std = float(std)
 
     return mean, std
 
-def determine_astconvertt_options(filename, dest_dir, mean, std):
+def determine_astconvertt_options(filename, dest_dir, mean, std, hdu='SCI'):
     raw_filename = os.path.basename(filename)
     output_filename = os.path.join(dest_dir, raw_filename.replace(".fits", ".pdf"))
 
@@ -596,7 +597,7 @@ def determine_astconvertt_options(filename, dest_dir, mean, std):
     low = mean + sigrem * std
     high = mean + sigadd * std
 
-    options = f'{filename} -L {low} -H {high} -hSCI --colormap=sls-inverse --output={output_filename}'
+    options = f'{filename} -L {low} -H {high} -h{hdu} --colormap=sls-inverse --output={output_filename}'
     return output_filename, options
 
 def make_pa_rate_dict(pa, deltapa, minrate, maxrate):
@@ -1602,14 +1603,14 @@ def run_astwarp(filename, dest_dir, center_RA, center_DEC, width = 1991.0, heigh
     cmdline = f"{binary} "
     cropped_filename, options = determine_astwarp_options(filename, dest_dir, center_RA, center_DEC, width, height)
     if os.path.exists(cropped_filename):
-        return cropped_filename, 0
+        return cropped_filename, 1
     header = fits.getheader(filename)
     wcs = WCS(header)
     #print(header['NAXIS1'], header['NAXIS2'])
     x, y = wcs.world_to_pixel_values(center_RA, center_DEC)
     x_max = header['NAXIS1']
     y_max = header['NAXIS2']
-    if x<0 or x>x_max or y<0 or y>y_max: #need to write test for this
+    if x<0 or x>x_max or y<0 or y>y_max:
         return None, -2
     cmdline += options
     cmdline = cmdline.rstrip()
@@ -1642,7 +1643,7 @@ def run_astarithmetic(filenames, dest_dir, binary='astarithmetic', dbg=False):
     cmdline = f"{binary} "
     combined_filename, options = determine_astarithmetic_options(filenames, dest_dir)
     if os.path.exists(combined_filename):
-        return combined_filename, 0
+        return combined_filename, 1
     cmdline += options
     cmdline = cmdline.rstrip()
     if dbg:
@@ -1672,6 +1673,8 @@ def run_astnoisechisel(filename, dest_dir, tilesize = '30,30', erode = 2, detgro
         return None, -42
     cmdline = f"{binary} "
     chiseled_filename, options = determine_astnoisechisel_options(filename, dest_dir, tilesize, erode, detgrowquant, maxholesize)
+    if os.path.exists(chiseled_filename):
+        return chiseled_filename, 1
     cmdline += options
     cmdline = cmdline.rstrip()
     if dbg:
@@ -1688,18 +1691,20 @@ def run_astnoisechisel(filename, dest_dir, tilesize = '30,30', erode = 2, detgro
 
     return chiseled_filename, retcode_or_cmdline
 
-def run_aststatistics(filename, keyword, binary='aststatistics', dbg=False):
+def run_aststatistics(filename, keyword, hdu='SCI', binary='aststatistics', dbg=False):
     '''
     Runs aststatistics on <filename> to find either the sigma-clipped mean
     or the sigma-clipped standard deviation depending on the provided <keyword>
     '''
+    if filename is None:
+        return None, -2
     if os.path.exists(filename) is False:
         return None, -1
     binary = binary or find_binary(binary)
     if binary is None:
         logger.error(f"Could not locate {binary} executable in PATH")
         return None, -42
-    cmdline = f"{binary} {filename} -hSCI --sigclip-{keyword}"
+    cmdline = f"{binary} {filename} -h{hdu} --sigclip-{keyword}"
     cmdline = cmdline.rstrip()
     if dbg:
         print(cmdline)
@@ -1716,11 +1721,13 @@ def run_aststatistics(filename, keyword, binary='aststatistics', dbg=False):
 
     return out, retcode_or_cmdline
 
-def run_astconvertt(filename, dest_dir, mean, std, binary='astconvertt', dbg=False):
+def run_astconvertt(filename, dest_dir, mean, std, hdu='SCI', binary='astconvertt', dbg=False):
     '''
     Runs astconvertt on <filename> to convert .fits file to .pdf file writing
     output to <dest_dir>
     '''
+    if filename is None:
+        return None, -2
     if os.path.exists(filename) is False:
         return None, -1
     binary = binary or find_binary(binary)
@@ -1728,7 +1735,9 @@ def run_astconvertt(filename, dest_dir, mean, std, binary='astconvertt', dbg=Fal
         logger.error(f"Could not locate {binary} executable in PATH")
         return None, -42
     cmdline = f"{binary} "
-    pdf_filename, options = determine_astconvertt_options(filename, dest_dir, mean, std)
+    pdf_filename, options = determine_astconvertt_options(filename, dest_dir, mean, std, hdu)
+    if os.path.exists(pdf_filename):
+        return pdf_filename, 1
     cmdline += options
     cmdline = cmdline.rstrip()
     if dbg:

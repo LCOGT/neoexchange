@@ -1853,14 +1853,14 @@ class TestDetermineAstwarpOptions(SimpleTestCase):
 
         self.assertEqual(expected_cmdline, cmdline)
 
-    def test_2(self):
+    def test_change_center(self):
         expected_cmdline = f'-hSCI --center=120,9 --widthinpix --width=1991.0,511.0 --output={self.test_dir}/tfn1m014-fa20-20221104-0213-e91-crop.fits tfn1m014-fa20-20221104-0213-e91.fits'
 
         output_filename, cmdline = determine_astwarp_options('tfn1m014-fa20-20221104-0213-e91.fits', self.test_dir, 120, 9)
 
         self.assertEqual(expected_cmdline, cmdline)
 
-    def test_3(self):
+    def test_skycoord_center(self):
         expected_cmdline = f'-hSCI --center=119.2346118,8.39523331 --widthinpix --width=1991.0,511.0 --output={self.test_dir}/tfn1m014-fa20-20221104-0207-e91-crop.fits tfn1m014-fa20-20221104-0207-e91.fits'
 
         center = SkyCoord(119.2346118, 8.39523331, unit = 'deg')
@@ -1869,7 +1869,7 @@ class TestDetermineAstwarpOptions(SimpleTestCase):
 
         self.assertEqual(expected_cmdline, cmdline)
 
-    def test_4(self):
+    def test_change_dims(self):
         expected_cmdline = f'-hSCI --center=119.2346118,8.39523331 --widthinpix --width=2000,550 --output={self.test_dir}/tfn1m014-fa20-20221104-0207-e91-crop.fits tfn1m014-fa20-20221104-0207-e91.fits'
 
         center = SkyCoord(119.2346118, 8.39523331, unit = 'deg')
@@ -1985,6 +1985,16 @@ class TestDetermineImageStats(ExternalCodeUnitTest):
         self.assertEqual(expected_mean, mean)
         self.assertEqual(expected_std, std)
 
+    def test_null_filename(self):
+        filename = None
+        expected_mean = None
+        expected_std = None
+
+        mean, std = determine_image_stats(filename)
+
+        self.assertEqual(expected_mean, mean)
+        self.assertEqual(expected_std, std)
+
 class TestDetermineAstconverttOptions(SimpleTestCase):
     def setUp(self):
         self.test_dir = '/tmp/foo'
@@ -2014,6 +2024,18 @@ class TestDetermineAstconverttOptions(SimpleTestCase):
 
         self.assertEqual(expected_cmdline, cmdline)
 
+    def test_change_hdu(self):
+        mean = 2207.726
+        std = 50.70005
+        low = mean - 0.5 * std
+        high = mean + 25 * std
+
+        expected_cmdline = f'{self.test_file} -L {low} -H {high} -hALIGNED --colormap=sls-inverse --output={self.test_dir}/{self.test_file.replace(".fits", ".pdf")}'
+
+        output_filename, cmdline = determine_astconvertt_options(self.test_file, self.test_dir, mean, std, hdu='ALIGNED')
+
+        self.assertEqual(expected_cmdline, cmdline)
+
 class TestRunAstwarp(ExternalCodeUnitTest):
     def setUp(self):
         super(TestRunAstwarp, self).setUp()
@@ -2030,7 +2052,7 @@ class TestRunAstwarp(ExternalCodeUnitTest):
         # Disable anything below CRITICAL level
         logging.disable(logging.CRITICAL)
 
-        self.remove = False
+        self.remove = True
         self.maxDiff = None
 
     def return_fits_dims(self, filename, keywords = ['NAXIS1', 'NAXIS2']):
@@ -2067,10 +2089,10 @@ class TestRunAstwarp(ExternalCodeUnitTest):
         self.assertEquals(self.center_DEC, dims[3])
 
     def test_change_center(self):
-        expected_center_RA = 300
-        expected_center_DEC = 50
+        expected_center_RA = 272.9475008
+        expected_center_DEC = 1.2648033
 
-        cropped_filename, status = run_astwarp(self.test_banzai_file_COPIED, self.test_dir, 300, 50)
+        cropped_filename, status = run_astwarp(self.test_banzai_file_COPIED, self.test_dir, 272.9475008, 1.2648033)
         dims = self.return_fits_dims(self.output_filename, keywords = ['CRVAL1', 'CRVAL2'])
 
         self.assertEquals(expected_center_RA, dims[0])
@@ -2117,13 +2139,31 @@ class TestRunAstwarp(ExternalCodeUnitTest):
         self.assertEquals(expected_filename, cropped_filename)
 
     def test_existing_output_filename(self):
-        expected_status = 0
+        expected_status = 1
         self.touch(self.output_filename)
 
         combined_filename, status = run_astwarp(self.test_banzai_file_COPIED, self.test_dir, self.center_RA, self.center_DEC)
 
         self.assertEquals(expected_status, status)
         self.assertTrue(os.path.exists(self.output_filename))
+
+    def test_RA_out_of_range(self):
+        expected_status = -2
+        expected_filename = None
+
+        cropped_filename, status = run_astwarp(self.test_banzai_file_COPIED, self.test_dir, 300, self.center_DEC)
+
+        self.assertEquals(expected_status, status)
+        self.assertEquals(expected_filename, cropped_filename)
+
+    def test_DEC_out_of_range(self):
+        expected_status = -2
+        expected_filename = None
+
+        cropped_filename, status = run_astwarp(self.test_banzai_file_COPIED, self.test_dir, self.center_RA, 5)
+
+        self.assertEquals(expected_status, status)
+        self.assertEquals(expected_filename, cropped_filename)
 
 class TestRunAstarithmetic(ExternalCodeUnitTest):
     def setUp(self):
@@ -2176,7 +2216,7 @@ class TestRunAstarithmetic(ExternalCodeUnitTest):
         self.assertEquals(expected_filename, combined_filename)
 
     def test_existing_output_filename(self):
-        expected_status = 0
+        expected_status = 1
         self.touch(self.output_filename)
 
         combined_filename, status = run_astarithmetic(self.test_filenames, self.test_dir)
@@ -2223,6 +2263,10 @@ class TestRunAstnoisechisel(ExternalCodeUnitTest):
             for key in keywords:
                 info.append(header[key])
         return info
+
+    def touch(self, fname, times=None):
+        with open(fname, 'a'):
+            os.utime(fname, times)
 
     def test_default_values(self):
         expected_status = 0
@@ -2284,6 +2328,15 @@ class TestRunAstnoisechisel(ExternalCodeUnitTest):
         self.assertEquals(expected_status, status)
         self.assertEquals(expected_filename, chiseled_filename)
 
+    def test_existing_output_filename(self):
+        expected_status = 1
+        self.touch(self.output_filename)
+
+        chiseled_filename, status = run_astnoisechisel(self.filename, self.test_dir)
+
+        self.assertEquals(expected_status, status)
+        self.assertTrue(os.path.exists(self.output_filename))
+
 class TestRunAststatistics(ExternalCodeUnitTest):
     def setUp(self):
         super(TestRunAststatistics, self).setUp()
@@ -2303,6 +2356,16 @@ class TestRunAststatistics(ExternalCodeUnitTest):
 
         mean, cmdline_mean = run_aststatistics(self.test_banzai_file_COPIED, 'mean', dbg=True)
         std, cmdline_std = run_aststatistics(self.test_banzai_file_COPIED, 'std', dbg=True)
+
+        self.assertEquals(expected_cmdline_mean, cmdline_mean)
+        self.assertEquals(expected_cmdline_std, cmdline_std)
+
+    def test_change_hdu(self):
+        expected_cmdline_mean = f'aststatistics {self.test_banzai_file_COPIED} -hALIGNED --sigclip-mean'
+        expected_cmdline_std = f'aststatistics {self.test_banzai_file_COPIED} -hALIGNED --sigclip-std'
+
+        mean, cmdline_mean = run_aststatistics(self.test_banzai_file_COPIED, 'mean', hdu='ALIGNED', dbg=True)
+        std, cmdline_std = run_aststatistics(self.test_banzai_file_COPIED, 'std', hdu='ALIGNED', dbg=True)
 
         self.assertEquals(expected_cmdline_mean, cmdline_mean)
         self.assertEquals(expected_cmdline_std, cmdline_std)
@@ -2339,6 +2402,10 @@ class TestRunAstconvertt(ExternalCodeUnitTest):
         self.remove = True
         self.maxDiff = None
 
+    def touch(self, fname, times=None):
+        with open(fname, 'a'):
+            os.utime(fname, times)
+
     def test_1(self):
         expected_status = 0
 
@@ -2347,3 +2414,12 @@ class TestRunAstconvertt(ExternalCodeUnitTest):
         self.assertEquals(expected_status, status)
         self.assertTrue(os.path.exists(self.output_filename))
         self.assertEquals(pdf_filename, self.output_filename)
+
+    def test_existing_output_filename(self):
+        expected_status = 1
+        self.touch(self.output_filename)
+
+        pdf_filename, status = run_astconvertt(self.test_banzai_file_COPIED, self.test_dir, self.mean, self.std)
+
+        self.assertEquals(expected_status, status)
+        self.assertTrue(os.path.exists(self.output_filename))
