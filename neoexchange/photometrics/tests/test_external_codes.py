@@ -2165,6 +2165,24 @@ class TestRunAstwarp(ExternalCodeUnitTest):
         self.assertEquals(expected_status, status)
         self.assertEquals(expected_filename, cropped_filename)
 
+    def test_width_out_of_range(self):
+        expected_status = -3
+        expected_filename = None
+
+        cropped_filename, status = run_astwarp(self.test_banzai_file_COPIED, self.test_dir, self.center_RA, self.center_DEC, width=5000)
+
+        self.assertEquals(expected_status, status)
+        self.assertEquals(expected_filename, cropped_filename)
+
+    def test_height_out_of_range(self):
+        expected_status = -3
+        expected_filename = None
+
+        cropped_filename, status = run_astwarp(self.test_banzai_file_COPIED, self.test_dir, self.center_RA, self.center_DEC, height=5000)
+
+        self.assertEquals(expected_status, status)
+        self.assertEquals(expected_filename, cropped_filename)
+
 class TestRunAstarithmetic(ExternalCodeUnitTest):
     def setUp(self):
         super(TestRunAstarithmetic, self).setUp()

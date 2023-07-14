@@ -1612,6 +1612,8 @@ def run_astwarp(filename, dest_dir, center_RA, center_DEC, width = 1991.0, heigh
     y_max = header['NAXIS2']
     if x<0 or x>x_max or y<0 or y>y_max:
         return None, -2
+    if width>x_max or height>y_max:
+        return None, -3
     cmdline += options
     cmdline = cmdline.rstrip()
     if dbg:
