@@ -76,7 +76,7 @@ def get_ephem(block):
     '''
     didymos = Body.objects.get(name = '65803')
     frames = find_frames(block)
-    frames_summary(frames)
+    #frames_summary(frames)
     first_frame = frames[0]
     last_frame = frames[frames.count()-1]
     onemin = timedelta(minutes = 1)
