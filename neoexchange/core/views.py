@@ -3641,6 +3641,8 @@ def convert_fits_to_pdf(filename, dest_dir, crop=False, center_RA=0, center_DEC=
     if crop:
         filename, status = run_astwarp(filename, dest_dir, center_RA, center_DEC, width, height, dbg=dbg)
         hdu = 'ALIGNED'
+    if '-chisel' in filename:
+        hdu = 'DETECTIONS'
     mean, std = determine_image_stats(filename, hdu)
     pdf_filename, status = run_astconvertt(filename, dest_dir, mean, std, hdu)
 
