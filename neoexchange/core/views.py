@@ -3631,7 +3631,7 @@ def run_astwarp_alignment_noisechisel(block, sci_dir, dest_dir):
     chiseled_filename, status = run_noisechisel(combined_filename, dest_dir)
     #print(status)
 
-    return chiseled_filename, status
+    return chiseled_filename, combined_filename, status
 
 def convert_fits_to_pdf(filename, dest_dir, crop=False, center_RA=0, center_DEC=0, width=1991.0, height=511.0, hdu='SCI', dbg=False):
     '''
@@ -3643,6 +3643,8 @@ def convert_fits_to_pdf(filename, dest_dir, crop=False, center_RA=0, center_DEC=
         hdu = 'ALIGNED'
     if '-chisel' in filename:
         hdu = 'DETECTIONS'
+    if '-combine' in filename:
+        hdu = '1'
     mean, std = determine_image_stats(filename, hdu)
     pdf_filename, status = run_astconvertt(filename, dest_dir, mean, std, hdu)
 
