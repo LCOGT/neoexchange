@@ -230,6 +230,21 @@ class Block(models.Model):
                     blockuid = str(blockuid)
         return blockuid
 
+    @cached_property
+    def get_blockdayobs(self):
+        """Return and Cache the DAY_OBS"""
+        warnings.simplefilter('ignore', FITSFixedWarning)
+        frame = Frame.objects.filter(block=self, frametype=Frame.BANZAI_RED_FRAMETYPE, frameid__isnull=False).first()
+        blockdayobs = None
+        if frame is not None:
+            if frame.frameid is not None:
+                url = f"{settings.ARCHIVE_FRAMES_URL}{frame.frameid}"
+                headers = lco_api_call(url)
+                blockdayobs = headers.get('DAY_OBS', None)
+                if blockdayobs is not None:
+                    blockdayobs = str(blockdayobs).replace('-','')
+        return blockdayobs
+
     def current_name(self):
         name = ''
         if self.body is not None:
