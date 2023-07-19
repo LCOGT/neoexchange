@@ -35,9 +35,11 @@ class Command(BaseCommand):
         blocks_end = []
         exposure_time = []
         moon_frac = []
+        moon_distance = []
         block_uid = []
         input_data_paths = []
         output_data_paths = []
+        V_mags = []
 
         blocks, dates = filter_blocks(None, start_date, end_date, 3, 10)
 
@@ -81,12 +83,17 @@ class Command(BaseCommand):
             midpoint = block.block_start + (block.block_end - block.block_start)/2
             total_exptime = 0
             moon_fractions = []
+            moon_dist = []
             for frame in frames:
                 total_exptime = total_exptime + frame.exptime
                 hdulist = fits.open(os.path.join(sci_dir_path, frame.filename))
                 header = hdulist['SCI'].header
                 moon_fractions.append(header['MOONFRAC'])
+                moon_dist.append(header['MOONDIST'])
             avg_moon_frac = round(sum(moon_fractions)/len(moon_fractions), 4)
+            avg_moon_dist = round(sum(moon_dist)/len(moon_dist), 4)
+            emp = block.body.compute_position(midpoint)
+            V_mag = emp[2]
 
             self.stdout.write(f'Block Start Time: {block.block_start.strftime("%Y-%m-%d %H:%M")}, Midpoint: {midpoint}, Total Exposure Time: {total_exptime}, Average Moon Fraction: {avg_moon_frac}')
 
@@ -96,6 +103,8 @@ class Command(BaseCommand):
             blocks_end.append(block.block_end)
             exposure_time.append(total_exptime)
             moon_frac.append(avg_moon_frac)
+            moon_distance.append(avg_moon_dist)
+            V_mags.append(V_mag)
             block_uid.append(block.get_blockuid)
             input_data_paths.append(input_data_path)
             output_data_paths.append(output_path)
@@ -110,7 +119,7 @@ class Command(BaseCommand):
             current_time += date_increment
 
         #make astropy table and convert to csv file
-        table = QTable([blocks_start, blocks_mid, blocks_end, exposure_time, moon_frac, block_uid, input_data_paths, output_data_paths],
-                names=('Block Start', 'Block Midpoint', 'Block End', 'Exposure Time', 'Moon Fraction', 'Block UID', 'Input Path', 'Output Path'))
+        table = QTable([blocks_start, blocks_mid, blocks_end, exposure_time, moon_frac, moon_distance, V_mags, block_uid, input_data_paths, output_data_paths],
+                names=('Block Start', 'Block Midpoint', 'Block End', 'Exposure Time', 'Moon Fraction', 'Moon Distance', 'V Magnitude', 'Block UID', 'Input Path', 'Output Path'))
         csv_path = os.path.join(dest_dir, 'didymos_tail_data.csv')
         ascii.write(table, csv_path, format='ecsv', delimiter = ',')
