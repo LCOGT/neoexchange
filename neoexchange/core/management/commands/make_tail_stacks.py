@@ -8,7 +8,7 @@ from astropy.io import ascii
 from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 
-from core.blocksfind import find_didymos_blocks, find_frames
+from core.blocksfind import filter_blocks, find_frames
 from core.views import run_astwarp_alignment_noisechisel, convert_fits_to_pdf
 
 
@@ -39,18 +39,11 @@ class Command(BaseCommand):
         input_data_paths = []
         output_data_paths = []
 
-        #find all Blocks between start and end date 
-        didymos_blocks = find_didymos_blocks()
-        blocks = []
-        dates = []
-        for block in didymos_blocks:
-            if start_date <= block.block_start and end_date >= block.block_end:
-                blocks.append(block)
-                dates.append(block.block_start)
+        blocks, dates = filter_blocks(start_date, end_date, 3, 10)
 
         #check if number of Blocks >0
         if len(blocks)==0:
-            raise CommandError('There are no blocks between start and end date.')
+            raise CommandError('No blocks were found.')
 
         current_time = start_date
         while current_time <= end_date:
@@ -69,55 +62,50 @@ class Command(BaseCommand):
                 break
 
             #find Frames for Block
-            #later: handle muscat frames in g,r,i,z
             frames = find_frames(block)
-            filter_frames = frames.order_by('filter').distinct('filter')
 
-            #check if >3 and <10 and same filter
-            if len(frames)>3 and len(frames)<10 and filter_frames.count()==1:
-                #set up working directory for Block and make a copy of all frames
-                dayobs = block.get_blockdayobs
-                input_data_path = os.path.join(sci_dir, dayobs, block.body.current_name()+'_'+block.get_blockuid)
-                output_path = os.path.join(dest_dir, 'original_files', dayobs)
-                if os.path.exists(output_path) is False:
-                    os.makedirs(output_path)
-                for frame in frames:
-                    shutil.copy(os.path.join(input_data_path,frame.filename), output_path)
-                sci_dir_path = output_path
-                dest_dir_path = os.path.join(dest_dir, dayobs)
+            #later: handle muscat frames in g,r,i,z
 
-                #make a record of stack midpoint, stack total exposure time, and moon fraction (need to get from fits header)
-                midpoint = block.block_start + (block.block_end - block.block_start)/2
-                total_exptime = 0
-                moon_fractions = []
-                for frame in frames:
-                    total_exptime = total_exptime + frame.exptime
-                    hdulist = fits.open(os.path.join(sci_dir_path, frame.filename))
-                    header = hdulist['SCI'].header
-                    moon_fractions.append(header['MOONFRAC'])
-                avg_moon_frac = round(sum(moon_fractions)/len(moon_fractions), 4)
+            #set up working directory for Block and make a copy of all frames
+            dayobs = block.get_blockdayobs
+            input_data_path = os.path.join(sci_dir, dayobs, block.body.current_name()+'_'+block.get_blockuid)
+            output_path = os.path.join(dest_dir, 'original_files', dayobs)
+            if os.path.exists(output_path) is False:
+                os.makedirs(output_path)
+            for frame in frames:
+                shutil.copy(os.path.join(input_data_path,frame.filename), output_path)
+            sci_dir_path = output_path
+            dest_dir_path = os.path.join(dest_dir, dayobs)
 
-                self.stdout.write(f'Block Start Time: {block.block_start.strftime("%Y-%m-%d %H:%M")}, Midpoint: {midpoint}, Total Exposure Time: {total_exptime}, Average Moon Fraction: {avg_moon_frac}')
+            #make a record of stack midpoint, stack total exposure time, and moon fraction (need to get from fits header)
+            midpoint = block.block_start + (block.block_end - block.block_start)/2
+            total_exptime = 0
+            moon_fractions = []
+            for frame in frames:
+                total_exptime = total_exptime + frame.exptime
+                hdulist = fits.open(os.path.join(sci_dir_path, frame.filename))
+                header = hdulist['SCI'].header
+                moon_fractions.append(header['MOONFRAC'])
+            avg_moon_frac = round(sum(moon_fractions)/len(moon_fractions), 4)
 
-                #add values for astropy data table
-                blocks_start.append(block.block_start)
-                blocks_mid.append(midpoint)
-                blocks_end.append(block.block_end)
-                exposure_time.append(total_exptime)
-                moon_frac.append(avg_moon_frac)
-                block_uid.append(block.get_blockuid)
-                input_data_paths.append(input_data_path)
-                output_data_paths.append(output_path)
+            self.stdout.write(f'Block Start Time: {block.block_start.strftime("%Y-%m-%d %H:%M")}, Midpoint: {midpoint}, Total Exposure Time: {total_exptime}, Average Moon Fraction: {avg_moon_frac}')
 
-                #call run_astwarp_alignment(), and run_noisechisel()
-                chiseled_filename, combined_filename, status = run_astwarp_alignment_noisechisel(block, sci_dir_path, dest_dir_path)
-                #call convert_fits_to_pdf()
-                pdf_filename_chiseled, status = convert_fits_to_pdf(chiseled_filename, dest_dir_path)
-                pdf_filename_combined, status = convert_fits_to_pdf(combined_filename, dest_dir_path)
-                self.stdout.write(f'Chiseled filename: {pdf_filename_chiseled}, Combined filename: {pdf_filename_combined}')
+            #add values for astropy data table
+            blocks_start.append(block.block_start)
+            blocks_mid.append(midpoint)
+            blocks_end.append(block.block_end)
+            exposure_time.append(total_exptime)
+            moon_frac.append(avg_moon_frac)
+            block_uid.append(block.get_blockuid)
+            input_data_paths.append(input_data_path)
+            output_data_paths.append(output_path)
 
-            else:
-                self.stdout.write(f'Block Start Time: {block.block_start.strftime("%Y-%m-%d %H:%M")} INVALID BLOCK')
+            #call run_astwarp_alignment(), and run_noisechisel()
+            chiseled_filename, combined_filename, status = run_astwarp_alignment_noisechisel(block, sci_dir_path, dest_dir_path)
+            #call convert_fits_to_pdf()
+            pdf_filename_chiseled, status = convert_fits_to_pdf(chiseled_filename, dest_dir_path)
+            pdf_filename_combined, status = convert_fits_to_pdf(combined_filename, dest_dir_path)
+            self.stdout.write(f'Chiseled filename: {pdf_filename_chiseled}, Combined filename: {pdf_filename_combined}')
 
             current_time += date_increment
 
@@ -126,4 +114,3 @@ class Command(BaseCommand):
                 names=('Block Start', 'Block Midpoint', 'Block End', 'Exposure Time', 'Moon Fraction', 'Block UID', 'Input Path', 'Output Path'))
         csv_path = os.path.join(dest_dir, 'didymos_tail_data.csv')
         ascii.write(table, csv_path, format='ecsv', delimiter = ',')
-
