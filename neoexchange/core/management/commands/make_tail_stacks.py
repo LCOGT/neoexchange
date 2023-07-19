@@ -3,6 +3,8 @@ from dateutil.parser import *
 from astropy.io import fits
 import shutil
 import os
+from astropy.table import QTable
+from astropy.io import ascii
 from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 
@@ -27,6 +29,16 @@ class Command(BaseCommand):
         sci_dir = options['sci_dir']
         dest_dir = options['dest_dir']
 
+        #lists for astropy data table
+        blocks_start = []
+        blocks_mid = []
+        blocks_end = []
+        exposure_time = []
+        moon_frac = []
+        block_uid = []
+        input_data_paths = []
+        output_data_paths = []
+
         #find all Blocks between start and end date 
         didymos_blocks = find_didymos_blocks()
         blocks = []
@@ -44,16 +56,20 @@ class Command(BaseCommand):
         while current_time <= end_date:
             #self.stdout.write(current_time.strftime('%Y-%m-%d %H:%M'))
 
-            #find closest Block in time to current_time
-            block_start = min(dates, key=lambda d: abs(d - current_time))
-            index = dates.index(block_start)
-            block = blocks[index]
+            if len(blocks) != 0:
+                #find closest Block in time to current_time
+                block_start = min(dates, key=lambda d: abs(d - current_time))
+                index = dates.index(block_start)
+                block = blocks[index]
 
-            #remove block from list so it is not repeated --> WIP
-            blocks.remove(block)
-            dates.remove(block_start)
+                #remove block from list so it is not repeated
+                blocks.remove(block)
+                dates.remove(block_start)
+            else:
+                break
 
             #find Frames for Block
+            #later: handle muscat frames in g,r,i,z
             frames = find_frames(block)
             filter_frames = frames.order_by('filter').distinct('filter')
 
@@ -83,6 +99,16 @@ class Command(BaseCommand):
 
                 self.stdout.write(f'Block Start Time: {block.block_start.strftime("%Y-%m-%d %H:%M")}, Midpoint: {midpoint}, Total Exposure Time: {total_exptime}, Average Moon Fraction: {avg_moon_frac}')
 
+                #add values for astropy data table
+                blocks_start.append(block.block_start)
+                blocks_mid.append(midpoint)
+                blocks_end.append(block.block_end)
+                exposure_time.append(total_exptime)
+                moon_frac.append(avg_moon_frac)
+                block_uid.append(block.get_blockuid)
+                input_data_paths.append(input_data_path)
+                output_data_paths.append(output_path)
+
                 #call run_astwarp_alignment(), and run_noisechisel()
                 chiseled_filename, combined_filename, status = run_astwarp_alignment_noisechisel(block, sci_dir_path, dest_dir_path)
                 #call convert_fits_to_pdf()
@@ -95,8 +121,9 @@ class Command(BaseCommand):
 
             current_time += date_increment
 
-            #later: handle muscat frames in g,r,i,z
+        #make astropy table and convert to csv file
+        table = QTable([blocks_start, blocks_mid, blocks_end, exposure_time, moon_frac, block_uid, input_data_paths, output_data_paths],
+                names=('Block Start', 'Block Midpoint', 'Block End', 'Exposure Time', 'Moon Fraction', 'Block UID', 'Input Path', 'Output Path'))
+        csv_path = os.path.join(dest_dir, 'didymos_tail_data.csv')
+        ascii.write(table, csv_path, format='ecsv', delimiter = ',')
 
-#make astropy table with: block_start, block_mid, block_end, exposure time, moon frac, block_uid, input_data_path, output_path then write to csv file
-#add logic so we don't repeat blocks
-#add logic so that if output filenames aleady exist skip function calls
