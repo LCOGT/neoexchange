@@ -39,7 +39,7 @@ class Command(BaseCommand):
         input_data_paths = []
         output_data_paths = []
 
-        blocks, dates = filter_blocks(start_date, end_date, 3, 10)
+        blocks, dates = filter_blocks(None, start_date, end_date, 3, 10)
 
         #check if number of Blocks >0
         if len(blocks)==0:

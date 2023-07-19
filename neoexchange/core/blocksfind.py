@@ -38,13 +38,20 @@ def blocks_summary(blocks):
                 proposal_code=sblock.proposal.code
         print(f"{block.block_start}->{block.block_end} {block.num_exposures}x{block.exp_length}s observed={block.num_observed} ({proposal_code})")
 
-def filter_blocks(start_date, end_date, min_frames, max_frames):
+def filter_blocks(original_blocks, start_date, end_date, min_frames=3, max_frames=10):
     '''
-    Routine to filter blocks. Returns blocks that are between <start_date>
+    Routine to filter blocks in <original_blocks> . If <original_blocks> is None,
+    then it calls find_didymos_blocks() to return a QuerySet of Blocks.
+
+    Returns blocks that are between <start_date>
     and <end_date> and that have a number of frames between <min_frames> and
     <max_frames>.
     '''
-    didymos_blocks = find_didymos_blocks()
+
+    if original_blocks is None:
+        didymos_blocks = find_didymos_blocks()
+    else:
+        didymos_blocks = original_blocks
     blocks = didymos_blocks.filter(block_start__gte = start_date)
     blocks = blocks.filter(block_end__lte = end_date)
     filtered_blocks = []
