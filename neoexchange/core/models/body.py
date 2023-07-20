@@ -221,7 +221,7 @@ class Body(models.Model):
 
     def diameter(self):
         m = self.abs_mag
-        avg = 0.167
+        avg = 0.14
         d_avg = asteroid_diameter(avg, m)
         return d_avg
 
