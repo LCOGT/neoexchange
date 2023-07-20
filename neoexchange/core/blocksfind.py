@@ -72,8 +72,8 @@ def find_frames(block):
     Returns list of frames
     '''
     frames = Frame.objects.filter(block = block)
-    frames = frames.filter(frametype = Frame.BANZAI_RED_FRAMETYPE)
-    #frames = frames.filter(frametype = Frame.NEOX_RED_FRAMETYPE)
+    #frames = frames.filter(frametype = Frame.BANZAI_RED_FRAMETYPE)
+    frames = frames.filter(frametype = Frame.NEOX_RED_FRAMETYPE)
     frames = frames.order_by('midpoint')
 
     return frames

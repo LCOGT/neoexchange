@@ -71,7 +71,7 @@ class Command(BaseCommand):
 
             #set up working directory for Block and make a copy of all frames
             dayobs = block.get_blockdayobs
-            input_data_path = os.path.join(sci_dir, dayobs, block.body.current_name()+'_'+block.get_blockuid)#, 'Temp_cvc_multiap')
+            input_data_path = os.path.join(sci_dir, dayobs, block.body.current_name()+'_'+block.get_blockuid, 'Temp_cvc_multiap')
             output_path = os.path.join(dest_dir, 'original_files', dayobs)
             if os.path.exists(output_path) is False:
                 os.makedirs(output_path)
