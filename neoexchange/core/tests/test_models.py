@@ -266,6 +266,30 @@ class TestBody(TestCase):
         diameter = test_body.diameter()
         self.assertEqual(None, diameter)
 
+    def test_diameter_default_albedo(self):
+        expected_diameter = 205.195
+
+        diameter = self.body.diameter()
+        self.assertAlmostEqual(expected_diameter, diameter, 2)
+
+    def test_1kmdiameter_default_albedo(self):
+        expected_diameter = 1000.38
+        test_body = self.body
+        test_body.abs_mag = 17.56
+        test_body.save()
+
+        diameter = test_body.diameter()
+        self.assertAlmostEqual(expected_diameter, diameter, 2)
+
+    def test_140mdiameter_default_albedo(self):
+        expected_diameter = 140.01
+        test_body = self.body
+        test_body.abs_mag = 21.83
+        test_body.save()
+
+        diameter = test_body.diameter()
+        self.assertAlmostEqual(expected_diameter, diameter, 2)
+
     def test_compute_obs_window_mid(self):
         test_body = self.body
         test_body.abs_mag = 19.0
