@@ -1596,6 +1596,11 @@ def run_astwarp(filename, dest_dir, center_RA, center_DEC, width = 1991.0, heigh
     '''
     if os.path.exists(filename) is False:
         return None, -1
+    hdulist = fits.open(filename)
+    header = hdulist['SCI'].header
+    wcs_err = header['WCSERR']
+    if wcs_err!=0:
+        return None, -5
     binary = binary or find_binary(binary)
     if binary is None:
         logger.error(f"Could not locate {binary} executable in PATH")
@@ -1608,6 +1613,7 @@ def run_astwarp(filename, dest_dir, center_RA, center_DEC, width = 1991.0, heigh
     wcs = WCS(header)
     #print(header['NAXIS1'], header['NAXIS2'])
     x, y = wcs.world_to_pixel_values(center_RA, center_DEC)
+    #print(x, y)
     x_max = header['NAXIS1']
     y_max = header['NAXIS2']
     if x<0 or x>x_max or y<0 or y>y_max:
@@ -1630,11 +1636,18 @@ def run_astwarp(filename, dest_dir, center_RA, center_DEC, width = 1991.0, heigh
 
     return cropped_filename, retcode_or_cmdline
 
-def run_astarithmetic(filenames, dest_dir, binary='astarithmetic', dbg=False):
+def run_astarithmetic(input_filenames, dest_dir, binary='astarithmetic', dbg=False):
     '''
     Runs astarithmetic on list of <filenames> to median combine writing 
     output to <dest_dir>
     '''
+    filenames=[]
+    for filename in input_filenames:
+        if filename is not None:
+            filenames.append(filename)
+    if len(filenames)==0:
+        return None, -6
+    #print(filenames)
     for filename in filenames:
         if os.path.exists(filename) is False:
             return None, -1

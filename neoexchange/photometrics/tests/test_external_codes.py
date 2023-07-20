@@ -2183,6 +2183,19 @@ class TestRunAstwarp(ExternalCodeUnitTest):
         self.assertEquals(expected_status, status)
         self.assertEquals(expected_filename, cropped_filename)
 
+    def test_wcs_err(self):
+        with fits.open(self.test_banzai_file_COPIED, mode='update') as hdulist:
+            hdulist[0].header['WCSERR'] = 4
+            hdulist.flush()
+
+        expected_status = -5
+        expected_filename = None
+
+        cropped_filename, status = run_astwarp(self.test_banzai_file_COPIED, self.test_dir, self.center_RA, self.center_DEC)
+
+        self.assertEquals(expected_status, status)
+        self.assertEquals(expected_filename, cropped_filename)
+
 class TestRunAstarithmetic(ExternalCodeUnitTest):
     def setUp(self):
         super(TestRunAstarithmetic, self).setUp()
@@ -2241,6 +2254,16 @@ class TestRunAstarithmetic(ExternalCodeUnitTest):
 
         self.assertEquals(expected_status, status)
         self.assertTrue(os.path.exists(self.output_filename))
+
+    def test_None_files(self):
+        filenames = [None, None, None]
+        expected_status = -6
+        expected_filename = None
+
+        combined_filename, status = run_astarithmetic(filenames, self.test_dir)
+
+        self.assertEquals(expected_status, status)
+        self.assertEquals(expected_filename, combined_filename)
 
 class TestRunAstnoisechisel(ExternalCodeUnitTest):
     def setUp(self):

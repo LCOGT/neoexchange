@@ -20,6 +20,7 @@ from datetime import datetime, timedelta, date
 from math import floor, ceil, degrees, radians, pi, acos, pow, cos
 from astropy import units as u
 from astropy.coordinates import SkyCoord
+from astropy.io import fits
 import json
 import logging
 import tempfile
@@ -3602,6 +3603,7 @@ def run_astwarp_alignment(block, sci_dir, dest_dir):
         #print(frame.filename, result_RA, result_DEC)
         fits_filename = os.path.join(sci_dir, frame.filename)
         cropped_filename, status = run_astwarp(fits_filename, dest_dir, result_RA[0], result_DEC[0])
+        #print(cropped_filename, status)
         filenames.append(cropped_filename)
 
     #call stacking routine
@@ -3614,6 +3616,8 @@ def run_noisechisel(filename, dest_dir):
     Verifies that input <filename> went through stacking routine. Calls run_astnoisechisel
     to get a binary detection map of the combined file and writes output to <dest_dir>.
     '''
+    if filename is None:
+        return None, -7
     if "-combine" not in filename:
         return None, -1
 
@@ -3638,6 +3642,8 @@ def convert_fits_to_pdf(filename, dest_dir, crop=False, center_RA=0, center_DEC=
     Calls determine_image_stats to get sigma-clipped mean and standard deviation.
     Calls run_astconvertt to convert .fits file into .pdf file.
     '''
+    if filename is None:
+        return None, -8
     if crop:
         filename, status = run_astwarp(filename, dest_dir, center_RA, center_DEC, width, height, dbg=dbg)
         hdu = 'ALIGNED'
