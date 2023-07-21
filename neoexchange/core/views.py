@@ -3588,7 +3588,7 @@ def run_astwarp_alignment(block, sci_dir, dest_dir):
     output to <dest_dir>.
     '''
     #find frames for block
-    frames = find_frames(block)
+    frames, num_banzai, num_neox = find_frames(block)
 
     #find ephem for block
     table = get_ephem(block)

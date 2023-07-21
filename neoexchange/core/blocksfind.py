@@ -38,6 +38,19 @@ def blocks_summary(blocks):
                 proposal_code=sblock.proposal.code
         print(f"{block.block_start}->{block.block_end} {block.num_exposures}x{block.exp_length}s observed={block.num_observed} ({proposal_code})")
 
+def split_light_curve_blocks(block, exptime):
+    '''
+    Routine to split a light curve <block> into equal sized sub-blocks with
+    total exposure time equal to <exptime>
+    '''
+    exp_length = block.exp_length
+    frames, num_banzai, num_neox = find_frames(block)
+    total_exp_time = len(frames) * exp_length
+    div_factor = total_exp_time/exptime
+    split_block = np.array_split(frames, round(div_factor))
+
+    return split_block
+
 def filter_blocks(original_blocks, start_date, end_date, min_frames=3, max_frames=10):
     '''
     Routine to filter blocks in <original_blocks> . If <original_blocks> is None,
@@ -57,7 +70,7 @@ def filter_blocks(original_blocks, start_date, end_date, min_frames=3, max_frame
     filtered_blocks = []
     dates = []
     for block in blocks:
-        frames = find_frames(block)
+        frames, num_banzai, num_neox = find_frames(block)
         filter_frames = frames.order_by('filter').distinct('filter')
         if len(frames)>min_frames and len(frames)<max_frames and filter_frames.count()==1:
             filtered_blocks.append(block)
@@ -72,11 +85,13 @@ def find_frames(block):
     Returns list of frames
     '''
     frames = Frame.objects.filter(block = block)
-    #frames = frames.filter(frametype = Frame.BANZAI_RED_FRAMETYPE)
-    frames = frames.filter(frametype = Frame.NEOX_RED_FRAMETYPE)
+    banzai_frames = frames.filter(frametype = Frame.BANZAI_RED_FRAMETYPE)
+    neox_frames = frames.filter(frametype = Frame.NEOX_RED_FRAMETYPE)
     frames = frames.order_by('midpoint')
+    if len(banzai_frames) != len(neox_frames):
+        print(f'Block uid: {block.get_blockuid}, Num banzai frames: {len(banzai_frames)}, Num neox frames: {len(neox_frames)}')
 
-    return frames
+    return neox_frames, len(banzai_frames), len(neox_frames)
 
 
 def frames_summary(frames):
@@ -102,7 +117,7 @@ def get_ephem(block):
     Creates a horizons ephemeris table for a passed <block>
     '''
     didymos = Body.objects.get(name = '65803')
-    frames = find_frames(block)
+    frames, num_banzai, num_neox = find_frames(block)
     #frames_summary(frames)
     first_frame = frames[0]
     last_frame = frames[frames.count()-1]
