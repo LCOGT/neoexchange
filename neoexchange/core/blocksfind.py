@@ -38,13 +38,15 @@ def blocks_summary(blocks):
                 proposal_code=sblock.proposal.code
         print(f"{block.block_start}->{block.block_end} {block.num_exposures}x{block.exp_length}s observed={block.num_observed} ({proposal_code})")
 
-def split_light_curve_blocks(block, exptime):
+def split_light_curve_blocks(block, exptime=800):
     '''
     Routine to split a light curve <block> into equal sized sub-blocks with
     total exposure time equal to <exptime>
     '''
     exp_length = block.exp_length
     frames, num_banzai, num_neox = find_frames(block)
+    if len(frames)==0:
+        return []
     total_exp_time = len(frames) * exp_length
     div_factor = total_exp_time/exptime
     split_block = np.array_split(frames, round(div_factor))
