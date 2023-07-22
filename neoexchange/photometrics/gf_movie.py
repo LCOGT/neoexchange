@@ -247,13 +247,19 @@ def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=True,
                 ax = plt.subplot(projection=wcs)
             dec = ax.coords['dec']
             # Disabling Automatic Labelling to stop 'pos.eq.dec' labels showing up
-            dec.set_auto_axislabel(False)
+            try:
+                dec.set_auto_axislabel(False)
+            except AttributeError:
+                dec.set_axislabel('')
             dec.set_major_formatter('dd:mm')
             dec.set_ticks_position('br')
             dec.set_ticklabel_position('br')
             dec.set_ticklabel(fontsize=10, exclude_overlapping=True)
             ra = ax.coords['ra']
-            ra.set_auto_axislabel(False)
+            try:
+                ra.set_auto_axislabel(False)
+            except AttributeError:
+                ra.set_axislabel('')
             ra.set_major_formatter('hh:mm:ss')
             ra.set_ticks_position('lb')
             ra.set_ticklabel_position('lb')
