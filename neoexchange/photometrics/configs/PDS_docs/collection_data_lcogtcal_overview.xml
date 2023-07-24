@@ -30,7 +30,7 @@
   </Identification_Area>
   <Reference_List>
     <Internal_Reference>
-        <lid_reference>urn:nasa:pds:dart_teleobs:documentation_lcogt:lcogt_dart_uncalibrated_calibrated_sis</lid_reference>
+        <lid_reference>urn:nasa:pds:dart_teleobs:document_lcogt:lcogt_dart_uncalibrated_calibrated_sis</lid_reference>
         <reference_type>document_to_associate</reference_type>
         <comment>Las Cumbres Observatory DART Uncalibrated, Calibrated SIS document which describes the Las Cumbres Observatory DART data products.
         </comment>
