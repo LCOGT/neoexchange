@@ -1044,7 +1044,7 @@ def create_reference_list(collection_type):
     reference_list = etree.Element("Reference_List")
     # Create Internal Reference subclass of Target Area
     int_reference = etree.SubElement(reference_list, "Internal_Reference")
-    etree.SubElement(int_reference, "lid_reference").text = "urn:nasa:pds:dart_teleobs:document_lcogt:las_cumbres_dart_uncalibrated_calibrated_sis"
+    etree.SubElement(int_reference, "lid_reference").text = "urn:nasa:pds:dart_teleobs:document_lcogt:lcogt_dart_uncalibrated_calibrated_sis"
     etree.SubElement(int_reference, "reference_type").text = "collection_to_document"
     etree.SubElement(int_reference, "comment").text = "Reference is to the Las Cumbres DART Uncalibrated, Calibrated SIS document which describes the data products in this collection."
     # Create Internal Reference to the <collection_type>'s overview
