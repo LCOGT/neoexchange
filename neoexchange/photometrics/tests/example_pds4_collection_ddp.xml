@@ -90,7 +90,7 @@
       <comment>Reference is to the Las Cumbres DART Uncalibrated, Calibrated SIS document which describes the data products in this collection.</comment>
     </Internal_Reference>
     <Internal_Reference>
-      <lid_reference>urn:nasa:pds:dart_teleobs:data_lcogtddp:overview</lid_reference>
+      <lid_reference>urn:nasa:pds:dart_teleobs:data_lcogtddp:collection_data_lcogtddp_overview</lid_reference>
       <reference_type>collection_to_document</reference_type>
       <comment>Reference is to the text file which gives an overview of the LCOGT ddp Data Collection.</comment>
     </Internal_Reference>
