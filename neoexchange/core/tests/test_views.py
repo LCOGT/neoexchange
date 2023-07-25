@@ -7312,11 +7312,43 @@ class TestFindBestSolarAnalog(TestCase):
             else:
                 self.assertEqual(expected_params[key], close_params[key])
 
-        close_standard2, close_params2, close_std_list2 = find_best_solar_analog(emp['ra'], emp['dec'], 'F65', num=2)
-        self.assertNotEqual(expected_params['name'], close_params2['name'])
-        self.assertNotEqual(expected_params['ra'], close_params2['ra'])
-        self.assertEqual(close_std_list2, close_std_list)
-        self.assertEqual(close_std_list[1]['calib'], close_standard2)
+    def test_FTN_bad_double(self):
+        expected_ra = 5.862367762762174
+        expected_dec = 0.8043113661006512
+        expected_standard = StaticSource.objects.get(name='16 Cyg B')
+        expected_params = {'separation_deg': 26.90873312301707}
+        # Python 3.5 dict merge; see PEP 448
+        expected_params = {**expected_params, **model_to_dict(expected_standard)}
+
+        emp = { 'ra' : expected_ra, 'dec' : expected_dec}
+        close_standard, close_params, close_std_list = find_best_solar_analog(emp['ra'], emp['dec'], 'F65')
+
+        self.assertEqual(expected_standard, close_standard)
+        self.assertEqual(len(close_std_list), 5)
+        self.assertGreater(close_std_list[1]["separation"], close_std_list[0]["separation"])
+        self.assertGreater(close_std_list[2]["separation"], close_std_list[1]["separation"])
+        self.assertGreater(close_std_list[3]["separation"], close_std_list[2]["separation"])
+
+        for key in expected_params:
+            if '_deg' in key or '_rad' in key:
+                self.assertAlmostEqual(expected_params[key], close_params[key], places=self.precision)
+            else:
+                self.assertEqual(expected_params[key], close_params[key])
+
+        # Lower quality of 16 Cyg B so its not found
+        expected_standard.quality = -1
+        expected_standard.save()
+        expected_standard = StaticSource.objects.get(name='HD 224251')
+        expected_params = {'separation_deg': 13.031726234959416}
+        # Python 3.5 dict merge; see PEP 448
+        expected_params = {**expected_params, **model_to_dict(expected_standard)}
+        close_standard, close_params, close_std_list = find_best_solar_analog(emp['ra'], emp['dec'], 'F65')
+
+        self.assertEqual(expected_standard, close_standard)
+        self.assertEqual(len(close_std_list), 5)
+        self.assertGreater(close_std_list[1]["separation"], close_std_list[0]["separation"])
+        self.assertGreater(close_std_list[2]["separation"], close_std_list[1]["separation"])
+        self.assertGreater(close_std_list[3]["separation"], close_std_list[2]["separation"])
 
     def test_FTS(self):
         expected_ra = 4.334041503242261

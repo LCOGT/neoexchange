@@ -4603,7 +4603,7 @@ def find_best_solar_analog(ra_rad, dec_rad, site, ha_sep=4.0, num=None, solar_st
     else:
         num = 0
     if solar_standards is None:
-        solar_standards = StaticSource.objects.filter(source_type=StaticSource.SOLAR_STANDARD)
+        solar_standards = StaticSource.objects.filter(source_type=StaticSource.SOLAR_STANDARD, quality__gte=0)
 
     if site == 'E10':
         dec_lim = [-90.0, 20.0]
