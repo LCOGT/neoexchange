@@ -42,6 +42,7 @@ class Command(BaseCommand):
         V_mags = []
 
         blocks, dates = filter_blocks(None, start_date, end_date, 3, 10)
+        #later: implement call to split_light_curve_blocks()
 
         #check if number of Blocks >0
         if len(blocks)==0:

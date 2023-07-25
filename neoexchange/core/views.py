@@ -3647,6 +3647,8 @@ def convert_fits_to_pdf(filename, dest_dir, crop=False, center_RA=0, center_DEC=
     if crop:
         filename, status = run_astwarp(filename, dest_dir, center_RA, center_DEC, width, height, dbg=dbg)
         hdu = 'ALIGNED'
+    if '-crop' in filename:
+        hdu = 'ALIGNED'
     if '-chisel' in filename:
         hdu = 'DETECTIONS'
     if '-combine' in filename:

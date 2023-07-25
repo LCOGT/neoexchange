@@ -231,6 +231,7 @@ class TestSplitLightCurveBlocks(TestCase):
 
         frame_params = { 'sitecode' : 'K92',
                           'filter' : 'w',
+                          'exptime' : 30,
                           'block' : self.test_block,
                           'midpoint' : datetime(2022,10,20,15,0,0),
                           'frametype' : Frame.NEOX_RED_FRAMETYPE
@@ -244,13 +245,16 @@ class TestSplitLightCurveBlocks(TestCase):
 
     def test_empty_block(self):
         expected_split_block = []
-        split_block = split_light_curve_blocks(self.empty_test_block)
+        expected_dates = []
+        split_block, dates = split_light_curve_blocks(self.empty_test_block)
         self.assertEquals(expected_split_block, split_block)
+        self.assertEquals(expected_dates, dates)
 
     def test_exptime(self):
         expected_split_block_len = 2
-        split_block = split_light_curve_blocks(self.test_block, exptime=100)
+        split_block, dates = split_light_curve_blocks(self.test_block, exptime=100)
         self.assertEquals(expected_split_block_len, len(split_block))
+        self.assertEquals(len(split_block), len(dates))
 
 class TestFindFrames(TestCase):
     def setUp(self):

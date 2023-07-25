@@ -43,15 +43,21 @@ def split_light_curve_blocks(block, exptime=800):
     Routine to split a light curve <block> into equal sized sub-blocks with
     total exposure time equal to <exptime>
     '''
+    dates = []
     exp_length = block.exp_length
     frames, num_banzai, num_neox = find_frames(block)
     if len(frames)==0:
-        return []
+        return [], []
     total_exp_time = len(frames) * exp_length
     div_factor = total_exp_time/exptime
     split_block = np.array_split(frames, round(div_factor))
+    for block in split_block:
+        first_frame = block[0]
+        delta = timedelta(seconds = first_frame.exptime/2)
+        start_date = first_frame.midpoint - delta
+        dates.append(start_date)
 
-    return split_block
+    return split_block, dates
 
 def filter_blocks(original_blocks, start_date, end_date, min_frames=3, max_frames=10):
     '''
@@ -62,11 +68,11 @@ def filter_blocks(original_blocks, start_date, end_date, min_frames=3, max_frame
     and <end_date> and that have a number of frames between <min_frames> and
     <max_frames>.
     '''
-
     if original_blocks is None:
         didymos_blocks = find_didymos_blocks()
     else:
         didymos_blocks = original_blocks
+
     blocks = didymos_blocks.filter(block_start__gte = start_date)
     blocks = blocks.filter(block_end__lte = end_date)
     filtered_blocks = []
