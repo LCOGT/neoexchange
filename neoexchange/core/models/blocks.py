@@ -217,17 +217,25 @@ class Block(models.Model):
 
     @cached_property
     def get_blockuid(self):
-        """Return and Cache the BLKUID"""
+        """Return and Cache the BLKUID. Returns a list (can be empty) of the BLKUID(s)"""
         warnings.simplefilter('ignore', FITSFixedWarning)
+        blockuid = []
+
         frame = Frame.objects.filter(block=self, frametype=Frame.BANZAI_RED_FRAMETYPE, frameid__isnull=False).first()
-        blockuid = None
-        if frame is not None:
-            if frame.frameid is not None:
-                url = f"{settings.ARCHIVE_FRAMES_URL}{frame.frameid}"
-                headers = lco_api_call(url)
-                blockuid = headers.get('BLKUID', None)
-                if blockuid is not None:
-                    blockuid = str(blockuid)
+        frames = [frame, ]
+        if self.num_observed >= 2:
+            if self.num_observed > 2:
+                logger.warning(f"More than 2 observations of Block id={self.id} - cannot retrieve all BLKUIDs")
+            last_frame = Frame.objects.filter(block=self, frametype=Frame.BANZAI_RED_FRAMETYPE, frameid__isnull=False).last()
+            frames.append(last_frame)
+        for frame in frames:
+            if frame is not None:
+                if frame.frameid is not None:
+                    url = f"{settings.ARCHIVE_FRAMES_URL}{frame.frameid}"
+                    headers = lco_api_call(url)
+                    frame_blockuid = headers.get('BLKUID', None)
+                    if frame_blockuid is not None:
+                        blockuid.append(str(frame_blockuid))
         return blockuid
 
     @cached_property
