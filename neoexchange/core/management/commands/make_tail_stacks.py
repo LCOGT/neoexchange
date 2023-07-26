@@ -8,7 +8,7 @@ from astropy.io import ascii
 from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 
-from core.blocksfind import filter_blocks, find_frames
+from core.blocksfind import filter_blocks, find_frames, split_light_curve_blocks
 from core.views import run_astwarp_alignment_noisechisel, convert_fits_to_pdf
 
 
@@ -41,43 +41,52 @@ class Command(BaseCommand):
         output_data_paths = []
         V_mags = []
 
-        blocks, dates = filter_blocks(None, start_date, end_date, 3, 10)
-        #later: implement call to split_light_curve_blocks()
+        lc_blocks, lc_dates = filter_blocks(None, start_date, end_date, 10, 1000)
+        tm_blocks, tm_dates = filter_blocks(None, start_date, end_date, 3, 10)
+
+        all_blocks = lc_blocks + tm_blocks
+        all_dates = lc_dates + tm_dates
 
         #check if number of Blocks >0
-        if len(blocks)==0:
+        if len(all_blocks)==0:
             raise CommandError('No blocks were found.')
 
         current_time = start_date
         while current_time <= end_date:
             #self.stdout.write(current_time.strftime('%Y-%m-%d %H:%M'))
 
-            if len(blocks) != 0:
+            if len(all_blocks) != 0:
                 #find closest Block in time to current_time
-                block_start = min(dates, key=lambda d: abs(d - current_time))
-                index = dates.index(block_start)
-                block = blocks[index]
+                block_start_date = min(all_dates, key=lambda d: abs(d - current_time))
+                index = all_dates.index(block_start_date)
+                block = all_blocks[index]
 
                 #remove block from list so it is not repeated
-                blocks.remove(block)
-                dates.remove(block_start)
+                del all_blocks[index]
+                #all_blocks.remove(block)
+                del all_dates[index]
+                #all_dates.remove(block_start_date)
             else:
                 break
 
-            #find Frames for Block
-            frames = find_frames(block)
-            #print(frames[0].frametype)
+            #find Frames in block
+            frames, num_banzai, num_neox = find_frames(block)
 
             #later: handle muscat frames in g,r,i,z
 
             #set up working directory for Block and make a copy of all frames
             dayobs = block.get_blockdayobs
+
             input_data_path = os.path.join(sci_dir, dayobs, block.body.current_name()+'_'+block.get_blockuid, 'Temp_cvc_multiap')
             output_path = os.path.join(dest_dir, 'original_files', dayobs)
             if os.path.exists(output_path) is False:
                 os.makedirs(output_path)
             for frame in frames:
-                shutil.copy(os.path.join(input_data_path,frame.filename), output_path)
+                path = os.path.join(input_data_path,frame.filename)
+                if os.path.exists(path) is False:
+                    print(f'path does not exist: {path}')
+                else:
+                    shutil.copy(os.path.join(input_data_path,frame.filename), output_path)
             sci_dir_path = output_path
             dest_dir_path = os.path.join(dest_dir, dayobs)
 

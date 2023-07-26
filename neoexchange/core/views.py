@@ -88,7 +88,7 @@ from core.utils import search
 from photometrics.SA_scatter import readSources, genGalPlane, plotScatter, \
     plotFormat
 from core.plots import spec_plot, lin_vis_plot, lc_plot
-from core.blocksfind import find_frames, get_ephem, ephem_interpolate
+from core.blocksfind import find_frames, get_ephem, ephem_interpolate, split_light_curve_blocks
 
 # import matplotlib
 # matplotlib.use('Agg')
@@ -3596,20 +3596,32 @@ def run_astwarp_alignment(block, sci_dir, dest_dir):
     if os.path.exists(dest_dir) is False:
         os.makedirs(dest_dir)
 
-    filenames = []
-    #for each frame interpolate position for frame midtime then call run_astwarp
-    for frame in frames:
-        result_RA, result_DEC = ephem_interpolate(frame.midpoint, table)
-        #print(frame.filename, result_RA, result_DEC)
-        fits_filename = os.path.join(sci_dir, frame.filename)
-        cropped_filename, status = run_astwarp(fits_filename, dest_dir, result_RA[0], result_DEC[0])
-        #print(cropped_filename, status)
-        filenames.append(cropped_filename)
+    #check if light curve block or tail monitoring block
+    if len(frames) > 10:
+        split_block = split_light_curve_blocks(block)
+        combined_filenames = []
+        statuses = []
+        for sub_block in split_block:
+            filenames = []
+            for frame in sub_block:
+                result_RA, result_DEC = ephem_interpolate(frame.midpoint, table)
+                fits_filename = os.path.join(sci_dir, frame.filename)
+                cropped_filename, status = run_astwarp(fits_filename, dest_dir, result_RA[0], result_DEC[0])
+                filenames.append(cropped_filename)
+            combined_filename, status = run_astarithmetic(filenames, dest_dir)
+            combined_filenames.append(combined_filename)
+            statuses.append(status)
+        return combined_filename, statuses
 
-    #call stacking routine
-    combined_filename, status = run_astarithmetic(filenames, dest_dir)
-
-    return combined_filename, status
+    else:
+        filenames = []
+        for frame in frames:
+            result_RA, result_DEC = ephem_interpolate(frame.midpoint, table)
+            fits_filename = os.path.join(sci_dir, frame.filename)
+            cropped_filename, status = run_astwarp(fits_filename, dest_dir, result_RA[0], result_DEC[0])
+            filenames.append(cropped_filename)
+        combined_filename, status = run_astarithmetic(filenames, dest_dir)
+        return combined_filename, status
 
 def run_noisechisel(filename, dest_dir):
     '''

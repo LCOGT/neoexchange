@@ -57,7 +57,7 @@ def split_light_curve_blocks(block, exptime=800):
         start_date = first_frame.midpoint - delta
         dates.append(start_date)
 
-    return split_block, dates
+    return split_block#, dates
 
 def filter_blocks(original_blocks, start_date, end_date, min_frames=3, max_frames=10):
     '''
@@ -75,6 +75,7 @@ def filter_blocks(original_blocks, start_date, end_date, min_frames=3, max_frame
 
     blocks = didymos_blocks.filter(block_start__gte = start_date)
     blocks = blocks.filter(block_end__lte = end_date)
+    blocks = blocks.exclude(block_start__lte = "2022-09-27T04:00:00")
     filtered_blocks = []
     dates = []
     for block in blocks:
