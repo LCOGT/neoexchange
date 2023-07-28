@@ -15,12 +15,15 @@ import os
 from io import StringIO
 from shutil import move
 import copy
+import warnings
 from glob import glob
 from operator import itemgetter
 from datetime import datetime, timedelta, date
 from math import floor, ceil, degrees, radians, pi, acos, pow, cos
+
 from astropy import units as u
 from astropy.io import ascii
+from astropy.wcs import FITSFixedWarning
 from astropy.coordinates import SkyCoord
 import json
 import logging
@@ -52,7 +55,6 @@ try:
     import pyslalib.slalib as S
 except ImportError:
     pass
-import io
 from urllib.parse import urljoin
 
 from .forms import EphemQuery, ScheduleForm, ScheduleCadenceForm, ScheduleBlockForm, \
@@ -4684,6 +4686,9 @@ def create_latex_table(body_or_name):
                  'caption': 'Table of observations for ' + body.current_name() + ' with LCOGT',
                  'tablefoot': ''}
                  
+    # Suppress WCS obsfix warnings when accessing Frame objects
+    warnings.simplefilter('ignore', FITSFixedWarning)
+
     table_data = {}
     for field in cleaned_data.get('field_list', []):
         for obs_record in blocks.order_by('block_start'):
