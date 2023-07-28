@@ -14,12 +14,14 @@ GNU General Public License for more details.
 import os
 from io import StringIO
 from shutil import move
+import copy
 from glob import glob
 from operator import itemgetter
 from datetime import datetime, timedelta, date
-from math import floor, ceil, degrees, radians, pi, acos, pow
+from math import floor, ceil, degrees, radians, pi, acos, pow, cos
 from astropy import units as u
 from astropy.io import ascii
+from astropy.coordinates import SkyCoord
 import json
 import logging
 import tempfile
@@ -54,7 +56,7 @@ import io
 from urllib.parse import urljoin
 
 from .forms import EphemQuery, ScheduleForm, ScheduleCadenceForm, ScheduleBlockForm, \
-    ScheduleSpectraForm, MPCReportForm, SpectroFeasibilityForm, AddTargetForm
+    ScheduleSpectraForm, MPCReportForm, SpectroFeasibilityForm, AddTargetForm, AddPeriodForm, UpdateAnalysisStatusForm
 from .models import *
 from astrometrics.ast_subs import determine_asteroid_type, determine_time_of_perih, \
     convert_ast_to_comet
@@ -94,6 +96,7 @@ import matplotlib.pyplot as plt
 logger = logging.getLogger(__name__)
 
 BOKEH_URL = "https://cdn.bokeh.org/bokeh/release/bokeh-{}.min."
+
 
 def home(request):
     params = build_unranked_list_params()
@@ -167,7 +170,7 @@ class AddTarget(LoginRequiredMixin, FormView):
 
     def form_invalid(self, form, **kwargs):
         context = self.get_context_data(**kwargs)
-        return render(context['view'].request, self.template_name, {'form': form, })
+        return render(context['view'].request, self.template_name, {'form': form})
 
     def form_valid(self, form):
         origin = form.cleaned_data['origin']
@@ -305,11 +308,11 @@ class SuperBlockTimeline(DetailView):
             else:
                 date = blk.block_start.isoformat(' ')
             data = {
-                'date' : date,
-                'num'  : blk.num_observed if blk.num_observed else 0,
-                'type' : blk.get_obstype_display(),
-                'duration' : (blk.block_end - blk.block_start).seconds,
-                'location' : blk.where_observed()
+                'date': date,
+                'num': blk.num_observed if blk.num_observed else 0,
+                'type': blk.get_obstype_display(),
+                'duration': (blk.block_end - blk.block_start).seconds,
+                'location': blk.where_observed()
                 }
             blks.append(data)
         context['blocks'] = json.dumps(blks)
@@ -1052,10 +1055,10 @@ class ScheduleCalibSubmit(LoginRequiredMixin, SingleObjectMixin, FormView):
             return self.form_invalid(form, request)
 
     def form_valid(self, form, request):
+        # Recalculate the parameters by amending the block length
+        data = schedule_check(form.cleaned_data, self.object)
+        new_form = ScheduleBlockForm(data)
         if 'edit' in request.POST:
-            # Recalculate the parameters by amending the block length
-            data = schedule_check(form.cleaned_data, self.object)
-            new_form = ScheduleBlockForm(data)
             return render(request, self.template_name, {'form': new_form, 'data': data, 'calibrator': self.object})
         elif 'submit' in request.POST:
             target = self.get_object()
@@ -1066,7 +1069,7 @@ class ScheduleCalibSubmit(LoginRequiredMixin, SingleObjectMixin, FormView):
 
             if tracking_num:
                 messages.success(self.request, "Request %s successfully submitted to the scheduler" % tracking_num)
-                block_resp = record_block(tracking_num, sched_params, form.cleaned_data, target)
+                block_resp = record_block(tracking_num, sched_params, form.cleaned_data, target, observer=request.user)
                 if block_resp:
                     messages.success(self.request, "Block recorded")
                 else:
@@ -1120,7 +1123,7 @@ class ScheduleSubmit(LoginRequiredMixin, SingleObjectMixin, FormView):
             tracking_num, sched_params = schedule_submit(new_form.cleaned_data, target, username)
             if tracking_num:
                 messages.success(self.request, "Request %s successfully submitted to the scheduler" % tracking_num)
-                block_resp = record_block(tracking_num, sched_params, new_form.cleaned_data, target)
+                block_resp = record_block(tracking_num, sched_params, new_form.cleaned_data, target, observer=request.user)
                 self.success = True
                 if block_resp:
                     messages.success(self.request, "Block recorded")
@@ -1318,6 +1321,7 @@ def schedule_check(data, body, ok_to_schedule=True):
         speed = 0.0
         ra = radians(body.ra)
         dec = radians(body.dec)
+    adjusted_speed = speed
 
     # Determine filter pattern
     if data.get('filter_pattern'):
@@ -1373,6 +1377,7 @@ def schedule_check(data, body, ok_to_schedule=True):
     snr = None
     saturated = None
     if spectroscopy:
+        fractional_tracking_rate = 1.0
         snr_params = {'airmass': max_alt_airmass,
                       'slit_width': float(filter_pattern[5:8])*u.arcsec,
                       'moon_phase': moon_phase_code
@@ -1393,12 +1398,25 @@ def schedule_check(data, body, ok_to_schedule=True):
                 solar_analog_exptime = data.get('calibsource_exptime')
 
     else:
+        # calculate rate of relative motion on chip
+        try:
+            if 'fractional_rate' not in data and body_elements.get('elements_type', '') == 'MPC_COMET':
+                fractional_tracking_rate = 1.0
+            else:
+                fractional_tracking_rate = float(data.get('fractional_rate', 0.5))
+        except ValueError:
+            fractional_tracking_rate = 0.5
+            if body_elements.get('elements_type', '') == 'MPC_COMET':
+                print("Setting to 1.0 for comets")
+                fractional_tracking_rate = 1.0
+        relative_apparent_rate = abs(fractional_tracking_rate - 0.5) + 0.5
+        adjusted_speed = speed * relative_apparent_rate
         # Determine exposure length and count
         if data.get('exp_length', None):
             exp_length = data.get('exp_length')
             slot_length, exp_count = determine_exp_count(slot_length, exp_length, data['site_code'], filter_pattern, bin_mode=bin_mode)
         else:
-            exp_length, exp_count = determine_exp_time_count(speed, data['site_code'], slot_length, magnitude, filter_pattern, bin_mode=bin_mode)
+            exp_length, exp_count = determine_exp_time_count(adjusted_speed, data['site_code'], slot_length, magnitude, filter_pattern, bin_mode=bin_mode)
             slot_length, exp_count = determine_exp_count(slot_length, exp_length, data['site_code'], filter_pattern, exp_count, bin_mode=bin_mode)
         if exp_length is None or exp_count is None:
             ok_to_schedule = False
@@ -1424,7 +1442,7 @@ def schedule_check(data, body, ok_to_schedule=True):
         trail_len = determine_star_trails(speed, ag_exp_time)
     else:
         ag_exp_time = None
-        trail_len = determine_star_trails(speed, exp_length)
+        trail_len = determine_star_trails(adjusted_speed, exp_length)
     if lco_site_code[-4:-1].upper() == "0M4":
         typical_seeing = 3.0
     else:
@@ -1471,18 +1489,40 @@ def schedule_check(data, body, ok_to_schedule=True):
     # Create Group ID
     group_name = validate_text(data.get('group_name', None))
 
-    suffix = datetime.strftime(utc_date, '%Y%m%d')
     if period and jitter:
-        suffix = "cad-%s-%s" % (datetime.strftime(rise_time, '%Y%m%d'), datetime.strftime(set_time, '%m%d'))
-    elif spectroscopy:
-        suffix += "_spectra"
+        name_date = f"-cad-{datetime.strftime(rise_time, '%Y%m%d')}-{datetime.strftime(set_time, '%m%d')}"
+    else:
+        name_date = datetime.strftime(utc_date, '-%Y%m%d')
+
+    # Define possible tags that can be added on confirmation page
+    possible_tags = ['_spectra', '_ToO', '_bin2x2', '_dither']
+    # Build defualt group name
+    base_group_name = body.current_name() + '_' + data['site_code'].upper()
+    default_group_name = base_group_name + name_date
+    if spectroscopy:
+        default_group_name += possible_tags[0]
     if too_mode is True:
-        suffix += '_ToO'
-    default_group_name = body.current_name() + '_' + data['site_code'].upper() + '-' + suffix
-    if not group_name or (group_name == default_group_name + '_bin2x2' and bin_mode != '2k_2x2'):
+        default_group_name += possible_tags[1]
+    # Test group name for custom user additions
+    test_name = group_name
+    test_name = test_name.replace(base_group_name, '')
+    test_name = test_name.replace(name_date, '')
+    for tag in possible_tags:
+        test_name = test_name.replace(tag, '')
+    # Check for new date
+    if len(test_name) == 9 and test_name[:3] == '-20' and test_name[-8:].isdigit():
+        test_name = ''
+        # Check for new Cadence
+    elif "cad-20" in test_name and len(test_name) == 18 and test_name.replace('-', '').replace('cad', '').isdigit():
+        test_name = ''
+    # If no name, or no user additions, remake group name
+    if not group_name or not test_name:
         group_name = default_group_name
-    if group_name == default_group_name and bin_mode == '2k_2x2':
-        group_name += '_bin2x2'
+    if group_name == default_group_name:
+        if bin_mode == '2k_2x2':
+            group_name += possible_tags[2]
+        if data.get('add_dither', False):
+            group_name += possible_tags[3]
 
     resp = {
         'target_name': body.current_name(),
@@ -1540,6 +1580,9 @@ def schedule_check(data, body, ok_to_schedule=True):
         'calibsource_predict_exptime': sa_predicted_exptime,
         'calibsource_list_options': calib_list,
         'calibsource_list': calibsource_list_init,
+        'dither_distance': data.get('dither_distance', 10),  # set default value to 10 arcsec.
+        'add_dither': data.get('add_dither', False),
+        'fractional_rate': fractional_tracking_rate,
     }
 
     if not spectroscopy and 'F65' in data['site_code']:
@@ -1580,17 +1623,17 @@ def schedule_submit(data, body, username):
     if data.get('solar_analog', False) and data.get('calibsource_id', -1) > 0:
         try:
             calibsource = StaticSource.objects.get(pk=data['calibsource_id'])
-            calibsource_params = {  'id'      : calibsource.pk,
-                                    'name'    : calibsource.name,
-                                    'ra_deg'  : calibsource.ra,
-                                    'dec_deg' : calibsource.dec,
-                                    'pm_ra'   : calibsource.pm_ra,
-                                    'pm_dec'  : calibsource.pm_dec,
-                                    'parallax': calibsource.parallax,
-                                    'source_type' : calibsource.source_type,
-                                    'vmag' : calibsource.vmag,
-                                    'calib_exptime': data.get('calibsource_exptime', 60)
-                                 }
+            calibsource_params = {'id': calibsource.pk,
+                                  'name': calibsource.name,
+                                  'ra_deg': calibsource.ra,
+                                  'dec_deg': calibsource.dec,
+                                  'pm_ra': calibsource.pm_ra,
+                                  'pm_dec': calibsource.pm_dec,
+                                  'parallax': calibsource.parallax,
+                                  'source_type': calibsource.source_type,
+                                  'vmag': calibsource.vmag,
+                                  'calib_exptime': data.get('calibsource_exptime', 60)
+                                  }
         except StaticSource.DoesNotExist:
             logger.error("Was passed a StaticSource id=%d, but it now can't be found" % data['calibsource_id'])
 
@@ -1652,7 +1695,11 @@ def schedule_submit(data, body, username):
               'para_angle': data.get('para_angle', False),
               'min_lunar_distance': data.get('min_lunar_dist', 30),
               'acceptability_threshold': data.get('acceptability_threshold', 90),
-              'ag_exp_time': data.get('ag_exp_time', 10)
+              'ag_exp_time': data.get('ag_exp_time', 10),
+              'dither_distance': data.get('dither_distance', 10),
+              'add_dither': data.get('add_dither', False),
+              'fractional_rate': float(data.get('fractional_rate', 0.5)),
+              'speed': data.get('speed', 0)
               }
     if data['period'] or data['jitter']:
         params['period'] = data['period']
@@ -1762,7 +1809,7 @@ def feasibility_check(data, body):
     return data
 
 
-class SpecDataListView(ListView):
+class SpecDataListDisplay(ListView):
     model = Block
     template_name = 'core/data_summary.html'
     queryset = Block.objects.filter(obstype=1).filter(num_observed__gt=0).order_by('-when_observed')
@@ -1770,40 +1817,82 @@ class SpecDataListView(ListView):
     paginate_by = 20
 
     def get_context_data(self, **kwargs):
-        context = super(SpecDataListView, self).get_context_data(**kwargs)
+        # define data_type
+        context = super(SpecDataListDisplay, self).get_context_data(**kwargs)
         context['data_type'] = 'Spec'
+        # Define list of choices for status form
+        body_list = Body.objects.filter(block__in=context['data_list']).distinct()
+        body_choices_list = [(body.pk, body.current_name()) for body in body_list]
+        # Add form to context
+        form = UpdateAnalysisStatusForm()
+        form.fields['update_body'].choices = body_choices_list
+        context['form'] = form
         return context
 
 
-class LCDataListView(ListView):
+class UpdateBodyStatus(SingleObjectMixin, FormView):
+    template_name = 'core/data_summary.html'
+    form_class = UpdateAnalysisStatusForm
+    model = Body
+
+    def post(self, request, *args, **kwargs):
+        body_id = request.POST.get('update_body')
+        status_value = request.POST.get('status')
+        try:
+            body = Body.objects.get(pk=body_id)
+            body.analysis_status = status_value
+            body.as_updated = datetime.utcnow()
+            body.save()
+        except ObjectDoesNotExist:
+            logger.warning(f"Could not find a body for {body_id}.")
+        return redirect(reverse('lc_data_summary'))
+
+    def get_success_url(self):
+        return reverse('lc_data_summary')
+
+
+class SpecDataListView(View):
+
+    def get(self, request, *args, **kwargs):
+        view = SpecDataListDisplay.as_view()
+        return view(request, *args, **kwargs)
+
+    def post(self, request, *args, **kwargs):
+        view = UpdateBodyStatus.as_view()
+        return view(request, *args, **kwargs)
+
+
+class LCDataListDisplay(ListView):
     model = Body
     template_name = 'core/data_summary.html'
+    period_info = PhysicalParameters.objects.filter(parameter_type='P').order_by('-preferred')
+    prefetch_period = Prefetch('physicalparameters_set', queryset=period_info, to_attr='rot_period')
+    queryset = Body.objects.filter(superblock__dataproduct__filetype=DataProduct.ALCDEF_TXT).distinct().prefetch_related(prefetch_period).order_by('-as_updated').order_by('analysis_status')
     paginate_by = 20
+    context_object_name = "data_list"
 
     def get_context_data(self, **kwargs):
-        context = {'data_list': self.find_lc(), 'data_type': 'LC'}
+        # define data_type
+        context = super(LCDataListDisplay, self).get_context_data(**kwargs)
+        context['data_type'] = 'LC'
+        # Define list of choices for status form
+        body_choices_list = [(body.pk, body.current_name()) for body in context['data_list']]
+        # Add form to context
+        form = UpdateAnalysisStatusForm()
+        form.fields['update_body'].choices = body_choices_list
+        context['form'] = form
         return context
 
-    def find_lc(self):
-        base_dir = os.path.join(settings.DATA_ROOT, 'Reduction')
-        dir_list, _ = default_storage.listdir(base_dir)
-        name_list = []
-        for name in dir_list:
-            if name.isdigit():
-                name_list.append(name)
-            elif '_' in name:
-                name_list.append(name.replace('_', ' '))
-            else:
-                for c in range(len(name)):
-                    new_name = name[:c] + ' ' + name[c:]
-                    name_list.append(new_name.lstrip())
-        object_list = Body.objects.filter(Q(designations__value__in=name_list) | Q(provisional_name__in=name_list)
-                                          | Q(provisional_packed__in=name_list) | Q(name__in=name_list))
-        final_objects = object_list
-        for obj in object_list:
-            if sanitize_object_name(obj.current_name()) not in name_list:
-                final_objects = final_objects.exclude(pk=obj.pk)
-        return list(set(final_objects))
+
+class LCDataListView(View):
+
+    def get(self, request, *args, **kwargs):
+        view = LCDataListDisplay.as_view()
+        return view(request, *args, **kwargs)
+
+    def post(self, request, *args, **kwargs):
+        view = UpdateBodyStatus.as_view()
+        return view(request, *args, **kwargs)
 
 
 def ranking(request):
@@ -1860,7 +1949,7 @@ def get_characterization_targets():
     """Function to return the list of Characterization targets.
     If we change this, also change models.Body.characterization_target"""
 
-    characterization_list = Body.objects.filter(active=True).exclude(origin='M').exclude(source_type='U')
+    characterization_list = Body.objects.filter(active=True).exclude(origin='M').exclude(source_type='U').exclude(origin='T')
     return characterization_list
 
 
@@ -1902,7 +1991,7 @@ def build_characterization_list(disp=None):
                             if m_wav == "NA":
                                 m_wav = "Yes"
                 body_dict = model_to_dict(body)
-                body_dict['current_name'] = body.current_name()
+                body_dict['full_name'] = body.full_name()
                 body_dict['ingest_date'] = body.ingest
                 body_dict['s_wav'] = s_wav
                 if s_vis_link:
@@ -2096,9 +2185,10 @@ def build_lookproject_list(disp=None):
 
 def look_project(request):
 
-    params =  build_lookproject_list()
+    params = build_lookproject_list()
     params['form'] = AddTargetForm()
     return render(request, 'core/lookproject.html', params)
+
 
 def check_for_block(form_data, params, new_body):
     """Checks if a block with the given name exists in the Django DB.
@@ -2124,7 +2214,8 @@ def check_for_block(form_data, params, new_body):
     try:
         block_id = SuperBlock.objects.get(body=new_body.id,
                                      groupid__contains=form_data['group_name'],
-                                     proposal=Proposal.objects.get(code=form_data['proposal_code'])
+                                     proposal=Proposal.objects.get(code=form_data['proposal_code']),
+                                     active=True
                                      )
 #                                         site=site_list[params['site_code']])
     except SuperBlock.MultipleObjectsReturned:
@@ -2139,7 +2230,7 @@ def check_for_block(form_data, params, new_body):
         return 1
 
 
-def record_block(tracking_number, params, form_data, target):
+def record_block(tracking_number, params, form_data, target, observer):
     """Records a just-submitted observation as a SuperBlock and Block(s) in the database.
     """
 
@@ -2168,9 +2259,10 @@ def record_block(tracking_number, params, form_data, target):
         else:
             sblock_kwargs['body'] = target
         # Check if this went to a rapid response proposal
-        if proposal.time_critical is True:
+        if proposal.time_critical is True and form_data.get('too_mode', False) is True and params.get('too_mode', False) is True:
             sblock_kwargs['rapid_response'] = True
         sblock_pk = SuperBlock.objects.create(**sblock_kwargs)
+        blockobserver = BlockObserver.objects.create(superblock=sblock_pk, observer=observer)
         i = 0
         for request, request_type in params.get('request_numbers', {}).items():
             # cut off json UTC timezone remnant
@@ -2219,9 +2311,11 @@ def record_block(tracking_number, params, form_data, target):
             if request_type == 'SIDEREAL' or request_type == 'ICRS':
                 block_kwargs['body'] = None
                 block_kwargs['calibsource'] = target
+                block_kwargs['tracking_rate'] = 0
             else:
                 block_kwargs['body'] = target
                 block_kwargs['calibsource'] = None
+                block_kwargs['tracking_rate'] = int(params['fractional_rate'] * 100)
             pk = Block.objects.create(**block_kwargs)
 
             if len(params.get('calibsource', {})) > 0:
@@ -2234,6 +2328,7 @@ def record_block(tracking_number, params, form_data, target):
                 block_kwargs['calibsource'] = calib_source
                 block_kwargs['exp_length'] = params['calibsrc_exptime']
                 block_kwargs['obstype'] = Block.OPT_SPECTRA_CALIB
+                block_kwargs['tracking_rate'] = 0
                 pk = Block.objects.create(**block_kwargs)
             i += 1
         return True
@@ -2945,6 +3040,8 @@ def update_MPC_orbit(obj_id_or_page, dbg=False, origin='M', force=False):
             logger.info("Added new orbit for %s from MPC" % obj_id)
     else:
         body.origin = origin
+        if origin != 'M':
+            body.active = True
         body.save()
         logger.info("More recent elements already stored for %s" % obj_id)
     # Update Physical Parameters
@@ -2986,8 +3083,8 @@ def update_MPC_orbit(obj_id_or_page, dbg=False, origin='M', force=False):
             if phys_params['value'] is not None:
                 saved = body.save_physical_parameters(phys_params)
                 body.refresh_from_db()
-                # Test to see if it's a DNC with a 1/a value < 1e-4 (10,000 AU)
-                if body.recip_a and body.recip_a < 1e-4 and body.source_subtype_2 is None:
+                # Test to see if it's a DNC with a 1/a0 value < 1e-4 (25,000 AU)
+                if body.recip_a and body.recip_a < 4e-5 and body.source_subtype_2 is None:
                     body.source_subtype_2 = 'DN'
                     body.save()
 
@@ -3373,6 +3470,40 @@ def find_matching_image_file(catfile):
     return fits_file_for_sext
 
 
+def determine_images_and_catalogs(self, datadir, red_level='e91', output=True):
+    """Count the numbers of FITS files (*[red_level].fits) and FITS-LDAC
+    catalogs (*[red_level]_ldac.fits) in <datadir> where [red_level] defaults
+    to 'e91'. If [output] is True,
+    print out the output.
+    When called from a Django managment command, `self` will be
+    automatically set and the output will use `self.stdout.write`.
+    When calling from elsewhere, set `self=None` and `print()`
+    will be used."""
+
+    if self is None:
+        func = print
+    else:
+        func = self.stdout.write
+
+    fits_files, fits_catalogs = None, None
+    # Add on a path separator at the end in case it's not there so `glob` works
+    # properly
+    datadir = os.path.join(datadir, '')
+    if os.path.exists(datadir) and os.path.isdir(datadir):
+        fits_files = sorted(glob(datadir + f'*{red_level}.fits'))
+        fits_catalogs = sorted(glob(datadir + f'*{red_level}_ldac.fits'))
+
+        if len(fits_files) == 0 and len(fits_catalogs) == 0:
+            if output: func(f"No {red_level} FITS files and catalogs found in directory {datadir}")
+            fits_files, fits_catalogs = None, None
+        else:
+            if output: func(f"Found {len(fits_files)} FITS files and {len(fits_catalogs)} catalogs for red level {red_level}")
+    else:
+        if output: func(f"Could not open directory {datadir}")
+        fits_files, fits_catalogs = None, None
+    return fits_files, fits_catalogs
+
+
 def run_sextractor_make_catalog(configs_dir, dest_dir, fits_file):
     """Run SExtractor, rename output to new filename which is returned"""
 
@@ -3497,9 +3628,11 @@ def check_catalog_and_refit(configs_dir, dest_dir, catfile, dbg=False, desired_c
         logger.error("Bad header for %s (%s)" % (catfile, e))
         return -1, num_new_frames_created
 
+    # Downgrade check on bad fit to a logged warning as we're seeing a fair
+    # number of instances where BANZAI fails but we can solve succesfully
     if header.get('astrometric_fit_status', None) != 0:
-        logger.error("Bad astrometric fit found")
-        return -1, num_new_frames_created
+        logger.warning("Bad astrometric fit found in %s", catfile)
+    # return -1, num_new_frames_created
 
     # Check catalog type
     if cattype != 'BANZAI':
@@ -3681,7 +3814,7 @@ def find_spec(pk):
 
     try:
         data = lco_api_call(url)['data']
-    except TypeError:
+    except (TypeError, KeyError) as e:
         return '', '', '', '', ''
 
     if 'DAY_OBS' in data:
@@ -3714,17 +3847,14 @@ def find_analog(date_obs, site):
     analog_blocks = Block.objects.filter(obstype=Block.OPT_SPECTRA_CALIB, site=site, when_observed__lte=date_obs+timedelta(days=10), when_observed__gte=date_obs-timedelta(days=10))
     star_list = []
     time_diff = []
-    for b in analog_blocks:
-        d_out, obj, req, path, prop = find_spec(b.id)
-        filenames = search(path, matchpattern='.*_2df_ex.fits', latest=False)
-        if filenames is False:
-            continue
-        filenames = [os.path.join(path, f) for f in filenames]
-        for fn in filenames:
-            star_list.append(fn)
-            time_diff.append(abs(date_obs - b.when_observed))
+    for block in analog_blocks:
+        block_db_list = DataProduct.content.block().filter(object_id=block.id)
+        analog_files = block_db_list.filter(filetype=DataProduct.FITS_SPECTRA)
+        for file in analog_files:
+            star_list.append(file)
+            time_diff.append(abs(date_obs - block.when_observed))
 
-    analog_list = [calib for _, calib in sorted(zip(time_diff, star_list))]
+    analog_list = [calib for _, calib in sorted(zip(time_diff, star_list), key=itemgetter(0))]
 
     return analog_list
 
@@ -3791,37 +3921,34 @@ def plot_all_spec(source):
 def plot_floyds_spec(block):
     """Get plots for requested blocks of FLOYDs data and subtract nearest solar analog."""
 
-    date_obs, obj, req, path, prop = find_spec(block.id)
-    filenames = search(path, matchpattern='.*_2df_ex.fits', latest=False)
-    if filenames is False:
-        return None, None
-    filenames = [os.path.join(path, f) for f in filenames]
+    block_db_list = DataProduct.content.block().filter(object_id=block.id)
+    spec_files = block_db_list.filter(filetype=DataProduct.FITS_SPECTRA)
 
     analogs = find_analog(block.when_observed, block.site)
 
     try:
         data_spec = []
-        for filename in filenames:
-            raw_label, raw_spec, ast_wav, spec_err = spectrum_plot(filename)
+        for spec_file in spec_files:
+            raw_label, raw_spec, ast_wav, spec_err = spectrum_plot(spec_file.product.name)
             data_spec.append({'label': raw_label,
                               'spec': raw_spec,
                               'wav': ast_wav,
                               'err': spec_err,
-                              'filename': filename})
+                              'filename': spec_file.product.name})
     except IndexError:
         data_spec = None
 
     analog_data = []
     offset = 2  # Arbitrary offset to minimize analog/target plotting overlap
     for analog in analogs:
-        analog_label, analog_spec, star_wav, spec_err = spectrum_plot(analog, offset=offset)
+        analog_label, analog_spec, star_wav, spec_err = spectrum_plot(analog.product.name, offset=offset)
         analog_data.append({'label': analog_label,
                             'spec': analog_spec,
                             'wav': star_wav,
                             'err': spec_err,
-                            'filename': analog})
+                            'filename': analog.product.name})
 
-    if data_spec:
+    if data_spec and data_spec[0]['spec'] is not None:
         script, div = spec_plot(data_spec, analog_data)
     else:
         return None, None
@@ -3876,16 +4003,21 @@ class PlotSpec(View):
 class LCPlot(LookUpBodyMixin, FormView):
 
     template_name = 'core/plot_lc.html'
+    form_class = AddPeriodForm
 
-    def get(self, request, *args, **kwargs):
-        best_period = self.body.get_physical_parameters('P', False)
+    def get(self, request, form=None, *args, **kwargs):
+        period_list = PhysicalParameters.objects.filter(body=self.body, parameter_type='P').order_by('update_time').order_by('-preferred')
+        best_period = period_list.filter(preferred=True)
         if best_period:
-            period = best_period[0].get('value', None)
+            period = best_period[0].value
         else:
             period = None
         script, div, meta_list = get_lc_plot(self.body, {'period': period})
+        if not form:
+            form = AddPeriodForm()
 
-        return self.render_to_response(self.get_context_data(body=self.body, script=script, div=div, meta_list=meta_list))
+        return self.render_to_response(self.get_context_data(body=self.body, script=script, div=div, form=form,
+                                                             meta_list=meta_list, period_list=period_list))
 
     def get_context_data(self, **kwargs):
         params = kwargs
@@ -3901,64 +4033,224 @@ class LCPlot(LookUpBodyMixin, FormView):
         params['table_path'] = BOKEH_URL.format('tables-'+bokeh.__version__) + 'js'
         return params
 
+    def form_invalid(self, form, **kwargs):
+        period_list = PhysicalParameters.objects.filter(body=self.body, parameter_type='P')
+        best_period = period_list.filter(preferred=True)
+        if best_period:
+            period = best_period[0].value
+        else:
+            period = None
+        script, div, meta_list = get_lc_plot(self.body, {'period': period})
+        if not form:
+            form = AddPeriodForm()
+        context = self.get_context_data(body=self.body, script=script, div=div, form=form, meta_list=meta_list, period_list=period_list)
+        return self.render_to_response(context)
 
-def import_alcdef(file, meta_list, lc_list):
-    """Pull LC data from ALCDEF text files."""
+    def form_valid(self, form):
+        period_data = form.cleaned_data
+        period_dict = {'value': period_data['period'],
+                       'error': period_data['error'],
+                       'parameter_type': 'P',
+                       'units': 'h',
+                       'preferred': period_data['preferred'],
+                       'reference': 'NEOX',
+                       'quality': period_data['quality'],
+                       'notes': period_data['notes']
+                       }
+        self.body.save_physical_parameters(period_dict)
+        return super(LCPlot, self).form_valid(form)
 
-    lc_file = default_storage.open(file, 'rb')
-    lines = lc_file.readlines()
+    def get_success_url(self):
+        return reverse('lc_plot', kwargs={'pk': self.body.id})
 
-    metadata = {}
-    dates = []
-    mags = []
-    mag_errs = []
-    met_dat = False
 
-    for line in lines:
-        line = str(line, 'utf-8')
-        if line[0] == '#':
-            continue
-        if '=' in line:
-            if 'DATA=' in line and met_dat is False:
-                chunks = line[5:].split('|')
-                jd = float(chunks[0])
-                mag = float(chunks[1])
-                mag_err = float(chunks[2])
-                dates.append(jd)
-                mags.append(mag)
-                mag_errs.append(mag_err)
-            else:
-                chunks = line.split('=')
-                metadata[chunks[0]] = chunks[1].replace('\n', '')
-        elif 'ENDDATA' in line:
-            if metadata not in meta_list and dates:
-                meta_list.append(metadata)
-                lc_data = {
-                    'date': dates,
-                    'mags': mags,
-                    'mag_errs': mag_errs,
-                    }
-                lc_list.append(lc_data)
-            dates = []
-            mags = []
-            mag_errs = []
-            metadata = {}
-        elif 'STARTMETADATA' in line:
-            met_dat = True
-        elif 'ENDMETADATA' in line:
-            met_dat = False
+def import_alcdef(alcdef, meta_list, lc_list):
+    """Pull LC data from ALCDEF Data Product.
+        :param alcdef: DataProduct of alcdef file
+        :param meta_list: list of metadata
+        :param lc_list: list of lc_data {date, mag, mag_err}
+        :return meta_list, lc_list
+    """
+
+    file = alcdef.product.file
+    with file.open() as lc_file:
+        lines = lc_file.readlines()
+
+        metadata = {}
+        dates = []
+        mags = []
+        mag_errs = []
+        met_dat = False
+
+        for line in lines:
+            line = line.rstrip()
+            line = str(line, 'utf-8')
+            # skip commented lines
+            try:
+                if line.lstrip()[0] == '#':
+                    continue
+            except IndexError:
+                continue
+            if '=' in line:
+                if 'DATA=' in line and met_dat is False:
+                    chunks = line[5:].split('|')
+                    jd = float(chunks[0])
+                    mag = float(chunks[1])
+                    mag_err = float(chunks[2])
+                    dates.append(jd)
+                    mags.append(mag)
+                    mag_errs.append(mag_err)
+                else:
+                    chunks = line.split('=')
+                    metadata[chunks[0]] = chunks[1].replace('\n', '')
+            elif 'ENDDATA' in line:
+                if metadata not in meta_list and dates:
+                    meta_list.append(metadata)
+                    lc_data = {
+                        'date': dates,
+                        'mags': mags,
+                        'mag_errs': mag_errs,
+                        }
+                    lc_list.append(lc_data)
+                dates = []
+                mags = []
+                mag_errs = []
+                metadata = {}
+            elif 'STARTMETADATA' in line:
+                met_dat = True
+            elif 'ENDMETADATA' in line:
+                metadata['alcdef_url'] = reverse('display_textfile', kwargs={'pk': alcdef.id})
+                met_dat = False
 
     return meta_list, lc_list
+
+
+def import_period_scan(file, scan_list):
+    """Pull Period data from Period Scan files."""
+
+    scan_data = {'period': [], 'rms': [], 'chi2': []}
+    lines = file.readlines()
+    for line in lines:
+        chunks = line.split()
+        if len(chunks) >= 3:
+            scan_data['period'].append(float(chunks[0]))
+            scan_data['rms'].append(float(chunks[1]))
+            scan_data['chi2'].append(float(chunks[2]))
+    scan_data["rms"] = [x for _, x in sorted(zip(scan_data["period"], scan_data["rms"]))]
+    scan_data["chi2"] = [x for _, x in sorted(zip(scan_data["period"], scan_data["chi2"]))]
+    scan_data["period"].sort()
+    scan_list.append(scan_data)
+    return scan_list
+
+
+def import_lc_model(m_file, model_list):
+    """Pull model lc from intensity files."""
+
+    lc_model_file = m_file.product.file
+    file_parts = m_file.product.name.split('_')
+    name = f'{file_parts[2]} ({file_parts[1]})'
+    lines = lc_model_file.readlines()
+    model_jd = []
+    model_mag = []
+    for k, line in enumerate(lines):
+        chunks = line.split()
+        if len(chunks) == 2:
+            model_jd.append(float(chunks[0]))
+            model_mag.append(float(chunks[1]))
+        elif k > 0:
+            model_list['date'].append(copy.deepcopy(model_jd))
+            model_list['mag'].append(copy.deepcopy(model_mag))
+            model_list['name'].append(name)
+            model_jd.clear()
+            model_mag.clear()
+    model_list['date'].append(copy.deepcopy(model_jd))
+    model_list['mag'].append(copy.deepcopy(model_mag))
+    model_list['name'].append(name)
+    return model_list
+
+
+def import_shape_model(file, body, model_params):
+    shape_list = {'faces_x': [], 'faces_y': [], 'faces_z': [], 'faces_normal': [], 'faces_level': [], 'faces_colors': []}
+    lines = file.readlines()
+    points_list = []
+    n_points = 0
+    # set angles
+    long_of_asc_node = body.longascnode
+    pole_long = radians(model_params['pole_longitude'])
+    pole_lat = radians(model_params['pole_latitude'] - 90)
+    # build rotation matrices
+    rmat_sun = S.sla_deuler('Z', radians(-long_of_asc_node), 0, 0)  # set initial orbit position to ecliptic
+    rmat_view = S.sla_deuler('X', radians(90), 0, 0)  # set initial view for heliocentric z = plot y
+    try:
+        rmat_pole = S.sla_deuler('YZ', pole_lat, pole_long, 0)  # create pole rotation
+    except TypeError:
+        rmat_pole = S.sla_deuler('', 0, 0, 0)
+    pole_vector = S.sla_dmxv(rmat_pole, [0, 0, 1])
+    pole_vector = S.sla_dmxv(rmat_view, pole_vector)
+    # pull out face information
+    for k, line in enumerate(lines):
+        chunks = line.split()
+        if len(chunks) < 3:
+            if len(chunks) == 2:
+                # get number of vertices
+                n_points = int(chunks[0])
+        elif k <= n_points:
+            # get vertex coordinates
+            coords = []
+            for c in chunks:
+                coords.append(float(c))
+            points_list.append(coords)
+        else:
+            # build faces using assigned vertices
+            face_x = []
+            face_y = []
+            face_z = []
+            normal = [0, 0, 0]
+            for h, p in enumerate(chunks):
+                next_point = chunks[(h+1) % (len(chunks))]
+
+                coords = points_list[int(p)-1]
+                coords_next = points_list[int(next_point)-1]
+                xx = coords[0]
+                xx_nxt = coords_next[0]
+                yy = coords[1]
+                yy_nxt = coords_next[1]
+                zz = coords[2]
+                zz_nxt = coords_next[2]
+
+                # rotate faces to initial position
+                rot_coords = S.sla_dmxv(rmat_pole, coords)
+                rot_coords = S.sla_dmxv(rmat_view, rot_coords)
+                # Store vertices of each face
+                face_x.append(rot_coords[0])
+                face_y.append(rot_coords[1])
+                face_z.append(rot_coords[2])
+
+                # Calculate normal vector for face
+                normal[0] += (yy - yy_nxt) * (zz + zz_nxt)
+                normal[1] += (zz - zz_nxt) * (xx + xx_nxt)
+                normal[2] += (xx - xx_nxt) * (yy + yy_nxt)
+            normal, _ = S.sla_dvn(normal)
+            shape_list['faces_x'].append(face_x)
+            shape_list['faces_y'].append(face_y)
+            shape_list['faces_z'].append(face_z)
+            shape_list['faces_normal'].append(normal)
+            shape_list['faces_level'].append(np.mean(face_z))
+            brightness = S.sla_dmxv(rmat_sun, S.sla_dmxv(rmat_pole, normal))[0] * 100
+            shape_list['faces_colors'].append(f"hsl(0, 0%, {brightness}%)")
+    pole_data = {"v_x": [pole_vector[0]], "v_y": [pole_vector[1]], "v_z": [pole_vector[2]], "p_lat": [pole_lat], "p_long": [pole_long], "period_fit": [model_params['period']]}
+    return shape_list, pole_data
 
 
 def get_lc_plot(body, data):
     """Plot all lightcurve data for given source.
     """
 
-    base_dir = os.path.join(settings.DATA_ROOT, 'Reduction')
-    obj_name = sanitize_object_name(body.current_name())
-    datadir = os.path.join(base_dir, obj_name)
-    filenames = search(datadir, '.*.ALCDEF.txt')
+    period_scans = DataProduct.content.fullbody(bodyid=body.id).filter(filetype=DataProduct.PERIODOGRAM_RAW)
+    lc_models = DataProduct.content.fullbody(bodyid=body.id).filter(filetype=DataProduct.MODEL_LC_RAW)
+    model_params = DataProduct.content.fullbody(bodyid=body.id).filter(filetype=DataProduct.MODEL_LC_PARAM)
+    shape_models = DataProduct.content.fullbody(bodyid=body.id).filter(filetype=DataProduct.MODEL_SHAPE)
+
     if data.get('period', None):
         period = data['period']
     else:
@@ -3966,11 +4258,62 @@ def get_lc_plot(body, data):
 
     meta_list = []
     lc_list = []
-    if filenames:
-        for file in filenames:
-            meta_list, lc_list = import_alcdef(os.path.join(datadir, file), meta_list, lc_list)
+    dataproducts = DataProduct.content.fullbody(bodyid=body.id).filter(filetype=DataProduct.ALCDEF_TXT)
+    if dataproducts:
+        for dp in dataproducts:
+            try:
+                meta_list, lc_list = import_alcdef(dp, meta_list, lc_list)
+            except FileNotFoundError as e:
+                logger.warning(e)
     else:
         meta_list = lc_list = []
+
+    period_scan_dict = []
+    if period_scans:
+        for scan in period_scans:
+            try:
+                period_scan_dict = import_period_scan(scan.product.file, period_scan_dict)
+            except FileNotFoundError as e:
+                logger.warning(e)
+    if not period_scan_dict:
+        period_scan_dict = [{"period": [], "rms": [], "chi2": []}]
+
+    lc_model_dict = {"date": [], "mag": [], "name": []}
+    if lc_models:
+        for m in lc_models:
+            try:
+                lc_model_dict = import_lc_model(m, lc_model_dict)
+            except FileNotFoundError as e:
+                logger.warning(e)
+
+    model_param_dict = []
+    if model_params:
+        for params in model_params:
+            try:
+                model_params_file = params.product.file.open()
+                lines = model_params_file.readlines()
+                chunks = lines[0].split()
+                model_param_dict.append({"pole_longitude": float(chunks[0]), "pole_latitude": float(chunks[1]), "period": float(chunks[2])})
+            except FileNotFoundError as e:
+                logger.warning(e)
+    else:
+        model_param_dict.append({"pole_longitude": None, "pole_latitude": None, "period": None})
+
+    shape_model_list = []
+    pole_vector_list = []
+    if shape_models:
+        for n, sm in enumerate(shape_models):
+            try:
+                shape_model_dict, pole_vector = import_shape_model(sm.product.file, body, model_param_dict[n])
+                for key in shape_model_dict.keys():
+                    if key != 'faces_level':
+                        shape_model_dict[key] = [x for _, x in sorted(zip(shape_model_dict["faces_level"], shape_model_dict[key]), key=lambda x: x[0], reverse=False)]
+                shape_model_list.append(shape_model_dict)
+                pole_vector_list.append(pole_vector)
+            except FileNotFoundError as e:
+                logger.warning(e)
+    if not pole_vector_list:
+        pole_vector_list = [{"v_x": [0], "v_y": [0], "v_z": [1], "p_lat": [0], "p_long": [0], "period_fit": [1]}]
 
     meta_list = [x for _, x in sorted(zip(lc_list, meta_list), key=lambda i: i[0]['date'][0])]
     lc_list = sorted(lc_list, key=lambda i: i['date'][0])
@@ -3988,7 +4331,7 @@ def get_lc_plot(body, data):
         ephem = []
 
     if lc_list:
-        script, div = lc_plot(lc_list, meta_list, period, jpl_ephem=ephem)
+        script, div = lc_plot(lc_list, meta_list, lc_model_dict, period, period_scan_dict, shape_model_list, pole_vector_list, body, jpl_ephem=ephem)
     else:
         script = None
         div = """
@@ -3996,6 +4339,22 @@ def get_lc_plot(body, data):
         """.format(body.full_name())
 
     return script, div, meta_list
+
+
+def display_textfile(request, pk):
+    """Load textfile DataProduct for display on webpage
+        :param pk: id for DataProduct
+    """
+    try:
+        textfile = DataProduct.objects.get(pk=pk).product
+    except ObjectDoesNotExist as e:
+        logger.warning(e)
+        raise Http404("Dataproduct does not exist.")
+    try:
+        return HttpResponse(textfile, content_type="Text/plain")
+    except FileNotFoundError as e:
+        logger.warning(e)
+        raise Http404("Couldn't find requested file.")
 
 
 def display_movie(request, pk):
@@ -4010,20 +4369,25 @@ def display_movie(request, pk):
         block = Block.objects.get(pk=pk)
     except ObjectDoesNotExist:
         raise Http404("Block does not exist.")
-    if block.obstype in [Block.OPT_IMAGING, Block.OPT_IMAGING_CALIB]:
-        movie_file = "{}_{}_framemovie.gif".format(obj.replace(' ', '_'), req)
-    elif block.obstype in [Block.OPT_SPECTRA, Block.OPT_SPECTRA_CALIB]:
-        movie_file = "{}_{}_guidemovie.gif".format(obj.replace(' ', '_'), req)
-        base_dir = os.path.join(path, "Guide_frames")
-    else:
+    block_db_list = DataProduct.content.block().filter(object_id=block.id)
+    try:
+        if block.obstype in [Block.OPT_IMAGING, Block.OPT_IMAGING_CALIB] and block_db_list:
+            movie_file = block_db_list.get(filetype=DataProduct.FRAME_GIF).product
+        elif block.obstype in [Block.OPT_SPECTRA, Block.OPT_SPECTRA_CALIB] and block_db_list:
+            movie_file = block_db_list.get(filetype=DataProduct.GUIDER_GIF).product
+        else:
+            return HttpResponse()
+    except DataProduct.DoesNotExist:
         return HttpResponse()
-
-    movie_file = search(base_dir, movie_file, latest=True)
 
     if movie_file:
         logger.debug('MOVIE FILE: {}'.format(movie_file))
-        movie = default_storage.open(movie_file, 'rb').read()
-        return HttpResponse(movie, content_type="Image/gif")
+        movie = movie_file
+        try:
+            return HttpResponse(movie, content_type="Image/gif")
+        except FileNotFoundError as e:
+            logger.warning(e)
+            return HttpResponse()
     else:
         return HttpResponse()
 
@@ -4063,8 +4427,6 @@ class GuideMovie(View):
 
         return render(request, self.template_name,
                       {'sb': supblock, 'block_list': block_list, 'is_paginated': is_paginated, 'page_obj': page_obj})
-
-        # return render(request, self.template_name, params)
 
 
 def update_taxonomy(body, tax_table, dbg=False):
@@ -4243,7 +4605,7 @@ def find_best_solar_analog(ra_rad, dec_rad, site, ha_sep=4.0, num=None, solar_st
     else:
         num = 0
     if solar_standards is None:
-        solar_standards = StaticSource.objects.filter(source_type=StaticSource.SOLAR_STANDARD)
+        solar_standards = StaticSource.objects.filter(source_type=StaticSource.SOLAR_STANDARD, quality__gte=0)
 
     if site == 'E10':
         dec_lim = [-90.0, 20.0]
@@ -4266,6 +4628,40 @@ def find_best_solar_analog(ra_rad, dec_rad, site, ha_sep=4.0, num=None, solar_st
         close_params = model_to_dict(close_standard)
         close_params['separation_deg'] = close_standards[num]["separation"]
     return close_standard, close_params, close_standards[:5]
+
+
+def compare_NEOx_horizons_ephems(body, d, sitecode='500', debug=True):
+    """Compare the NEOexchange and HORIZONS positions at datetime <d> for
+    <body> (can be either a core.models.Body instance or string) from MPC site
+    code [sitecode; defaults to 500 (geocenter).
+    Returns the NEOx and HORIZONS ephemeris and the radial and RA & Dec components
+    of the separation (as Astropy Angle instances in u.arcsec in the sense of
+    the values that need to be added to the NEOx position to the HORIZONS one)"""
+
+    if type(body) != Body:
+        body = Body.objects.get(name=body)
+
+    neox_emp = compute_ephem(d, model_to_dict(body), sitecode, perturb=True, display=debug)
+    horizons_emp = horizons_ephem(body.current_name(), d, d+timedelta(minutes=1), sitecode, '1m')
+
+    sep_r = None
+    sep_ra = None
+    sep_dec = None
+    if len(neox_emp) > 0 and horizons_emp is not None and len(horizons_emp) > 0:
+        neox_pos = SkyCoord(neox_emp['ra'], neox_emp['dec'], unit=u.rad)
+        # Find index of nearest in time ephememeris line
+        horizons_index = np.abs(d-horizons_emp['datetime'].datetime).argmin()
+        horizons_pos = SkyCoord(horizons_emp['RA'][horizons_index], horizons_emp['DEC'][horizons_index], unit=u.deg)
+        mag_column = 'V'
+        if mag_column not in horizons_emp.colnames:
+            mag_column = 'Tmag'
+        sep_r = horizons_pos.separation(neox_pos).to(u.arcsec)
+        sep_ra, sep_dec = horizons_pos.spherical_offsets_to(neox_pos)
+        sep_ra = -sep_ra.to(u.arcsec) / cos(horizons_pos.dec.rad)
+        sep_dec = -sep_dec.to(u.arcsec)
+        print(f"At {d:} (HORIZONS@{horizons_emp['datetime'][horizons_index]} , sep= {sep_r:.1f} (RA={sep_ra:.1f}, Dec={sep_dec:.1f})\nNEOX: {neox_pos.to_string('hmsdms', sep=' ', precision=4):} V={neox_emp['mag']:.1f}\n JPL: {horizons_pos.to_string('hmsdms', sep=' ', precision=4):} V={horizons_emp[mag_column][horizons_index]:.1f}")
+
+    return neox_emp, horizons_emp, sep_r, sep_ra, sep_dec
 
 
 def create_latex_table(body_or_name):

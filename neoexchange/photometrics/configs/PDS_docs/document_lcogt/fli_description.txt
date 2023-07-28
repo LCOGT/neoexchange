@@ -1,0 +1,57 @@
+Las Cumbres Observatory FLI Imager
+==================================
+
+  Instrument Overview
+  ===================
+
+    The ancillary autoguider cameras for the main visible-wavelength,
+    direct-imaging CCD Sinistro instruments for the Las Cumbres
+    Observatory (LCOGT) 1-meter Telescopes are called the FLI Imagers.
+    The FLI imagers compromise a Finger Lakes Instrumentation (FLI) ML4720 
+    camera containing a e2v back-illuminated monolithic frame transfer CCD with 
+    1024 x 1024 x 13um pixels combined with a LCOGT constructed corrector, focus
+    stage and filterwheel. The instrument is mounted on one of the
+    side ports on the LCOGT 1-meter instrument support structure.
+
+  Detector                                                         
+  ========      
+    The FLI imager is a 1k x 1k CCD that images a 5.8 arc minute square field of
+    view. The device is back illuminated and has 13-micron pixels. The unbinned
+    detector provides a pixel scale of 0.340 arcsec/pixel. The instrument
+    can be operated in 1x1 or 2x2 pixel binning, giving 0.680 arcsec/pixel.
+    The chip is linear up to 65k ADU and has dual amplifiers 
+    which can readout at either 500 kHz or 2MHz. Read noise is typically 7.5 
+    electrons with 500 kHz readout and 16.3 electrons in 2 MHz readout. The 
+    readout and processing time is 2.1 seconds for unbinned images, and 
+    1.78 seconds for the binned 2x2 mode. The CCD quantum efficiency is 15% for 
+    300-350 nm, 50% at 400, 90% at 500 nm, rising to 90-95% over 500-700 nm and
+    declining smoothly to 12% at 1000 nm.
+
+  Filters                                                         
+  =======
+    A single ten position filter wheel in the FLI instrument provide 9
+    filter slots. A common set of filters are provided in all the FLI
+    imagers including the Bessell B and V and Sloan/PanSTARRS g’r’i’zs along
+    with a 'clear' broad filter with a very sharp cut-on at 400nm and a roll-off
+    at 1000nm down to ~50% transmission at 1200nm.
+ 
+  FLI Instrument Designations
+  ================================
+
+    The distribution of the FLI imagers among the 1-meter telescopes of
+    LCOGT network in 2023 April are shown below with the LCOGT 
+    Node/Observatory node shown with the LCOGT Site Code given in parentheses,
+    along with the FLI instrument designation for the telescope in that
+    location:
+    Siding Spring (COJ), Dome A: ef09
+    Siding Spring (COJ), Dome B: ef10
+    Sutherland (CPT), Dome A: ef02
+    Sutherland (CPT), Dome B: ef03
+    Sutherland (CPT), Dome C: ef04
+    Cerro Tololo (LSC), Dome A: ef07
+    Cerro Tololo (LSC), Dome B: ef05
+    Cerro Tololo (LSC), Dome C: ef01
+    McDonald (ELP), Dome A: ef08
+    McDonald (ELP), Dome B: ef15
+    Tenerife (TFN), Dome A: ef11
+    Tenerife (TFN), Dome B: ef14

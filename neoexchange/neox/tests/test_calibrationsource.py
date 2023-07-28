@@ -19,6 +19,7 @@ from math import radians
 from .base import FunctionalTest
 from django.urls import reverse
 from django.contrib.auth.models import User
+from django.conf import settings
 from bs4 import BeautifulSoup
 # from selenium import webdriver
 from mock import patch
@@ -30,6 +31,7 @@ from neox.auth_backend import update_proposal_permissions
 from astrometrics.sources_subs import fetch_flux_standards
 from core.views import create_calib_sources
 from core.models import Proposal, StaticSource
+from core.utils import save_to_default
 
 
 @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
@@ -37,6 +39,8 @@ from core.models import Proposal, StaticSource
 class TestCalibrationSources(FunctionalTest):
 
     def setUp(self):
+        settings.MEDIA_ROOT = os.path.abspath(os.path.join('photometrics', 'tests', 'test_spectra'))
+
         # Create a user to test login
         self.insert_test_proposals()
         self.username = 'bart'
@@ -377,6 +381,7 @@ class TestCalibrationSources(FunctionalTest):
 
     @patch('core.views.datetime', MockDateTime)
     def test_can_view_calibsource_spectra(self):
+        settings.MEDIA_ROOT = os.path.abspath('data')
         self.add_new_calib_sources()
         MockDateTime.change_datetime(2018, 5, 22, 5, 0, 0)
 
@@ -399,7 +404,7 @@ class TestCalibrationSources(FunctionalTest):
         # He picks HR9087 as being a suitably hot star
         link = self.browser.find_element_by_link_text('HR9087')
         target = StaticSource.objects.get(name='HR9087')
-        target_url = "{0}{1}".format(self.live_server_url, reverse('calibsource' , kwargs={'pk': target.pk}))
+        target_url = "{0}{1}".format(self.live_server_url, reverse('calibsource', kwargs={'pk': target.pk}))
         actual_url = link.get_attribute('href')
         self.assertEqual(actual_url, target_url)
 

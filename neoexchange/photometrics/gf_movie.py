@@ -17,11 +17,12 @@ import sys
 import numpy as np
 from math import degrees, cos, radians, copysign
 import matplotlib
+# Sometimes needed...
+#matplotlib.rcParams['agg.path.chunksize'] = 100
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
-import pyslalib.slalib as S
 from astropy.io import fits
-from astropy.wcs import WCS
+from astropy.wcs import WCS, FITSFixedWarning
 from django.conf import settings
 from astropy.wcs._wcs import InvalidTransformError
 from astropy.wcs.utils import skycoord_to_pixel
@@ -38,7 +39,7 @@ import logging
 from django.core.files.storage import default_storage
 
 from photometrics.external_codes import unpack_tarball
-from photometrics.catalog_subs import funpack_fits_file
+from photometrics.catalog_subs import unpack_sci_extension
 from core.models import Block, Frame, CatalogSources
 from astrometrics.ephem_subs import horizons_ephem
 from astrometrics.time_subs import timeit
@@ -130,7 +131,7 @@ def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=True,
         fits_files = np.sort(frames)
     else:
         fits_files = frames
-    path = os.path.dirname(frames[0]).lstrip(' ')
+    path = out_path
 
     start_frames = 5
     copies = 1
@@ -152,6 +153,7 @@ def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=True,
         return "WARNING: COULD NOT FIND FITS FILES"
 
     fig = plt.figure()
+    warnings.simplefilter('ignore', category=FITSFixedWarning)
     frame_query = Frame.objects.filter(filename__in=base_name_list).order_by('midpoint').prefetch_related('catalogsources_set')
     if frame_query:
         frame_obj = frame_query[0]
@@ -220,12 +222,16 @@ def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=True,
             if progress:
                 logger.warning('Could not find Frame {}'.format(good_fits_files[n]))
             return None
+
         # pull Date from Header
         try:
             date_obs = header_n['DATE-OBS']
         except KeyError:
             date_obs = header_n['DATE_OBS']
-        date = datetime.strptime(date_obs, '%Y-%m-%dT%H:%M:%S.%f')
+        try:
+            date = datetime.strptime(date_obs, '%Y-%m-%dT%H:%M:%S.%f')
+        except ValueError:
+            date = datetime.strptime(date_obs, '%Y-%m-%dT%H:%M:%S')
         # reset plot
         ax = plt.gca()
         ax.clear()
@@ -236,13 +242,24 @@ def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=True,
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")
                 wcs = WCS(header_n)  # get wcs transformation
-                ax = plt.gca(projection=wcs)
+                #ax = plt.gca(projection=wcs)
+                # Matplotlib deprecated above in 3.4
+                ax = plt.subplot(projection=wcs)
             dec = ax.coords['dec']
+            # Disabling Automatic Labelling to stop 'pos.eq.dec' labels showing up
+            try:
+                dec.set_auto_axislabel(False)
+            except AttributeError:
+                dec.set_axislabel('')
             dec.set_major_formatter('dd:mm')
             dec.set_ticks_position('br')
             dec.set_ticklabel_position('br')
             dec.set_ticklabel(fontsize=10, exclude_overlapping=True)
             ra = ax.coords['ra']
+            try:
+                ra.set_auto_axislabel(False)
+            except AttributeError:
+                ra.set_axislabel('')
             ra.set_major_formatter('hh:mm:ss')
             ra.set_ticks_position('lb')
             ra.set_ticklabel_position('lb')
@@ -257,17 +274,25 @@ def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=True,
             sup_title = f'REQ# {header_n["REQNUM"]} -- {header_n["OBJECT"]} at {header_n["SITEID"].upper()} ({header_n["INSTRUME"]}) -- Filter: {header_n["FILTER"]}'
         else:
             sup_title = title
-        fig.suptitle(sup_title)
-        ax.set_title('UT Date: {} ({} of {})'.format(date.strftime('%x %X'), current_count,
-                                                     int(len(good_fits_files) - (copies - 1) * start_frames)), pad=10)
+        framenum = header_n.get("FRAMENUM", None)
+        if framenum is None:
+            framenum = int(header_n["FILENAME"].replace('ccd', '').replace('c1', ''))
+        ax.set_title(sup_title + '\n' + f'UT Date: {date.strftime("%Y/%m/%d %H:%M:%S")} -- #{framenum:04d} '
+                                        f'({current_count} of'
+                                        f' {int(len(good_fits_files) - (copies - 1) * start_frames)})')
 
         # Set frame to be center of chip in arcmin
         shape = data.shape
         x_frac = 0
         y_frac = 0
+        scale_keyword = 'PIXSCALE'
+        if 'PIXSCALE' not in header_n:
+            scale_keyword = 'SCALE'
+        pixscale = header_n.get(scale_keyword, 1.0)
         if center is not None:
-            y_frac = np.max(int((shape[0] - (center * 60)/header_n['PIXSCALE']) / 2), 0)
-            x_frac = np.max(int((shape[1] - (center * 60)/header_n['PIXSCALE']) / 2), 0)
+            width = (center * 60) / pixscale
+            y_frac = np.max(int((shape[0] - width) / 2), 0)
+            x_frac = np.max(int((shape[1] - width) / 2), 0)
 
             # set data ranges
             data_x_range = [x_frac, -(x_frac+1)]
@@ -301,8 +326,8 @@ def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=True,
             if plot_source and (data.shape[1] > header_n['CRPIX1'] > 0) and (data.shape[0] > header_n['CRPIX2'] > 0):
                 plt.plot([header_n['CRPIX1']], [header_n['CRPIX2']], color='red', marker='+', linestyle=' ', label="Frame_Center")
             else:
-                circle_5arcsec = plt.Circle((header_n['CRPIX1'], header_n['CRPIX2']), 5/header_n['PIXSCALE'], fill=False, color='limegreen', linewidth=1.5)
-                circle_15arcsec = plt.Circle((header_n['CRPIX1'], header_n['CRPIX2']), 15/header_n['PIXSCALE'], fill=False, color='lime', linewidth=1.5)
+                circle_5arcsec = plt.Circle((header_n['CRPIX1'], header_n['CRPIX2']), 5/pixscale, fill=False, color='limegreen', linewidth=1.5)
+                circle_15arcsec = plt.Circle((header_n['CRPIX1'], header_n['CRPIX2']), 15/pixscale, fill=False, color='lime', linewidth=1.5)
                 ax.add_artist(circle_5arcsec)
                 ax.add_artist(circle_15arcsec)
 
@@ -312,7 +337,7 @@ def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=True,
                 frame_obj = Frame.objects.get(filename=os.path.basename(good_fits_files[n]))
                 sources = CatalogSources.objects.filter(frame=frame_obj, obs_y__range=(y_frac, shape[0] - y_frac + 2 * y_offset), obs_x__range=(x_frac, shape[1] - x_frac + 2 * x_offset))
                 for source in sources:
-                    circle_source = plt.Circle((source.obs_x - x_frac, source.obs_y - y_frac), 3/header_n['PIXSCALE'], fill=False, color='red', linewidth=1, alpha=.5)
+                    circle_source = plt.Circle((source.obs_x - x_frac, source.obs_y - y_frac), 3/pixscale, fill=False, color='red', linewidth=1, alpha=.5)
                     ax.add_artist(circle_source)
             except Frame.DoesNotExist:
                 pass
@@ -322,12 +347,12 @@ def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=True,
         y_pix = header_n['CRPIX2']
         if target_data:
             td = target_data[n]
-            target_source = td['best_source']
+            target_source = td.get('best_source', None)
             if target_source:
-                target_circle = plt.Circle((target_source.obs_x - x_frac, target_source.obs_y - y_frac), 3/header_n['PIXSCALE'], fill=False, color='limegreen', linewidth=1)
+                target_circle = plt.Circle((target_source.obs_x - x_frac, target_source.obs_y - y_frac), 3/pixscale, fill=False, color='limegreen', linewidth=1)
                 ax.add_artist(target_circle)
             bw = td['bw']
-            bw /= header_n['PIXSCALE']
+            bw /= pixscale
             coord = SkyCoord(td['ra'], td['dec'], unit="rad")
             # if target_source:
             #     print(coord.separation(SkyCoord(target_source.obs_ra, target_source.obs_dec, unit="deg")).arcsec)
@@ -362,15 +387,8 @@ def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=True,
 
     plt.close('all')
     # Save to default location because Matplotlib wants a string filename not File object
-    if settings.USE_S3:
-        movie_filename = filename.replace(out_path, "").lstrip("/")
-        movie_file = default_storage.open(movie_filename, "wb+")
-        with open(filename, 'rb+') as f:
-            movie_file.write(f.read())
-        movie_file.close()
-        return movie_file.name
-    else:
-        return filename
+
+    return filename
 
 
 def make_movie(date_obs, obj, req, base_dir, out_path, prop, tarfile=None):
@@ -414,7 +432,7 @@ def make_movie(date_obs, obj, req, base_dir, out_path, prop, tarfile=None):
                 logger.info("Unpacking tar in tar")
                 for gf in guide_files:
                     if '.fits.fz' in gf:
-                        funpack_fits_file(gf)
+                        unpack_sci_extension(gf)
             else:
                 logger.error("Could not find Guide Frames or Guide Frame tarball for request: %s" % req)
                 return None
@@ -452,8 +470,7 @@ if __name__ == '__main__':
     if len(files) < 1:
         files = np.sort(glob(path+'*.fits'))
     if len(files) >= 1:
-        gif_file = make_gif(files, fr=fr, init_fr=ir, show_reticle=tr, center=center, progress=True)
+        gif_file = make_gif(files, fr=fr, init_fr=ir, show_reticle=tr, out_path=path, center=center, progress=True)
         logger.info("New gif created: {}".format(gif_file))
     else:
         logger.info("No files found.")
-

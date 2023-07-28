@@ -14,7 +14,7 @@ GNU General Public License for more details.
 """
 
 from datetime import datetime, timedelta
-from unittest import skipIf
+from unittest import skipIf, skip
 from math import sqrt, log10, log
 import os
 from glob import glob
@@ -67,7 +67,7 @@ class ZeropointUnitTest(TestCase):
     def test_get_cat_ra_dec(self):
         # test getting a single ra, dec, and rmag out of the default UCAC4 catalog
         # test_data = __file__.replace('.py', '_UCAC4.dat') #test_data_file captured with cat_table.write('test_catalog_subs_UCAC4.dat', format='csv')
-        #        test_data = '/home/sgreenstreet/git/neoexchange/neoexchange/photometrics/tests/test_catalog_subs_UCAC4.dat'
+        # test_data = '/home/sgreenstreet/git/neoexchange/neoexchange/photometrics/tests/test_catalog_subs_UCAC4.dat'
         # test_query_result = []
         # test_query_result.append(Table.read(test_data, format='csv'))
         # mock_vizier().query_region().__getitem__.return_value=test_query_result
@@ -257,6 +257,7 @@ class ZeropointUnitTest(TestCase):
 
 #    @patch('photometrics.catalog_subs.Vizier')
 #    def test_get_cat_ra_dec_empty_list_PPMXL(self, mock_vizier):
+    @skip("Defunct catalog / needs mock")
     def test_get_cat_ra_dec_empty_list_PPMXL(self):
 
         expected_ra_last_source = 0.0
@@ -282,6 +283,7 @@ class ZeropointUnitTest(TestCase):
 
 #    @patch('photometrics.catalog_subs.Vizier')
 #    def test_get_cat_ra_dec_empty_list_UCAC4(self, mock_vizier):
+    @skip("Defunct catalog / needs mock")
     def test_get_cat_ra_dec_empty_list_UCAC4(self):
 
         expected_ra_last_source = 0.0
@@ -335,7 +337,7 @@ class ZeropointUnitTest(TestCase):
         expected_rmag_first_source = 14.7231
         expected_e_rmag_first_source = 0.0003
         expected_flags_first_source = 0
-        expected_len_cat_table = 585
+        expected_len_cat_table = 574
 
         cat_table, cat_name = get_vizier_catalog_table(299.590, 35.201, "30m", "30m", "GAIA-DR2")
 
@@ -824,6 +826,7 @@ class ZeropointUnitTest(TestCase):
         self.assertEqual(expected_cat_name, cat_name)
         self.assertAlmostEqual(expected_len_cross_match_table, len(cross_match_table))
 
+    @skip("Defunct catalog / needs mock")
     def test_call_with_diff_test_cat_force_to_UCAC4(self):
         """test the call with a different FITS catalog file that will return an empty vizier query table for the PPMXL
         catalog and a zeropoint already in the header, so that the computed avg_zeropoint is the difference between
@@ -1264,6 +1267,16 @@ class FITSUnitTest(TestCase):
         hdulist.close()
         self.uncomp_banzai_table_firstitem = self.test_banzaitable[0:1]
 
+        self.test_raw_filename = os.path.join('photometrics', 'tests', 'mef_raw_test_frame.fits')
+        hdulist = fits.open(self.test_raw_filename)
+        self.test_raw_header = [hdu.header for hdu in hdulist]
+        self.test_raw_table = {}
+
+        self.test_swopefilename = os.path.join('photometrics', 'tests', 'swope_test_frame.fits')
+        hdulist = fits.open(self.test_swopefilename)
+        self.test_swopeheader = hdulist[0].header
+        hdulist.close()
+
         column_types = [('ccd_x', '>f4'), 
                         ('ccd_y', '>f4'), 
                         ('obs_ra', '>f8'), 
@@ -1515,6 +1528,41 @@ class OpenFITSCatalog(FITSUnitTest):
         self.assertAlmostEqual(expected_x, tbl[-1]['XWIN'], self.precision)
         self.assertAlmostEqual(expected_y, tbl[-1]['YWIN'], self.precision)
 
+    def test_raw_read_image(self):
+        unexpected_value = {}
+
+        hdr, tbl, cattype = open_fits_catalog(self.test_raw_filename)
+        self.assertNotEqual(unexpected_value, hdr)
+        self.assertEqual(unexpected_value, tbl)
+        self.assertNotEqual(unexpected_value, cattype)
+
+    def test_raw_image_read_length(self):
+        expected_hdr_lengths = [237, 17, 17, 17, 17]
+        expected_tbl_len = len(self.test_raw_table)
+        expected_cattype = 'RAW_MEF'
+
+        hdr, tbl, cattype = open_fits_catalog(self.test_raw_filename)
+
+        self.assertEqual(len(expected_hdr_lengths), len(hdr))
+        for hdu, expected_hdr_len in enumerate(expected_hdr_lengths):
+            self.assertEqual(expected_hdr_len, len(hdr[hdu]))
+        self.assertEqual(expected_tbl_len, len(tbl))
+        self.assertEqual(expected_cattype, cattype)
+
+    def test_swope_header(self):
+        outpath = os.path.join("photometrics", "tests")
+        expected_header = fits.Header.fromfile(os.path.join(outpath, "swope_test_header"), sep='\n', endcard=False, padding=False)
+        expected_tbl = {}
+        expected_cattype = 'SWOPE'
+
+        hdr, tbl, cattype = open_fits_catalog(self.test_swopefilename)
+
+        self.assertEqual(expected_cattype, cattype)
+        self.assertEqual(expected_tbl, tbl)
+        for key in expected_header:
+            self.assertEqual(expected_header[key], hdr[key],
+                msg="Failure on %s (%s != %s)" % (key, expected_header[key], hdr[key]))
+
 
 class TestConvertValues(FITSUnitTest):
 
@@ -1717,9 +1765,9 @@ class FITSReadHeader(FITSUnitTest):
                             'astrometric_fit_nstars' : -4,
                             'zeropoint'     : -99,
                             'zeropoint_err' : -99,
-                            'zeropoint_src' : 'N/A',
+                            'zeropoint_src' : 'BANZAI',
                             'wcs'           : self.test_banzaiwcs,
-                            'reduction_level' : 91
+                            'reduction_level' : 91,
                           }
         expected_cattype = "BANZAI"
 
@@ -1759,9 +1807,9 @@ class FITSReadHeader(FITSUnitTest):
                             'astrometric_fit_nstars' : -4,
                             'zeropoint'     : -99,
                             'zeropoint_err' : -99,
-                            'zeropoint_src' : 'N/A',
+                            'zeropoint_src' : 'BANZAI',
                             'wcs'           : self.test_banzaiwcs,
-                            'reduction_level' : 91
+                            'reduction_level' : 91,
                           }
         expected_cattype = "BANZAI"
 
@@ -1803,9 +1851,9 @@ class FITSReadHeader(FITSUnitTest):
                             'astrometric_fit_nstars' : -4,
                             'zeropoint'     : -99,
                             'zeropoint_err' : -99,
-                            'zeropoint_src' : 'N/A',
+                            'zeropoint_src' : 'BANZAI',
                             'wcs'           : self.test_banzaiwcs,
-                            'reduction_level' : 91
+                            'reduction_level' : 91,
                           }
         expected_cattype = "BANZAI"
 
@@ -1847,9 +1895,9 @@ class FITSReadHeader(FITSUnitTest):
                             'astrometric_fit_nstars' : -4,
                             'zeropoint'     : -99,
                             'zeropoint_err' : -99,
-                            'zeropoint_src' : 'N/A',
+                            'zeropoint_src' : 'BANZAI',
                             'wcs'           : self.test_banzaiwcs,
-                            'reduction_level' : 91
+                            'reduction_level' : 91,
                           }
         expected_cattype = "BANZAI"
 
@@ -1891,9 +1939,9 @@ class FITSReadHeader(FITSUnitTest):
                             'astrometric_fit_nstars' : -4,
                             'zeropoint'     : -99,
                             'zeropoint_err' : -99,
-                            'zeropoint_src' : 'N/A',
+                            'zeropoint_src' : 'BANZAI',
                             'wcs'           : self.test_banzaiwcs,
-                            'reduction_level' : 91
+                            'reduction_level' : 91,
                           }
         expected_cattype = "BANZAI"
 
@@ -1935,9 +1983,9 @@ class FITSReadHeader(FITSUnitTest):
                             'astrometric_fit_nstars' : -4,
                             'zeropoint'     : -99,
                             'zeropoint_err' : -99,
-                            'zeropoint_src' : 'N/A',
+                            'zeropoint_src' : 'BANZAI',
                             'wcs'           : self.test_banzaiwcs,
-                            'reduction_level' : 91
+                            'reduction_level' : 91,
                           }
         expected_cattype = "BANZAI"
 
@@ -1979,9 +2027,9 @@ class FITSReadHeader(FITSUnitTest):
                             'astrometric_fit_nstars' : -4,
                             'zeropoint'     : -99,
                             'zeropoint_err' : -99,
-                            'zeropoint_src' : 'N/A',
+                            'zeropoint_src' : 'BANZAI',
                             'wcs'           : self.test_banzaiwcs,
-                            'reduction_level' : 91
+                            'reduction_level' : 91,
                           }
         expected_cattype = "BANZAI"
 
@@ -2023,9 +2071,9 @@ class FITSReadHeader(FITSUnitTest):
                             'astrometric_fit_nstars' : -4,
                             'zeropoint'     : -99,
                             'zeropoint_err' : -99,
-                            'zeropoint_src' : 'N/A',
+                            'zeropoint_src' : 'BANZAI',
                             'wcs'           : self.test_banzaiwcs,
-                            'reduction_level' : 91
+                            'reduction_level' : 91,
                           }
         expected_cattype = "BANZAI"
 

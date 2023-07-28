@@ -2,7 +2,4 @@
 10,30,50 18-23 * * * source ~/cronwrapper ; python ~/git/neoexchange/neoexchange/manage.py download_archive_data --date "$(date +\%Y\%m\%d)" --datadir /data/eng/rocks/ &>> /data/eng/rocks/Logs/download_archive_"$(date +\%Y-\%m-\%d)".log
 05,40 00-18 * * * source ~/download_process_data_cron "$(date --date '1 day ago' +\%Y\%m\%d)"
 05,40 17-23 * * * source ~/download_process_data_cron "$(date +\%Y\%m\%d)"
-# Spectra downloading
-20 19,22,23 * * * source ~/download_FLOYDS_data_cron "$(date --date '1 day ago' +\%Y\%m\%d)"
-# Upload data to S3
-30 15 * * * source ~/upload_data_cron "$(date --date '1 day ago' +\%Y\%m\%d)"
+

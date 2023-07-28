@@ -4,6 +4,60 @@ Portal for scheduling observations of NEOs (and other Solar System objects) usin
 
 ## History
 
+### 3.13.1
+* Major update for DART mission support to handle exporting of lightcurves (from NEOexchange or photometrypipeline) and FITS frames to the Planetary Data System (PDS)
+
+### 3.12.5
+* Fix issue with SuperBlocks for proposals with Time Critical time all being recorded as rapid_response.
+
+### 3.12.4
+* Fix for parsing physical parameters from the JPL SBDB API which are comma-separated rather than slash-separated. Allow for parsing of percentages as sigmas.
+
+### 3.12.3
+* Store the submitting observer in a new table linked to SuperBlock (Issue #608)
+
+### 3.12.2
+* Fix issue for 73P where visibility plots were plotting fragment 73P-BV instead (Issue #606)
+
+### 3.12.1
+* Add Gaia EDR3, DR3 and ATLAS-2 MPC catalog codes (Issue #603)
+* Various fixes for pipeline processing. Increase depth of cross match catalog to r=16.5
+
+### 3.12.0
+* Add option to set fractional ephemeris rate.
+* Set default observing mode to 50% object's rate for moving targets (except for comets and spectroscopy)
+* Fix frame updating for change in archive header returns.
+
+### 3.11.1
+* Change threshold on 1/a0 for Dynamically New Comets from 1e-4 to 4e-5.
+
+### 3.11.0
+* Update Summary pages for enhanced usability and utility.
+* Add body publication status.
+* Add form for updating period from LC plot page.
+
+### 3.10.3
+* Minor bug fixes and error handling.
+
+### 3.10.2
+* Fix ADES header info for new telescopes and MuSCAT instrument (Issue #578)
+* Fix gif movie creation permission issues (Issue #580)
+
+### 3.10.1
+* Fix orbit plots for cometary elements.
+
+### 3.10.0
+* Add support for DAMIT and advanced LC plotting features.
+
+### 3.9.1
+* Implement dithering capabilities
+
+### 3.9.0
+* Implement DataProducts refactor for ALCDEF, Gifs, and Floyds Traces
+
+### 3.8.13
+* Adds galactic plane into the visualization plots.
+
 ### 3.8.12
 * Adds support for multi-target spectroscopy blocks.
 

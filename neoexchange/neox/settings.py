@@ -7,7 +7,7 @@ from django.utils.crypto import get_random_string
 import rollbar
 
 
-VERSION = '3.8.12'
+VERSION = '3.13.1.3'
 
 
 CURRENT_PATH = os.path.dirname(os.path.realpath(__file__))
@@ -250,7 +250,7 @@ EMAIL_PORT          = 587
 DEFAULT_FROM_EMAIL  = 'NEO Exchange <neox@lco.global>'
 EMAIL_HOST_USER = os.environ.get('NEOX_EMAIL_USERNAME', '')
 EMAIL_HOST_PASSWORD = os.environ.get('NEOX_EMAIL_PASSWORD', '')
-EMAIL_MPC_RECIPIENTS = ['tlister@lco.global', 'jchatelain@lco.global']
+EMAIL_MPC_RECIPIENTS = ['tlister@lco.global', ]
 
 ####################
 # LCO Api settings #
@@ -312,11 +312,11 @@ if USE_S3:
     PUBLIC_MEDIA_LOCATION = 'data'
     MEDIA_URL = f'https://s3-{AWS_S3_REGION_NAME}.amazonaws.com/{AWS_STORAGE_BUCKET_NAME}/{PUBLIC_MEDIA_LOCATION}/'
     DEFAULT_FILE_STORAGE = 'neox.storage_backends.PublicMediaStorage'
-    DATA_ROOT = ''
+    DATA_ROOT = os.getenv('DATA_ROOT', '')  # Set env variable on Apophis to '/apophis/eng/rocks/'
 else:
     # For local use
-    MEDIA_ROOT = os.getenv('DATA_ROOT', '/apophis/eng/rocks/')
-    DATA_ROOT = MEDIA_ROOT
+    MEDIA_ROOT = os.getenv('MEDIA_ROOT', '/apophis/eng/media/')
+    DATA_ROOT = os.getenv('DATA_ROOT', '/apophis/eng/rocks/')
 
 ##################
 # LOCAL SETTINGS #
@@ -331,4 +331,3 @@ if not CURRENT_PATH.startswith('/app'):
     except ImportError as e:
         if "local_settings" not in str(e):
             raise e
-

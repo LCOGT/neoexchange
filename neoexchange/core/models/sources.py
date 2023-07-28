@@ -11,15 +11,19 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 """
 import logging
+import warnings
 from math import pi, log10, sqrt, cos, ceil
 
 from django.db import models
 from django.utils.translation import gettext_lazy as _
+from astropy.wcs import FITSFixedWarning
+from astropy.wcs.utils import proj_plane_pixel_scales
 
 from astrometrics.ast_subs import normal_to_packed
 from astrometrics.ephem_subs import get_sitecam_params
 from astrometrics.time_subs import dttodecimalday, degreestohms, degreestodms
 from astrometrics.sources_subs import translate_catalog_code, psv_padding
+import astrometrics.site_config as cfg
 
 from core.models.body import Body
 from core.models.frame import Frame
@@ -48,6 +52,39 @@ class SourceMeasurement(models.Model):
     snr = models.FloatField('Size of aperture (arcsec)', blank=True, null=True)
     flags = models.CharField('Frame Quality flags', help_text='Comma separated list of frame/condition flags', max_length=40, blank=True, default=' ')
 
+    def _aperture_size_arcsecs(self):
+        return self.aperture_size
+
+    def _aperture_size_pixels(self):
+        '''Convert aperture_size (in arcsecs) back to pixels'''
+        warnings.simplefilter('ignore', FITSFixedWarning)
+        pixel_scale = 1.0
+        if self.frame.wcs:
+            pixel_scale = proj_plane_pixel_scales(self.frame.wcs).mean()*3600.0
+        else:
+            sitecode = self.frame.sitecode
+            telcode = cfg.valid_telescope_codes.get(sitecode, 'XXX')
+            if '1M0' in telcode:
+                pixel_scale = cfg.tel_field['onem_sinistro_pixscale']
+                if 'kb' in self.frame.instrument:
+                    # Old SBIG data
+                    pixel_scale = cfg.tel_field['onem_pixscale']
+                elif 'ef' in self.frame.instrument:
+                    # FLI data
+                    pixel_scale = cfg.tel_field['onem_fli_pixscale']
+            elif '2M0' in telcode:
+                pixel_scale = cfg.tel_field['twom_pixscale']
+                if 'ep' in self.frame.instrument:
+                    # MuSCAT
+                    pixel_scale = cfg.tel_field['twom_muscat_pixscale']
+            elif '0M4' in telcode:
+                pixel_scale = cfg.tel_field['point4m_pixscale']
+
+        return self.aperture_size/pixel_scale
+
+    aperture_size_arcsecs = property(_aperture_size_arcsecs)
+    aperture_size_pixels = property(_aperture_size_pixels)
+
     def format_mpc_line(self, include_catcode=False):
         """Format the contents of 'self' (a SourceMeasurement i.e. the confirmed
         measurement of an object on a particular frame) into MPC 1992 80 column
@@ -71,7 +108,9 @@ class SourceMeasurement(models.Model):
 
         microday = True
 
-        if self.frame.extrainfo:
+        valid_MPC_notes = ['A', 'P', 'e', 'C', 'B', 'T', 'M', 'V', 'v', 'R', 'r', 'S', 's',\
+            'c', 'E', 'O', 'H', 'N', 'n', 'D', 'Z', 'W', 'w', 'Q', 'q', 'T', 't']
+        if self.frame.extrainfo in valid_MPC_notes:
             obs_type = self.frame.extrainfo
             if obs_type == 'A':
                 microday = False
@@ -140,12 +179,12 @@ class SourceMeasurement(models.Model):
         rms_available = False
         if self.err_obs_ra and self.err_obs_dec and self.err_obs_mag:
             rms_available = True
-            rms_tbl_fmt = '%7s|%-11s|%8s|%4s|%-4s|%-23s|%11s|%11s|%5s|%6s|%8s|%-5s|%6s|%4s|%8s|%6s|%6s|%6s|%-5s|%-s'
+            rms_tbl_fmt = '%-7s|%-11s|%-8s|%-4s|%-4s|%-23s|%-11s|%-11s|%-5s|%-6s|%-8s|%-5s|%-6s|%-4s|%-8s|%-6s|%-6s|%-6s|%-5s|%-s'
             tbl_hdr = rms_tbl_fmt % ('permID ', 'provID', 'trkSub  ', 'mode', 'stn', 'obsTime', \
                 'ra', 'dec', 'rmsRA', 'rmsDec', 'astCat', 'mag', 'rmsMag', 'band', 'photCat', \
                 'photAp', 'logSNR', 'seeing', 'notes', 'remarks')
         else:
-            tbl_fmt = '%7s|%-11s|%8s|%4s|%-4s|%-23s|%11s|%11s|%8s|%-5s|%4s|%8s|%-5s|%-s'
+            tbl_fmt = '%-7s|%-11s|%-8s|%-4s|%-4s|%-23s|%-11s|%-11s|%-8s|%-5s|%-4s|%-8s|%-5s|%-s'
             tbl_hdr = tbl_fmt % ('permID ', 'provID', 'trkSub  ', 'mode', 'stn', 'obsTime', \
                 'ra'.ljust(11), 'dec'.ljust(11), 'astCat', 'mag', 'band', 'photCat', 'notes', 'remarks')
         return tbl_hdr
@@ -292,14 +331,14 @@ class CatalogSources(models.Model):
         return fwhm
 
     def make_mu_max(self):
-        pixel_scale = get_sitecam_params(self.frame.sitecode)[3]
+        pixel_scale = get_sitecam_params(self.frame.sitecode)['pixel_scale']
         mu_max = 0.0
         if self.flux_max > 0.0:
             mu_max = (-2.5*log10(self.flux_max/pixel_scale**2))+self.frame.zeropoint
         return mu_max
 
     def make_mu_threshold(self):
-        pixel_scale = get_sitecam_params(self.frame.sitecode)[3]
+        pixel_scale = get_sitecam_params(self.frame.sitecode)['pixel_scale']
         mu_threshold = 0.0
         if self.threshold > 0.0:
             mu_threshold = (-2.5*log10(self.threshold/pixel_scale**2))+self.frame.zeropoint

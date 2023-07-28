@@ -18,6 +18,7 @@ GNU General Public License for more details.
 import logging
 from datetime import datetime, timedelta, time
 from math import sin, cos, tan, asin, acos, atan2, degrees, radians, pi, sqrt, fabs, exp, log10, ceil, log
+from socket import timeout
 
 try:
     import pyslalib.slalib as S
@@ -30,6 +31,7 @@ import copy
 from itertools import groupby
 import re
 import warnings
+import requests
 
 from astropy.utils.exceptions import AstropyDeprecationWarning
 warnings.simplefilter('ignore', category=AstropyDeprecationWarning)
@@ -128,7 +130,9 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False)
         'southpole_sep':  Angular distance from the South Pole (degrees)
         'sun_sep':        Angular distance from the Solar position (radians)
         'earth_obj_dist': Delta, distance between Earth and target (AU)
-
+        'geocnt_a_pos':   Geocentric Asteroid Position [x,y,z] (AU)
+        'heliocnt_e_pos': Heliocentric Earth Position [x,y,z] (AU)
+        'ltt':            Light Travel time (s)
     """
 # Light travel time for 1 AU (in sec)
     tau = 499.004783806
@@ -248,10 +252,10 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False)
 
     # Check we have everything we need before computing positions
     if p_orbelems['Inc'] is None or p_orbelems['LongNode'] is None or p_orbelems['ArgPeri'] is None\
-        or p_orbelems['SemiAxisOrQ'] is None or p_orbelems['Ecc'] is None:
-            logger.error("Missing parameter for %s (%s)" % (orbelems['name'], orbelems['provisional_name']))
-            logger.error(p_orbelems)
-            return {}
+            or p_orbelems['SemiAxisOrQ'] is None or p_orbelems['Ecc'] is None:
+        logger.error("Missing parameter for %s (%s)" % (orbelems['name'], orbelems['provisional_name']))
+        logger.error(p_orbelems)
+        return {}
 
     r3 = -100.
     delta = 0.0
@@ -277,12 +281,12 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False)
         logger.debug("Sun->Asteroid [x,y,z]=%s %s" % (pv[0:3], status))
         logger.debug("Sun->Asteroid [xdot,ydot,zdot]=%s %s" % (pv[3:6], status))
         if status != 0:
-            err_mapping = { -1 : 'illegal JFORM',
-                            -2 : 'illegal E',
-                            -3 : 'illegal AORQ',
-                            -4 : 'illegal DM',
-                            -5 : 'numerical error'
-                          }
+            err_mapping = {-1: 'illegal JFORM',
+                           -2: 'illegal E',
+                           -3: 'illegal AORQ',
+                           -4: 'illegal DM',
+                           -5: 'numerical error'
+                           }
             msg = "Position (sla_planel) error={} {}".format(status, err_mapping.get(status, 'Unknown error'))
             logger.error(msg)
             return {}
@@ -439,6 +443,9 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False)
                 'southpole_sep' : spd,
                 'sun_sep'       : separation,
                 'earth_obj_dist': delta,
+                'geocnt_a_pos'  : convert_to_ecliptic(pos, mjd_tt),
+                'heliocnt_e_pos': convert_to_ecliptic(e_pos_hel, mjd_tt),
+                'ltt'           : ltt,
                 'sun_obj_dist'  : r,
                 }
 
@@ -642,11 +649,16 @@ def horizons_ephem(obj_name, start, end, site_code, ephem_step_size='1h', alt_li
      'alpha',
      'RSS_3sigma',
      'hour_angle',
+     'GlxLon',
+     'GlxLat',
      'datetime']
     If [include_moon] = True, 2 additional columns of the Moon-Object separation
     ('moon_sep'; in degrees) and the Moon phase ('moon_phase'; 0..1) are added
     to the table.
     """
+
+    # Define quantities we want back from HORIZONS
+    horizons_quantities = '1,3,4,9,19,20,23,24,38,42,33'
 
     eph = Horizons(id=obj_name, id_type='smallbody', epochs={'start' : start.strftime("%Y-%m-%d %H:%M"),
             'stop' : end.strftime("%Y-%m-%d %H:%M"), 'step' : ephem_step_size}, location=site_code)
@@ -658,35 +670,44 @@ def horizons_ephem(obj_name, start, end, site_code, ephem_step_size='1h', alt_li
     ha_lowlimit, ha_hilimit, alt_limit = get_mountlimits(site_code)
     ha_limit = max(abs(ha_lowlimit), abs(ha_hilimit)) / 15.0
     should_skip_daylight = True
+    ephem = None
     if len(site_code) >= 1 and site_code[0] == '-':
         # Radar site
         should_skip_daylight = False
     try:
-        ephem = eph.ephemerides(quantities='1,3,4,9,19,20,23,24,38,42',
+        ephem = eph.ephemerides(quantities=horizons_quantities,
             skip_daylight=should_skip_daylight, airmass_lessthan=airmass_limit,
             max_hour_angle=ha_limit)
         ephem = convert_horizons_table(ephem, include_moon)
     except ConnectionError as e:
         logger.error("Unable to connect to HORIZONS")
+    except requests.exceptions.ConnectionError as e:
+        logger.error("Unable to connect to HORIZONS")
+    except timeout as sock_e:
+        logger.warning(f"HORIZONS retrieval failed with socket Error {sock_e.errno}: {sock_e.strerror}")
     except ValueError as e:
-        logger.debug("Ambiguous object, trying to determine HORIZONS id")
-        ephem = None
+        logger.debug("HORIZONS error, trying to fix")
         if e.args and len(e.args) > 0:
-            choices = e.args[0].split('\n')
-            horizons_id = determine_horizons_id(choices)
-            logger.debug("HORIZONS id=", horizons_id)
-            if horizons_id:
-                try:
-                    eph = Horizons(id=horizons_id, id_type='id', epochs={'start' : start.strftime("%Y-%m-%d %H:%M:%S"),
-                        'stop' : end.strftime("%Y-%m-%d %H:%M:%S"), 'step' : ephem_step_size}, location=site_code)
-                    ephem = eph.ephemerides(quantities='1,3,4,9,19,20,23,24,38,42',
-                        skip_daylight=should_skip_daylight, airmass_lessthan=airmass_limit,
-                        max_hour_angle=ha_limit)
-                    ephem = convert_horizons_table(ephem, include_moon)
-                except ValueError as e:
-                    logger.warning("Error querying HORIZONS. Error message: {}".format(e))
+            if 'No ephemeris meets criteria.' in e.args[0]:
+                logger.warning("No ephemeris returned from HORIZONS. Error message: {}".format(e))
             else:
-                logger.warning("Unable to determine the HORIZONS id")
+                logger.debug("Ambiguous object, trying to determine HORIZONS id")
+
+                choices = e.args[0].split('\n')
+                horizons_id = determine_horizons_id(choices, obj_name)
+                logger.debug("HORIZONS id= {}".format(horizons_id))
+                if horizons_id:
+                    try:
+                        eph = Horizons(id=horizons_id, id_type='id', epochs={'start' : start.strftime("%Y-%m-%d %H:%M:%S"),
+                            'stop' : end.strftime("%Y-%m-%d %H:%M:%S"), 'step' : ephem_step_size}, location=site_code)
+                        ephem = eph.ephemerides(quantities=horizons_quantities,
+                            skip_daylight=should_skip_daylight, airmass_lessthan=airmass_limit,
+                            max_hour_angle=ha_limit)
+                        ephem = convert_horizons_table(ephem, include_moon)
+                    except ValueError as e:
+                        logger.warning("Error querying HORIZONS. Error message: {}".format(e))
+                else:
+                    logger.warning("Unable to determine the HORIZONS id")
         else:
             logger.warning("Error querying HORIZONS. Error message: {}".format(e))
     return ephem
@@ -721,10 +742,11 @@ def convert_horizons_table(ephem, include_moon=False):
     return ephem
 
 
-def determine_horizons_id(lines, now=None):
+def determine_horizons_id(lines, obj_name, now=None):
     """Attempts to determine the HORIZONS id of a target body that has multiple
     possibilities. The passed [lines] (from the .args attribute of the exception)
-    are searched for the HORIZONS id (column 1) whose 'epoch year' (column 2)
+    are searched for the HORIZONS id (column 1) whose 'Primary Desig (column 4)
+    matches [obj_name] and for the  'epoch year' (column 2)
     which is closest to [now] (a passed-in datetime or defaulting to datetime.utcnow()"""
 
     now = now or datetime.utcnow()
@@ -732,7 +754,7 @@ def determine_horizons_id(lines, now=None):
     horizons_id = None
     for line in lines:
         chunks = line.split()
-        if len(chunks) >= 5 and chunks[0].isdigit() is True and chunks[1].isdigit() is True:
+        if len(chunks) >= 5 and chunks[0].isdigit() is True and chunks[1].isdigit() is True and chunks[3] == obj_name:
             try:
                 epoch_yr = datetime.strptime(chunks[1], "%Y")
                 if abs(now-epoch_yr) <= timespan:
@@ -1213,7 +1235,10 @@ def determine_exp_time_count(speed, site_code, slot_length_in_mins, mag, filter_
     exp_count = None
     min_exp_count = 4
 
-    (chk_site_code, setup_overhead, exp_overhead, pixel_scale, ccd_fov, site_max_exp_time, alt_limit) = get_sitecam_params(site_code, bin_mode)
+    sitecam = get_sitecam_params(site_code, bin_mode)
+    setup_overhead = sitecam['setup_overhead']
+    exp_overhead = sitecam['exp_overhead']
+    site_max_exp_time = sitecam['max_exp_length']
 
     slot_length = slot_length_in_mins * 60.0
 
@@ -1251,7 +1276,9 @@ def determine_exp_time_count(speed, site_code, slot_length_in_mins, mag, filter_
 def determine_exp_count(slot_length_in_mins, exp_time, site_code, filter_pattern, min_exp_count=1, bin_mode=None):
     exp_count = None
 
-    (chk_site_code, setup_overhead, exp_overhead, pixel_scale, ccd_fov, site_max_exp_time, alt_limit) = get_sitecam_params(site_code, bin_mode)
+    sitecam = get_sitecam_params(site_code, bin_mode)
+    setup_overhead = sitecam['setup_overhead']
+    exp_overhead = sitecam['exp_overhead']
 
     slot_length = slot_length_in_mins * 60.0
 
@@ -1302,7 +1329,9 @@ def determine_spectro_slot_length(exp_time, calibs, exp_count=1):
     site_code = 'F65-FLOYDS'
     slot_length = None
 
-    (chk_site_code, overheads, exp_overhead, pixel_scale, ccd_fov, max_exp_time, alt_limit) = get_sitecam_params(site_code)
+    sitecam = get_sitecam_params(site_code)
+    overheads = sitecam['setup_overhead']
+    exp_overhead = sitecam['exp_overhead']
 
     num_molecules = 1
     calibs = calibs.lower()
@@ -1590,6 +1619,14 @@ def get_sitepos(site_code, dbg=False):
         (site_long, status) = S.sla_daf2r(170, 27, 53.9)
         site_hgt = 1027.1
         site_name = 'MOA 1.8m at Mount John Observatory'
+    elif site_code == '304':
+        # Latitude, longitude from sla_obs values for DuPont 2.5m
+        (site_lat, status) = S.sla_daf2r(29, 0, 11.0)
+        site_lat = -site_lat   # Southern hemisphere !
+        (site_long, status) = S.sla_daf2r(70, 42, 9.0)
+        site_long = -site_long  # West of Greenwich !
+        site_hgt = 2280.0
+        site_name = 'Swope 1m at Las Campanas Observatory'
     elif site_code == '500' or site_code == '1M0' or site_code == '0M4' or site_code == '2M0':
         site_lat = 0.0
         site_long = 0.0
@@ -1690,6 +1727,24 @@ def moon_alt_az(date, moon_app_ra, moon_app_dec, obsvr_long, obsvr_lat, obsvr_hg
 
 
 def moonphase(date, obsvr_long, obsvr_lat, obsvr_hgt, dbg=False):
+    """Compute the illuminated fraction (phase) of the Moon for the specific
+    time and observing site.
+
+    Uses the "medium" precision version of the algorithm in Chapter 48 of
+    Jean Meeus, Astronomical Algorithms, second edition, 1998, Willmann-Bell.
+    Meeus claims a max error in mphase of 0.0014 (0.14%)
+    
+    Parameters
+    ----------
+    date : `datetime` UTC datetime of observation
+    obsvr_long : Observer's longitude (East +ve; radians)
+    obsvr_lat : Observer's latitude (North +ve; radians)
+    obsvr_hgt : Observer's height above reference (geodetic; meters)
+
+    Returns
+    -------
+    mphase : Illuminated fraction of the Moon from 0 (New Moon) to 1 (Full Moon)
+    """
 
     mjd_tdb = datetime2mjd_tdb(date, obsvr_long, obsvr_lat, obsvr_hgt, dbg)
     (moon_ra, moon_dec, moon_diam) = S.sla_rdplan(mjd_tdb, 3, obsvr_long, obsvr_lat)
@@ -1868,6 +1923,13 @@ def LCOGT_domes_to_site_codes(siteid, encid, telid):
     instance = "%s-%s-%s" % (siteid.strip().upper(), encid.strip().upper(), telid.strip().upper())
     return valid_site_codes.get(instance, 'XXX')
 
+def LCOGT_telserial_to_site_codes(serial):
+    """Turns LCOGT telescope serial numbers e.g. '1m0-11' or '1m011' into the
+    MPC site code e.g. 'Q63'"""
+
+    valid_tel_serials = cfg.valid_telescope_serials
+
+    return valid_tel_serials.get(serial.replace('-', '', 1), 'XXX')
 
 def MPC_site_code_to_domes(site):
     """ Returns the mapped value of the MPC site code to LCO Site, Eclosure, and telescope"""
@@ -1896,7 +1958,7 @@ def get_sitecam_params(site, bin_mode=None):
         setup_overhead = cfg.tel_overhead['twom_setup_overhead']
         exp_overhead = cfg.inst_overhead['twom_exp_overhead']
         pixel_scale = cfg.tel_field['twom_pixscale']
-        fov = arcmins_to_radians(cfg.tel_field['twom_fov'])
+        fov = cfg.tel_field['twom_fov']
         max_exp_length = 300.0
         alt_limit = cfg.tel_alt['twom_alt_limit']
     elif site == 'FTN' or 'OGG-CLMA-2M0' in site or site == 'F65':
@@ -1904,7 +1966,7 @@ def get_sitecam_params(site, bin_mode=None):
         setup_overhead = cfg.tel_overhead['twom_setup_overhead']
         exp_overhead = cfg.inst_overhead['muscat_exp_overhead']
         pixel_scale = cfg.tel_field['twom_muscat_pixscale']
-        fov = arcmins_to_radians(cfg.tel_field['twom_muscat_fov'])
+        fov = cfg.tel_field['twom_muscat_fov']
         max_exp_length = 300.0
         alt_limit = cfg.tel_alt['twom_alt_limit']
     elif site == 'FTS' or 'COJ-CLMA-2M0' in site or site == 'E10':
@@ -1912,29 +1974,29 @@ def get_sitecam_params(site, bin_mode=None):
         setup_overhead = cfg.tel_overhead['twom_setup_overhead']
         exp_overhead = cfg.inst_overhead['twom_exp_overhead']
         pixel_scale = cfg.tel_field['twom_pixscale']
-        fov = arcmins_to_radians(cfg.tel_field['twom_fov'])
+        fov = cfg.tel_field['twom_fov']
         max_exp_length = 300.0
         alt_limit = cfg.tel_alt['twom_alt_limit']
     elif site == 'F65-FLOYDS' or site == 'E10-FLOYDS':
         site_code = site[0:3]
         exp_overhead = cfg.inst_overhead['floyds_exp_overhead']
         pixel_scale = cfg.tel_field['twom_floyds_pixscale']
-        fov = arcmins_to_radians(cfg.tel_field['twom_floyds_fov'])
+        fov = cfg.tel_field['twom_floyds_fov']
         max_exp_length = 3600.0
         alt_limit = cfg.tel_alt['twom_alt_limit']
-        setup_overhead = { 'front_padding' : cfg.tel_overhead['twom_setup_overhead'],
-                           'config_change_time' : cfg.inst_overhead['floyds_config_change_overhead'],
-                           'acquire_processing_time' : cfg.inst_overhead['floyds_acq_proc_overhead'],
-                           'acquire_exposure_time': cfg.inst_overhead['floyds_acq_exp_time'],
-                           'per_molecule_time' : cfg.molecule_overhead['per_molecule_time'],
-                           'calib_exposure_time' : cfg.inst_overhead['floyds_calib_exp_time']
+        setup_overhead = {'front_padding': cfg.tel_overhead['twom_setup_overhead'],
+                          'config_change_time': cfg.inst_overhead['floyds_config_change_overhead'],
+                          'acquire_processing_time': cfg.inst_overhead['floyds_acq_proc_overhead'],
+                          'acquire_exposure_time': cfg.inst_overhead['floyds_acq_exp_time'],
+                          'per_molecule_time': cfg.molecule_overhead['per_molecule_time'],
+                          'calib_exposure_time': cfg.inst_overhead['floyds_calib_exp_time']
                          }
     elif site in valid_point4m_codes:
         site_code = site
         setup_overhead = cfg.tel_overhead['point4m_setup_overhead']
         exp_overhead = cfg.inst_overhead['point4m_exp_overhead']
         pixel_scale = cfg.tel_field['point4m_pixscale']
-        fov = arcmins_to_radians(cfg.tel_field['point4m_fov'])
+        fov = cfg.tel_field['point4m_fov']
         max_exp_length = 300.0
         alt_limit = cfg.tel_alt['point4m_alt_limit']
     elif site in valid_site_codes or site == '1M0':
@@ -1942,11 +2004,11 @@ def get_sitecam_params(site, bin_mode=None):
         if bin_mode == '2k_2x2':
             pixel_scale = cfg.tel_field['onem_2x2_sin_pixscale']
             exp_overhead = cfg.inst_overhead['sinistro_2x2_exp_overhead']
-            fov = arcmins_to_radians(cfg.tel_field['onem_2x2_sinistro_fov'])
+            fov = cfg.tel_field['onem_2x2_sinistro_fov']
         else:
             exp_overhead = cfg.inst_overhead['sinistro_exp_overhead']
             pixel_scale = cfg.tel_field['onem_sinistro_pixscale']
-            fov = arcmins_to_radians(cfg.tel_field['onem_sinistro_fov'])
+            fov = cfg.tel_field['onem_sinistro_fov']
         max_exp_length = 300.0
         alt_limit = cfg.tel_alt['normal_alt_limit']
         site_code = site
@@ -1955,7 +2017,14 @@ def get_sitecam_params(site, bin_mode=None):
         site_code = 'XXX'
         setup_overhead = exp_overhead = pixel_scale = fov = max_exp_length = alt_limit = -1
 
-    return site_code, setup_overhead, exp_overhead, pixel_scale, fov, max_exp_length, alt_limit
+    return {'site_code': site_code,
+            'setup_overhead': setup_overhead,
+            'exp_overhead': exp_overhead,
+            'pixel_scale': pixel_scale,
+            'fov': fov,
+            'max_exp_length': max_exp_length,
+            'alt_limit': alt_limit,
+            }
 
 
 def comp_FOM(orbelems, emp_line):
@@ -2212,3 +2281,138 @@ def get_visibility(ra, dec, date, site_code, step_size='30 m', alt_limit=30, qui
             stop_time = set_time
 
     return dark_and_up_time, max_alt, start_time, stop_time
+
+
+def convert_to_ecliptic(equatorial_coords, coord_date):
+    # Calculate radial distance for cartesian coordinates
+    r = sqrt(sum([coord ** 2 for coord in equatorial_coords]))
+
+    # Convert heliocentric, equatorial Cartesian Coordinates to spherical coordinates
+    alpha, delta = S.sla_dcc2s(equatorial_coords)
+
+    # Convert Equatorial spherical Coordinates to Ecliptic Spherical coordinates
+    l, b = S.sla_eqecl(alpha, delta, coord_date)
+
+    # Convert Ecliptic Spherical coordinates to Unit cartesian coordinates
+    unit_cartesian_coords = S.sla_dcs2c(l, b)
+
+    # Convert Unit coordinates into real coordinates
+    final_cartesian_coords = [pos * r for pos in unit_cartesian_coords]
+
+    return final_cartesian_coords
+
+
+def orbital_pos_from_true_anomaly(nu, body_elements):
+    """Give Cartesian coordinates for a given true anomaly in radians for a given set of orbital elements"""
+    a = body_elements.get('meandist', 0)
+    e = body_elements['eccentricity']
+    i = radians(body_elements['orbinc'])
+    om = radians(body_elements['longascnode'])
+    w = radians(body_elements['argofperih'])
+    q = body_elements.get('perihdist', 0)
+
+    # Calculate radial distance
+    if not a:  # Comet
+        e = 1
+        if e >= 1:  # shorten extent of nu to prevent wayward infinities and beyond.
+            nu *= acos(-1/e) / pi - 0.0001
+        r = q * (1 + e) / (1 + e * cos(nu))
+    else:
+        r = a * (1 - e ** 2) / (1 + e * cos(nu))
+
+    # Calculate radial distance and heliocentric, ecliptic Cartesian Coordinates based on orbital elements
+    x_h_ecl = r * (cos(om) * cos(w + nu) - sin(om) * sin(w + nu) * cos(i))
+    y_h_ecl = r * (sin(om) * cos(w + nu) + cos(om) * sin(w + nu) * cos(i))
+    z_h_ecl = r * (sin(w + nu) * sin(i))
+
+    final_cartesian_coords = [x_h_ecl, y_h_ecl, z_h_ecl]
+
+    return final_cartesian_coords
+
+
+def get_planetary_elements(planet=None):
+    """
+    Function to return rough elements for the major planets with respect to the mean ecliptic and equinox of J2000.
+    Provides approximate orbits valid between 1800 AD and 2050 AD.
+    a,e,i change on the the order of .001 Unit/Century while Om and om are ~ .2 deg/Century
+    (See https://ssd.jpl.nasa.gov/planets/approx_pos.html)
+    :param planet: name of planet
+    :return: requested elements
+    """
+    planet_elements = {'mercury': {'meandist': 0.38709927,
+                                   'eccentricity': 0.20563593,
+                                   'orbinc': 7.00497902,
+                                   'longascnode': 48.33076593,
+                                   'argofperih': 77.45779628},
+                       'venus':   {'meandist': 0.72333566,
+                                   'eccentricity': 0.00677672,
+                                   'orbinc': 3.39467605,
+                                   'longascnode': 76.67984255,
+                                   'argofperih': 131.60246718},
+                       'earth':   {'meandist': 1.00000261,
+                                   'eccentricity': 0.01671123,
+                                   'orbinc': 0.00001531,
+                                   'longascnode': 0.0,
+                                   'argofperih': 102.93768193},
+                       'mars':    {'meandist': 1.52371034,
+                                   'eccentricity': 0.09339410,
+                                   'orbinc': 1.84969142,
+                                   'longascnode': 49.55953891,
+                                   'argofperih': -23.94362959},
+                       'jupiter': {'meandist': 5.20288700,
+                                   'eccentricity': 0.04838624,
+                                   'orbinc': 1.30439695,
+                                   'longascnode': 100.47390909,
+                                   'argofperih': 14.72847983},
+                       'saturn':  {'meandist': 9.53667594,
+                                   'eccentricity': 0.05386179,
+                                   'orbinc': 2.48599187,
+                                   'longascnode': 113.66242448,
+                                   'argofperih': 92.59887831},
+                       'uranus':  {'meandist': 19.18916464,
+                                   'eccentricity': 0.04725744,
+                                   'orbinc': 0.77263783,
+                                   'longascnode': 74.01692503,
+                                   'argofperih': 170.95427630},
+                       'neptune': {'meandist': 30.06992276,
+                                   'eccentricity': 0.00859048,
+                                   'orbinc': 1.77004347,
+                                   'longascnode': 131.78422574,
+                                   'argofperih': 44.96476227}
+                       }
+    try:
+        return_elements = planet_elements[planet.lower()]
+    except (KeyError, AttributeError):
+        return_elements = planet_elements
+    return return_elements
+
+def convert_findorb_elements(elements_json):
+    """Converts JSON elements output from find_orb in the elem_short.json file
+    to NEOexchange format"""
+
+    obj = elements_json['objects'][elements_json['ids'][0]]
+    elements = obj['elements']
+    neox_elements = { 'name' : obj['object'].replace('(', '').replace(')', ''),
+                      'origin' : 'F',
+                      'elements_type' : 'MPC_MINOR_PLANET',
+                      'epochofel' : datetime.strptime(elements['epoch_iso'], '%Y-%m-%dT%H:%M:%SZ'),
+                    }
+    # Mapping from find_orb -> NEOx element sets for direct values
+    mapping = {
+                'M' : 'meananom',
+                'a' : 'meandist',
+                'e' : 'eccentricity',
+                'q' : 'perihdist',
+                'i' : 'orbinc',
+                'arg_per' : 'argofperih',
+                'asc_node' : 'longascnode',
+                'Tp' : 'epochofperih',
+                'H' : 'abs_mag',
+                'G' :  'slope',
+                'rms_residual' : 'orbit_rms'
+            }
+
+    for fo_key, neox_key in mapping.items():
+        neox_elements[neox_key] = elements[fo_key]
+
+    return neox_elements

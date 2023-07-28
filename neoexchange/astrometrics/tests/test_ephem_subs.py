@@ -19,14 +19,16 @@ import os
 import tempfile
 from glob import glob
 import mock
+import json
 
-from django.test import TestCase, tag
+from django.test import SimpleTestCase, TestCase, tag
 from django.forms.models import model_to_dict
 
 # Import module to test
 from astrometrics.ephem_subs import *
 from core.models import Body
 from astrometrics.time_subs import datetime2mjd_utc, mjd_utc2mjd_tt
+import astrometrics.site_config as cfg
 
 
 class TestGetMountLimits(TestCase):
@@ -278,7 +280,7 @@ class TestComputeEphemerides(TestCase):
                          'type': 'MPC_MINOR_PLANET',
                          'uncertainty': 'U'}
 
-        self.length_emp_line = 12
+        self.length_emp_line = 15
 
     def test_body_is_correct_class(self):
         tbody = Body.objects.get(provisional_name='N999r0q')
@@ -315,6 +317,9 @@ class TestComputeEphemerides(TestCase):
         expected_pa = 91.35793788996334
         expected_delta = 0.18138901132373111
         expected_r = 0.9919581686703755
+        expected_geocnt_a_pos = [0.08577088074651966, -0.08469640009626787, 0.13553990887734638]
+        expected_heliocnt_e_pos = [-0.8586692430417997, -0.5221333567849594, 1.6751755818864368e-06]
+        expected_ltt = 90.51398438038252
 
         emp_line = compute_ephem(d, self.elements, '500', dbg=False, perturb=True, display=False)
 
@@ -330,6 +335,10 @@ class TestComputeEphemerides(TestCase):
         self.assertAlmostEqual(expected_pa,  emp_line['sky_motion_pa'], precision)
         self.assertAlmostEqual(expected_delta,  emp_line['earth_obj_dist'], precision)
         self.assertAlmostEqual(expected_r,  emp_line['sun_obj_dist'], precision)
+        self.assertAlmostEqual(expected_ltt,  emp_line['ltt'], precision)
+        for k, coord in enumerate(expected_geocnt_a_pos):
+            self.assertAlmostEqual(coord,  emp_line['geocnt_a_pos'][k], precision)
+            self.assertAlmostEqual(expected_heliocnt_e_pos[k],  emp_line['heliocnt_e_pos'][k], precision)
 
     def test_compute_ephem_with_body(self):
         d = datetime(2015, 4, 21, 17, 35, 00)
@@ -342,6 +351,9 @@ class TestComputeEphemerides(TestCase):
         expected_pa = 91.35793788996334
         expected_delta = 0.18138901132373111
         expected_r = 0.9919581686703755
+        expected_geocnt_a_pos = [0.08577088074651966, -0.08469640009626787, 0.13553990887734638]
+        expected_heliocnt_e_pos = [-0.8586692430417997, -0.5221333567849594, 1.6751755818864368e-06]
+        expected_ltt = 90.51398438038252
 
         body_elements = model_to_dict(self.body)
         emp_line = compute_ephem(d, body_elements, '500', dbg=False, perturb=True, display=False)
@@ -358,6 +370,10 @@ class TestComputeEphemerides(TestCase):
         self.assertAlmostEqual(expected_pa,  emp_line['sky_motion_pa'], precision)
         self.assertAlmostEqual(expected_delta,  emp_line['earth_obj_dist'], precision)
         self.assertAlmostEqual(expected_r,  emp_line['sun_obj_dist'], precision)
+        self.assertAlmostEqual(expected_ltt, emp_line['ltt'], precision)
+        for k, coord in enumerate(expected_geocnt_a_pos):
+            self.assertAlmostEqual(coord, emp_line['geocnt_a_pos'][k], precision)
+            self.assertAlmostEqual(expected_heliocnt_e_pos[k], emp_line['heliocnt_e_pos'][k], precision)
 
     def test_compute_south_polar_distance_with_elements_in_north(self):
         d = datetime(2015, 4, 21, 17, 35, 00)
@@ -700,6 +716,8 @@ class TestDarkAndObjectUp(TestCase):
             cls.full_emp.append(emp_line)
             ephem_time = ephem_time + timedelta(seconds=step_size_secs)
 
+        cls.precision = 8
+
     def test1(self):
         expected_first_line = {'date': datetime(2019, 1, 26, 1, 20),
                                'ra': 3.13872732667931,
@@ -726,9 +744,9 @@ class TestDarkAndObjectUp(TestCase):
 
         self.assertEqual(expected_num_lines, len(visible_emp))
         for key, value in expected_first_line.items():
-            self.assertEqual(value, visible_emp[0][key])
+            self.assertAlmostEqual(value, visible_emp[0][key], self.precision)
         for key, value in expected_last_line.items():
-            self.assertEqual(value, visible_emp[-1][key])
+            self.assertAlmostEqual(value, visible_emp[-1][key], self.precision)
 
     def test_empty_ephem(self):
         expected_num_lines = 0
@@ -1767,21 +1785,26 @@ class TestGetSiteCamParams(TestCase):
 
     twom_setup_overhead = 180.0
     twom_exp_overhead = 19.0
-    twom_fov = radians(10.0/60.0)
-    twom_muscat_fov = radians(9.1/60.0)
-    onem_sbig_fov = radians(15.5/60.0)
+    twom_fov = 10.0
+    twom_muscat_fov = 9.1
+    onem_sbig_fov = 15.5
     onem_setup_overhead = 90.0
     onem_exp_overhead = 15.5
     sinistro_exp_overhead = 28.0
-    onem_sinistro_fov = radians(26.4/60.0)
-    point4m_fov = radians(29.1/60.0)
+    onem_sinistro_fov = 26.4
+    point4m_fov = 29.1
     point4m_exp_overhead = 14.0
     point4m_setup_overhead = 90.0
     max_exp = 300.0
 
     def test_bad_site(self):
         site_code = 'wibble'
-        chk_site_code, setup_overhead, exp_overhead, pixel_scale, ccd_fov, max_exp_time, alt_limit = get_sitecam_params(site_code)
+        sitecam = get_sitecam_params(site_code)
+        chk_site_code = sitecam['site_code']
+        setup_overhead = sitecam['setup_overhead']
+        exp_overhead = sitecam['exp_overhead']
+        pixel_scale = sitecam['pixel_scale']
+        max_exp_time = sitecam['max_exp_length']
         self.assertEqual('XXX', chk_site_code)
         self.assertEqual(-1, pixel_scale)
         self.assertEqual(-1, max_exp_time)
@@ -1790,7 +1813,13 @@ class TestGetSiteCamParams(TestCase):
 
     def test_2m_site(self):
         site_code = 'E10'
-        chk_site_code, setup_overhead, exp_overhead, pixel_scale, ccd_fov, max_exp_time, alt_limit = get_sitecam_params(site_code)
+        sitecam = get_sitecam_params(site_code)
+        chk_site_code = sitecam['site_code']
+        setup_overhead = sitecam['setup_overhead']
+        exp_overhead = sitecam['exp_overhead']
+        pixel_scale = sitecam['pixel_scale']
+        ccd_fov = sitecam['fov']
+        max_exp_time = sitecam['max_exp_length']
         self.assertEqual(site_code.upper(), chk_site_code)
         self.assertEqual(0.304, pixel_scale)
         self.assertEqual(self.twom_fov, ccd_fov)
@@ -1800,7 +1829,13 @@ class TestGetSiteCamParams(TestCase):
 
     def test_muscat_site(self):
         site_code = 'f65'
-        chk_site_code, setup_overhead, exp_overhead, pixel_scale, ccd_fov, max_exp_time, alt_limit = get_sitecam_params(site_code)
+        sitecam = get_sitecam_params(site_code)
+        chk_site_code = sitecam['site_code']
+        setup_overhead = sitecam['setup_overhead']
+        exp_overhead = sitecam['exp_overhead']
+        pixel_scale = sitecam['pixel_scale']
+        ccd_fov = sitecam['fov']
+        max_exp_time = sitecam['max_exp_length']
         self.assertEqual(site_code.upper(), chk_site_code)
         self.assertEqual(0.27, pixel_scale)
         self.assertEqual(self.twom_muscat_fov, ccd_fov)
@@ -1812,7 +1847,13 @@ class TestGetSiteCamParams(TestCase):
         site_code = 'E10'
 
         site_string = 'COJ-CLMA-2M0A'
-        chk_site_code, setup_overhead, exp_overhead, pixel_scale, ccd_fov, max_exp_time, alt_limit = get_sitecam_params(site_string)
+        sitecam = get_sitecam_params(site_string)
+        chk_site_code = sitecam['site_code']
+        setup_overhead = sitecam['setup_overhead']
+        exp_overhead = sitecam['exp_overhead']
+        pixel_scale = sitecam['pixel_scale']
+        ccd_fov = sitecam['fov']
+        max_exp_time = sitecam['max_exp_length']
         self.assertEqual(site_code, chk_site_code)
         self.assertEqual(0.304, pixel_scale)
         self.assertEqual(self.twom_fov, ccd_fov)
@@ -1820,9 +1861,32 @@ class TestGetSiteCamParams(TestCase):
         self.assertEqual(self.twom_setup_overhead, setup_overhead)
         self.assertEqual(self.twom_exp_overhead, exp_overhead)
 
+    def test_2m_floyds(self):
+        site_code = 'E10-FLOYDS'
+
+        sitecam = get_sitecam_params(site_code)
+        chk_site_code = sitecam['site_code']
+        setup_overhead = sitecam['setup_overhead']
+        exp_overhead = sitecam['exp_overhead']
+        pixel_scale = sitecam['pixel_scale']
+        ccd_fov = sitecam['fov']
+        max_exp_time = sitecam['max_exp_length']
+        self.assertEqual('E10', chk_site_code)
+        self.assertEqual(cfg.tel_field['twom_floyds_pixscale'], pixel_scale)
+        self.assertEqual(cfg.tel_field['twom_floyds_fov'], ccd_fov)
+        self.assertEqual(3600, max_exp_time)
+        self.assertEqual(6, len(setup_overhead))
+        self.assertEqual(cfg.inst_overhead['floyds_exp_overhead'], exp_overhead)
+
     def test_1m_site_sinistro_domea(self):
         site_code = 'W85'
-        chk_site_code, setup_overhead, exp_overhead, pixel_scale, ccd_fov, max_exp_time, alt_limit = get_sitecam_params(site_code)
+        sitecam = get_sitecam_params(site_code)
+        chk_site_code = sitecam['site_code']
+        setup_overhead = sitecam['setup_overhead']
+        exp_overhead = sitecam['exp_overhead']
+        pixel_scale = sitecam['pixel_scale']
+        ccd_fov = sitecam['fov']
+        max_exp_time = sitecam['max_exp_length']
         self.assertEqual(site_code.upper(), chk_site_code)
         self.assertEqual(0.389, pixel_scale)
         self.assertEqual(self.onem_sinistro_fov, ccd_fov)
@@ -1832,7 +1896,13 @@ class TestGetSiteCamParams(TestCase):
 
     def test_1m_lsc_site_sinistro(self):
         site_code = 'W86'
-        chk_site_code, setup_overhead, exp_overhead, pixel_scale, ccd_fov, max_exp_time, alt_limit = get_sitecam_params(site_code)
+        sitecam = get_sitecam_params(site_code)
+        chk_site_code = sitecam['site_code']
+        setup_overhead = sitecam['setup_overhead']
+        exp_overhead = sitecam['exp_overhead']
+        pixel_scale = sitecam['pixel_scale']
+        ccd_fov = sitecam['fov']
+        max_exp_time = sitecam['max_exp_length']
         self.assertEqual(site_code.upper(), chk_site_code)
         self.assertEqual(0.389, pixel_scale)
         self.assertEqual(self.onem_sinistro_fov, ccd_fov)
@@ -1842,7 +1912,13 @@ class TestGetSiteCamParams(TestCase):
 
     def test_point4m_site(self):
         site_code = 'Z21'
-        chk_site_code, setup_overhead, exp_overhead, pixel_scale, ccd_fov, max_exp_time, alt_limit = get_sitecam_params(site_code)
+        sitecam = get_sitecam_params(site_code)
+        chk_site_code = sitecam['site_code']
+        setup_overhead = sitecam['setup_overhead']
+        exp_overhead = sitecam['exp_overhead']
+        pixel_scale = sitecam['pixel_scale']
+        ccd_fov = sitecam['fov']
+        max_exp_time = sitecam['max_exp_length']
         self.assertEqual(site_code.upper(), chk_site_code)
         self.assertEqual(0.571, pixel_scale)
         self.assertEqual(self.point4m_fov, ccd_fov)
@@ -1852,7 +1928,13 @@ class TestGetSiteCamParams(TestCase):
 
     def test_point4m_site2(self):
         site_code = 'T04'
-        chk_site_code, setup_overhead, exp_overhead, pixel_scale, ccd_fov, max_exp_time, alt_limit = get_sitecam_params(site_code)
+        sitecam = get_sitecam_params(site_code)
+        chk_site_code = sitecam['site_code']
+        setup_overhead = sitecam['setup_overhead']
+        exp_overhead = sitecam['exp_overhead']
+        pixel_scale = sitecam['pixel_scale']
+        ccd_fov = sitecam['fov']
+        max_exp_time = sitecam['max_exp_length']
         self.assertEqual(site_code.upper(), chk_site_code)
         self.assertEqual(0.571, pixel_scale)
         self.assertEqual(self.point4m_fov, ccd_fov)
@@ -1862,7 +1944,13 @@ class TestGetSiteCamParams(TestCase):
 
     def test_point4m_site3(self):
         site_code = 'Q59'
-        chk_site_code, setup_overhead, exp_overhead, pixel_scale, ccd_fov, max_exp_time, alt_limit = get_sitecam_params(site_code)
+        sitecam = get_sitecam_params(site_code)
+        chk_site_code = sitecam['site_code']
+        setup_overhead = sitecam['setup_overhead']
+        exp_overhead = sitecam['exp_overhead']
+        pixel_scale = sitecam['pixel_scale']
+        ccd_fov = sitecam['fov']
+        max_exp_time = sitecam['max_exp_length']
         self.assertEqual(site_code.upper(), chk_site_code)
         self.assertEqual(0.571, pixel_scale)
         self.assertEqual(self.point4m_fov, ccd_fov)
@@ -1872,7 +1960,13 @@ class TestGetSiteCamParams(TestCase):
 
     def test_point4m_site4(self):
         site_code = 'Q58'
-        chk_site_code, setup_overhead, exp_overhead, pixel_scale, ccd_fov, max_exp_time, alt_limit = get_sitecam_params(site_code)
+        sitecam = get_sitecam_params(site_code)
+        chk_site_code = sitecam['site_code']
+        setup_overhead = sitecam['setup_overhead']
+        exp_overhead = sitecam['exp_overhead']
+        pixel_scale = sitecam['pixel_scale']
+        ccd_fov = sitecam['fov']
+        max_exp_time = sitecam['max_exp_length']
         self.assertEqual(site_code.upper(), chk_site_code)
         self.assertEqual(0.571, pixel_scale)
         self.assertEqual(self.point4m_fov, ccd_fov)
@@ -1882,7 +1976,13 @@ class TestGetSiteCamParams(TestCase):
 
     def test_point4m_site5(self):
         site_code = 'Z17'
-        chk_site_code, setup_overhead, exp_overhead, pixel_scale, ccd_fov, max_exp_time, alt_limit = get_sitecam_params(site_code)
+        sitecam = get_sitecam_params(site_code)
+        chk_site_code = sitecam['site_code']
+        setup_overhead = sitecam['setup_overhead']
+        exp_overhead = sitecam['exp_overhead']
+        pixel_scale = sitecam['pixel_scale']
+        ccd_fov = sitecam['fov']
+        max_exp_time = sitecam['max_exp_length']
         self.assertEqual(site_code.upper(), chk_site_code)
         self.assertEqual(0.571, pixel_scale)
         self.assertEqual(self.point4m_fov, ccd_fov)
@@ -1892,7 +1992,13 @@ class TestGetSiteCamParams(TestCase):
 
     def test_point4m_site6(self):
         site_code = 'T03'
-        chk_site_code, setup_overhead, exp_overhead, pixel_scale, ccd_fov, max_exp_time, alt_limit = get_sitecam_params(site_code)
+        sitecam = get_sitecam_params(site_code)
+        chk_site_code = sitecam['site_code']
+        setup_overhead = sitecam['setup_overhead']
+        exp_overhead = sitecam['exp_overhead']
+        pixel_scale = sitecam['pixel_scale']
+        ccd_fov = sitecam['fov']
+        max_exp_time = sitecam['max_exp_length']
         self.assertEqual(site_code.upper(), chk_site_code)
         self.assertEqual(0.571, pixel_scale)
         self.assertEqual(self.point4m_fov, ccd_fov)
@@ -1902,7 +2008,13 @@ class TestGetSiteCamParams(TestCase):
 
     def test_point4m_site7(self):
         site_code = 'W89'
-        chk_site_code, setup_overhead, exp_overhead, pixel_scale, ccd_fov, max_exp_time, alt_limit = get_sitecam_params(site_code)
+        sitecam = get_sitecam_params(site_code)
+        chk_site_code = sitecam['site_code']
+        setup_overhead = sitecam['setup_overhead']
+        exp_overhead = sitecam['exp_overhead']
+        pixel_scale = sitecam['pixel_scale']
+        ccd_fov = sitecam['fov']
+        max_exp_time = sitecam['max_exp_length']
         self.assertEqual(site_code.upper(), chk_site_code)
         self.assertEqual(0.571, pixel_scale)
         self.assertEqual(self.point4m_fov, ccd_fov)
@@ -1912,7 +2024,13 @@ class TestGetSiteCamParams(TestCase):
 
     def test_point4m_site8(self):
         site_code = 'V38'
-        chk_site_code, setup_overhead, exp_overhead, pixel_scale, ccd_fov, max_exp_time, alt_limit = get_sitecam_params(site_code)
+        sitecam = get_sitecam_params(site_code)
+        chk_site_code = sitecam['site_code']
+        setup_overhead = sitecam['setup_overhead']
+        exp_overhead = sitecam['exp_overhead']
+        pixel_scale = sitecam['pixel_scale']
+        ccd_fov = sitecam['fov']
+        max_exp_time = sitecam['max_exp_length']
         self.assertEqual(site_code.upper(), chk_site_code)
         self.assertEqual(0.571, pixel_scale)
         self.assertEqual(self.point4m_fov, ccd_fov)
@@ -1922,7 +2040,13 @@ class TestGetSiteCamParams(TestCase):
 
     def test_point4m_site9(self):
         site_code = 'L09'
-        chk_site_code, setup_overhead, exp_overhead, pixel_scale, ccd_fov, max_exp_time, alt_limit = get_sitecam_params(site_code)
+        sitecam = get_sitecam_params(site_code)
+        chk_site_code = sitecam['site_code']
+        setup_overhead = sitecam['setup_overhead']
+        exp_overhead = sitecam['exp_overhead']
+        pixel_scale = sitecam['pixel_scale']
+        ccd_fov = sitecam['fov']
+        max_exp_time = sitecam['max_exp_length']
         self.assertEqual(site_code.upper(), chk_site_code)
         self.assertEqual(0.571, pixel_scale)
         self.assertEqual(self.point4m_fov, ccd_fov)
@@ -1932,7 +2056,13 @@ class TestGetSiteCamParams(TestCase):
 
     def test_point4m_site10(self):
         site_code = 'W79'
-        chk_site_code, setup_overhead, exp_overhead, pixel_scale, ccd_fov, max_exp_time, alt_limit = get_sitecam_params(site_code)
+        sitecam = get_sitecam_params(site_code)
+        chk_site_code = sitecam['site_code']
+        setup_overhead = sitecam['setup_overhead']
+        exp_overhead = sitecam['exp_overhead']
+        pixel_scale = sitecam['pixel_scale']
+        ccd_fov = sitecam['fov']
+        max_exp_time = sitecam['max_exp_length']
         self.assertEqual(site_code.upper(), chk_site_code)
         self.assertEqual(0.571, pixel_scale)
         self.assertEqual(self.point4m_fov, ccd_fov)
@@ -1942,7 +2072,13 @@ class TestGetSiteCamParams(TestCase):
 
     def test_1m_cpt_site_sinistro1(self):
         site_code = 'K92'
-        chk_site_code, setup_overhead, exp_overhead, pixel_scale, ccd_fov, max_exp_time, alt_limit = get_sitecam_params(site_code)
+        sitecam = get_sitecam_params(site_code)
+        chk_site_code = sitecam['site_code']
+        setup_overhead = sitecam['setup_overhead']
+        exp_overhead = sitecam['exp_overhead']
+        pixel_scale = sitecam['pixel_scale']
+        ccd_fov = sitecam['fov']
+        max_exp_time = sitecam['max_exp_length']
         self.assertEqual(site_code.upper(), chk_site_code)
         self.assertEqual(0.389, pixel_scale)
         self.assertEqual(self.onem_sinistro_fov, ccd_fov)
@@ -1952,7 +2088,13 @@ class TestGetSiteCamParams(TestCase):
 
     def test_1m_cpt_site_sinistro2(self):
         site_code = 'K93'
-        chk_site_code, setup_overhead, exp_overhead, pixel_scale, ccd_fov, max_exp_time, alt_limit = get_sitecam_params(site_code)
+        sitecam = get_sitecam_params(site_code)
+        chk_site_code = sitecam['site_code']
+        setup_overhead = sitecam['setup_overhead']
+        exp_overhead = sitecam['exp_overhead']
+        pixel_scale = sitecam['pixel_scale']
+        ccd_fov = sitecam['fov']
+        max_exp_time = sitecam['max_exp_length']
         self.assertEqual(site_code.upper(), chk_site_code)
         self.assertEqual(0.389, pixel_scale)
         self.assertEqual(self.onem_sinistro_fov, ccd_fov)
@@ -1962,7 +2104,13 @@ class TestGetSiteCamParams(TestCase):
 
     def test_1m_elp_site_sinistro_domeB(self):
         site_code = 'V39'
-        chk_site_code, setup_overhead, exp_overhead, pixel_scale, ccd_fov, max_exp_time, alt_limit = get_sitecam_params(site_code)
+        sitecam = get_sitecam_params(site_code)
+        chk_site_code = sitecam['site_code']
+        setup_overhead = sitecam['setup_overhead']
+        exp_overhead = sitecam['exp_overhead']
+        pixel_scale = sitecam['pixel_scale']
+        ccd_fov = sitecam['fov']
+        max_exp_time = sitecam['max_exp_length']
         self.assertEqual(site_code.upper(), chk_site_code)
         self.assertEqual(0.389, pixel_scale)
         self.assertEqual(self.onem_sinistro_fov, ccd_fov)
@@ -1972,7 +2120,13 @@ class TestGetSiteCamParams(TestCase):
 
     def test_1m_tfn_site_sinistro_domeA(self):
         site_code = 'Z31'
-        chk_site_code, setup_overhead, exp_overhead, pixel_scale, ccd_fov, max_exp_time, alt_limit = get_sitecam_params(site_code)
+        sitecam = get_sitecam_params(site_code)
+        chk_site_code = sitecam['site_code']
+        setup_overhead = sitecam['setup_overhead']
+        exp_overhead = sitecam['exp_overhead']
+        pixel_scale = sitecam['pixel_scale']
+        ccd_fov = sitecam['fov']
+        max_exp_time = sitecam['max_exp_length']
         self.assertEqual(site_code.upper(), chk_site_code)
         self.assertEqual(0.389, pixel_scale)
         self.assertEqual(self.onem_sinistro_fov, ccd_fov)
@@ -1982,12 +2136,35 @@ class TestGetSiteCamParams(TestCase):
 
     def test_1m_tfn_site_sinistro_domeB(self):
         site_code = 'Z24'
-        chk_site_code, setup_overhead, exp_overhead, pixel_scale, ccd_fov, max_exp_time, alt_limit = get_sitecam_params(site_code)
+        sitecam = get_sitecam_params(site_code)
+        chk_site_code = sitecam['site_code']
+        setup_overhead = sitecam['setup_overhead']
+        exp_overhead = sitecam['exp_overhead']
+        pixel_scale = sitecam['pixel_scale']
+        ccd_fov = sitecam['fov']
+        max_exp_time = sitecam['max_exp_length']
         self.assertEqual(site_code.upper(), chk_site_code)
         self.assertEqual(0.389, pixel_scale)
         self.assertEqual(self.onem_sinistro_fov, ccd_fov)
         self.assertEqual(self.onem_setup_overhead, setup_overhead)
         self.assertEqual(self.sinistro_exp_overhead, exp_overhead)
+        self.assertEqual(self.max_exp, max_exp_time)
+
+    def test_1m_2x2binned(self):
+        site_code = 'V39'
+        bin_mode = '2k_2x2'
+        sitecam = get_sitecam_params(site_code, bin_mode)
+        chk_site_code = sitecam['site_code']
+        setup_overhead = sitecam['setup_overhead']
+        exp_overhead = sitecam['exp_overhead']
+        pixel_scale = sitecam['pixel_scale']
+        ccd_fov = sitecam['fov']
+        max_exp_time = sitecam['max_exp_length']
+        self.assertEqual(site_code.upper(), chk_site_code)
+        self.assertEqual(cfg.tel_field['onem_2x2_sin_pixscale'], pixel_scale)
+        self.assertEqual(cfg.tel_field['onem_2x2_sinistro_fov'], ccd_fov)
+        self.assertEqual(self.onem_setup_overhead, setup_overhead)
+        self.assertEqual(cfg.inst_overhead['sinistro_2x2_exp_overhead'], exp_overhead)
         self.assertEqual(self.max_exp, max_exp_time)
 
 
@@ -3230,7 +3407,7 @@ class TestReadFindorbEphem(TestCase):
         self.compare_ephemeris((expected_empinfo, expected_emp), (empinfo, emp))
 
 
-class TestDetermineHorizonsId(TestCase):
+class TestDetermineHorizonsId(SimpleTestCase):
 
     def test_289P(self):
         expected_id = 90001196
@@ -3240,8 +3417,9 @@ class TestDetermineHorizonsId(TestCase):
                  '    90001195    2005    289P           289P            Blanpain',
                  '    90001196    2018    289P           289P            Blanpain',
                  '']
+        obj_name = '289P'
 
-        horizons_id = determine_horizons_id(lines)
+        horizons_id = determine_horizons_id(lines, obj_name)
 
         self.assertEqual(expected_id, horizons_id)
 
@@ -3264,8 +3442,9 @@ class TestDetermineHorizonsId(TestCase):
                  '    90000543    2018    46P            46P             Wirtanen',
                  '    90000544    2018    46P            46P             Wirtanen',
                  '']
+        obj_name = '46P'
 
-        horizons_id = determine_horizons_id(lines)
+        horizons_id = determine_horizons_id(lines, obj_name)
 
         self.assertEqual(expected_id, horizons_id)
 
@@ -3289,8 +3468,9 @@ class TestDetermineHorizonsId(TestCase):
                  '    90000544    2018    46P            46P             Wirtanen',
                  '']
         now = datetime(2008, 5, 11, 17, 20, 42)
+        obj_name = '46P'
 
-        horizons_id = determine_horizons_id(lines, now)
+        horizons_id = determine_horizons_id(lines, obj_name, now)
 
         self.assertEqual(expected_id, horizons_id)
 
@@ -3308,8 +3488,9 @@ class TestDetermineHorizonsId(TestCase):
                  '    90000393    2011    29P            29P             Schwassmann-Wachmann 1',
                  '']
         now = datetime(2020, 5, 11, 17, 20, 42)
+        obj_name = '29P'
 
-        horizons_id = determine_horizons_id(lines, now)
+        horizons_id = determine_horizons_id(lines, obj_name, now)
 
         self.assertEqual(expected_id, horizons_id)
 
@@ -3327,8 +3508,9 @@ class TestDetermineHorizonsId(TestCase):
                  '    90000393    2011    29P            29P             Schwassmann-Wachmann 1',
                  '']
         now = datetime(2008, 5, 11, 17, 20, 42)
+        obj_name = '29P'
 
-        horizons_id = determine_horizons_id(lines, now)
+        horizons_id = determine_horizons_id(lines, obj_name, now)
 
         self.assertEqual(expected_id, horizons_id)
 
@@ -3361,23 +3543,554 @@ class TestDetermineHorizonsId(TestCase):
                  '    90000213    2011    10P            10P             Tempel 2',
                  '']
         now = datetime(1975, 5, 11, 17, 20, 42)
+        obj_name = '10P'
 
-        horizons_id = determine_horizons_id(lines, now)
+        horizons_id = determine_horizons_id(lines, obj_name, now)
+
+        self.assertEqual(expected_id, horizons_id)
+
+    def test_73P(self):
+        expected_id = 90000732
+        lines = ['Ambiguous target name; provide unique id:',
+             'Record #  Epoch-yr  >MATCH DESIG<  Primary Desig  Name  ',
+             '--------  --------  -------------  -------------  -------------------------',
+             '90000726    1930    73P            73P             Schwassmann-Wachmann 3',
+             '90000727    1979    73P            73P             Schwassmann-Wachmann 3',
+             '90000728    1995    73P            73P             Schwassmann-Wachmann 3',
+             '90000729    1996    73P            73P             Schwassmann-Wachmann 3',
+             '90000730    2005    73P            73P             Schwassmann-Wachmann 3',
+             '90000731    2017    73P            73P             Schwassmann-Wachmann 3',
+             '90000732    2017    73P            73P             Schwassmann-Wachmann 3',
+             '90000733    1995    73P-A          73P-A           Schwassmann-Wachmann 3',
+             '90000734    1995    73P-B          73P-B           Schwassmann-Wachmann 3',
+             '90000735    2001    73P-B          73P-B           Schwassmann-Wachmann 3',
+             '90000736    2006    73P-B          73P-B           Schwassmann-Wachmann 3',
+             '90000737    1995    73P-C          73P-C           Schwassmann-Wachmann 3',
+             '90000738    2001    73P-C          73P-C           Schwassmann-Wachmann 3',
+             '90000739    2012    73P-C          73P-C           Schwassmann-Wachmann 3',
+             '90000740    2001    73P-E          73P-E           Schwassmann-Wachmann 3',
+             '90000741    2006    73P-G          73P-G           Schwassmann-Wachmann 3',
+             '90000742    2006    73P-H          73P-H           Schwassmann-Wachmann 3',
+             '90000743    2006    73P-J          73P-J           Schwassmann-Wachmann 3',
+             '90000744    2006    73P-K          73P-K           Schwassmann-Wachmann 3',
+             '90000745    2006    73P-L          73P-L           Schwassmann-Wachmann 3',
+             '90000746    2006    73P-M          73P-M           Schwassmann-Wachmann 3',
+             '90000747    2006    73P-N          73P-N           Schwassmann-Wachmann 3',
+             '90000748    2006    73P-P          73P-P           Schwassmann-Wachmann 3',
+             '90000749    2006    73P-Q          73P-Q           Schwassmann-Wachmann 3',
+             '90000750    2006    73P-R          73P-R           Schwassmann-Wachmann 3',
+             '90000751    2006    73P-S          73P-S           Schwassmann-Wachmann 3',
+             '90000752    2006    73P-T          73P-T           Schwassmann-Wachmann 3',
+             '90000753    2006    73P-U          73P-U           Schwassmann-Wachmann 3',
+             '90000754    2006    73P-V          73P-V           Schwassmann-Wachmann 3',
+             '90000755    2006    73P-W          73P-W           Schwassmann-Wachmann 3',
+             '90000756    2006    73P-X          73P-X           Schwassmann-Wachmann 3',
+             '90000757    2006    73P-Y          73P-Y           Schwassmann-Wachmann 3',
+             '90000758    2006    73P-Z          73P-Z           Schwassmann-Wachmann 3',
+             '90000759    2006    73P-AA         73P-AA          Schwassmann-Wachmann 3',
+             '90000760    2006    73P-AB         73P-AB          Schwassmann-Wachmann 3',
+             '90000761    2006    73P-AC         73P-AC          Schwassmann-Wachmann 3',
+             '90000762    2006    73P-AD         73P-AD          Schwassmann-Wachmann 3',
+             '90000763    2006    73P-AE         73P-AE          Schwassmann-Wachmann 3',
+             '90000764    2006    73P-AF         73P-AF          Schwassmann-Wachmann 3',
+             '90000765    2006    73P-AG         73P-AG          Schwassmann-Wachmann 3',
+             '90000766    2006    73P-AH         73P-AH          Schwassmann-Wachmann 3',
+             '90000767    2006    73P-AI         73P-AI          Schwassmann-Wachmann 3',
+             '90000768    2006    73P-AJ         73P-AJ          Schwassmann-Wachmann 3',
+             '90000769    2006    73P-AK         73P-AK          Schwassmann-Wachmann 3',
+             '90000770    2006    73P-AL         73P-AL          Schwassmann-Wachmann 3',
+             '90000771    2006    73P-AM         73P-AM          Schwassmann-Wachmann 3',
+             '90000772    2006    73P-AN         73P-AN          Schwassmann-Wachmann 3',
+             '90000773    2006    73P-AO         73P-AO          Schwassmann-Wachmann 3',
+             '90000774    2006    73P-AP         73P-AP          Schwassmann-Wachmann 3',
+             '90000775    2006    73P-AQ         73P-AQ          Schwassmann-Wachmann 3',
+             '90000776    2006    73P-AR         73P-AR          Schwassmann-Wachmann 3',
+             '90000777    2006    73P-AS         73P-AS          Schwassmann-Wachmann 3',
+             '90000778    2006    73P-AT         73P-AT          Schwassmann-Wachmann 3',
+             '90000779    2006    73P-AU         73P-AU          Schwassmann-Wachmann 3',
+             '90000780    2006    73P-AV         73P-AV          Schwassmann-Wachmann 3',
+             '90000781    2006    73P-AW         73P-AW          Schwassmann-Wachmann 3',
+             '90000782    2006    73P-AX         73P-AX          Schwassmann-Wachmann 3',
+             '90000783    2006    73P-AY         73P-AY          Schwassmann-Wachmann 3',
+             '90000784    2006    73P-AZ         73P-AZ          Schwassmann-Wachmann 3',
+             '90000785    2006    73P-BA         73P-BA          Schwassmann-Wachmann 3',
+             '90000786    2006    73P-BB         73P-BB          Schwassmann-Wachmann 3',
+             '90000787    2006    73P-BC         73P-BC          Schwassmann-Wachmann 3',
+             '90000788    2006    73P-BD         73P-BD          Schwassmann-Wachmann 3',
+             '90000789    2006    73P-BE         73P-BE          Schwassmann-Wachmann 3',
+             '90000790    2006    73P-BF         73P-BF          Schwassmann-Wachmann 3',
+             '90000791    2006    73P-BG         73P-BG          Schwassmann-Wachmann 3',
+             '90000792    2006    73P-BH         73P-BH          Schwassmann-Wachmann 3',
+             '90000793    2006    73P-BI         73P-BI          Schwassmann-Wachmann 3',
+             '90000794    2006    73P-BJ         73P-BJ          Schwassmann-Wachmann 3',
+             '90000795    2006    73P-BK         73P-BK          Schwassmann-Wachmann 3',
+             '90000796    2006    73P-BL         73P-BL          Schwassmann-Wachmann 3',
+             '90000797    2006    73P-BM         73P-BM          Schwassmann-Wachmann 3',
+             '90000798    2006    73P-BN         73P-BN          Schwassmann-Wachmann 3',
+             '90000799    2006    73P-BO         73P-BO          Schwassmann-Wachmann 3',
+             '90000800    2006    73P-BP         73P-BP          Schwassmann-Wachmann 3',
+             '90000801    2006    73P-BQ         73P-BQ          Schwassmann-Wachmann 3',
+             '90000802    2006    73P-BR         73P-BR          Schwassmann-Wachmann 3',
+             '90000803    2006    73P-BS         73P-BS          Schwassmann-Wachmann 3',
+             '90000804    2017    73P-BT         73P-BT          Schwassmann-Wachmann 3',
+             '90000805    2022    73P-BU         73P-BU          Schwassmann-Wachmann 3',
+             '90000806    2022    73P-BV         73P-BV          Schwassmann-Wachmann 3',
+             '']
+        now = datetime(2022, 8, 19, 17, 20, 42)
+        obj_name = '73P'
+
+        horizons_id = determine_horizons_id(lines, obj_name, now)
 
         self.assertEqual(expected_id, horizons_id)
 
     def test_bad_object(self):
         expected_id = None
         lines = ['Unknown target (20000P). Maybe try different id_type?']
+        obj_name = '20000P'
 
-        horizons_id = determine_horizons_id(lines)
+        horizons_id = determine_horizons_id(lines, obj_name)
 
         self.assertEqual(expected_id, horizons_id)
 
     def test_bad_object2(self):
         expected_id = None
         lines = []
+        obj_name = ''
 
-        horizons_id = determine_horizons_id(lines)
+        horizons_id = determine_horizons_id(lines, obj_name)
 
         self.assertEqual(expected_id, horizons_id)
+
+
+class TestLCOGT_tels_to_sitecode(SimpleTestCase):
+
+# 2.0m's
+    def test_ogg_clma_2m0a(self):
+
+        expected_sitecode = 'F65'
+        sitecode = LCOGT_telserial_to_site_codes('2m0-01')
+
+        self.assertEqual(expected_sitecode, sitecode)
+
+    def test_coj_clma_2m0a(self):
+
+        expected_sitecode = 'E10'
+        sitecode = LCOGT_telserial_to_site_codes('2m0-02')
+
+        self.assertEqual(expected_sitecode, sitecode)
+
+# 1.0m's
+
+    def test_coj_doma_1m0a(self):
+
+        expected_sitecode = 'Q63'
+        sitecode = LCOGT_telserial_to_site_codes('1m0-11')
+
+        self.assertEqual(expected_sitecode, sitecode)
+
+    def test_coj_domb_1m0a(self):
+
+        expected_sitecode = 'Q64'
+        sitecode = LCOGT_telserial_to_site_codes('1m0-03')
+
+        self.assertEqual(expected_sitecode, sitecode)
+
+    def test_cpt_doma_1m0a(self):
+
+        expected_sitecode = 'K91'
+        sitecode = LCOGT_telserial_to_site_codes('1m0-10')
+
+        self.assertEqual(expected_sitecode, sitecode)
+
+    def test_cpt_domb_1m0a(self):
+
+        expected_sitecode = 'K92'
+        sitecode = LCOGT_telserial_to_site_codes('1m0-13')
+
+        self.assertEqual(expected_sitecode, sitecode)
+
+    def test_cpt_domc_1m0a(self):
+
+        expected_sitecode = 'K93'
+        sitecode = LCOGT_telserial_to_site_codes('1m0-12')
+
+        self.assertEqual(expected_sitecode, sitecode)
+
+    def test_lsc_doma_1m0a(self):
+
+        expected_sitecode = 'W85'
+        sitecode = LCOGT_telserial_to_site_codes('1m0-05')
+
+        self.assertEqual(expected_sitecode, sitecode)
+
+    def test_lsc_domb_1m0a(self):
+
+        expected_sitecode = 'W86'
+        sitecode = LCOGT_telserial_to_site_codes('1m0-09')
+
+        self.assertEqual(expected_sitecode, sitecode)
+
+    def test_lsc_domc_1m0a(self):
+
+        expected_sitecode = 'W87'
+        sitecode = LCOGT_telserial_to_site_codes('1m0-04')
+
+        self.assertEqual(expected_sitecode, sitecode)
+
+    def test_elp_doma_1m0a(self):
+
+        expected_sitecode = 'V37'
+        sitecode = LCOGT_telserial_to_site_codes('1m0-08')
+
+        self.assertEqual(expected_sitecode, sitecode)
+
+    def test_elp_domb_1m0a(self):
+
+        expected_sitecode = 'V39'
+        sitecode = LCOGT_telserial_to_site_codes('1m0-06')
+
+        self.assertEqual(expected_sitecode, sitecode)
+
+    def test_tfn_doma_1m0a(self):
+
+        expected_sitecode = 'Z31'
+        sitecode = LCOGT_telserial_to_site_codes('1m0-14')
+
+        self.assertEqual(expected_sitecode, sitecode)
+
+    def test_tfn_domb_1m0a(self):
+
+        expected_sitecode = 'Z24'
+        sitecode = LCOGT_telserial_to_site_codes('1m0-01')
+
+        self.assertEqual(expected_sitecode, sitecode)
+
+# 0.4m's
+    def test_coj_clma_0m4a(self):
+
+        expected_sitecode = 'Q58'
+        sitecode = LCOGT_telserial_to_site_codes('0m4-03')
+
+        self.assertEqual(expected_sitecode, sitecode)
+
+    def test_coj_clma_0m4b(self):
+
+        expected_sitecode = 'Q59'
+        sitecode = LCOGT_telserial_to_site_codes('0m4-05')
+
+        self.assertEqual(expected_sitecode, sitecode)
+
+    def test_coj_clma_0m4c(self):
+
+        expected_sitecode = 'XXX'
+        sitecode = LCOGT_telserial_to_site_codes('0m4-20')
+
+        self.assertEqual(expected_sitecode, sitecode)
+
+    def test_cpt_aqwa_0m4a(self):
+
+        expected_sitecode = 'L09'
+        sitecode = LCOGT_telserial_to_site_codes('0m4-07')
+
+        self.assertEqual(expected_sitecode, sitecode)
+
+    def test_elp_aqwa_0m4a(self):
+
+        expected_sitecode = 'V38'
+        sitecode = LCOGT_telserial_to_site_codes('0m4-11')
+
+        self.assertEqual(expected_sitecode, sitecode)
+
+    def test_elp_aqwa_0m4b(self):
+
+        expected_sitecode = 'XXX'
+        sitecode = LCOGT_telserial_to_site_codes('0m4-19')
+
+        self.assertEqual(expected_sitecode, sitecode)
+
+    def test_lsc_aqwa_0m4a(self):
+
+        expected_sitecode = 'W89'
+        sitecode = LCOGT_telserial_to_site_codes('0m4-09')
+
+        self.assertEqual(expected_sitecode, sitecode)
+
+    def test_lsc_aqwa_0m4b(self):
+
+        expected_sitecode = 'XXX'
+        sitecode = LCOGT_telserial_to_site_codes('0m4-17')
+
+        self.assertEqual(expected_sitecode, sitecode)
+
+    def test_lsc_aqwb_0m4a(self):
+
+        expected_sitecode = 'W79'
+        sitecode = LCOGT_telserial_to_site_codes('0m4-12')
+
+        self.assertEqual(expected_sitecode, sitecode)
+
+    def test_lsc_aqwb_0m4b(self):
+
+        expected_sitecode = 'XXX'
+        sitecode = LCOGT_telserial_to_site_codes('0m4-18')
+
+        self.assertEqual(expected_sitecode, sitecode)
+
+    def test_ogg_clma_0m4a(self):
+
+        expected_sitecode = 'XXX'
+        sitecode = LCOGT_telserial_to_site_codes('0m4-08')
+
+        self.assertEqual(expected_sitecode, sitecode)
+
+    def test_ogg_clma_0m4b(self):
+
+        expected_sitecode = 'T04'
+        sitecode = LCOGT_telserial_to_site_codes('0m4-06')
+
+        self.assertEqual(expected_sitecode, sitecode)
+
+    def test_ogg_clma_0m4c(self):
+
+        expected_sitecode = 'T03'
+        sitecode = LCOGT_telserial_to_site_codes('0m4-04')
+
+        self.assertEqual(expected_sitecode, sitecode)
+
+    def test_tfn_aqwa_0m4a(self):
+
+        expected_sitecode = 'Z21'
+        sitecode = LCOGT_telserial_to_site_codes('0m4-14')
+
+        self.assertEqual(expected_sitecode, sitecode)
+
+    def test_tfn_aqwa_0m4b(self):
+
+        expected_sitecode = 'Z17'
+        sitecode = LCOGT_telserial_to_site_codes('0m4-10')
+
+        self.assertEqual(expected_sitecode, sitecode)
+
+# Without dashes
+# 2.0m's
+    def test_ogg_clma_2m0a_nodash(self):
+
+        expected_sitecode = 'F65'
+        sitecode = LCOGT_telserial_to_site_codes('2m001')
+
+        self.assertEqual(expected_sitecode, sitecode)
+
+    def test_coj_clma_2m0a_nodash(self):
+
+        expected_sitecode = 'E10'
+        sitecode = LCOGT_telserial_to_site_codes('2m002')
+
+        self.assertEqual(expected_sitecode, sitecode)
+
+# 1.0m's
+
+    def test_coj_doma_1m0a_nodash(self):
+
+        expected_sitecode = 'Q63'
+        sitecode = LCOGT_telserial_to_site_codes('1m011')
+
+        self.assertEqual(expected_sitecode, sitecode)
+
+    def test_coj_domb_1m0a_nodash(self):
+
+        expected_sitecode = 'Q64'
+        sitecode = LCOGT_telserial_to_site_codes('1m003')
+
+        self.assertEqual(expected_sitecode, sitecode)
+
+    def test_cpt_doma_1m0a_nodash(self):
+
+        expected_sitecode = 'K91'
+        sitecode = LCOGT_telserial_to_site_codes('1m010')
+
+        self.assertEqual(expected_sitecode, sitecode)
+
+    def test_cpt_domb_1m0a_nodash(self):
+
+        expected_sitecode = 'K92'
+        sitecode = LCOGT_telserial_to_site_codes('1m013')
+
+        self.assertEqual(expected_sitecode, sitecode)
+
+    def test_cpt_domc_1m0a_nodash(self):
+
+        expected_sitecode = 'K93'
+        sitecode = LCOGT_telserial_to_site_codes('1m012')
+
+        self.assertEqual(expected_sitecode, sitecode)
+
+    def test_lsc_doma_1m0a_nodash(self):
+
+        expected_sitecode = 'W85'
+        sitecode = LCOGT_telserial_to_site_codes('1m005')
+
+        self.assertEqual(expected_sitecode, sitecode)
+
+    def test_lsc_domb_1m0a_nodash(self):
+
+        expected_sitecode = 'W86'
+        sitecode = LCOGT_telserial_to_site_codes('1m009')
+
+        self.assertEqual(expected_sitecode, sitecode)
+
+    def test_lsc_domc_1m0a_nodash(self):
+
+        expected_sitecode = 'W87'
+        sitecode = LCOGT_telserial_to_site_codes('1m004')
+
+        self.assertEqual(expected_sitecode, sitecode)
+
+    def test_elp_doma_1m0a_nodash(self):
+
+        expected_sitecode = 'V37'
+        sitecode = LCOGT_telserial_to_site_codes('1m008')
+
+        self.assertEqual(expected_sitecode, sitecode)
+
+    def test_elp_domb_1m0a_nodash(self):
+
+        expected_sitecode = 'V39'
+        sitecode = LCOGT_telserial_to_site_codes('1m006')
+
+        self.assertEqual(expected_sitecode, sitecode)
+
+    def test_tfn_doma_1m0a_nodash(self):
+
+        expected_sitecode = 'Z31'
+        sitecode = LCOGT_telserial_to_site_codes('1m014')
+
+        self.assertEqual(expected_sitecode, sitecode)
+
+    def test_tfn_domb_1m0a_nodash(self):
+
+        expected_sitecode = 'Z24'
+        sitecode = LCOGT_telserial_to_site_codes('1m001')
+
+        self.assertEqual(expected_sitecode, sitecode)
+
+# 0.4m's
+    def test_coj_clma_0m4a_nodash(self):
+
+        expected_sitecode = 'Q58'
+        sitecode = LCOGT_telserial_to_site_codes('0m403')
+
+        self.assertEqual(expected_sitecode, sitecode)
+
+    def test_coj_clma_0m4b_nodash(self):
+
+        expected_sitecode = 'Q59'
+        sitecode = LCOGT_telserial_to_site_codes('0m405')
+
+        self.assertEqual(expected_sitecode, sitecode)
+
+    def test_coj_clma_0m4c_nodash(self):
+
+        expected_sitecode = 'XXX'
+        sitecode = LCOGT_telserial_to_site_codes('0m420')
+
+        self.assertEqual(expected_sitecode, sitecode)
+
+    def test_cpt_aqwa_0m4a_nodash(self):
+
+        expected_sitecode = 'L09'
+        sitecode = LCOGT_telserial_to_site_codes('0m407')
+
+        self.assertEqual(expected_sitecode, sitecode)
+
+    def test_elp_aqwa_0m4a_nodash(self):
+
+        expected_sitecode = 'V38'
+        sitecode = LCOGT_telserial_to_site_codes('0m411')
+
+        self.assertEqual(expected_sitecode, sitecode)
+
+    def test_elp_aqwa_0m4b_nodash(self):
+
+        expected_sitecode = 'XXX'
+        sitecode = LCOGT_telserial_to_site_codes('0m419')
+
+        self.assertEqual(expected_sitecode, sitecode)
+
+    def test_lsc_aqwa_0m4a_nodash(self):
+
+        expected_sitecode = 'W89'
+        sitecode = LCOGT_telserial_to_site_codes('0m409')
+
+        self.assertEqual(expected_sitecode, sitecode)
+
+    def test_lsc_aqwa_0m4b_nodash(self):
+
+        expected_sitecode = 'XXX'
+        sitecode = LCOGT_telserial_to_site_codes('0m417')
+
+        self.assertEqual(expected_sitecode, sitecode)
+
+    def test_lsc_aqwb_0m4a_nodash(self):
+
+        expected_sitecode = 'W79'
+        sitecode = LCOGT_telserial_to_site_codes('0m412')
+
+        self.assertEqual(expected_sitecode, sitecode)
+
+    def test_lsc_aqwb_0m4b_nodash(self):
+
+        expected_sitecode = 'XXX'
+        sitecode = LCOGT_telserial_to_site_codes('0m418')
+
+        self.assertEqual(expected_sitecode, sitecode)
+
+    def test_ogg_clma_0m4a_nodash(self):
+
+        expected_sitecode = 'XXX'
+        sitecode = LCOGT_telserial_to_site_codes('0m408')
+
+        self.assertEqual(expected_sitecode, sitecode)
+
+    def test_ogg_clma_0m4b_nodash(self):
+
+        expected_sitecode = 'T04'
+        sitecode = LCOGT_telserial_to_site_codes('0m406')
+
+        self.assertEqual(expected_sitecode, sitecode)
+
+    def test_ogg_clma_0m4c_nodash(self):
+
+        expected_sitecode = 'T03'
+        sitecode = LCOGT_telserial_to_site_codes('0m404')
+
+        self.assertEqual(expected_sitecode, sitecode)
+
+    def test_tfn_aqwa_0m4a_nodash(self):
+
+        expected_sitecode = 'Z21'
+        sitecode = LCOGT_telserial_to_site_codes('0m414')
+
+        self.assertEqual(expected_sitecode, sitecode)
+
+    def test_tfn_aqwa_0m4b_nodash(self):
+
+        expected_sitecode = 'Z17'
+        sitecode = LCOGT_telserial_to_site_codes('0m410')
+
+        self.assertEqual(expected_sitecode, sitecode)
+
+
+class TestConvertFOElements(SimpleTestCase):
+
+    def setUp(self):
+        with open(os.path.join('astrometrics', 'tests', 'test_fo_elements.json'), 'r') as fp:
+            self.test_json = json.load(fp)
+
+        self.maxDiff = None
+
+    def test_65803_keys(self):
+        expected_keys = ['name', 'origin', 'elements_type', 'epochofel', 'meananom', 'meandist',  'eccentricity',  'perihdist', 'orbinc', 'argofperih', 'longascnode', 'epochofperih', 'abs_mag', 'slope', 'orbit_rms']
+
+        new_elements = convert_findorb_elements(self.test_json)
+
+        self.assertEqual(expected_keys, list(new_elements.keys()))

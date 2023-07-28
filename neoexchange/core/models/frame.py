@@ -80,6 +80,7 @@ class Frame(models.Model):
     BANZAI_QL_FRAMETYPE = 11
     ORACDR_RED_FRAMETYPE = 90
     BANZAI_RED_FRAMETYPE = 91
+    NEOX_RED_FRAMETYPE = 92
     FRAMETYPE_CHOICES = (
                         (SINGLE_FRAMETYPE, 'Single frame'),
                         (STACK_FRAMETYPE, 'Stack of frames'),
@@ -224,6 +225,9 @@ class Frame(models.Model):
                         'W86' : onem_dict,
                         'W87' : onem_dict,
                         'V37' : onem_dict,
+                        'V39' : onem_dict,
+                        'Z31' : onem_dict,
+                        'Z24' : onem_dict,
                         'Z21' : point4m_dict,
                         'Z17' : point4m_dict,
                         'Q58' : point4m_dict,

@@ -1,0 +1,138 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<?xml-model href="https://pds.nasa.gov/pds4/pds/v1/PDS4_PDS_1F00.sch"
+            schematypens="http://purl.oclc.org/dsdl/schematron"?>
+<Product_Collection xmlns="http://pds.nasa.gov/pds4/pds/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://pds.nasa.gov/pds4/pds/v1 https://pds.nasa.gov/pds4/pds/v1/PDS4_PDS_1F00.xsd">
+  <Identification_Area>
+    <logical_identifier>urn:nasa:pds:dart_teleobs:data_lcogtraw</logical_identifier>
+    <version_id>1.0</version_id>
+    <title>DART Las Cumbres Observatory Network (LCOGT) Raw Data Collection</title>
+    <information_model_version>1.15.0.0</information_model_version>
+    <product_class>Product_Collection</product_class>
+    <Citation_Information>
+      <author_list>Lister, T.</author_list>
+      <publication_year>2021</publication_year>
+      <keyword>Las Cumbres</keyword>
+      <description>We obtained images of the NEO (65803) Didymos binary asteroid and supporting calibration data with the Las Cumbres Observatory global telescope network through several filters. These images were obtained in support of NASA's Double Asteroid Redirection Test (DART) mission. The DART mission was a planetary defense mission designed to test and measure the deflection caused by a kinetic impactor (the spacecraft) on the orbit of Dimorphos asteroid around its primary, Didymos. These ground-based observations were used to obtain light curves of Didymos and time the mutual events of Dimorphos to determine the period change caused by the impact of the DART spacecraft. This collection consists of the Las Cumbres Observatory raw images.</description>
+    </Citation_Information>
+    <Modification_History>
+      <Modification_Detail>
+        <modification_date>2021-10-15</modification_date>
+        <version_id>1.0</version_id>
+        <description>initial version</description>
+      </Modification_Detail>
+    </Modification_History>
+  </Identification_Area>
+  <Context_Area>
+    <Time_Coordinates>
+      <start_date_time>2021-10-13T00:44:10.00Z</start_date_time>
+      <stop_date_time>2021-10-13T02:15:58.77Z</stop_date_time>
+    </Time_Coordinates>
+    <Primary_Result_Summary>
+      <purpose>Science</purpose>
+      <processing_level>Raw</processing_level>
+      <Science_Facets>
+        <discipline_name>Small Bodies</discipline_name>
+        <facet1>Dynamical Properties</facet1>
+      </Science_Facets>
+      <Science_Facets>
+        <wavelength_range>Visible</wavelength_range>
+        <discipline_name>Small Bodies</discipline_name>
+        <facet1>Lightcurve</facet1>
+      </Science_Facets>
+      <Science_Facets>
+        <discipline_name>Small Bodies</discipline_name>
+        <facet1>Physical Properties</facet1>
+      </Science_Facets>
+      <Science_Facets>
+        <wavelength_range>Visible</wavelength_range>
+        <discipline_name>Flux Measurements</discipline_name>
+        <facet1>Photometry</facet1>
+      </Science_Facets>
+    </Primary_Result_Summary>
+    <Investigation_Area>
+      <name>Double Asteroid Redirection Test</name>
+      <type>Mission</type>
+      <Internal_Reference>
+        <lid_reference>urn:nasa:pds:context:investigation:mission.double_asteroid_redirection_test</lid_reference>
+        <reference_type>collection_to_investigation</reference_type>
+      </Internal_Reference>
+    </Investigation_Area>
+    <Observing_System>
+      <Observing_System_Component>
+        <name>Las Cumbres Observatory (LCOGT)</name>
+        <type>Host</type>
+        <description>The description for the Las Cumbres Observatory (LCOGT) can be found in the document collection for this bundle.</description>
+      </Observing_System_Component>
+      <Observing_System_Component>
+        <name>LCOGT 1m0-01 Telescope</name>
+        <type>Telescope</type>
+        <description>The description for the LCOGT 1m0-01 Telescope can be found in the document collection for this bundle.</description>
+      </Observing_System_Component>
+      <Observing_System_Component>
+        <name>Sinistro Imager</name>
+        <type>Instrument</type>
+        <description>The description for the Sinistro Imager can be found in the document collection for this bundle.</description>
+      </Observing_System_Component>
+    </Observing_System>
+    <Target_Identification>
+      <name>(65803) Didymos</name>
+      <type>Asteroid</type>
+      <Internal_Reference>
+        <lid_reference>urn:nasa:pds:context:target:asteroid.65803_didymos</lid_reference>
+        <reference_type>collection_to_target</reference_type>
+      </Internal_Reference>
+    </Target_Identification>
+  </Context_Area>
+  <Reference_List>
+    <Internal_Reference>
+      <lid_reference>urn:nasa:pds:dart_teleobs:document_lcogt:las_cumbres_dart_uncalibrated_calibrated_sis</lid_reference>
+      <reference_type>collection_to_document</reference_type>
+      <comment>Reference is to the Las Cumbres DART Uncalibrated, Calibrated SIS document which describes the data products in this collection.</comment>
+    </Internal_Reference>
+    <Internal_Reference>
+      <lid_reference>urn:nasa:pds:dart_teleobs:data_lcogtraw:overview</lid_reference>
+      <reference_type>collection_to_document</reference_type>
+      <comment>Reference is to the text file which gives an overview of the LCOGT raw Data Collection.</comment>
+    </Internal_Reference>
+  </Reference_List>
+  <Collection>
+    <collection_type>Data</collection_type>
+  </Collection>
+  <File_Area_Inventory>
+    <File>
+      <file_name>collection_data_lcogtraw.csv</file_name>
+      <creation_date_time>2021-10-15</creation_date_time>
+    </File>
+    <Inventory>
+      <offset unit="byte">0</offset>
+      <parsing_standard_id>PDS DSV 1</parsing_standard_id>
+      <records>3</records>
+      <record_delimiter>Carriage-Return Line-Feed</record_delimiter>
+      <field_delimiter>Comma</field_delimiter>
+      <Record_Delimited>
+        <fields>2</fields>
+        <groups>0</groups>
+        <Field_Delimited>
+          <name>Member Status</name>
+          <field_number>1</field_number>
+          <data_type>ASCII_String</data_type>
+          <maximum_field_length unit="byte">1</maximum_field_length>
+          <description>
+            P indicates primary member of the collection
+            S indicates secondary member of the collection
+          </description>
+        </Field_Delimited>
+        <Field_Delimited>
+          <name>LIDVID_LID</name>
+          <field_number>2</field_number>
+          <data_type>ASCII_LIDVID_LID</data_type>
+          <maximum_field_length unit="byte">255</maximum_field_length>
+          <description>
+            The LID or LIDVID of a product that is a member of the collection.
+          </description>
+        </Field_Delimited>
+      </Record_Delimited>
+      <reference_type>inventory_has_member_product</reference_type>
+    </Inventory>
+  </File_Area_Inventory>
+</Product_Collection>

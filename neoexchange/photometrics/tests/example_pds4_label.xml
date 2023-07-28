@@ -9,23 +9,23 @@
             schematypens="http://purl.oclc.org/dsdl/schematron"?>
 <Product_Observational xmlns="http://pds.nasa.gov/pds4/pds/v1" xmlns:disp="http://pds.nasa.gov/pds4/disp/v1" xmlns:geom="http://pds.nasa.gov/pds4/geom/v1" xmlns:img="http://pds.nasa.gov/pds4/img/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://pds.nasa.gov/pds4/disp/v1 https://pds.nasa.gov/pds4/disp/v1/PDS4_DISP_1F00_1500.xsd    http://pds.nasa.gov/pds4/geom/v1 https://pds.nasa.gov/pds4/geom/v1/PDS4_GEOM_1F00_1910.xsd    http://pds.nasa.gov/pds4/img/v1 https://pds.nasa.gov/pds4/img/v1/PDS4_IMG_1F00_1810.xsd    http://pds.nasa.gov/pds4/pds/v1 https://pds.nasa.gov/pds4/pds/v1/PDS4_PDS_1F00.xsd">
   <Identification_Area>
-    <logical_identifier>urn:nasa:pds:dart_teleobs:lcogt_cal:banzai_test_frame.fits</logical_identifier>
+    <logical_identifier>urn:nasa:pds:dart_teleobs:data_lcogtcal:banzai_test_frame</logical_identifier>
     <version_id>1.0</version_id>
-    <title>Las Cumbres Observatory Calibrated Image</title>
+    <title>Las Cumbres Observatory Calibrated Image: banzai_test_frame</title>
     <information_model_version>1.15.0.0</information_model_version>
     <product_class>Product_Observational</product_class>
-  <Modification_History>
+    <Modification_History>
       <Modification_Detail>
         <modification_date>2021-05-04</modification_date>
         <version_id>1.0</version_id>
         <description>initial version</description>
       </Modification_Detail>
-  </Modification_History>
+    </Modification_History>
   </Identification_Area>
   <Observation_Area>
     <Time_Coordinates>
-      <start_date_time>2016-06-06T22:48:14.000000Z</start_date_time>
-      <stop_date_time>2016-06-06T22:50:02.770000Z</stop_date_time>
+      <start_date_time>2016-06-06T22:48:14.00Z</start_date_time>
+      <stop_date_time>2016-06-06T22:50:02.77Z</stop_date_time>
     </Time_Coordinates>
     <Investigation_Area>
       <name>Double Asteroid Redirection Test</name>
@@ -37,19 +37,34 @@
     </Investigation_Area>
     <Observing_System>
       <Observing_System_Component>
-        <name>Sinistro</name>
+        <name>Las Cumbres Observatory (LCOGT)</name>
+        <type>Host</type>
+        <description>The description for the host can be found in the document collection for this bundle.</description>
+        <Internal_Reference>
+          <lid_reference>urn:nasa:pds:context:facility:observatory.las_cumbres</lid_reference>
+          <reference_type>is_facility</reference_type>
+        </Internal_Reference>
+      </Observing_System_Component>
+      <Observing_System_Component>
+        <name>Las Cumbres Global Telescope Network - 1m Telescopes</name>
+        <type>Telescope</type>
+        <description>
+          LCOGT 1m0-13 Telescope
+          LCOGT CPT Node 1m0 Dome B at Sutherland
+          The description for the telescope can be found in the document collection for this bundle.</description>
+        <Internal_Reference>
+          <lid_reference>urn:nasa:pds:context:instrument_host:las_cumbres.1m0_telescopes</lid_reference>
+          <reference_type>is_telescope</reference_type>
+        </Internal_Reference>
+      </Observing_System_Component>
+      <Observing_System_Component>
+        <name>Las Cumbres 1m Telescopes - Sinistro Camera</name>
         <type>Instrument</type>
         <description>The description for the instrument can be found in the document collection for this bundle.</description>
-      </Observing_System_Component>
-      <Observing_System_Component>
-        <name>Las Cumbres Observatory (LCOGT)</name>
-        <type>Observatory</type>
-        <description>The description for the observatory can be found in the document collection for this bundle.</description>
-      </Observing_System_Component>
-      <Observing_System_Component>
-        <name>LCOGT 1m0-13 Telescope</name>
-        <type>Telescope</type>
-        <description>The description for the telescope can be found in the document collection for this bundle.</description>
+        <Internal_Reference>
+          <lid_reference>urn:nasa:pds:context:instrument:las_cumbres.1m0_telescopes.sinistro</lid_reference>
+          <reference_type>is_instrument</reference_type>
+        </Internal_Reference>
       </Observing_System_Component>
     </Observing_System>
     <Target_Identification>
@@ -57,59 +72,71 @@
       <type>Asteroid</type>
     </Target_Identification>
     <Discipline_Area>
-  <disp:Display_Settings>
+      <disp:Display_Settings>
         <Local_Internal_Reference>
           <local_identifier_reference>banzai_test_frame</local_identifier_reference>
           <local_reference_type>display_settings_to_array</local_reference_type>
         </Local_Internal_Reference>
-    <disp:Display_Direction>
-      <disp:horizontal_display_axis>Sample</disp:horizontal_display_axis>
-      <disp:horizontal_display_direction>Left to Right</disp:horizontal_display_direction>
-      <disp:vertical_display_axis>Line</disp:vertical_display_axis>
-      <disp:vertical_display_direction>Bottom to Top</disp:vertical_display_direction>
-    </disp:Display_Direction>
-  </disp:Display_Settings>
-  <img:Exposure>
-    <img:exposure_duration unit="s">100.000</img:exposure_duration>
-  </img:Exposure>
-  <img:Optical_Filter>
-    <img:filter_name>w</img:filter_name>
-    <img:bandwidth unit="Angstrom">4409.8</img:bandwidth>
-    <img:center_filter_wavelength unit="Angstrom">6080.0</img:center_filter_wavelength>
-  </img:Optical_Filter>
-  <geom:Geometry>
-    <geom:Image_Display_Geometry>
-      <Local_Internal_Reference>
-        <local_identifier_reference>banzai_test_frame</local_identifier_reference>
-        <local_reference_type>display_to_data_object</local_reference_type>
-      </Local_Internal_Reference>
-    <geom:Display_Direction>
-      <geom:horizontal_display_axis>Sample</geom:horizontal_display_axis>
-      <geom:horizontal_display_direction>Left to Right</geom:horizontal_display_direction>
-      <geom:vertical_display_axis>Line</geom:vertical_display_axis>
-      <geom:vertical_display_direction>Bottom to Top</geom:vertical_display_direction>
-    </geom:Display_Direction>
-         <geom:Object_Orientation_RA_Dec>
-       <geom:right_ascension_angle unit="deg">272.953000</geom:right_ascension_angle>
-       <geom:declination_angle unit="deg">1.280402</geom:declination_angle>
-       <geom:celestial_north_clock_angle unit="deg">0.0</geom:celestial_north_clock_angle>
-      <geom:Reference_Frame_Identification>
-        <geom:name>J2000</geom:name>
-        <geom:comment>equinox of RA and DEC</geom:comment>
-      </geom:Reference_Frame_Identification>
-     </geom:Object_Orientation_RA_Dec>
-    </geom:Image_Display_Geometry>
-  </geom:Geometry>
-</Discipline_Area>
+        <disp:Display_Direction>
+          <disp:horizontal_display_axis>Sample</disp:horizontal_display_axis>
+          <disp:horizontal_display_direction>Left to Right</disp:horizontal_display_direction>
+          <disp:vertical_display_axis>Line</disp:vertical_display_axis>
+          <disp:vertical_display_direction>Bottom to Top</disp:vertical_display_direction>
+        </disp:Display_Direction>
+      </disp:Display_Settings>
+      <img:Imaging>
+        <Local_Internal_Reference>
+          <local_identifier_reference>banzai_test_frame</local_identifier_reference>
+          <local_reference_type>imaging_parameters_to_image_object</local_reference_type>
+        </Local_Internal_Reference>
+        <img:Exposure>
+          <img:exposure_duration unit="s">100.000</img:exposure_duration>
+        </img:Exposure>
+        <img:Optical_Filter>
+          <img:filter_name>w</img:filter_name>
+          <img:bandwidth unit="Angstrom">4409.8</img:bandwidth>
+          <img:center_filter_wavelength unit="Angstrom">6080.0</img:center_filter_wavelength>
+        </img:Optical_Filter>
+      </img:Imaging>
+      <geom:Geometry>
+        <geom:Image_Display_Geometry>
+          <Local_Internal_Reference>
+            <local_identifier_reference>banzai_test_frame</local_identifier_reference>
+            <local_reference_type>display_to_data_object</local_reference_type>
+          </Local_Internal_Reference>
+          <geom:Display_Direction>
+            <geom:horizontal_display_axis>Sample</geom:horizontal_display_axis>
+            <geom:horizontal_display_direction>Left to Right</geom:horizontal_display_direction>
+            <geom:vertical_display_axis>Line</geom:vertical_display_axis>
+            <geom:vertical_display_direction>Bottom to Top</geom:vertical_display_direction>
+          </geom:Display_Direction>
+          <geom:Object_Orientation_RA_Dec>
+            <geom:right_ascension_angle unit="deg">272.953000</geom:right_ascension_angle>
+            <geom:declination_angle unit="deg">1.280402</geom:declination_angle>
+            <geom:celestial_north_clock_angle unit="deg">0.0</geom:celestial_north_clock_angle>
+            <geom:Reference_Frame_Identification>
+              <geom:name>J2000</geom:name>
+              <geom:comment>equinox of RA and DEC</geom:comment>
+            </geom:Reference_Frame_Identification>
+          </geom:Object_Orientation_RA_Dec>
+        </geom:Image_Display_Geometry>
+      </geom:Geometry>
+    </Discipline_Area>
   </Observation_Area>
   <File_Area_Observational>
     <File>
       <file_name>banzai_test_frame.fits</file_name>
       <comment>Calibrated LCOGT image file</comment>
     </File>
+    <Header>
+      <name>main_header</name>
+      <offset unit="byte">0</offset>
+      <object_length unit="byte">20160</object_length>
+      <parsing_standard_id>FITS 3.0</parsing_standard_id>
+    </Header>
     <Array_2D_Image>
       <local_identifier>banzai_test_frame</local_identifier>
-      <offset unit="byte">22400</offset>
+      <offset unit="byte">20160</offset>
       <axes>2</axes>
       <axis_index_order>Last Index Fastest</axis_index_order>
       <Element_Array>
@@ -122,7 +149,7 @@
       </Axis_Array>
       <Axis_Array>
         <axis_name>Sample</axis_name>
-        <elements>2038</elements>
+        <elements>2028</elements>
         <sequence_number>2</sequence_number>
       </Axis_Array>
     </Array_2D_Image>

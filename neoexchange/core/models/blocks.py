@@ -11,22 +11,28 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 """
 from collections import Counter, OrderedDict
+from datetime import datetime
+import warnings
 
 from django.conf import settings
+from django.contrib.auth.models import User
 from django.forms.models import model_to_dict
 from django.db import models
 from django.db.models import Sum
 from django.utils.translation import gettext_lazy as _
 from django.utils.functional import cached_property
+from django.contrib.contenttypes.fields import GenericRelation
 from requests.compat import urljoin
 from numpy import frombuffer
+from astropy.wcs import FITSFixedWarning
 
 from astrometrics.ephem_subs import compute_ephem, comp_sep
-from core.archive_subs import check_for_archive_images
+from core.archive_subs import check_for_archive_images, lco_api_call
 
 from core.models.body import Body
 from core.models.frame import Frame
 from core.models.proposal import Proposal
+from core.models.dataproducts import DataProduct
 
 TELESCOPE_CHOICES = (
                         ('1m0', '1-meter'),
@@ -62,10 +68,11 @@ class SuperBlock(models.Model):
     jitter          = models.FloatField('Acceptable deviation before or after strict period (hours)', null=True, blank=True)
     timeused        = models.FloatField('Time used (seconds)', null=True, blank=True)
     active          = models.BooleanField(default=False)
+    dataproduct     = GenericRelation(DataProduct, related_query_name='sblock')
 
     @cached_property
     def get_blocks(self):
-        """Return and Cache the querryset of all blocks connected to the SuperBlock"""
+        """Return and Cache the queryset of all blocks connected to the SuperBlock"""
         return self.block_set.all()
 
     def current_name(self):
@@ -154,6 +161,10 @@ class SuperBlock(models.Model):
 
         return ",".join([str(x) for x in obstypes])
 
+    @property
+    def observers(self):
+        return [o.observer for o in self.blockobserver_set.all()]
+
     class Meta:
         verbose_name = _('SuperBlock')
         verbose_name_plural = _('SuperBlocks')
@@ -169,6 +180,13 @@ class SuperBlock(models.Model):
 
 
 class Block(models.Model):
+
+    RATE_CHOICES = (
+        (100, 'Target Tracking'),
+        (50, 'Half-Rate Tracking'),
+        (0, 'Sidereal Tracking'),
+        (-99, 'Non-Standard Tracking')
+    )
 
     OPT_IMAGING = 0
     OPT_SPECTRA = 1
@@ -197,6 +215,23 @@ class Block(models.Model):
     active          = models.BooleanField(default=False)
     reported        = models.BooleanField(default=False)
     when_reported   = models.DateTimeField(null=True, blank=True)
+    dataproduct     = GenericRelation(DataProduct, related_query_name='block')
+    tracking_rate   = models.SmallIntegerField('Tracking Strategy', choices=RATE_CHOICES, blank=False, default=100)
+
+    @cached_property
+    def get_blockuid(self):
+        """Return and Cache the BLKUID"""
+        warnings.simplefilter('ignore', FITSFixedWarning)
+        frame = Frame.objects.filter(block=self, frametype=Frame.BANZAI_RED_FRAMETYPE, frameid__isnull=False).first()
+        blockuid = None
+        if frame is not None:
+            if frame.frameid is not None:
+                url = f"{settings.ARCHIVE_FRAMES_URL}{frame.frameid}"
+                headers = lco_api_call(url)
+                blockuid = headers.get('BLKUID', None)
+                if blockuid is not None:
+                    blockuid = str(blockuid)
+        return blockuid
 
     def current_name(self):
         name = ''
@@ -262,6 +297,18 @@ class Block(models.Model):
                 where_observed = ",".join([frames.filter(sitecode=site['sitecode'])[0].return_site_string() + " (" + site['sitecode'] + ")" for site in unique_sites])
         return where_observed
 
+    def which_instruments(self):
+        which_instruments=''
+        if self.num_observed is not None:
+            frames = Frame.objects.filter(block=self.id, frametype=Frame.BANZAI_RED_FRAMETYPE)
+            if frames.count() > 0:
+                # which_instruments_qs = frames.distinct('instrument')
+                # which_instruments = ",".join([inst for inst in which_instruments_qs])
+                # Alternative which doesn't need PostgreSQL DISTINCT ON <fieldname>
+                unique_insts = frames.values_list('instrument', flat=True).distinct()
+                which_instruments = ",".join(unique_insts)
+        return which_instruments
+
     class Meta:
         verbose_name = _('Observation Block')
         verbose_name_plural = _('Observation Blocks')
@@ -274,6 +321,32 @@ class Block(models.Model):
             text = 'not '
 
         return '%s is %sactive' % (self.request_number, text)
+
+
+class ExportedBlock(models.Model):
+    """Class to hold record of Blocks that have been exported elsewhere e.g. PDS
+    """
+
+    PDS_V4 = 1
+    TARBALL = 10
+    EXPORT_CHOICES = (
+                        (PDS_V4, 'PDS V4 collection'),
+                        (TARBALL, 'Tarball of files')
+                     )
+    block = models.ForeignKey(Block, on_delete=models.CASCADE)
+    input_path = models.CharField('Input path to exporter', max_length=4096, null=True)
+    export_path = models.CharField('Export path from exporter', max_length=4096, null=True)
+    export_format = models.SmallIntegerField('Export format', choices=EXPORT_CHOICES, blank=False, default=1)
+    when_exported  = models.DateTimeField(default=datetime.utcnow)
+    notes = models.TextField('Notes', blank=True, null=True)
+
+    class Meta:
+        verbose_name = _('Exported Block')
+        verbose_name_plural = _('Exported Blocks')
+
+    def __str__(self):
+        export_date = self.when_exported.strftime("%Y-%m-%d %H:%M")
+        return f"{self.block.request_number} -> {self.export_path} on {export_date}"
 
 
 class Candidate(models.Model):
@@ -327,6 +400,17 @@ class Candidate(models.Model):
 
     def __str__(self):
         return "%s#%04d" % (self.block.request_number, self.cand_id)
+
+class BlockObserver(models.Model):
+    observer = models.ForeignKey(User, on_delete=models.CASCADE)
+    superblock = models.ForeignKey(SuperBlock, on_delete=models.CASCADE)
+
+    class Meta:
+        verbose_name = _('SuperBlock Observer')
+
+    def __str__(self):
+        return f"{self.observer} requested superblock {self.superblock.id}"
+
 
 
 def detections_array_dtypes():

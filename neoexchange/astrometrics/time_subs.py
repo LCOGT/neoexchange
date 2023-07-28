@@ -364,14 +364,20 @@ def hourstodegrees(value, arg):
     """Converts decimal hours to decimal degrees"""
     if ":" in str(value):
         return value
-    return value*15
+    try:
+        return float(value)*15
+    except:
+        return ""
 
 
 def degreestohours(value):
     """Converts decimal degrees to decimal hours"""
     if ":" in str(value):
         return value
-    return float(value)/15
+    try:
+        return float(value)/15
+    except:
+        return ""
 
 
 def degreestodms(value, sep):
@@ -428,31 +434,20 @@ def radianstohms(value, sep):
         return ""
 
 
-def dmstodegrees(value):
-    if ":" not in str(value):
-        return value
-    el = value.split(":")
-    deg = float(el[0])
-    if deg < 0:
-        sign = -1.
-    else:
-        sign = 1
-    return deg + sign*float(el[1])/60. + sign*float(el[2])/3600.
-
-
-def hmstodegrees(value):
-    if ":" not in str(value):
-        return value
-    el = value.split(":")
-    return float(el[0])*15 + float(el[1])/60. + float(el[2])/3600.
-
-
 def hmstohours(value):
     if ":" not in str(value):
         return value
     el = value.split(":")
     return float(el[0]) + float(el[1])/60. + float(el[2])/3600.
 
+def decimaldaytodt(date_string):
+    """Converts a MPC-style Year, Month, Decimal day <date_string> e.g.
+    '2013 10 31.16159' into a datetime object (datetime(2013, 10, 31, 3, 52, 41, 376000)
+    (Actually just a wrapper around parse_neocp_decimal_date() to provide the
+    inverse of dttodecimalday()...)
+    """
+
+    return parse_neocp_decimal_date(date_string)
 
 def dttodecimalday(dt, microdays=False):
     """Converts a datetime object <dt> into MPC-style Year, Month, Decimal day. An

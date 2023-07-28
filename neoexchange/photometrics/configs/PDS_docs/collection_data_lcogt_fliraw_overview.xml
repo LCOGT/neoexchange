@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<?xml-model href="https://pds.nasa.gov/pds4/pds/v1/PDS4_PDS_1J00.sch"
+    schematypens="http://purl.oclc.org/dsdl/schematron"?>
+
+<Product_Document xmlns="http://pds.nasa.gov/pds4/pds/v1" 
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+    xsi:schemaLocation="http://pds.nasa.gov/pds4/pds/v1                              https://pds.nasa.gov/pds4/pds/v1/PDS4_PDS_1J00.xsd">
+  <Identification_Area>
+    <logical_identifier>urn:nasa:pds:dart_teleobs:data_lcogt_fliraw:collection_data_lcogt_fliraw_overview</logical_identifier>
+    <version_id>1.0</version_id>
+    <title>Overview of the Las Cumbres Observatory (LCOGT) FLI Raw Data Collection</title>
+    <information_model_version>1.19.0.0</information_model_version>
+    <product_class>Product_Document</product_class>
+    <Citation_Information>
+      <author_list>Lister, T.</author_list>
+      <publication_year>2023</publication_year>
+      <description>Overview of the Las Cumbres Observatory (LCOGT) FLI Raw Data Collection.
+      This collection consists of the Las Cumbres Observatory FLI raw images.
+       </description>
+    </Citation_Information>
+  <Modification_History>
+      <Modification_Detail>
+        <modification_date>2023-04-28</modification_date>
+        <version_id>1.0</version_id>
+        <description>PDS Delivery</description>
+      </Modification_Detail>
+  </Modification_History>
+  </Identification_Area>
+  <Reference_List>
+    <Internal_Reference>
+        <lid_reference>urn:nasa:pds:dart_teleobs:document_lcogt:las_cumbres_dart_uncalibrated_calibrated_sis</lid_reference>
+        <reference_type>document_to_associate</reference_type>
+        <comment>Las Cumbres Observatory DART Uncalibrated, Calibrated SIS document which describes the Las Cumbres Observatory DART data products.
+        </comment>
+    </Internal_Reference>
+    <Internal_Reference>
+        <lid_reference>urn:nasa:pds:dart_teleobs:document_lcogt:fli_description</lid_reference>
+        <reference_type>document_to_associate</reference_type>
+        <comment>Las Cumbres Observatory document which describes the Las Cumbres Observatory FLI instruments.
+        </comment>
+    </Internal_Reference>
+  </Reference_List>
+  <Document>
+    <author_list>Lister, T.</author_list>
+    <publication_date>2023-04-28</publication_date>
+    <description>Overview of the Las Cumbres Observatory (LCOGT) FLI Raw Data Collection</description>
+    <Document_Edition>
+      <edition_name>UTF-8 ASCII</edition_name>
+      <language>English</language>
+      <files>1</files>
+      <Document_File>
+        <file_name>overview.txt</file_name>
+        <document_standard_id>UTF-8 Text</document_standard_id>
+      </Document_File>
+    </Document_Edition>
+  </Document>
+</Product_Document>

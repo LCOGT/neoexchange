@@ -40,6 +40,7 @@ class Command(BaseCommand):
             bodies = Body.objects.filter(name=obj_id)
         else:
             bodies = get_characterization_targets()
+
         if type(options['date']) != datetime:
             try:
                 start_date = datetime.strptime(options['date'], '%Y%m%d')
@@ -75,10 +76,13 @@ class Command(BaseCommand):
             # If new observations, use them to refit elements with findorb.
             # Will update epoch to date of most recent obs.
             # Will only update if new epoch closer to present than previous.
-            if measures or body.fast_moving or options['target']:
+            # Don't refit Body's with MPC_COMET element type as this seems to misbehave.
+            if ((measures or body.fast_moving) and body.elements_type != 'MPC_COMET') or options['target']:
                 refit_with_findorb(body.id, 500, start_date)
                 f += 1
                 body.refresh_from_db()
+            else:
+                self.stdout.write("Not refitting with find_orb")
 
             # If new obs pull most recent orbit from MPC
             # Updated infrequently for most targets

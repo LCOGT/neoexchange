@@ -106,11 +106,11 @@ def get_vizier_catalog_table(ra, dec, set_width, set_height, cat_name="UCAC4", s
         if "UCAC4" in cat_name:
             query_service = Vizier(row_limit=set_row_limit, column_filters={"r2mag": rmag_limit, "r1mag": rmag_limit}, columns=['RAJ2000', 'DEJ2000', 'rmag', 'e_rmag'])
         elif "GAIA-DR2" in cat_name:
-            query_service = Vizier(row_limit=set_row_limit, column_filters={"Gmag": rmag_limit}, columns=['RAJ2000', 'DEJ2000', 'e_RAJ2000', 'e_DEJ2000', 'Gmag', 'e_Gmag', 'Dup'])
+            query_service = Vizier(row_limit=set_row_limit, column_filters={"Gmag": rmag_limit, "Plx": ">0"}, columns=['RAJ2000', 'DEJ2000', 'e_RAJ2000', 'e_DEJ2000', 'Gmag', 'e_Gmag', 'Dup'])
         else:
             query_service = Vizier(row_limit=set_row_limit, column_filters={"r2mag": rmag_limit, "r1mag": rmag_limit}, columns=['RAJ2000', 'DEJ2000', 'r2mag', 'fl'])
 
-        vizier_servers_list = ['vizier.cfa.harvard.edu', 'vizier.hia.nrc.ca'] # Preferred first
+        vizier_servers_list = ['vizier.cfa.harvard.edu', 'vizier.hia.nrc.ca', 'vizier.cds.unistra.fr', ] # Preferred first
         query_service.VIZIER_SERVER = vizier_servers_list[0]
 
         query_service.TIMEOUT = 60
@@ -125,7 +125,7 @@ def get_vizier_catalog_table(ra, dec, set_width, set_height, cat_name="UCAC4", s
             query_service.VIZIER_SERVER = vizier_servers_list[-1]
             logger.warning("Timeout querying {}. Switching to {}".format(old_server, query_service.VIZIER_SERVER))
             result = query_service.query_region(coord.SkyCoord(ra, dec, unit=(u.deg, u.deg), frame='icrs'), width=set_width, height=set_height, catalog=cat_mapping[cat_name])
-        if len(result) == 0:
+        if result is None or len(result) == 0:
             old_server = query_service.VIZIER_SERVER
             query_service.VIZIER_SERVER = vizier_servers_list[-1]
             logger.warning("Error querying {}. Switching to {}".format(old_server, query_service.VIZIER_SERVER))
@@ -170,7 +170,7 @@ def get_vizier_catalog_table(ra, dec, set_width, set_height, cat_name="UCAC4", s
             if "UCAC4" in cat_name:
                 query_service = Vizier(row_limit=set_row_limit, column_filters={"r2mag": rmag_limit, "r1mag": rmag_limit}, columns=['RAJ2000', 'DEJ2000', 'rmag', 'e_rmag'])
             elif "GAIA-DR2" in cat_name:
-                query_service = Vizier(row_limit=set_row_limit, column_filters={"Gmag": rmag_limit}, columns=['RAJ2000', 'DEJ2000', 'e_RAJ2000', 'e_DEJ2000', 'Gmag', 'e_Gmag', 'Dup'])
+                query_service = Vizier(row_limit=set_row_limit, column_filters={"Gmag": rmag_limit, "Plx": ">0"}, columns=['RAJ2000', 'DEJ2000', 'e_RAJ2000', 'e_DEJ2000', 'Gmag', 'e_Gmag', 'Dup'])
             else:
                 query_service = Vizier(row_limit=set_row_limit, column_filters={"r2mag": rmag_limit, "r1mag": rmag_limit}, columns=['RAJ2000', 'DEJ2000', 'r2mag', 'fl'])
             result = query_service.query_region(coord.SkyCoord(ra, dec, unit=(u.deg, u.deg), frame='icrs'), width=set_width, catalog=cat_mapping[cat_name])
@@ -395,14 +395,14 @@ def write_ldac(table, output_file):
                     'mag'       : '1E',
                     'e_mag'     : '1E'
                   }
-    disp_dict = { 'RAJ2000'   : 'E15',
-                  'DEJ2000'   : 'E15',
-                  'e_RAJ2000' : 'E12',
-                  'e_DEJ2000' : 'E12',
+    disp_dict = { 'RAJ2000'   : 'F13.8',
+                  'DEJ2000'   : 'F13.8',
+                  'e_RAJ2000' : 'F13.8',
+                  'e_DEJ2000' : 'F13.8',
                   'mag'       : 'F8.4',
                   'e_mag'     : 'F8.5'
                 }
-    unit_dict = { 'RAJ2000'   : 'deg', 
+    unit_dict = { 'RAJ2000'   : 'deg',
                   'DEJ2000'   : 'deg',
                   'e_RAJ2000' : 'deg',
                   'e_DEJ2000' : 'deg',
@@ -705,10 +705,10 @@ def banzai_catalog_mapping():
                     'field_width' : 'NAXIS1',
                     'field_height' : 'NAXIS2',
                     'pixel_scale' : '<WCS>',
-                    'zeropoint'     : '<ZP>',
-                    'zeropoint_err' : '<ZP>',
-                    'zeropoint_src' : '<ZPSRC>',
-                    'fwhm'          : 'L1FWHM',
+                    'zeropoint'     : '<L1ZP>',
+                    'zeropoint_err' : '<L1ZPERR>',
+                    'zeropoint_src' : '<L1ZPSRC>',
+                    'fwhm'          : '<L1FWHM>',
                     'astrometric_fit_rms'    : '<WCSRDRES>',
                     'astrometric_fit_status' : 'WCSERR',
                     'astrometric_fit_nstars' : '<WCSMATCH>',
@@ -759,7 +759,7 @@ def banzai_ldac_catalog_mapping():
                     'zeropoint'     : '<ZP>',
                     'zeropoint_err' : '<ZP>',
                     'zeropoint_src' : '<ZPSRC>',
-                    'fwhm'          : 'L1FWHM',
+                    'fwhm'          : '<L1FWHM>',
                     'astrometric_fit_rms'    : '<WCSRDRES>',
                     'astrometric_fit_status' : 'WCSERR',
                     'astrometric_fit_nstars' : '<WCSMATCH>',
@@ -888,27 +888,50 @@ def open_fits_catalog(catfile, header_only=False):
             cat_index = hdulist.index_of('CAT')
         except KeyError:
             cat_index = -1
+        try:
+            bpm_index = hdulist.index_of('BPM')
+        except KeyError:
+            bpm_index = -1
+        try:
+            err_index = hdulist.index_of('ERR')
+        except KeyError:
+            err_index = -1
 
         if sci_index != -1 and cat_index != -1:
             header = hdulist[sci_index].header
             if header_only is False:
                 table = hdulist[cat_index].data
         else:
-            logger.error("Could not find SCI and CAT HDUs in file")
+            if sci_index != -1 and bpm_index != -1 and err_index != -1:
+                cattype = 'BANZAI_CALIB_MEF'
+                header = [hdu.header for hdu in hdulist]
+                table = {}
+            else:
+                logger.error("Could not find SCI and CAT (or BPM and ERR) HDUs in file: %s" % catfile)
     elif len(hdulist) == 1:
-        # BANZAI-format after extraction of image
-        cattype = 'BANZAI'
+        origin = hdulist[0].header.get('origin', None)
+        if origin is not None and origin == 'LCO/OCIW':
+            cattype = 'SWOPE'
+            hdr_name = 'PRIMARY'
+        else:
+            # BANZAI-format after extraction of image
+            cattype = 'BANZAI'
+            hdr_name = 'SCI'
         try:
-            sci_index = hdulist.index_of('SCI')
+            sci_index = hdulist.index_of(hdr_name)
         except KeyError:
             sci_index = -1
 
         if sci_index != -1:
             header = hdulist[sci_index].header
         else:
-            logger.error("Could not find SCI HDU in file")
+            logger.error(f"Could not find {hdr_name} HDU in file")
+    elif len(hdulist) == 5:
+        # Raw Sinistro image
+        cattype = 'RAW_MEF'
+        header = [hdu.header for hdu in hdulist]
     else:
-        logger.error("Unexpected number of catalog HDUs (Expected 2, got %d)" % len(hdulist))
+        logger.error("Unexpected number of catalog HDUs in %s (Expected 1-5, got %d)" % (catfile, len(hdulist)))
 
     hdulist.close()
 
@@ -994,12 +1017,16 @@ def get_catalog_header(catalog_header, catalog_type='LCOGT', debug=False):
     'UNKNOWN'.
     """
 
-    fixed_values_map = {'<WCCATTYP>'  : '2MASS',  # Hardwire catalog to 2MASS for BANZAI's astrometry.net-based solves 
+    fixed_values_map = {'<WCCATTYP>'  : '2MASS',  # Hardwire catalog to 2MASS for BANZAI's astrometry.net-based solves
                                                   # (but could be modified based on version number further down)
                         '<ZP>'        : -99,      # Hardwire zeropoint to -99.0 for BANZAI catalogs
                         '<ZPSRC>'     : 'N/A',    # Hardwire zeropoint src to 'N/A' for BANZAI catalogs
+                        '<L1ZP>'      : -99,      # Hardwire zeropoint to -99.0 for newer BANZAI catalogs where it's missing e.g. w band
+                        '<L1ZPERR>'   : -99,      # Hardwire zeropoint to -99.0 for newer BANZAI catalogs where it's missing e.g. w band
+                        '<L1ZPSRC>'   : 'BANZAI', # Hardwire zeropoint src to 'N/A' for newer BANZAI catalogs where it's missing
                         '<WCSRDRES>'  : 0.3,      # Hardwire RMS to 0.3"
-                        '<WCSMATCH>'  : -4        # Hardwire no. of stars matched to 4 (1 quad)
+                        '<WCSMATCH>'  : -4,       # Hardwire no. of stars matched to 4 (1 quad)
+                        '<L1FWHM>'    : -99       # May not be present if BANZAI WCS fit fails
                         }
 
     header_items = {}
@@ -1438,7 +1465,7 @@ def store_catalog_sources(catfile, catalog_type='LCOGT', std_zeropoint_tolerance
             if '2m0' in header.get('framename', ''):
                 rmag_limit = '<=18.0'
             else:
-                rmag_limit = '<=15.0'
+                rmag_limit = '<=16.5'
             header, table, cat_table, cross_match_table, avg_zeropoint, std_zeropoint, count, num_in_calc, phot_cat_name = call_cross_match_and_zeropoint((header, table), std_zeropoint_tolerance, phot_cat_name, rmag_limit=rmag_limit)
             end = time.time()
             logger.debug("TIME: compute_zeropoint took {:.1f} seconds".format(end-start))
@@ -1489,12 +1516,12 @@ def get_or_create_CatalogSources(table, frame):
     if num_cat_sources == 0:
         new_sources = []
         for source in table:
-            new_source = CatalogSources(frame=frame, obs_x=source['ccd_x'], obs_y=source['ccd_y'], 
-                                        obs_ra=source['obs_ra'], obs_dec=source['obs_dec'], obs_mag=source['obs_mag'], 
-                                        err_obs_ra=source['obs_ra_err'], err_obs_dec=source['obs_dec_err'], 
-                                        err_obs_mag=source['obs_mag_err'], background=source['obs_sky_bkgd'], 
-                                        major_axis=source['major_axis'], minor_axis=source['minor_axis'], 
-                                        position_angle=source['ccd_pa'], ellipticity=1.0-(source['minor_axis']/source['major_axis']), 
+            new_source = CatalogSources(frame=frame, obs_x=source['ccd_x'], obs_y=source['ccd_y'],
+                                        obs_ra=source['obs_ra'], obs_dec=source['obs_dec'], obs_mag=source['obs_mag'],
+                                        err_obs_ra=source['obs_ra_err'], err_obs_dec=source['obs_dec_err'],
+                                        err_obs_mag=source['obs_mag_err'], background=source['obs_sky_bkgd'],
+                                        major_axis=source['major_axis'], minor_axis=source['minor_axis'],
+                                        position_angle=source['ccd_pa'], ellipticity=1.0-(source['minor_axis']/source['major_axis']),
                                         aperture_size=3.0, flags=source['flags'], flux_max=source['flux_max'], threshold=source['threshold'])
             new_sources.append(new_source)
         try:
@@ -1560,8 +1587,8 @@ def make_sext_file_line(sext_params):
 
     print_format = "      %4i   %8.3f   %8.3f  %7.4f %6.1f    %8.3f     %5.2f   %1i  %4.2f   %12.1f   %3i %9.5f %9.5f"
 
-    sext_line = print_format % (sext_params['number'], sext_params['obs_x'], sext_params['obs_y'], sext_params['obs_mag'], 
-                                sext_params['theta'], sext_params['elongation'], sext_params['fwhm'], sext_params['flags'], 
+    sext_line = print_format % (sext_params['number'], sext_params['obs_x'], sext_params['obs_y'], sext_params['obs_mag'],
+                                sext_params['theta'], sext_params['elongation'], sext_params['fwhm'], sext_params['flags'],
                                 sext_params['deltamu'], sext_params['flux'], sext_params['area'], sext_params['ra'], sext_params['dec'])
 
     return sext_line
@@ -1605,7 +1632,7 @@ def make_sext_dict_list(new_catalog, catalog_type, edge_trim_limit=75.0):
     except Frame.DoesNotExist:
         logger.error("Frame entry for fits file %s does not exist" % real_fits_filename)
         return -3, -3
-    sources = CatalogSources.objects.filter(frame__filename=real_fits_filename, obs_mag__gt=0.0, obs_x__gt=edge_trim_limit, 
+    sources = CatalogSources.objects.filter(frame__filename=real_fits_filename, obs_mag__gt=0.0, obs_x__gt=edge_trim_limit,
                                             obs_x__lt=num_x_pixels-edge_trim_limit, obs_y__gt=edge_trim_limit, obs_y__lt=num_y_pixels-edge_trim_limit)
     num_iter = 1
     for source in sources:
@@ -1692,7 +1719,7 @@ def determine_filenames(product):
         elif len(file_bits) == 3:
             # Fpacked BANZAI product - output is input
             new_product = None
-            funpack_status = funpack_fits_file(full_path)
+            funpack_status = unpack_sci_extension(full_path)
             if funpack_status == 0:
                 new_product = file_bits[0] + os.extsep + file_bits[1]
     return new_product
@@ -1723,8 +1750,9 @@ def increment_red_level(product):
     return new_product
 
 
-def funpack_fits_file(fpack_file):
-    """Calls 'funpack' on the passed <fpack_file> to uncompress it. A status
+def unpack_sci_extension(fpack_file):
+    """Opens the passed <fpack_file> FITS and extracts the'SCI', writing it to
+    a new PrimaryHDU and output file to uncompress it. A status
     value of 0 is returned if the unpacked file already exists or the uncompress
     was successful, -1 is returned otherwise"""
 
@@ -1740,7 +1768,9 @@ def funpack_fits_file(fpack_file):
     hdu = fits.PrimaryHDU(data, header)
     hdu._bscale = 1.0
     hdu._bzero = 0.0
+    hdu.header.remove("BSCALE", ignore_missing=True)
     hdu.header.insert("NAXIS2", ("BSCALE", 1.0), after=True)
+    hdu.header.remove("BZERO", ignore_missing=True)
     hdu.header.insert("BSCALE", ("BZERO", 0.0), after=True)
     hdu.writeto(unpacked_file, checksum=True)
     hdulist.close()
@@ -1772,7 +1802,7 @@ def extract_sci_image(file_path, catalog_path):
     return fits_filename_path
 
 
-def search_box(frame, ra, dec, box_halfwidth=3.0, dbg=False):
+def search_box(frame, ra, dec, box_halfwidth=3.0, max_ap_size=None, dbg=False):
     """Search CatalogSources for the passed Frame object for sources within a
     box of <box_halfwidth> centered on <ra>, <dec>.
     <ra>, <dec> are in radians, <box_halfwidth> is in arcseconds, default is 3.0"
@@ -1787,8 +1817,11 @@ def search_box(frame, ra, dec, box_halfwidth=3.0, dbg=False):
     dec_min = min(box_dec_min, box_dec_max)
     dec_max = max(box_dec_min, box_dec_max)
     if dbg: 
-        logger.debug("Searching %.4f->%.4f, %.4f->%.4f in %s" % (ra_min, ra_max, dec_min, dec_max , frame.filename))
+        logger.debug("Searching %.4f->%.4f, %.4f->%.4f in %s" % (ra_min, ra_max, dec_min, dec_max, frame.filename))
+
     sources = CatalogSources.objects.filter(frame=frame, obs_ra__range=(ra_min, ra_max), obs_dec__range=(dec_min, dec_max))
+    if max_ap_size is not None:
+        sources = sources.filter(aperture_size__lte=max_ap_size)
     return sources
 
 
@@ -1802,12 +1835,12 @@ def get_fits_files(fits_path):
 
         fpacked_files = sorted(glob(fits_path + '*e91.fits.fz') + glob(fits_path + '*e11.fits.fz'))
         for fpack_file in fpacked_files:
-            funpack_fits_file(fpack_file)
+            unpack_sci_extension(fpack_file)
 
         sorted_fits_files = sorted(glob(fits_path + '*e91.fits') + glob(fits_path + '*e11.fits'))
 
     else:
-        logger.error("Not a directory")
+        logger.error(f"{fits_path} is not a directory")
 
     return sorted_fits_files
 
@@ -1816,11 +1849,16 @@ def sanitize_object_name(object_name):
     """Remove problematic characters (space, slash) from object names so it
     can be used for e.g. directory names"""
 
+    name_mapping = { 'didymos' : '65803',
+                     '65803didymos' : '65803',
+                    }
+
     clean_object_name = None
     if type(object_name) == str or type(object_name) == np.str_:
         clean_object_name = object_name.strip().replace('(', '').replace(')', '')
         # collapse multiple sequential spaces into a single space.
         clean_object_name = ' '.join(clean_object_name.split())
+        clean_object_name = name_mapping.get(clean_object_name.lower(), clean_object_name)
         # Find the rightmost space and then do space->underscore mapping *left*
         # of that but space->empty string right of that.
         index = clean_object_name.rfind(' ')

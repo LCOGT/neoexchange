@@ -1,6 +1,6 @@
 """
 NEO exchange: NEO observing portal for Las Cumbres Observatory
-Copyright (C) 2017-2021 LCO
+Copyright (C) 2017-2022 LCO
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -16,6 +16,7 @@ GNU General Public License for more details.
 from datetime import datetime, timedelta
 from math import degrees
 
+from django.contrib.auth.models import User
 from django.core.management.base import BaseCommand, CommandError
 
 from core.models import Body, Block
@@ -133,7 +134,8 @@ def schedule_target_list(bodies_list, form_details, username):
 
             print("%s@%s for %s->%s" % (target.current_name(), data['site_code'], data['start_time'], data['end_time']))
             tracking_num, sched_params = schedule_submit(data, target, username)
-            block_resp = record_block(tracking_num, sched_params, data, target)
+            user = User.objects.get(username=username)
+            block_resp = record_block(tracking_num, sched_params, data, target, user)
 
             if block_resp:
                 num_scheduled += 1
@@ -149,7 +151,7 @@ class Command(BaseCommand):
         faint_default = 22.0
         spd_default = 95.0
         not_seen_default = 2.5
-        proposal_default = 'LCO2021B-002'
+        proposal_default = 'LCO2022B-006'
         speed_limit_default = 5.0
         parser.add_argument('--date', default=datetime.utcnow(), help='Date to schedule for (YYYYMMDD-HH)')
         parser.add_argument('--user', default='tlister@lcogt.net', help="Username to schedule as e.g. 'tlister@lcogt.net'")

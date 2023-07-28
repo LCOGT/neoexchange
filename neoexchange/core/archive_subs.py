@@ -23,6 +23,7 @@ from urllib.parse import urljoin
 
 
 import requests
+from tenacity import retry, wait_exponential, stop_after_attempt
 from django.conf import settings
 from django.core.management.base import CommandError
 
@@ -49,7 +50,9 @@ def archive_login(username=None, password=None):
     archive_url = settings.ARCHIVE_TOKEN_URL
     return get_lcogt_headers(archive_url, username, password)
 
-
+# Stop after 4 attempts, and back off exponentially with a minimum wait time of 4 seconds, and a maximum of 10.
+# If it fails after 4 attempts, "reraise" the original exception back up to the caller.
+@retry(wait=wait_exponential(multiplier=2, min=4, max=10), stop=stop_after_attempt(4), reraise=True)
 def lco_api_call(url, headers=None, method='get'):
     if headers is None:
         if 'archive' in url:
@@ -302,17 +305,28 @@ def make_data_dir(data_dir, frame):
     filename = frame['filename']
     if "tar.gz" in filename:
         chunks = filename.split('_')
-        day_dir = chunks[3]
+        offset = 3
+        if len(chunks) == 6:
+            offset = 4
+        day_dir = chunks[offset]
     else:
         chunks = filename.split('-')
-        day_dir = chunks[2]
+        if len(chunks) > 2:
+            day_dir = chunks[2]
+        else:
+            day_dir = ''
 
     try:
         dd = datetime.strptime(day_dir, '%Y%m%d')
     except ValueError:
         try:
             logger.warning("Filename ({}) does not contain day-obs.".format(filename))
-            dd = datetime.strptime(frame['DATE_OBS'], '%Y-%m-%dT%H:%M:%S.%fZ')
+            if 'DATE_OBS' in frame:
+                dd = datetime.strptime(frame['DATE_OBS'], '%Y-%m-%dT%H:%M:%S.%fZ')
+            elif 'midpoint' in frame:
+                dd = frame['midpoint']
+            else:
+                dd = ''
             day_dir = datetime.strftime(dd, '%Y%m%d')
         except ValueError:
             logger.error("{} has improperly formated DATE_OBS in Header!")
@@ -322,6 +336,9 @@ def make_data_dir(data_dir, frame):
     if "tar.gz" in filename and frame['SITEID'] == 'ogg':
         day_dir = datetime.strftime(dd-timedelta(days=1), '%Y%m%d')
 
+    if frame.get('SITEID', '') == 'lco' or frame.get('sitecode', '') == '304':
+        # Swope data, modify path
+        data_dir = os.path.join(data_dir, 'Swope')
     out_path = os.path.join(data_dir, day_dir)
     if not os.path.exists(out_path):
         try:

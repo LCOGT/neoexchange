@@ -21,8 +21,9 @@ import warnings
 
 from astropy.io import fits
 from numpy import array, arange
+#from numpy.testing import assertDeepAlmostEqual
 
-from django.test import TestCase
+from django.test import TestCase, SimpleTestCase
 from django.forms.models import model_to_dict
 
 # Import module to test
@@ -1037,3 +1038,95 @@ class TestUnpackTarball(TestCase):
     #
     #     self.assertEqual(expected_num_files,len(files))
     #     self.assertEqual(expected_file_name,files[1])
+
+
+class TestReformatHeader(SimpleTestCase):
+    def setUp(self):
+        self.neox_headerfile = os.path.join('photometrics', 'tests', 'example_neox_hdr')
+        self.test_neox_header = fits.Header.fromtextfile(self.neox_headerfile)
+        self.pp_headerfile = os.path.join('photometrics', 'tests', 'example_pp_hdr')
+
+        self.maxDiff = None
+
+    def compare_headers(self, header1, header2, test_length=True):
+
+        if test_length: self.assertEqual(len(header1), len(header2))
+
+        for i, card in enumerate(header1.cards):
+            if card.keyword in ['CHECKSUM', 'DATASUM']:
+                continue
+            if card.keyword[0:4] in ['CRVA', 'CD1_', 'CD2_', 'PV1_', 'PV2_', 'WCSD', 'SECP', 'WCSR', 'WCSN', 'WCSM']:
+                self.assertEqual((card.keyword,  card.comment),
+                    (header2.cards[i].keyword, header2.cards[i].comment))
+                self.assertEqual(type(card.value), type(header2.cards[i].value), msg=f'Failure on {card.keyword} type')
+                if card.keyword[0:4] not in ['PV1_', 'PV2_', 'WCSR', 'WCSN', 'WCSM']:
+                    self.assertAlmostEqual(card.value, header2.cards[i].value, places=4, msg=f'Failure on {card.keyword} value')
+            else:
+                self.assertEqual((card.keyword, card.value, card.comment),
+                    (header2.cards[i].keyword, header2.cards[i].value, header2.cards[i].comment))
+
+    def test_fromHeader_short(self):
+        expected_header = fits.Header({'SIMPLE' : True, 'OBJECT' : '65803   ',
+            'SRCTYPE' : 'MINORPLANET',
+            'OBSTYPE' : 'EXPOSE  ',
+            })
+        test_header = fits.Header({'SIMPLE' : True, 'OBJECT' : '65803   ',
+            'SRCTYPE' : 'MINORPLANET',
+            'OBSTYPE' : 'EXPOSE  ',
+            'SECPIXX' : 0.464,
+            'SECPIXY' : 0.464,
+            'EPOCH'   : 2000.0,
+            'HISTORY' : 'Astrometric solution',
+            'COMMENT' : 'This is a comment that should go'
+            })
+        new_header = reformat_header(test_header)
+
+        self.compare_headers(expected_header, new_header)
+
+    def test_fromHeader_update_keywords(self):
+        expected_header = fits.Header([fits.Card('SIMPLE', True),
+            fits.Card('OBJECT', '65803   '),
+            fits.Card('SRCTYPE', 'MINORPLANET'),
+            fits.Card('OBSTYPE', 'EXPOSE  '),
+            fits.Card('OBRECIPE', 'N/A  ', 'Observing recipes used'),
+            fits.Card('PCRECIPE', 'BANZAI', 'Processing Recipes required/used'),
+            fits.Card('PPRECIPE', 'PHOTOMETRYPIPELINE', 'Post-Processing Recipes required/used'),
+            fits.Card('EXPTIME', 42.0, '[s] Exposure length'),
+            fits.Card('FILTER', 'rp', 'Filter used'),
+            fits.Card('RADESYS', '2000.0', '[[FK5,ICRS]] Fundamental coord. system of the o'),
+            fits.Card('AIRMASS', 1.2345, 'Effective mean airmass'),
+            fits.Card('WCSERR' , 0, 'Error status of WCS fit. 0 for no error')
+            ])
+        test_header = fits.Header([fits.Card('SIMPLE', True),
+            fits.Card('OBJECT', '65803   '),
+            fits.Card('SRCTYPE', 'MINORPLANET'),
+            fits.Card('OBSTYPE', 'EXPOSE  '),
+            fits.Card('OBRECIPE', 'N/A  ', 'Observing recipes used'),
+            fits.Card('PCRECIPE', 'N/A  ', 'Observing recipes used'),
+            fits.Card('PPRECIPE', 'N/A  ', 'Observing recipes used'),
+            fits.Card('EXPTIME', 42.0, 'PP: copied'),
+            fits.Card('FILTER', 'rp', 'Look through this'),
+            fits.Card('RADESYS', '2000.0', 'ICRS'),
+            fits.Card('AIRMASS', 1.2345, 'computed airmass'),
+            fits.Card('WCSERR' , 0, 'pp_solve fit status'),
+            fits.Card('HISTORY' , 'Astrometric solution',),
+            fits.Card('COMMENT' , 'This is a comment that should go'),
+            ])
+
+        new_header = reformat_header(test_header)
+
+        self.compare_headers(expected_header, new_header)
+
+    def test_fromfiles(self):
+
+        new_header = reformat_header(self.pp_headerfile)
+
+        self.compare_headers(self.test_neox_header, new_header)
+
+    def test_already_converted(self):
+
+        new_header = reformat_header(self.pp_headerfile)
+        new_header_v2 = reformat_header(new_header)
+
+        self.assertEqual(new_header, new_header_v2)
+        self.compare_headers(self.test_neox_header, new_header_v2)

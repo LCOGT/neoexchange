@@ -1,0 +1,10 @@
+XTENSION= 'IMAGE   '           / Image extension                                
+BITPIX  =                    8 / array data type                                
+NAXIS   =                    2 / number of array dimensions                     
+NAXIS1  =                 4096                                                  
+NAXIS2  =                 4096                                                  
+PCOUNT  =                    0 / number of parameters                           
+GCOUNT  =                    1 / number of groups                               
+EXTNAME = 'BPM     '                                                            
+CHECKSUM= 'jEhJmEfGjEfGjEfG'   / HDU checksum updated 2022-02-16T20:36:46       
+DATASUM = '65536   '           / data unit checksum updated 2022-02-16T20:36:46 

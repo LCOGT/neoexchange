@@ -1,0 +1,53 @@
+Las Cumbres Observatory Sinistro Imager
+=======================================
+
+  Instrument Overview
+  ===================
+
+    The visible-wavelength, direct-imaging CCD instruments for the Las Cumbres
+    Observatory (LCOGT) 1-meter Telescopes are called the Sinistro Imagers.
+    Sinistro imagers contain a Fairchild deep depletion, back-illuminated
+    monolithic CCD with 4096 x 4097 pixels. The instrument is mounted on the
+    straight through port on the LCOGT 1-meter instrument support structure.
+
+  Detector                                                         
+  ========      
+    Sinistro is a 4k x 4k CCD that images a 26.5 arc minute square field of
+    view. The device is back illuminated and has 15-micron pixels. The unbinned
+    detector provides a pixel scale of 0.389 arcsec/pixel. The instrument
+    can also be operated in a central_2k_2x2 mode which reads the central
+    2048 x 2048 pixels, with 2x2 pixel binning, giving 0.778 arcsec/pixel.
+    The chip is linear up to 65k ADU and the gains of the four individual
+    amplifiers are normalized to 1.0 by the processing pipeline for calibrated
+    images. Read noise is typically 7.5 to 9 electrons depending on the
+    particular CCD and the readout time is 28 seconds for unbinned images, and
+    9 sec for the central_2k_2x2 mode. The CCD quantum efficiency is 64% for
+    350 - 400 nm, 72% at 500 nm, rising to 80-90% over 600-800 nm and declining
+    to 24% at 1000 nm. The quantum efficiency falls off very sharply below 350 nm.
+
+  Filters                                                         
+  =======
+    Three eight position filter wheels in the Sinsitro instrument provide 21
+    filter slots. A common set of filters are provided in all the Sinistro
+    imagers including the Bessell UBVRI and Sloan/PanSTARRS u’g’r’i’zs along
+    with a PanSTARRS w broad filter equivalent to g’+r’+i’.
+ 
+  Sinistro Instrument Designations
+  ================================
+
+    The distribution of the Sinsitro imagers among the 1-meter telescopes of
+    LCOGT network are shown below with the LCOGT Node/Observatory node shown
+    with the LCOGT Site Code given in parentheses, along with the Sinistro
+    instrument desigination for the telescope in that location:
+    Siding Spring (COJ), Dome A: fa12
+    Siding Spring (COJ), Dome B: fa19
+    Sutherland (CPT), Dome A: fa16
+    Sutherland (CPT), Dome B: fa14
+    Sutherland (CPT), Dome C: fa06
+    Cerro Tololo (LSC), Dome A: fa15
+    Cerro Tololo (LSC), Dome B: fa04
+    Cerro Tololo (LSC), Dome C: fa03
+    McDonald (ELP), Dome A: fa05
+    McDonald (ELP), Dome B: fa07
+    Tenerife (TFN), Dome A: fa20
+    Tenerife (TFN), Dome B: fa11

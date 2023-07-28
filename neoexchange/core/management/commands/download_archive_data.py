@@ -28,9 +28,10 @@ from django.core.files.storage import default_storage
 from core.archive_subs import archive_login, get_frame_data, get_catalog_data, \
     determine_archive_start_end, download_files, make_data_dir
 from core.views import determine_active_proposals
+from core.models import DataProduct, Block
 from photometrics.gf_movie import make_movie
 from photometrics.catalog_subs import sanitize_object_name
-from core.utils import save_to_default, search
+from core.utils import save_to_default, search, save_dataproduct
 
 
 class Command(BaseCommand):
@@ -113,11 +114,16 @@ class Command(BaseCommand):
                         obj = sanitize_object_name(frame['OBJECT'])
                         req_num = str(frame['REQNUM'])
                         movie_file = make_movie(frame['DATE_OBS'], obj, req_num, tar_path, out_path, frame['PROPID'], tarfile=frame['filename'])
-                        if settings.USE_S3:
-                            filenames = glob(os.path.join(tar_path, obj + '_' + req_num, '*_2df_ex.fits'))
-                            if filenames:
-                                for filename in filenames:
-                                    save_to_default(filename, out_path)
+                        blocks = Block.objects.filter(request_number=req_num)
+                        for block in blocks:
+                            if block.current_name() == frame['OBJECT']:
+                                save_dataproduct(obj=block, filepath=movie_file, filetype=DataProduct.GUIDER_GIF)
+                                filenames = glob(os.path.join(tar_path, obj + '_' + req_num, '*_2df_ex.fits'))
+                                if filenames:
+                                    for filename in filenames:
+                                        save_dataproduct(obj=block, filepath=filename, filetype=DataProduct.FITS_SPECTRA)
+                                break
+            self.stdout.write("Done")
         else:
             self.stdout.write("No token defined (set ARCHIVE_TOKEN environment variable)")
 

@@ -17,14 +17,17 @@ import logging
 import os
 from math import floor
 from datetime import datetime, timedelta
-from subprocess import call, TimeoutExpired
+
+from subprocess import call, PIPE, Popen, TimeoutExpired
 from collections import OrderedDict
 import warnings
 from shutil import unpack_archive
 from glob import glob
 
+import astropy.units as u
 from astropy.io import fits
 from astropy.io.votable import parse
+from astropy.coordinates import Angle
 from numpy import loadtxt, split, empty
 
 from core.models import detections_array_dtypes
@@ -534,13 +537,17 @@ def get_scamp_xml_info(scamp_xml_file):
     fgroups_table = votable.get_table_by_id('FGroups')
 
     reference_catalog = fgroups_table.array['AstRef_Catalog'].data[0]
-    reference_catalog = reference_catalog.decode("utf-8")
+    # Earlier versions of Astropy (~<3.2.3) have an older VOTable parser which
+    # returns `bytes`; later versions return `str`ings
+    if type(reference_catalog) == bytes:
+        reference_catalog = reference_catalog.decode("utf-8")
     reference_catalog = reference_catalog.replace('-', '')
     if reference_catalog == 'file':
         # SCAMP was fed a reference catalog file, we have more digging to do
         # to get the actual catalog used
         reference_catalog = votable.get_field_by_id_or_name('AstRefCat_Name').value
-        reference_catalog = reference_catalog.decode("utf-8")
+        if type(reference_catalog) == bytes:
+            reference_catalog = reference_catalog.decode("utf-8")
         wcs_refcat_name = reference_catalog
         if '_' in reference_catalog:
             # If it's new format catalog file with position and size, strip
@@ -549,11 +556,14 @@ def get_scamp_xml_info(scamp_xml_file):
         reference_catalog = reference_catalog.replace('.cat', '')
     else:
         wcs_refcat_name = "<Vizier/aserver.cgi?%s@cds>" % reference_catalog.lower()
+    wcs_imagecat_name = fields_table.array['Catalog_Name'].data[0]
+    if type(wcs_imagecat_name) == bytes:
+        wcs_imagecat_name = wcs_imagecat_name.decode("utf-8")
     info = { 'num_match'    : fgroups_table.array['AstromNDets_Internal_HighSN'].data[0],
              'num_refstars' : fields_table.array['NDetect'].data[0],
              'wcs_refcat'   : wcs_refcat_name,
              'wcs_cattype'  : "%s@CDS" % reference_catalog.upper(),
-             'wcs_imagecat' : fields_table.array['Catalog_Name'].data[0].decode("utf-8"),
+             'wcs_imagecat' : wcs_imagecat_name,
              'pixel_scale'  : fields_table.array['Pixel_Scale'].data[0].mean()
            }
 
@@ -638,8 +648,8 @@ def updateFITSWCS(fits_file, scamp_file, scamp_xml_file, fits_file_output):
     secpix = round(scamp_info['pixel_scale'], 6)
 
     # header keywords we have
-    header['WCSDELRA'] = header['CRVAL1'] - crval1
-    header['WCSDELDE'] = header['CRVAL2'] - crval2
+    header['WCSDELRA'] = (header['CRVAL1'] - crval1, '[arcsec] Shift of fitted WCS w.r.t. nominal')
+    header['WCSDELDE'] = (header['CRVAL2'] - crval2, '[arcsec] Shift of fitted WCS w.r.t. nominal')
     header['CTYPE1'] = ctype1
     header['CTYPE2'] = ctype2
     header['CRVAL1'] = crval1
@@ -651,13 +661,19 @@ def updateFITSWCS(fits_file, scamp_file, scamp_xml_file, fits_file_output):
     header['CD2_1'] = cd2_1
     header['CD2_2'] = cd2_2
     header['SECPIX'] = (secpix, '[arcsec/pixel] Fitted pixel scale on sky')
-    header['WCSSOLVR'] = wcssolvr
-    header['WCSRFCAT'] = wcsrfcat
-    header['WCSIMCAT'] = wcsimcat
-    header['WCSNREF'] = wcsnref
-    header['WCSMATCH'] = wcsmatch
-    header['WCCATTYP'] = wccattyp
-    header['WCSRDRES'] = str(str(astrrms1)+'/'+str(astrrms2))
+    header['WCSSOLVR'] = (wcssolvr, 'WCS solver')
+    # This can be quite long and the comment might not fit. Truncate at max possible length
+    existing_length = 11 + len(wcsrfcat) + 4 # 8 (keyword) + "= '" + catname length + "' / '"
+    comment_length = max(80-existing_length, 0)
+    header['WCSRFCAT'] = (wcsrfcat, 'Fname of astrometric catalog'[0:comment_length])
+    # This can be quite long and the comment might not fit. Truncate at max possible length
+    existing_length = 11 + len(wcsimcat) + 4 # 8 (keyword) + "= '" + catname length + "' / '"
+    comment_length = max(80-existing_length, 0)
+    header['WCSIMCAT'] = (wcsimcat, 'Fname of detection catalog'[0:comment_length])
+    header['WCSNREF']  = (wcsnref, 'Stars in image available to define WCS')
+    header['WCSMATCH'] = (wcsmatch, 'Stars in image matched against ref catalog')
+    header['WCCATTYP'] = (wccattyp, 'Reference catalog used')
+    header['WCSRDRES'] = (str(str(astrrms1)+'/'+str(astrrms2)), '[arcsec] WCS fitting residuals (x/y)')
     header['WCSERR'] = 0
 
     # header keywords we (probably) don't have. Insert after CTYPE2
@@ -676,6 +692,104 @@ def updateFITSWCS(fits_file, scamp_file, scamp_xml_file, fits_file_output):
 
     return 0, header
 
+
+def reformat_header(header_or_file):
+    """Reformats a header either read from a FITS file (<header_or_file> is of
+    `str` type) or a fits.Header directly into a NEOX pipeline format one"""
+
+    if type(header_or_file) == str:
+        new_header = fits.Header.fromtextfile(header_or_file)
+    else:
+        new_header = header_or_file.copy()
+
+    hdr_updates = { 'exptime' : (None, '[s] Exposure length'),
+                    'filter'  : (None, 'Filter used'),
+                    'radesys' : (None, '[[FK5,ICRS]] Fundamental coord. system of the o'),
+                    'airmass' : (None, 'Effective mean airmass'),
+                    'pcrecipe': ('BANZAI', 'Processing Recipes required/used'),
+                    'pprecipe': ('PHOTOMETRYPIPELINE', 'Post-Processing Recipes required/used'),
+                    'wcserr'  : (0, 'Error status of WCS fit. 0 for no error')
+                  }
+
+    wcs_keywords = ['CTYPE1', 'CTYPE2', 'CRPIX1', 'CRPIX2', 'CRVAL1', 'CRVAL2',\
+        'CUNIT1', 'CUNIT2', 'CD1_1 ', 'CD1_2', 'CD2_1', 'CD2_2',\
+        'PV1_0', 'PV1_1', 'PV1_2', 'PV1_4', 'PV1_5', 'PV1_6', 'PV1_7', 'PV1_8', 'PV1_9', 'PV1_10',\
+        'PV2_0', 'PV2_1', 'PV2_2', 'PV2_4', 'PV2_5', 'PV2_6', 'PV2_7', 'PV2_8', 'PV2_9', 'PV2_10']
+
+    wcs_comments = { 'CTYPE1' : 'Type of WCS Projection', 'CTYPE2' : 'Type of WCS Projection',
+                     'CRPIX1' : '[pixel] Coordinate of reference point (axis 1)',
+                     'CRPIX2' : '[pixel] Coordinate of reference point (axis 2)',
+                     'CRVAL1' : '[deg] RA at the reference pixel',
+                     'CRVAL2' : '[deg] Dec at the reference pixel',
+                     'CUNIT1' : 'Units of RA',
+                     'CUNIT2': 'Units of Dec',
+                     'CD' : 'WCS CD transformation matrix',
+                     'PV' : 'TPV distortion coefficient'
+            }
+    # Update comments on existing keywords
+    for keyword, (new_value, new_comment) in hdr_updates.items():
+        if keyword not in new_header:
+            continue
+        if new_value is not None:
+            new_header[keyword] = (new_value, new_comment)
+        else:
+            new_header.set(keyword, comment=new_comment)
+    # Move WCS keywords, convert type
+    if 'm2roll' in new_header:
+        index = new_header.index('m2roll')
+        for keyword in wcs_keywords:
+            _, value, old_comment = new_header.cards[keyword]
+            lookup_key = keyword
+            if 'CD' in keyword or 'PV' in keyword:
+                lookup_key = keyword[0:2]
+            comment = wcs_comments.get(lookup_key, old_comment)
+            try:
+                value = float(value)
+            except ValueError:
+                pass
+            #print(index, keyword, value, comment)
+            new_header.remove(keyword)
+            new_header.insert(index, (keyword, value, comment), after=True)
+            index += 1
+    # New keywords from old
+    if 'RA' in new_header and 'DEC' in new_header and 'WCSDELRA' not in new_header and 'WCSDELDE' not in new_header:
+        ra = Angle(new_header['RA'], unit=u.hourangle)
+        new_header.insert('l1filter', ('wcsdelra', float(ra.deg - new_header['crval1']),  '[arcsec] Shift of fitted WCS w.r.t. nominal'), after=True)
+        dec = Angle(new_header['DEC'], unit=u.deg)
+        new_header.insert('wcsdelra', ('wcsdelde', float(dec.deg - new_header['crval2']), '[arcsec] Shift of fitted WCS w.r.t. nominal'), after=True)
+    if 'SECPIXX' in new_header and 'SECPIXY' in new_header and 'WCSDELDE' in new_header:
+        secpix = (new_header['SECPIXX'] + new_header['SECPIXY']) / 2.0
+        new_header.insert('wcsdelde', ('secpix', secpix, '[arcsec/pixel] Fitted pixel scale on sky'), after=True)
+        new_header.insert('secpix', ('wcssolvr', 'SCAMP-2.0.4', 'WCS solver'), after=True)
+        new_header.insert('wcssolvr', ('wcsrfcat', 'GAIA-DR2', 'Fname of astrometric catalog'), after=True)
+        wcsimcat = new_header['ORIGNAME'].replace('e00', 'e91_ldac')
+        # This can be quite long and the comment might not fit. Truncate at max possible length
+        existing_length = 11 + len(wcsimcat) + 4 # 8 (keyword) + "= '" + catname length + "' / '"
+        comment_length = max(80-existing_length, 0)
+        new_header.insert('wcsrfcat', ('wcsimcat', wcsimcat, 'Fname of detection catalog'[0:comment_length]), after=True)
+        new_header.insert('wcsimcat', ('wcsnref', -1, 'Stars in image available to define WCS'), after=True)
+        new_header.insert('wcsnref', ('wcsmatch', -1, 'Stars in image matched against ref catalog'), after=True)
+        new_header.insert('wcsmatch', ('wccattyp', 'GAIA-DR2@CDS', 'Reference catalog used'), after=True)
+
+        astrrms1 = round(float(new_header['astrrms1'])*3600.0, 5)
+        astrrms2 = round(float(new_header['astrrms2'])*3600.0, 5)
+        wcsrdres = str(astrrms1) + '/' + str(astrrms2)
+        new_header.insert('wccattyp', ('WCSRDRES', wcsrdres, '[arcsec] WCS fitting residuals (x/y)'), after=True)
+    # Remove extra keywords
+    del_keywords = [ 'EPOCH', 'PHOTFLAG', 'PHOT_K', 'SECPIXX', 'SECPIXY',
+        'EQUINOX', 'RADECSYS', 'FGROUPNO', 'ASTIRMS1', 'ASTIRMS2', 'ASTINST',
+        'FLXSCALE', 'MAGZEROP', 'PHOTIRMS', 'PHOTINST', 'PHOTLINK', 'PHOTMODE',
+        'APRAD', 'APIDX', 'MIDTIMJD', 'TELINSTR', 'TEL_KEYW',' ASTRRMS1', 'ASTRRMS2',
+        'REGCAT' ]
+
+    for keyword in del_keywords:
+        if keyword in new_header:
+            new_header.remove(keyword)
+    for keyword in ['HISTORY', 'COMMENT']:
+        if keyword in new_header:
+            new_header.remove(keyword, remove_all=True)
+
+    return new_header
 
 def read_mtds_file(mtdsfile, dbg=False):
     """Read a detections file produced by mtdlink and return a dictionary of the
@@ -765,3 +879,119 @@ def unpack_tarball(tar_path, unpack_dir):
         os.chmod(file, 0o664)
 
     return files
+
+def convert_file_to_crlf(file_to_convert, binary=None, dbg=False):
+    """Converts the passed <file_to_convert> to DOS/CRLF line endings by running
+    'unix2dos' on it."""
+
+    binary = binary or find_binary("unix2dos")
+    if binary is None:
+        logger.error("Could not locate 'unix2dos' executable in PATH")
+        return -42
+
+    cmdline = "%s %s" % ( binary, file_to_convert)
+    cmdline = cmdline.rstrip()
+    if dbg:
+        print(cmdline)
+
+    if dbg is True:
+        retcode_or_cmdline = cmdline
+    else:
+        dest_dir = os.path.dirname(file_to_convert)
+        logger.debug("cmdline=%s" % cmdline)
+        args = cmdline.split()
+        retcode_or_cmdline = call(args, cwd=dest_dir)
+
+    return retcode_or_cmdline
+
+def funpack_file(fpack_file, binary=None, dbg=False):
+    """Calls 'funpack' on the passed <fpack_file> to uncompress it. A status
+    value of 0 is returned if the unpacked file already exists or the uncompress
+    was successful, -1 is returned otherwise"""
+
+    file_bits = fpack_file.split(os.extsep)
+    if len(file_bits) != 3 and file_bits[-1].lower() != 'fz':
+        return -1
+    unpacked_file = file_bits[0] + os.extsep + file_bits[1]
+    if os.path.exists(unpacked_file):
+        return 0
+
+    binary = binary or find_binary("funpack")
+    if binary is None:
+        logger.error("Could not locate 'funpack' executable in PATH")
+        return -42
+
+    cmdline = "%s -F %s" % ( binary, fpack_file)
+    cmdline = cmdline.rstrip()
+
+    if dbg is True:
+        print(cmdline)
+        retcode_or_cmdline = cmdline
+    else:
+        dest_dir = os.path.dirname(fpack_file)
+        logger.debug("cmdline=%s" % cmdline)
+        args = cmdline.split()
+        retcode_or_cmdline = call(args, cwd=dest_dir)
+
+    return retcode_or_cmdline
+
+def run_damit_periodscan(lcs_input_filename, psinput_filename, psoutput_filename, binary=None, dbg=False):
+    """ Run DAMIT code to calculate periodogram based on lc .
+        See https://astro.troja.mff.cuni.cz/projects/damit/
+    """
+    binary = binary or find_binary("period_scan")
+    if binary is None:
+        logger.error("Could not locate 'period_scan' executable in PATH")
+        return -42
+    dest_dir = os.path.dirname(psoutput_filename)
+    cmdline = f"{binary} -v {psinput_filename} {psoutput_filename}"
+    catline = f"cat {lcs_input_filename}"
+    cmdline = cmdline.rstrip()
+    catline = catline.rstrip()
+    if dbg:
+        print(cmdline)
+
+    if dbg is True:
+        retcode_or_cmdline = cmdline
+    else:
+        logger.debug(f"cmdline={catline} | {cmdline}")
+        cmd_args = cmdline.split()
+        cat_args = catline.split()
+        cat_call = Popen(cat_args, cwd=dest_dir, stdout=PIPE)
+        cmd_call = Popen(cmd_args, cwd=dest_dir, stdin=cat_call.stdout, stdout=PIPE)
+        retcode_or_cmdline = cmd_call.communicate()
+
+    return retcode_or_cmdline        
+
+
+def run_damit(call_name, cat_input_filename, primary_call, write_out=False, binary=None, dbg=False):
+    """ Run DAMIT code to calculate LC and shape models.
+        See https://astro.troja.mff.cuni.cz/projects/damit/
+    """
+    binary = binary or find_binary(call_name)
+    if binary is None:
+        logger.error(f"Could not locate {call_name} executable in PATH")
+        return -42
+    dest_dir = os.path.dirname(cat_input_filename)
+    cmdline = f"{binary} {primary_call}"
+    catline = f"cat {cat_input_filename}"
+    cmdline = cmdline.rstrip()
+    catline = catline.rstrip()
+    if dbg:
+        print(cmdline)
+
+    if dbg is True:
+        retcode_or_cmdline = cmdline
+    else:
+        logger.debug(f"cmdline={catline} | {cmdline}")
+        cmd_args = cmdline.split()
+        cat_args = catline.split()
+        cat_call = Popen(cat_args, cwd=dest_dir, stdout=PIPE)
+        if write_out:
+
+            cmd_call = Popen(cmd_args, cwd=dest_dir, stdin=cat_call.stdout, stdout=write_out)
+        else:
+            cmd_call = Popen(cmd_args, cwd=dest_dir, stdin=cat_call.stdout, stdout=PIPE)
+        retcode_or_cmdline = cmd_call.communicate()
+
+    return retcode_or_cmdline

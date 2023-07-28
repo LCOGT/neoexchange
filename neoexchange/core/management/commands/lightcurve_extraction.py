@@ -13,33 +13,40 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 """
 
-import os
-import stat
-from sys import exit
 from datetime import datetime, timedelta, time
-from math import degrees, radians, floor
-import numpy as np
-from django.core.files.storage import default_storage
-from django.core.management.base import BaseCommand, CommandError
-from django.forms.models import model_to_dict
+from math import degrees, radians, floor, copysign
+from sys import exit
+import os
+import tempfile
+import stat
+import warnings
+
 try:
     import pyslalib.slalib as S
 except:
     pass
-import matplotlib
-import matplotlib.pyplot as plt
-from matplotlib.dates import HourLocator, DateFormatter
+from astroquery.jplhorizons import Horizons
+from astropy.wcs import FITSFixedWarning
 from astropy.stats import LombScargle
-import astropy.units as u
 from astropy.time import Time
 from django.conf import settings
-from core.models import Block, Frame, SuperBlock, SourceMeasurement, CatalogSources
+from django.core.files.storage import default_storage
+from django.core.management.base import BaseCommand, CommandError
+from django.forms.models import model_to_dict
+from matplotlib.dates import HourLocator, DateFormatter
+import astropy.units as u
+import matplotlib
+import matplotlib.pyplot as plt
+import numpy as np
+
 from astrometrics.ephem_subs import compute_ephem, radec2strings, moon_alt_az, get_sitepos
 from astrometrics.time_subs import datetime2mjd_utc
-from photometrics.gf_movie import make_gif
-from photometrics.catalog_subs import search_box, sanitize_object_name
-from photometrics.photometry_subs import compute_fwhm, map_filter_to_wavelength
 from core.archive_subs import make_data_dir
+from core.models import Block, Frame, SuperBlock, SourceMeasurement, CatalogSources, DataProduct
+from core.utils import save_dataproduct
+from photometrics.catalog_subs import search_box, sanitize_object_name, open_fits_catalog, make_object_directory
+from photometrics.gf_movie import make_gif
+from photometrics.photometry_subs import compute_fwhm, map_filter_to_wavelength
 
 
 class Command(BaseCommand):
@@ -47,17 +54,22 @@ class Command(BaseCommand):
     help = 'Extract lightcurves of a target from a given SuperBlock. Can look back at earlier SuperBlocks for same object if requested.'
 
     def add_arguments(self, parser):
-        parser.add_argument('supblock', type=int, help='SuperBlock (tracking number) to analyze')
+        parser.add_argument('supblock', type=str, help='SuperBlock (tracking number) to analyze')
         parser.add_argument('-ts', '--timespan', type=float, default=0.0, help='Days prior to referenced SuperBlock that should be included')
         parser.add_argument('-bw', '--boxwidth', type=float, default=5.0, help='Box half-width in arcsec to search')
+        parser.add_argument('-ro', '--ra_offset', type=float, default=0.0, help='RA offset of box center in arcsec')
+        parser.add_argument('-do', '--dec_offset', type=float, default=0.0, help='Dec offset of box center in arcsec')
         parser.add_argument('-dm', '--deltamag', type=float, default=0.5, help='delta magnitude tolerance for multiple matches')
         parser.add_argument('--title', type=str, default=None, help='plot title')
         parser.add_argument('--persist', action="store_true", default=False, help='Whether to store cross-matches as SourceMeasurements for the body')
         parser.add_argument('--single', action="store_true", default=False, help='Whether to only analyze a single SuperBlock')
         parser.add_argument('--nogif', action="store_true", default=False, help='Whether to create a gif movie of the extraction')
         parser.add_argument('--date', action="store", default=None, help='Date of the blocks to extract (YYYYMMDD)')
+        parser.add_argument('--overwrite', action="store_true", default=False, help='Force overwrite and store robust data products')
         base_dir = os.path.join(settings.DATA_ROOT, 'Reduction')
         parser.add_argument('--datadir', default=base_dir, help='Place to save data (e.g. %s)' % base_dir)
+        parser.add_argument('-ap', '--maxapsize', default=None, help='Max. aperture size')
+        parser.add_argument('--horizons', action="store_true", default=False, help='Whether to use HORIZONS to predict positions')
 
     def generate_expected_fwhm(self, times, airmasses, fwhm_0=2.0, obs_filter='w', tel_diameter=0.4*u.m):
         """Compute the expected FWHM and the variation with airmass and observing
@@ -124,13 +136,20 @@ class Command(BaseCommand):
         # Plot LC
         ax0.errorbar(times, mags, yerr=mag_errs, marker='.', color=colors, linestyle=' ')
         # Sort out/Plot good Zero Points
-        zp_times = [alltimes[i] for i, zp in enumerate(zps) if zp and zp_errs[i]]
-        zps_good = [zp for i, zp in enumerate(zps) if zp and zp_errs[i]]
-        zp_errs_good = [zp_errs[i] for i, zp in enumerate(zps) if zp and zp_errs[i]]
+        zp_times = [alltimes[i] for i, zp in enumerate(zps) if zp > 0 and zp_errs[i] > 0]
+        zps_good = [zp for i, zp in enumerate(zps) if zp > 0 and zp_errs[i] > 0]
+        zp_errs_good = [zp_errs[i] for i, zp in enumerate(zps) if zp > 0 and zp_errs[i] > 0]
         ax1.errorbar(zp_times, zps_good, yerr=zp_errs_good, marker='.', color=colors, linestyle=' ')
+        ylims = ax1.get_ylim()
+        # Sort out/Plot bad Zero Points
+        zp_times = [alltimes[i] for i, zp in enumerate(zps) if zp <= 0 or zp_errs[i] <= 0]
+        zps_bad = [zp for i, zp in enumerate(zps) if zp <= 0 or zp_errs[i] <= 0]
+        zp_errs_bad = [zp_errs[i]-ylims[0] for i, zp in enumerate(zps) if zp <= 0 or zp_errs[i] <= 0]
+        ax1.errorbar(zp_times, zps_bad, yerr=zp_errs_bad, uplims=True, marker='d', color=colors, linestyle='--')
+        ax1.set_ylim(ylims[0]-0.1, ylims[1])
         # Set up Axes/Titles
         ax0.invert_yaxis()
-        ax1.invert_yaxis()
+        #ax1.invert_yaxis()
         ax1.set_xlabel('Time')
         ax0.set_ylabel('Magnitude')
         ax1.set_ylabel('Magnitude')
@@ -227,11 +246,11 @@ class Command(BaseCommand):
         mpc_line = source.format_mpc_line()
 
         ades_psv_line = source.format_psv_line()
-        if persist is not True:
+        if persist is not True and created is True:
             source.delete()
         return mpc_line, ades_psv_line
 
-    def output_alcdef(self, lightcurve_file, block, site, dates, mags, mag_errors, filt, outmag):
+    def output_alcdef(self, block, site, dates, mags, mag_errors, filt, outmag):
         """
         Create a standardized ALCDEF formatted text file for LC data
 
@@ -246,6 +265,7 @@ class Command(BaseCommand):
         :return: None
         """
         obj_name = block.body.current_name()
+        alcdef_txt = ''
 
         mid_time = (dates[-1] - dates[0])/2 + dates[0]
         metadata_dict = {'ObjectNumber': 0,
@@ -272,19 +292,22 @@ class Command(BaseCommand):
             metadata_dict['ObjectNumber'] = obj_name
             metadata_dict['MPCDesig'] = block.body.old_name()
             metadata_dict['ObjectName'] = block.body.old_name()
-        lightcurve_file.write('STARTMETADATA\n')
+        alcdef_txt += 'STARTMETADATA\n'
         for key, value in metadata_dict.items():
-            lightcurve_file.write('{}={}\n'.format(key.upper(), value))
-        lightcurve_file.write('ENDMETADATA\n')
+            alcdef_txt += '{}={}\n'.format(key.upper(), value)
+        alcdef_txt += 'ENDMETADATA\n'
         i = 0
         for date in dates:
             jd = datetime2mjd_utc(date)+0.5
-            lightcurve_file.write('DATA=24{:.6f}|{:+.3f}|{:+.3f}\n'.format(jd, mags[i], mag_errors[i]))
+            alcdef_txt += 'DATA=24{:.6f}|{:+.3f}|{:+.3f}\n'.format(jd, mags[i], mag_errors[i])
             i += 1
-        lightcurve_file.write('ENDDATA\n')
+        alcdef_txt += 'ENDDATA\n'
+        return alcdef_txt
 
     def handle(self, *args, **options):
 
+        # Suppress incorrect FITSFixedWarnings
+        warnings.simplefilter('ignore', FITSFixedWarning)
         self.stdout.write("==== Light curve building %s ====" % (datetime.now().strftime('%Y-%m-%d %H:%M')))
 
         try:
@@ -328,7 +351,7 @@ class Command(BaseCommand):
         datadir = os.path.join(options['datadir'], obj_name)
         out_path = settings.DATA_ROOT
         data_path = ''
-        rw_permissions = stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IWGRP | stat.S_IROTH | stat.S_IWOTH
+        rw_permissions = stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IWGRP | stat.S_IROTH
         if not os.path.exists(datadir) and not settings.USE_S3:
             try:
                 os.makedirs(datadir)
@@ -339,7 +362,6 @@ class Command(BaseCommand):
                 msg = "Error creating output path %s" % datadir
                 raise CommandError(msg)
         sb_day = start_super_block.block_start.strftime("%Y%m%d")
-        sb_site = start_super_block.get_sites().replace(',', '')
 
         # Turn telescope class into a diameter for theoretical FWHM curve
         tel_classes = start_super_block.get_telclass()
@@ -352,19 +374,22 @@ class Command(BaseCommand):
             tel_diameter = float(tel_class.replace('m', '.'))
             tel_diameter *= u.m
         except ValueError:
-            self.stdout.write("Error determining telescope diameter, assuming 0.4m")
-            tel_diameter = 0.4*u.m
+            self.stdout.write("Error determining telescope diameter, assuming 1.0m")
+            tel_diameter = 1.0*u.m
 
-        # Create, name, open ALCDEF file.
-        if obs_date:
-            alcdef_date = options['date']
-        else:
-            alcdef_date = sb_day
-        base_name = '{}_{}_{}_{}_'.format(obj_name, sb_site, alcdef_date, start_super_block.tracking_number)
-        alcdef_filename = os.path.join(datadir, base_name + 'ALCDEF.txt')
-        output_file_list.append('{},{}'.format(alcdef_filename, datadir.lstrip(out_path)))
-        alcdef_file = default_storage.open(alcdef_filename, 'w')
+        # Set offsets, convert from Arcsec to Radians
+        ra_offset = radians(options['ra_offset'] / 3600)
+        dec_offset = radians(options['dec_offset'] / 3600)
         for super_block in super_blocks:
+            # Create, name, open ALCDEF file.
+            if obs_date:
+                alcdef_date = options['date']
+            else:
+                alcdef_date = super_block.block_start.strftime("%Y%m%d")
+            base_name = '{}_{}_{}_{}_'.format(obj_name, super_block.get_sites().replace(',', ''), alcdef_date, super_block.tracking_number)
+            alcdef_filename = base_name + 'ALCDEF.txt'
+            output_file_list.append('{},{}'.format(alcdef_filename, datadir.lstrip(out_path)))
+            alcdef_txt = ''
             block_list = Block.objects.filter(superblock=super_block.id)
             if obs_date:
                 block_list = block_list.filter(when_observed__lt=obs_date+timedelta(days=2)).filter(when_observed__gt=obs_date)
@@ -379,12 +404,12 @@ class Command(BaseCommand):
                 obs_site = block.site
                 # Get all Useful frames from each block
                 frames_red = Frame.objects.filter(block=block.id, frametype__in=[Frame.BANZAI_RED_FRAMETYPE]).order_by('filter', 'midpoint')
-                frames_ql = Frame.objects.filter(block=block.id, frametype__in=[Frame.BANZAI_QL_FRAMETYPE]).order_by('filter', 'midpoint')
-                if len(frames_red) >= len(frames_ql):
-                    frames_all_zp = frames_red
+                frames_neox = Frame.objects.filter(block=block.id, frametype__in=[Frame.NEOX_RED_FRAMETYPE]).order_by('filter', 'midpoint')
+                if frames_neox.filter(zeropoint__isnull=False).count() >= frames_red.filter(zeropoint__isnull=False).count():
+                    frames_all_zp = frames_neox
                 else:
-                    frames_all_zp = frames_ql
-                frames = frames_all_zp.filter(zeropoint__isnull=False)
+                    frames_all_zp = frames_red
+                frames = frames_all_zp.filter(zeropoint__isnull=False, zeropoint__gte=0)
                 self.stdout.write("Found %d frames (of %d total) for Block# %d with good ZPs" % (frames.count(), frames_all_zp.count(), block.id))
                 self.stdout.write("Searching within %.1f arcseconds and +/-%.2f delta magnitudes" % (options['boxwidth'], options['deltamag']))
                 total_frame_count += frames.count()
@@ -395,13 +420,28 @@ class Command(BaseCommand):
 
                     for frame in frames_all_zp:
                         # get predicted position and magnitude of target during time of each frame
-                        emp_line = compute_ephem(frame.midpoint, elements, frame.sitecode)
-                        ra = emp_line['ra']
-                        dec = emp_line['dec']
-                        mag_estimate = emp_line['mag']
+                        if options['horizons'] is True:
+                            t_jd = Time(frame.midpoint).jd
+                            obj = Horizons(block.body.current_name().replace('_', ' '),
+                               id_type='smallbody',
+                               epochs=t_jd,
+                               location=frame.sitecode)
+                            eph = obj.ephemerides()
+                            if len(eph) > 0:
+                                ra = eph['RA'].to(u.rad).value
+                                dec = eph['DEC'].to(u.rad).value
+                                mag_estimate = eph['V']
+                        else:
+                            emp_line = compute_ephem(frame.midpoint, elements, frame.sitecode)
+                            ra = emp_line['ra']
+                            dec = emp_line['dec']
+                            mag_estimate = emp_line['mag']
+
+                        ra = S.sla_dranrm(ra + ra_offset)
+                        dec = copysign(S.sla_drange(dec + dec_offset), dec + dec_offset)
                         (ra_string, dec_string) = radec2strings(ra, dec, ' ')
                         # Find list of frame sources within search region of predicted coordinates
-                        sources = search_box(frame, ra, dec, options['boxwidth'])
+                        sources = search_box(frame, ra, dec, options['boxwidth'], max_ap_size=options['maxapsize'])
                         midpoint_string = frame.midpoint.strftime('%Y-%m-%d %H:%M:%S')
                         self.stdout.write("%s %s %s V=%.1f %s (%d) %s" % (midpoint_string, ra_string, dec_string, mag_estimate, frame.sitecode, len(sources), frame.filename))
                         best_source = None
@@ -463,30 +503,46 @@ class Command(BaseCommand):
                             mag_set = [m for m, f in zip(block_mags, filter_list) if f == filt]
                             time_set = [t for t, f in zip(block_times, filter_list) if f == filt]
                             error_set = [e for e, f in zip(block_mag_errs, filter_list) if f == filt]
-                            self.output_alcdef(alcdef_file, block, obs_site, time_set, mag_set, error_set, filt, outmag)
+                            alcdef_txt += self.output_alcdef(block, obs_site, time_set, mag_set, error_set, filt, outmag)
                     mags += block_mags
                     mag_errs += block_mag_errs
                     times += block_times
 
                     # Create gif of fits files used for LC extraction
                     data_path = make_data_dir(out_path, model_to_dict(frames_all_zp[0]))
-                    frames_list = [os.path.join(data_path, f.filename) for f in frames_all_zp]
+                    red_paths = []
+                    for f in frames_all_zp:
+                        fits_filepath = os.path.join(data_path, f.filename.replace('e92', 'e91').replace('-e72', ''))
+                        fits_header, fits_table, cattype = open_fits_catalog(fits_filepath, header_only=True)
+                        object_name = fits_header.get('OBJECT', None)
+                        block_id = fits_header.get('BLKUID', '').replace('/', '')
+                        object_directory = ''
+                        if object_name:
+                            object_directory = make_object_directory(fits_filepath, object_name, block_id)
+                        red_paths.append(object_directory)
+                    data_subdir = 'Temp_cvc'
+                    #if os.path.exists(os.path.join(red_path, data_subdir)) is False:
+                    #    data_subdir = 'Temp_cvc_multiap'
+                    frames_list = [os.path.join(red_path, data_subdir, f.filename) for red_path,f in zip(red_paths, frames_all_zp)]
                     if not options['nogif']:
-                        movie_file = make_gif(frames_list, sort=False, init_fr=100, center=3, out_path=out_path, plot_source=True,
+                        movie_file = make_gif(frames_list, options['title'], sort=False, init_fr=100, center=3, out_path=data_path, plot_source=True,
                                               target_data=frame_data, show_reticle=True, progress=True)
                         if "WARNING" not in movie_file:
+                            # Add write permissions to movie file
+                            try:
+                                os.chmod(movie_file, rw_permissions)
+                            except PermissionError:
+                                pass
+                            # Create DataProduct
+                            save_dataproduct(obj=block, filepath=movie_file, filetype=DataProduct.FRAME_GIF, force=options['overwrite'])
                             output_file_list.append('{},{}'.format(movie_file, data_path.lstrip(out_path)))
                             self.stdout.write("New gif created: {}".format(movie_file))
                         else:
                             self.stdout.write(movie_file)
-        alcdef_file.close()
-        self.stdout.write("Found matches in %d of %d frames" % (len(times), total_frame_count))
+            save_dataproduct(obj=super_block, filepath=None, filetype=DataProduct.ALCDEF_TXT, filename=alcdef_filename, content=alcdef_txt, force=options['overwrite'])
+            self.stdout.write("Found matches in %d of %d frames" % (len(times), total_frame_count))
 
         if not settings.USE_S3:
-            try:
-                os.chmod(alcdef_filename, rw_permissions)
-            except PermissionError:
-                pass
 
             # Write light curve data out in similar format to Make_lc.csh
             i = 0
@@ -576,17 +632,17 @@ class Command(BaseCommand):
                         os.chmod(os.path.join(datadir, base_name + 'lightcurve.png'), rw_permissions)
                     except PermissionError:
                         pass
-            else:
-                self.stdout.write("No sources matched.")
+                else:
+                    self.stdout.write("No sources matched.")
 
-            if data_path:
-                with open(os.path.join(data_path, base_name + 'lc_file_list.txt'), 'w') as outfut_file_file:
-                    outfut_file_file.write('# == Files created by Lightcurve Extraction for {} on {} ==\n'.format(obj_name, sb_day))
-                    for output_file in output_file_list:
-                        outfut_file_file.write(output_file)
-                        outfut_file_file.write('\n')
-                self.stdout.write(f"New lc file list created: {os.path.join(data_path, base_name + 'lc_file_list.txt')}")
-                try:
-                    os.chmod(os.path.join(data_path, base_name + 'lc_file_list.txt'), rw_permissions)
-                except PermissionError:
-                    pass
+                if data_path:
+                    with open(os.path.join(data_path, base_name + 'lc_file_list.txt'), 'w') as outfut_file_file:
+                        outfut_file_file.write('# == Files created by Lightcurve Extraction for {} on {} ==\n'.format(obj_name, sb_day))
+                        for output_file in output_file_list:
+                            outfut_file_file.write(output_file)
+                            outfut_file_file.write('\n')
+                    self.stdout.write(f"New lc file list created: {os.path.join(data_path, base_name + 'lc_file_list.txt')}")
+                    try:
+                        os.chmod(os.path.join(data_path, base_name + 'lc_file_list.txt'), rw_permissions)
+                    except PermissionError:
+                        pass

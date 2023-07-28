@@ -582,7 +582,9 @@ def map_filter_to_wavelength(passband='ip'):
 
     filter_cwave = {'U': 3600, 'B': 4300, 'V' : 5500, 'R' : 6500, 'I' : 8200, 'Z' : 9500,
                     'gp' : 4810, 'rp' : 6170, 'ip' : 7520, 'zp' : 8660, 'w' : 6080}
-    wavelength = filter_cwave.get(passband, filter_cwave['ip']) * u.angstrom
+    wavelength = filter_cwave.get(passband, None)
+    if wavelength:
+        wavelength *= u.angstrom
 
     return wavelength
 
@@ -593,7 +595,9 @@ def map_filter_to_bandwidth(passband='ip'):
 
     filter_bwidth = {'U': 501.61, 'B': 952.75, 'V' : 839.79, 'R' : 1298.29, 'I' : 3155.25, 'Z' : 700,
                     'up' : 638.91, 'gp' : 1487.49, 'rp' : 1391.42, 'ip' : 1287.66, 'zp' : 1026.15, 'w' : 4409.79}
-    bandwidth = filter_bwidth.get(passband, filter_bwidth['ip']) * u.angstrom
+    bandwidth = filter_bwidth.get(passband, None)
+    if bandwidth:
+        bandwidth *= u.angstrom
 
     return bandwidth
 

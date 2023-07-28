@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-model href="https://pds.nasa.gov/pds4/pds/v1/PDS4_PDS_1J00.sch"
+      schematypens="http://purl.oclc.org/dsdl/schematron"?>
+<Product_Collection xmlns="http://pds.nasa.gov/pds4/pds/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://pds.nasa.gov/pds4/pds/v1                              https://pds.nasa.gov/pds4/pds/v1/PDS4_PDS_1J00.xsd">
+  <Identification_Area>
+    <logical_identifier>urn:nasa:pds:dart_teleobs:document_lcogt</logical_identifier>
+    <version_id>1.0</version_id>
+    <title>DART Telescopic Observations, Las Cumbres Observatory (LCOGT) Documentation Collection</title>
+    <information_model_version>1.19.0.0</information_model_version>
+    <product_class>Product_Collection</product_class>
+    <Citation_Information>
+      <author_list>Lister, T.</author_list>
+      <publication_year>2022</publication_year>
+      <keyword>LCOGT</keyword>
+      <description>DART Telescopic Observation Bundle, LCOGT Documentation Collection</description>
+    </Citation_Information>
+    <Modification_History>
+      <Modification_Detail>
+        <modification_date>2022-02-16</modification_date>
+        <version_id>1.0</version_id>
+        <description>Initial PDS4 Version</description>
+      </Modification_Detail>
+    </Modification_History>
+  </Identification_Area>
+  <Context_Area>
+    <Investigation_Area>
+      <name>Double Asteroid Redirection Test</name>
+      <type>Mission</type>
+      <Internal_Reference>
+        <lid_reference>urn:nasa:pds:context:investigation:mission.double_asteroid_redirection_test</lid_reference>
+        <reference_type>collection_to_investigation</reference_type>
+      </Internal_Reference>
+    </Investigation_Area>
+    <Observing_System>
+      <Observing_System_Component>
+        <name>Las Cumbres Observatory Observatory</name>
+        <type>Host</type>
+        <description>The description for the Las Cumbres Observatory can be 
+        found in the document collection for this bundle.</description>
+      </Observing_System_Component>
+      <Observing_System_Component>
+        <name>Las Cumbres Observatory 1-meter Telescopes</name>
+        <type>Telescope</type>
+        <description>The description for the Las Cumbres Observatory 1-meter telescopes can be found in the
+        document collection for this bundle.</description>
+      </Observing_System_Component>
+      <Observing_System_Component>
+        <name>Sinistro Imager</name>
+        <type>Instrument</type>
+        <description>The description for the Sinistro Imager can be 
+        found in the document collection for this bundle.</description>
+      </Observing_System_Component>
+      <Observing_System_Component>
+        <name>FLI Imager</name>
+        <type>Instrument</type>
+        <description>The description for the FLI Imager can be 
+        found in the document collection for this bundle.</description>
+      </Observing_System_Component>
+    </Observing_System>
+    <Target_Identification>
+      <name>(65803) Didymos</name>
+      <type>Asteroid</type>
+      <Internal_Reference>
+        <lid_reference>urn:nasa:pds:context:target:asteroid.65803_didymos</lid_reference>
+        <reference_type>collection_to_target</reference_type>
+      </Internal_Reference>
+    </Target_Identification>
+  </Context_Area>
+  <Collection>
+    <collection_type>Document</collection_type>
+  </Collection>
+  <File_Area_Inventory>
+    <File>
+      <file_name>collection_lcogtdoc.csv</file_name>
+      <creation_date_time>2023-04-26</creation_date_time>
+      <file_size unit="byte">238</file_size>
+    </File>
+    <Inventory>
+      <offset unit="byte">0</offset>
+      <parsing_standard_id>PDS DSV 1</parsing_standard_id>
+      <records>2</records>
+      <record_delimiter>Carriage-Return Line-Feed</record_delimiter>
+      <field_delimiter>Comma</field_delimiter>
+      <Record_Delimited>
+        <fields>2</fields>
+        <groups>0</groups>
+        <Field_Delimited>
+          <name>Member Status</name>
+          <field_number>1</field_number>
+          <data_type>ASCII_String</data_type>
+          <maximum_field_length unit="byte">1</maximum_field_length>
+          <description>
+            P indicates primary member of the collection
+            S indicates secondary member of the collection
+          </description>
+        </Field_Delimited>
+        <Field_Delimited>
+          <name>LIDVID_LID</name>
+          <field_number>2</field_number>
+          <data_type>ASCII_LIDVID_LID</data_type>
+          <maximum_field_length unit="byte">255</maximum_field_length>
+          <description>
+            The LID or LIDVID of a product that is a member of the collection.
+          </description>
+        </Field_Delimited>
+      </Record_Delimited>
+      <reference_type>inventory_has_member_product</reference_type>
+    </Inventory>
+  </File_Area_Inventory>
+</Product_Collection>

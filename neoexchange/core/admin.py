@@ -41,6 +41,8 @@ class BodyAdmin(VersionAdmin):
       'fast_moving', 'updated')
     ordering = ('-ingest',)
 
+class ObserverInline(admin.TabularInline):
+    model = BlockObserver
 
 @admin.register(SuperBlock)
 class SuperBlockAdmin(VersionAdmin):
@@ -64,6 +66,8 @@ class SuperBlockAdmin(VersionAdmin):
     list_display = ('groupid', 'body_name', 'proposal', 'block_start', 'active', )
     list_filter = ('proposal', 'block_start', 'active', )
     ordering = ('-block_start',)
+
+    inlines = [ObserverInline,]
 
 
 @admin.register(Block)
@@ -298,7 +302,7 @@ class PhysicalParametersAdmin(admin.ModelAdmin):
     search_fields = ('body__name', 'body__provisional_name')
     list_display = ('id', 'body_name', 'parameter_type', 'value', 'error', 'units', 'preferred')
     list_filter = ('parameter_type', 'preferred')
-    ordering = [ 'body__name', 'parameter_type', '-preferred']
+    ordering = ['body__name', 'parameter_type', '-preferred']
 
 
 class DesignationsAdmin(admin.ModelAdmin):
@@ -314,7 +318,7 @@ class DesignationsAdmin(admin.ModelAdmin):
     search_fields = ('value',)
     list_display = ('id', 'value', 'desig_type', 'body_name', 'preferred', 'update_time')
     list_filter = ('desig_type', 'preferred')
-    ordering = [ 'body__name', 'desig_type', '-preferred']
+    ordering = ['body__name', 'desig_type', '-preferred']
 
 
 class ColorValuesAdmin(admin.ModelAdmin):
@@ -333,6 +337,41 @@ class ColorValuesAdmin(admin.ModelAdmin):
     ordering = ['body__name', 'color_band', '-preferred']
 
 
+class DataProductsAdmin(admin.ModelAdmin):
+
+    def body_name(self, obj):
+        name = ''
+        if obj.body is not None:
+            name = obj.body.full_name()
+        elif obj.calibsource is not None:
+            name = obj.calibsource.name
+        return name
+
+    # search_fields = ('body_name', 'body_provisional_name')
+    list_display = ('id', 'filetype', 'product', 'created', 'content_type')
+    list_filter = ('filetype',)
+    # ordering = ['body_name', 'filetype', 'created']
+
+
+class ExportedBlockAdmin(admin.ModelAdmin):
+
+    list_select_related = True
+
+    def block_info(self, obj):
+        block_info = f"#{obj.block.request_number}"
+        if obj.block.superblock.groupid is not None:
+            block_info += f" ({obj.block.superblock.groupid})"
+        return block_info
+    block_info.allow_tags = True
+
+    # Use raw_id fields (https://docs.djangoproject.com/en/1.11/ref/contrib/admin/#django.contrib.admin.ModelAdmin.raw_id_fields)
+    # for the Block to stop it making a select box tens of thousands entries long...
+    raw_id_fields = ("block",)
+
+    list_display = ('block_info', 'input_path', 'export_path', 'export_format', 'when_exported')
+    list_display_links = ('block_info', )
+    list_filter = ('export_format', )
+
 admin.site.register(Proposal, ProposalAdmin)
 admin.site.register(SourceMeasurement, SourceMeasurementAdmin)
 admin.site.register(ProposalPermission)
@@ -342,3 +381,5 @@ admin.site.register(StaticSource, StaticSourceAdmin)
 admin.site.register(PhysicalParameters, PhysicalParametersAdmin)
 admin.site.register(Designations, DesignationsAdmin)
 admin.site.register(ColorValues, ColorValuesAdmin)
+admin.site.register(DataProduct, DataProductsAdmin)
+admin.site.register(ExportedBlock, ExportedBlockAdmin)
