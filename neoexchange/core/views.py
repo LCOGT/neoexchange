@@ -4725,7 +4725,7 @@ def create_latex_table(body_or_name):
                     if obs_filter in ['up', 'gp', 'rp', 'ip']:
                         obs_filter = obs_filter.replace('p', "'")
                     elif obs_filter == 'zs':
-                        obs_filter = 'z_{s}'
+                        obs_filter = '$\mathrm{z_{s}}$'
                     text_filters.append(obs_filter)
                 data_value = ",".join(text_filters)
             elif field == 'num_exposures':

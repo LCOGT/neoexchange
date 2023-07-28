@@ -8664,7 +8664,7 @@ class TestCreateLatexTable(TestCase):
                   "2021-07-07 03:00 & 2021-07-07 03:03 & cpt & 1m0 & K91 & Opt. imaging & g',r' & 4/4 \\\\\n",
                   "2021-07-14 03:00 & 2021-07-14 03:03 & cpt & 1m0 & K93 & Opt. imaging & g',r' & 4/4 \\\\\n",
                   "2021-07-21 03:00 & 2021-07-21 03:03 & cpt & 1m0 & K92 & Opt. imaging & g',r' & 4/4 \\\\\n",
-                  "2021-07-22 15:00 & 2021-07-22 15:06 & ogg & 2m0 & F65 & Opt. imaging & g',r',i',z_{s} & 4/4 \\\\\n",
+                  "2021-07-22 15:00 & 2021-07-22 15:06 & ogg & 2m0 & F65 & Opt. imaging & g',r',i',$\mathrm{z_{s}}$ & 4/4 \\\\\n",
                 ]
 
         expected_lines = self.table_hdr + lines + self.table_ftr
