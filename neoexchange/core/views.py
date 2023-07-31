@@ -3598,6 +3598,7 @@ def run_astwarp_alignment(block, sci_dir, dest_dir):
 
     #check if light curve block or tail monitoring block
     if len(frames) > 10:
+        print('Light Curve Block')
         split_block = split_light_curve_blocks(block)
         combined_filenames = []
         statuses = []
@@ -3611,9 +3612,10 @@ def run_astwarp_alignment(block, sci_dir, dest_dir):
             combined_filename, status = run_astarithmetic(filenames, dest_dir)
             combined_filenames.append(combined_filename)
             statuses.append(status)
-        return combined_filename, statuses
+        return combined_filenames, statuses
 
     else:
+        print('Tail Monitoring Block')
         filenames = []
         for frame in frames:
             result_RA, result_DEC = ephem_interpolate(frame.midpoint, table)
@@ -3621,6 +3623,7 @@ def run_astwarp_alignment(block, sci_dir, dest_dir):
             cropped_filename, status = run_astwarp(fits_filename, dest_dir, result_RA[0], result_DEC[0])
             filenames.append(cropped_filename)
         combined_filename, status = run_astarithmetic(filenames, dest_dir)
+        combined_filename = [combined_filename]
         return combined_filename, status
 
 def run_noisechisel(filename, dest_dir):
@@ -3642,12 +3645,16 @@ def run_astwarp_alignment_noisechisel(block, sci_dir, dest_dir):
     Calls run_astwarp_alignemnt on a given <block> to get a combined file.
     Calls run_noisechisel on the combined file to get its detection map.
     '''
-    combined_filename, status = run_astwarp_alignment(block, sci_dir, dest_dir)
-    #print(status)
-    chiseled_filename, status = run_noisechisel(combined_filename, dest_dir)
-    #print(status)
+    combined_filenames, statuses = run_astwarp_alignment(block, sci_dir, dest_dir)
 
-    return chiseled_filename, combined_filename, status
+    chiseled_filenames = []
+    status = []
+    for combined_filename in combined_filenames:
+        filename, s = run_noisechisel(combined_filename, dest_dir)
+        chiseled_filenames.append(filename)
+        status.append(s)
+
+    return chiseled_filenames, combined_filenames, status
 
 def convert_fits_to_pdf(filename, dest_dir, crop=False, center_RA=0, center_DEC=0, width=1991.0, height=511.0, hdu='SCI', dbg=False):
     '''

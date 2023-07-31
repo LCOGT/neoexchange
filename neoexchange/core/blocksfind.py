@@ -1,3 +1,4 @@
+import logging
 from core.models import Body,Block,SuperBlock,Frame
 from astropy.wcs import WCS, FITSFixedWarning, InvalidTransformError
 from datetime import datetime,timedelta
@@ -8,6 +9,8 @@ from astrometrics.ephem_subs import horizons_ephem
 from astropy.time import Time
 import numpy as np
 warnings.simplefilter('ignore', category=FITSFixedWarning)
+
+logger = logging.getLogger(__name__)
 
 
 def find_didymos_blocks():
@@ -43,7 +46,6 @@ def split_light_curve_blocks(block, exptime=800):
     Routine to split a light curve <block> into equal sized sub-blocks with
     total exposure time equal to <exptime>
     '''
-    dates = []
     exp_length = block.exp_length
     frames, num_banzai, num_neox = find_frames(block)
     if len(frames)==0:
@@ -51,13 +53,8 @@ def split_light_curve_blocks(block, exptime=800):
     total_exp_time = len(frames) * exp_length
     div_factor = total_exp_time/exptime
     split_block = np.array_split(frames, round(div_factor))
-    for block in split_block:
-        first_frame = block[0]
-        delta = timedelta(seconds = first_frame.exptime/2)
-        start_date = first_frame.midpoint - delta
-        dates.append(start_date)
 
-    return split_block#, dates
+    return split_block
 
 def filter_blocks(original_blocks, start_date, end_date, min_frames=3, max_frames=10):
     '''
@@ -96,9 +93,9 @@ def find_frames(block):
     frames = Frame.objects.filter(block = block)
     banzai_frames = frames.filter(frametype = Frame.BANZAI_RED_FRAMETYPE)
     neox_frames = frames.filter(frametype = Frame.NEOX_RED_FRAMETYPE)
-    frames = frames.order_by('midpoint')
-    if len(banzai_frames) != len(neox_frames):
-        print(f'Block uid: {block.get_blockuid}, Num banzai frames: {len(banzai_frames)}, Num neox frames: {len(neox_frames)}')
+    neox_frames = neox_frames.order_by('midpoint')
+    #if len(banzai_frames) != len(neox_frames):
+    #    print(f'Block uid: {block.get_blockuid}, Num banzai frames: {len(banzai_frames)}, Num neox frames: {len(neox_frames)}')
 
     return neox_frames, len(banzai_frames), len(neox_frames)
 
@@ -125,7 +122,7 @@ def get_ephem(block):
     '''
     Creates a horizons ephemeris table for a passed <block>
     '''
-    didymos = Body.objects.get(name = '65803')
+    body = block.body
     frames, num_banzai, num_neox = find_frames(block)
     #frames_summary(frames)
     first_frame = frames[0]
@@ -133,7 +130,13 @@ def get_ephem(block):
     onemin = timedelta(minutes = 1)
     delta_1 = timedelta(seconds = first_frame.exptime/2)
     delta_2 = timedelta(seconds = last_frame.exptime/2)
-    table = horizons_ephem(didymos.current_name(), first_frame.midpoint - delta_1 - onemin, last_frame.midpoint + delta_2 + onemin, first_frame.sitecode, '1m')
+    start_time = first_frame.midpoint - delta_1 - onemin
+    end_time = last_frame.midpoint + delta_2 + onemin
+    if end_time < start_time:
+        logger.warning("Start time is greater than end time")
+    if first_frame.sitecode is None:
+        logger.warning("First frame sitecode is missing or null")
+    table = horizons_ephem(body.current_name(), start_time, end_time, first_frame.sitecode, '1m')
 
     return table
 

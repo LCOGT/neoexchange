@@ -13,7 +13,7 @@ from core.views import run_astwarp_alignment_noisechisel, convert_fits_to_pdf
 
 
 class Command(BaseCommand):
-    help = 'Generates stacked and noise chiseled outputs for Blocks. Generates pdf of final output file.'
+    help = 'Generates stacked and noise chiseled outputs for Blocks. Generates pdf of final output files.'
 
     def add_arguments(self, parser):
         parser.add_argument('start_date', help='Start date (YYYYMMDD-HH:MM)')
@@ -63,30 +63,42 @@ class Command(BaseCommand):
 
                 #remove block from list so it is not repeated
                 del all_blocks[index]
-                #all_blocks.remove(block)
                 del all_dates[index]
-                #all_dates.remove(block_start_date)
             else:
                 break
 
             #find Frames in block
             frames, num_banzai, num_neox = find_frames(block)
+            #print(frames)
 
             #later: handle muscat frames in g,r,i,z
 
             #set up working directory for Block and make a copy of all frames
             dayobs = block.get_blockdayobs
+            blockuid = block.get_blockuid
+            self.stdout.write(f'BLKUID: {blockuid}')
 
-            input_data_path = os.path.join(sci_dir, dayobs, block.body.current_name()+'_'+block.get_blockuid, 'Temp_cvc_multiap')
+            #chooses correct input path
+            input_data_path_1 = os.path.join(sci_dir, dayobs, block.body.current_name()+'_'+blockuid[0], 'Temp_cvc_multiap')
+            if len(blockuid)==2:
+                input_data_path_2 = os.path.join(sci_dir, dayobs, block.body.current_name()+'_'+blockuid[1], 'Temp_cvc_multiap')
             output_path = os.path.join(dest_dir, 'original_files', dayobs)
             if os.path.exists(output_path) is False:
                 os.makedirs(output_path)
             for frame in frames:
-                path = os.path.join(input_data_path,frame.filename)
-                if os.path.exists(path) is False:
-                    print(f'path does not exist: {path}')
+                file_path_1 = os.path.join(input_data_path_1,frame.filename)
+                if len(blockuid)==2:
+                    file_path_2 = os.path.join(input_data_path_2,frame.filename)
                 else:
-                    shutil.copy(os.path.join(input_data_path,frame.filename), output_path)
+                    file_path_2 = ''
+                if os.path.exists(file_path_1) is False and os.path.exists(file_path_2) is False:
+                    frames = frames.exclude(filename = frame.filename)
+                    continue
+                if os.path.exists(file_path_1):
+                    input_data_path = input_data_path_1
+                else:
+                    input_data_path = input_data_path_2
+                shutil.copy(os.path.join(input_data_path,frame.filename), output_path)
             sci_dir_path = output_path
             dest_dir_path = os.path.join(dest_dir, dayobs)
 
@@ -116,16 +128,24 @@ class Command(BaseCommand):
             moon_frac.append(avg_moon_frac)
             moon_distance.append(avg_moon_dist)
             V_mags.append(V_mag)
-            block_uid.append(block.get_blockuid)
+            block_uid.append(blockuid[0])
             input_data_paths.append(input_data_path)
             output_data_paths.append(output_path)
 
             #call run_astwarp_alignment(), and run_noisechisel()
-            chiseled_filename, combined_filename, status = run_astwarp_alignment_noisechisel(block, sci_dir_path, dest_dir_path)
+            chiseled_filenames, combined_filenames, status = run_astwarp_alignment_noisechisel(block, sci_dir_path, dest_dir_path)
             #call convert_fits_to_pdf()
-            pdf_filename_chiseled, status = convert_fits_to_pdf(chiseled_filename, dest_dir_path)
-            pdf_filename_combined, status = convert_fits_to_pdf(combined_filename, dest_dir_path)
-            self.stdout.write(f'Chiseled filename: {pdf_filename_chiseled}, Combined filename: {pdf_filename_combined}')
+            pdf_filenames_chiseled = []
+            pdf_filenames_combined = []
+            for chiseled_filename in chiseled_filenames:
+                pdf_filename_chiseled, status = convert_fits_to_pdf(chiseled_filename, dest_dir_path)
+                pdf_filenames_chiseled.append(pdf_filename_chiseled)
+            for combined_filename in combined_filenames:
+                pdf_filename_combined, status = convert_fits_to_pdf(combined_filename, dest_dir_path)
+                pdf_filenames_combined.append(pdf_filename_combined)
+            self.stdout.write(f'Chiseled filename(s): {pdf_filenames_chiseled}')
+            self.stdout.write(f'Combined filename(s): {pdf_filenames_combined}')
+            self.stdout.write('')
 
             current_time += date_increment
 
