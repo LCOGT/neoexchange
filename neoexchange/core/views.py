@@ -23,6 +23,7 @@ from math import floor, ceil, degrees, radians, pi, acos, pow, cos
 
 from astropy import units as u
 from astropy.io import ascii
+from astropy.table import Table
 from astropy.wcs import FITSFixedWarning
 from astropy.coordinates import SkyCoord
 import json
@@ -4665,12 +4666,36 @@ def compare_NEOx_horizons_ephems(body, d, sitecode='500', debug=True):
 
     return neox_emp, horizons_emp, sep_r, sep_ra, sep_dec
 
+def get_verbose_name(model, string):
+    fields = string.split('__')
 
-def create_latex_table(body_or_name):
+    for field_name in fields[:-1]:
+        field = model._meta.get_field(field_name)
 
-    field_list = ['block_start','block_end','site','telclass','MPC Site Code','obstype','Filters','num_exposures']
-    cleaned_data = {}
-    cleaned_data['field_list'] = field_list
+        if field.many_to_one:
+            model = field.foreign_related_fields[0].model
+        elif field.many_to_many or field.one_to_one or field.one_to_many:
+            model = field.related_model
+        else:
+            raise ValueError('incorrect string')
+
+    return model._meta.get_field(fields[-1]).verbose_name
+
+def get_verbose_field(instance, field):
+    field_path = field.split('__')
+    attr = instance
+    for elem in field_path:
+        try:
+            attr = getattr(attr, elem)
+        except AttributeError:
+            return None
+    return attr
+
+def create_latex_table(body_or_name, return_table=False, dbg=False):
+
+    # Fields to retrieve, separate foreign keys with '__'
+    field_list = ['block_start', 'block_end', 'site', 'telclass',
+                  'MPC Site Code', 'obstype', 'Filters', 'num_exposures']
 
     if isinstance(body_or_name, Body):
         body = body_or_name
@@ -4678,7 +4703,18 @@ def create_latex_table(body_or_name):
         body = Body.objects.get(name=body_or_name)
     blocks = Block.objects.filter(body=body, num_observed__gte=1)
     block_mapping = { Block.OBSTYPE_CHOICES[0][0] : Block.OBSTYPE_CHOICES[0][1].replace("Optical", "Opt."), Block.OBSTYPE_CHOICES[1][0] : Block.OBSTYPE_CHOICES[1][1].replace("Optical", "Opt.")}
+    num_blocks = blocks.count()
+    # If 'obstype' is in the field_list but there is only type of Block.obstype
+    # then drop it
+    num_obstypes = -1
+    if 'obstype' in field_list:
+        num_obstypes = blocks.values_list('obstype').distinct().count()
+        if num_obstypes == 1:
+            field_list.remove('obstype')
+    if dbg: print(f"Found {num_blocks} Blocks for {body.current_name()} with {num_obstypes} different Observation Types")
 
+    cleaned_data = {}
+    cleaned_data['field_list'] = field_list
     latex_dict = {'tabletype': 'table',
                  'header_start': '\\hline \\hline',
                  'header_end': '\\hline',
@@ -4693,10 +4729,13 @@ def create_latex_table(body_or_name):
     for field in cleaned_data.get('field_list', []):
         for obs_record in blocks.order_by('block_start'):
             try:
-                verbose_name = Block._meta.get_field(field).verbose_name
-                data_value = getattr(obs_record, field)
+                # verbose_name = Block._meta.get_field(field).verbose_name
+                verbose_name = get_verbose_name(Block, field)
+                data_value = get_verbose_field(obs_record, field)
             except FieldDoesNotExist:
                 verbose_name = field
+                data_value = ''
+            except AttributeError:
                 data_value = ''
             verbose_name = verbose_name.title()
             frames = Frame.objects.filter(block=obs_record,frametype__in=(Frame.SPECTRUM_FRAMETYPE,Frame.BANZAI_QL_FRAMETYPE,Frame.BANZAI_RED_FRAMETYPE,Frame.SINGLE_FRAMETYPE))
@@ -4704,12 +4743,20 @@ def create_latex_table(body_or_name):
                 data_value = block_mapping.get(data_value)
             elif field == 'block_start':
                 try:
-                    data_value = frames.earliest('midpoint').midpoint.strftime("%Y-%m-%d %H:%M")
+                    first_frame = frames.earliest('midpoint')
+                    first_frame_time = first_frame.midpoint
+                    exptime = first_frame.exptime or 0.0
+                    first_frame_time = first_frame_time - timedelta(seconds=exptime / 2.0)
+                    data_value = first_frame_time.strftime("%Y-%m-%d %H:%M")
                 except Frame.DoesNotExist:
                     data_value = "-"
             elif field == 'block_end':
                 try:
-                    data_value = frames.latest('midpoint').midpoint.strftime("%Y-%m-%d %H:%M")
+                    last_frame = frames.latest('midpoint')
+                    last_frame_time = last_frame.midpoint
+                    exptime = last_frame.exptime or 0.0
+                    last_frame_time = last_frame_time + timedelta(seconds=exptime / 2.0)
+                    data_value = last_frame_time.strftime("%Y-%m-%d %H:%M")
                 except Frame.DoesNotExist:
                     data_value = "-"
             elif field == 'MPC Site Code':
@@ -4736,5 +4783,9 @@ def create_latex_table(body_or_name):
 
     buf = StringIO()
     ascii.write(table_data, output=buf, format='latex', latexdict=latex_dict)
+
+    if return_table is True:
+        table = Table(table_data)
+        return buf, table
 
     return buf
