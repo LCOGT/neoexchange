@@ -8648,7 +8648,7 @@ class TestCreateLatexTable(TestCase):
     def test_table_by_body(self):
 
         lines = [
-                  "2021-07-04 06:00 & 2021-07-04 07:00 & coj & 2m0 & E10 & Opt. spectra & SLIT_30.0x6.0AS & 0/1 \\\\\n",
+                  "2021-07-04 06:00 & 2021-07-04 07:00 & coj & 2m0 & E10 & Opt. spectra & $30.0\\arcsec\\times6.0\\arcsec$ slit & 0/1 \\\\\n",
                   "2021-07-07 03:00 & 2021-07-07 03:08 & cpt & 1m0 & K91 & Opt. imaging & g',r' & 4/4 \\\\\n",
                   "2021-07-14 03:00 & 2021-07-14 03:08 & cpt & 1m0 & K93 & Opt. imaging & g',r' & 4/4 \\\\\n",
                   "2021-07-21 03:00 & 2021-07-21 03:08 & cpt & 1m0 & K92 & Opt. imaging & g',r' & 4/4 \\\\\n",
@@ -8662,6 +8662,10 @@ class TestCreateLatexTable(TestCase):
         self.assertEqual(13, Frame.objects.all().count())
         
         out_buf = create_latex_table(self.test_body, return_table=False)
+        with open(os.path.join('/tmp', 'Didymos_obs_no_obstype.tex'), 'w') as fd:
+            out_buf.seek(0)
+            shutil.copyfileobj(out_buf, fd)
+
         out_buf.seek(0)
 
         for i, line in enumerate(out_buf.readlines()):
@@ -8670,7 +8674,7 @@ class TestCreateLatexTable(TestCase):
     def test_table_by_name(self):
 
         lines = [
-                  "2021-07-04 06:00 & 2021-07-04 07:00 & coj & 2m0 & E10 & Opt. spectra & SLIT_30.0x6.0AS & 0/1 \\\\\n",
+                  "2021-07-04 06:00 & 2021-07-04 07:00 & coj & 2m0 & E10 & Opt. spectra & $30.0\\arcsec\\times6.0\\arcsec$ slit & 0/1 \\\\\n",
                   "2021-07-07 03:00 & 2021-07-07 03:08 & cpt & 1m0 & K91 & Opt. imaging & g',r' & 4/4 \\\\\n",
                   "2021-07-14 03:00 & 2021-07-14 03:08 & cpt & 1m0 & K93 & Opt. imaging & g',r' & 4/4 \\\\\n",
                   "2021-07-21 03:00 & 2021-07-21 03:08 & cpt & 1m0 & K92 & Opt. imaging & g',r' & 4/4 \\\\\n",
@@ -8692,7 +8696,7 @@ class TestCreateLatexTable(TestCase):
     def test_return_table(self):
 
         lines = [
-                  "2021-07-04 06:00 & 2021-07-04 07:00 & coj & 2m0 & E10 & Opt. spectra & SLIT_30.0x6.0AS & 0/1 \\\\\n",
+                  "2021-07-04 06:00 & 2021-07-04 07:00 & coj & 2m0 & E10 & Opt. spectra & $30.0\\arcsec\\times6.0\\arcsec$ slit & 0/1 \\\\\n",
                   "2021-07-07 03:00 & 2021-07-07 03:08 & cpt & 1m0 & K91 & Opt. imaging & g',r' & 4/4 \\\\\n",
                   "2021-07-14 03:00 & 2021-07-14 03:08 & cpt & 1m0 & K93 & Opt. imaging & g',r' & 4/4 \\\\\n",
                   "2021-07-21 03:00 & 2021-07-21 03:08 & cpt & 1m0 & K92 & Opt. imaging & g',r' & 4/4 \\\\\n",

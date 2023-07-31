@@ -12,6 +12,7 @@ GNU General Public License for more details.
 """
 
 import os
+import re
 from io import StringIO
 from shutil import move
 import copy
@@ -50,7 +51,6 @@ from django.views.generic.edit import FormView
 from http.client import HTTPSConnection
 import reversion
 import requests
-import re
 import numpy as np
 try:
     import pyslalib.slalib as S
@@ -4773,6 +4773,11 @@ def create_latex_table(body_or_name, return_table=False, dbg=False):
                         obs_filter = obs_filter.replace('p', "'")
                     elif obs_filter == 'zs':
                         obs_filter = '$\mathrm{z_{s}}$'
+                    elif obs_filter.upper().startswith('SLIT'):
+                        slit_regex = r"SLIT_([\d.]+)X([\d.]+)AS"
+                        match = re.match(slit_regex, obs_filter.upper())
+                        if match and len(match.groups()) == 2:
+                            obs_filter = f"${match.groups()[0]}\\arcsec\\times{match.groups()[1]}\\arcsec$ slit"
                     text_filters.append(obs_filter)
                 data_value = ",".join(text_filters)
             elif field == 'num_exposures':
