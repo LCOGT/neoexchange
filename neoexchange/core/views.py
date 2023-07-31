@@ -4691,8 +4691,22 @@ def get_verbose_field(instance, field):
             return None
     return attr
 
-def create_latex_table(body_or_name, return_table=False, dbg=False):
-
+def create_latex_table(body_or_name, return_table=False, deluxetable=False, dbg=False):
+    """Creates a LaTeX table for all the observations of <body_or_name>
+    This is returned as a StringIo buffer which can be written to a file
+    e.g.
+    with open(filename, 'w') as fd:
+      buf.seek(0)
+      shutil.copyfileobj(buf, fd)
+    or rendered to a Django template. If [return_table] is True, an Astropy
+    Table is returned also.
+    The default table includes an 'Observation Type' column, derived from
+    the Block.obstype; if this is the same for all Blocks, this is droppped.
+    If [deluxetable] is True then the table is written out using the
+    `aastex` io.ascii formatter instead to produce a deluxetable; longer
+    than 1 page tables will need a '\startlongtable' manually inserting
+    at the start of the table.
+    """
     # Fields to retrieve, separate foreign keys with '__'
     field_list = ['block_start', 'block_end', 'site', 'telclass',
                   'MPC Site Code', 'obstype', 'Filters', 'num_exposures']
@@ -4701,7 +4715,7 @@ def create_latex_table(body_or_name, return_table=False, dbg=False):
         body = body_or_name
     else:
         body = Body.objects.get(name=body_or_name)
-    blocks = Block.objects.filter(body=body, num_observed__gte=1)
+    blocks = Block.objects.filter(body=body, num_observed__gte=1).exclude(superblock__proposal__code='SWOPE2022')
     block_mapping = { Block.OBSTYPE_CHOICES[0][0] : Block.OBSTYPE_CHOICES[0][1].replace("Optical", "Opt."), Block.OBSTYPE_CHOICES[1][0] : Block.OBSTYPE_CHOICES[1][1].replace("Optical", "Opt.")}
     num_blocks = blocks.count()
     # If 'obstype' is in the field_list but there is only type of Block.obstype
@@ -4715,13 +4729,19 @@ def create_latex_table(body_or_name, return_table=False, dbg=False):
 
     cleaned_data = {}
     cleaned_data['field_list'] = field_list
+    table_format = 'latex'
     latex_dict = {'tabletype': 'table',
                  'header_start': '\\hline \\hline',
                  'header_end': '\\hline',
                  'data_end': '\\hline',
                  'caption': 'Table of observations for ' + body.current_name() + ' with LCOGT',
                  'tablefoot': ''}
-                 
+    if deluxetable is True:
+        table_format = 'aastex'
+        latex_dict = {'tabletype': 'deluxetable',
+                      'caption': 'Table of observations for ' + body.current_name() + ' with LCOGT',
+                      'tablefoot': ''}
+
     # Suppress WCS obsfix warnings when accessing Frame objects
     warnings.simplefilter('ignore', FITSFixedWarning)
 
@@ -4787,7 +4807,7 @@ def create_latex_table(body_or_name, return_table=False, dbg=False):
             table_data.setdefault(verbose_name, []).append(data_value)
 
     buf = StringIO()
-    ascii.write(table_data, output=buf, format='latex', latexdict=latex_dict)
+    ascii.write(table_data, output=buf, format=table_format, latexdict=latex_dict)
 
     if return_table is True:
         table = Table(table_data)

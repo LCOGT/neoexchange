@@ -8627,6 +8627,13 @@ class TestCreateLatexTable(TestCase):
                            '\\hline\n'
                          ]
 
+        self.deluxetable_hdr = [\
+                           '\\begin{deluxetable}{cccccccc}\n',
+                           '\\tablecaption{Table of observations for 2005 QN173 with LCOGT}\n',
+                           r'\tablehead{\colhead{Block Start} & \colhead{Block End} & \colhead{Site} & \colhead{Telclass} & \colhead{MPC Site Code} & \colhead{Observation Type} & \colhead{Filters} & \colhead{Num Exposures}}'+'\n',
+                           '\\startdata\n'
+                         ]
+
         self.table_hdr_no_obstype = \
                          [ '\\begin{table}\n',
                            '\\caption{Table of observations for 2005 QN173 with LCOGT}\n',
@@ -8643,7 +8650,15 @@ class TestCreateLatexTable(TestCase):
                            '\\end{table}\n'
                          ]
 
+        self.deluxetable_ftr = [
+                           '\\enddata\n',
+                           '\n',
+                           '\\end{deluxetable}\n'
+                         ]
+
         self.expected_colnames = ['Block Start', 'Block End', 'Site', 'Telclass', 'MPC Site Code', 'Observation Type', 'Filters', 'Num Exposures']
+
+        self.maxDiff = None
 
     def test_table_by_body(self):
 
@@ -8665,6 +8680,32 @@ class TestCreateLatexTable(TestCase):
         with open(os.path.join('/tmp', 'Didymos_obs_no_obstype.tex'), 'w') as fd:
             out_buf.seek(0)
             shutil.copyfileobj(out_buf, fd)
+
+        out_buf.seek(0)
+
+        for i, line in enumerate(out_buf.readlines()):
+            self.assertEqual(expected_lines[i], line)
+
+    def test_deluxetable_by_body(self):
+
+        lines = [
+                  "2021-07-04 06:00 & 2021-07-04 07:00 & coj & 2m0 & E10 & Opt. spectra & $30.0\\arcsec\\times6.0\\arcsec$ slit & 0/1 \\\\\n",
+                  "2021-07-07 03:00 & 2021-07-07 03:08 & cpt & 1m0 & K91 & Opt. imaging & g',r' & 4/4 \\\\\n",
+                  "2021-07-14 03:00 & 2021-07-14 03:08 & cpt & 1m0 & K93 & Opt. imaging & g',r' & 4/4 \\\\\n",
+                  "2021-07-21 03:00 & 2021-07-21 03:08 & cpt & 1m0 & K92 & Opt. imaging & g',r' & 4/4\n",
+                ]
+
+        expected_lines = self.deluxetable_hdr + lines + self.deluxetable_ftr
+
+        self.assertEqual(1, Body.objects.all().count())
+        self.assertEqual(2, SuperBlock.objects.all().count())
+        self.assertEqual(4, Block.objects.all().count())
+        self.assertEqual(13, Frame.objects.all().count())
+
+        out_buf = create_latex_table(self.test_body, return_table=False, deluxetable=True)
+        # with open(os.path.join('/tmp', 'Didymos_obs_no_obstype.tex'), 'w') as fd:
+            # out_buf.seek(0)
+            # shutil.copyfileobj(out_buf, fd)
 
         out_buf.seek(0)
 
