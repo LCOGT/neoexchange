@@ -221,12 +221,12 @@ class Block(models.Model):
         warnings.simplefilter('ignore', FITSFixedWarning)
         blockuid = []
 
-        frame = Frame.objects.filter(block=self, frametype=Frame.BANZAI_RED_FRAMETYPE, frameid__isnull=False).first()
+        frame = Frame.objects.filter(block=self, frametype=Frame.BANZAI_RED_FRAMETYPE, frameid__isnull=False).earliest('midpoint')
         frames = [frame, ]
         if self.num_observed >= 2:
             if self.num_observed > 2:
                 logger.warning(f"More than 2 observations of Block id={self.id} - cannot retrieve all BLKUIDs")
-            last_frame = Frame.objects.filter(block=self, frametype=Frame.BANZAI_RED_FRAMETYPE, frameid__isnull=False).last()
+            last_frame = Frame.objects.filter(block=self, frametype=Frame.BANZAI_RED_FRAMETYPE, frameid__isnull=False).latest('midpoint')
             frames.append(last_frame)
         for frame in frames:
             if frame is not None:
