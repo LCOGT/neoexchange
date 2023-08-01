@@ -8498,6 +8498,356 @@ class TestParsePortalErrors(SimpleTestCase):
         self.assertEqual(expected_msg, msg)
 
 
+class TestCreateLatexTable(TestCase):
+
+    def setUp(self):
+        body_params = {
+                         'provisional_name': None,
+                         'provisional_packed': None,
+                         'name': '2005 QN173',
+                         'origin': 'O',
+                         'source_type': 'A',
+                         'source_subtype_1': 'M',
+                         'source_subtype_2': None,
+                         'elements_type': 'MPC_MINOR_PLANET',
+                         'active': True,
+                         'fast_moving': False,
+                         'urgency': None,
+                         'epochofel': datetime(2020, 12, 17, 0, 0),
+                         'orbit_rms': 0.65,
+                         'orbinc': 0.06654,
+                         'longascnode': 174.67813,
+                         'argofperih': 145.83613,
+                         'eccentricity': 0.2260268,
+                         'meandist': 3.0664,
+                         'meananom': 332.73044,
+                         'perihdist': None,
+                         'epochofperih': None,
+                         'abs_mag': 16.02,
+                         'slope': 0.15,
+                         'score': None,
+                         'discovery_date': datetime(2000, 11, 27, 0, 0),
+                         'num_obs': 292,
+                         'arc_length': 7149.0,
+                         'not_seen': 380.627780639225,
+                         'updated': True,
+                         'ingest': datetime(2021, 7, 9, 15, 4, 0, 238661),
+                         'update_time': datetime(2020, 6, 24, 0, 0)}
+
+        self.test_body = Body.objects.create(**body_params)
+        
+        proposal_params = { 'code'   : 'KEY202B-009',
+                            'title'  : 'LOOK Project',
+                            'active' : True
+                          }
+        self.key_proposal, created = Proposal.objects.get_or_create(**proposal_params)
+
+        sblock_params = {
+                        'body' : self.test_body,
+                        'cadence' : False,
+                        'block_start' : datetime(2021, 7, 4, 3, 0),
+                        'block_end'   : datetime(2021, 7, 4,19, 30),
+                        'proposal' : self.key_proposal,
+                        'groupid' : '2005 QN173_E10-20210704_spectra',
+                        'tracking_number' : '1255400',
+                        }
+        self.test_sblock_spectra = SuperBlock.objects.create(**sblock_params)
+
+        self.block_spectra_params = {
+                                'body' : self.test_body,
+                                'superblock' : self.test_sblock_spectra,
+                                'telclass' : '2m0',
+                                'site' : 'coj',
+                                'block_start' : datetime(2021, 7, 4, 3, 30),
+                                'block_end'   : datetime(2021, 7, 4, 19, 30),
+                                'obstype' : Block.OPT_SPECTRA,
+                                'request_number' : 4242,
+                                'num_observed' : 1,
+                                'when_observed' : datetime(2021, 7, 4, 6, 15),
+                                'num_exposures' : 1,
+                                'exp_length' : 3600
+                               }
+        self.test_specblock = Block.objects.create(**self.block_spectra_params)
+
+        self.frame_params = { 'block'    : self.test_specblock,
+                              'filename' : 'coj2m002-en99-20210704-0042-e90.fits',
+                              'sitecode' : 'E10',
+                              'frametype': Frame.SPECTRUM_FRAMETYPE,
+                              'filter' : 'SLIT_30.0x6.0AS',
+                              'exptime' : 3600,
+                              'midpoint' : datetime(2021, 7, 4, 6, 30)
+                            }
+        test_frame = Frame.objects.create(**self.frame_params)
+
+        sblock_params = {
+                        'body' : self.test_body,
+                        'cadence' : True,
+                        'block_start' : datetime(2021, 7, 1, 19, 0),
+                        'block_end'   : datetime(2019, 7, 23,19, 30),
+                        'proposal' : self.key_proposal,
+                        'tracking_number' : '1255300',
+                        'period' : 7*24,
+                        'jitter' : 72
+                        }
+        self.test_sblock = SuperBlock.objects.create(**sblock_params)
+
+        for sitecode, day in zip(['K91', 'K93', 'K92'], range(7,22,7)):
+            self.block_params = {
+                                'body' : self.test_body,
+                                'superblock' : self.test_sblock,
+                                'site' : 'cpt',
+                                'block_start' : datetime(2021, 7, day, 22, 30),
+                                'block_end'   : datetime(2021, 7, day, 6, 30),
+                                'obstype' : Block.OPT_IMAGING,
+                                'request_number' : day*1000,
+                                'num_observed' : 1,
+                                'when_observed' : datetime(2021, 7, day, 23, 15),
+                                'num_exposures' : 4,
+                                'exp_length' : 120
+                               }
+            self.test_objblock = Block.objects.create(**self.block_params)
+
+            for i, obs_filter in enumerate(['gp', 'gp', 'rp', 'rp']):
+                self.frame_params = { 'block'    : self.test_objblock,
+                                      'filename' : f'cpt1m003-fa99-202107{day}-{42+i:04d}-e91.fits',
+                                      'sitecode' : sitecode,
+                                      'frametype': Frame.BANZAI_RED_FRAMETYPE,
+                                      'exptime' : 120,
+                                      'filter' : obs_filter,
+                                      'midpoint' : datetime(2021, 7, day, 3, (i*2)+1, 0)
+                                    }
+
+                test_frame = Frame.objects.create(**self.frame_params)
+
+        self.table_hdr = [ '\\begin{table}\n',
+                           '\\caption{Table of observations for 2005 QN173 with LCOGT}\n',
+                           '\\begin{tabular}{cccccccc}\n',
+                           '\\hline \\hline\n',
+                           'Block Start & Block End & Site & Telclass & MPC Site Code & Observation Type & Filters & Num Exposures \\\\\n',
+                           '\\hline\n'
+                         ]
+
+        self.deluxetable_hdr = [\
+                           '\\begin{deluxetable}{cccccccc}\n',
+                           '\\tablecaption{Table of observations for 2005 QN173 with LCOGT}\n',
+                           r'\tablehead{\colhead{Block Start} & \colhead{Block End} & \colhead{Site} & \colhead{Telclass} & \colhead{MPC Site Code} & \colhead{Observation Type} & \colhead{Filters} & \colhead{Num Exposures}}'+'\n',
+                           '\\startdata\n'
+                         ]
+
+        self.table_hdr_no_obstype = \
+                         [ '\\begin{table}\n',
+                           '\\caption{Table of observations for 2005 QN173 with LCOGT}\n',
+                           '\\begin{tabular}{ccccccc}\n',
+                           '\\hline \\hline\n',
+                           'Block Start & Block End & Site & Telclass & MPC Site Code & Filters & Num Exposures \\\\\n',
+                           '\\hline\n'
+                         ]
+
+        self.table_ftr = [
+                           '\\hline\n',
+                           '\\end{tabular}\n',
+                           '\n',
+                           '\\end{table}\n'
+                         ]
+
+        self.deluxetable_ftr = [
+                           '\\enddata\n',
+                           '\n',
+                           '\\end{deluxetable}\n'
+                         ]
+
+        self.expected_colnames = ['Block Start', 'Block End', 'Site', 'Telclass', 'MPC Site Code', 'Observation Type', 'Filters', 'Num Exposures']
+
+        self.maxDiff = None
+
+    def test_table_by_body(self):
+
+        lines = [
+                  "2021-07-04 06:00 & 2021-07-04 07:00 & coj & 2m0 & E10 & Opt. spectra & $30.0\\arcsec\\times6.0\\arcsec$ slit & 0/1 \\\\\n",
+                  "2021-07-07 03:00 & 2021-07-07 03:08 & cpt & 1m0 & K91 & Opt. imaging & g',r' & 4/4 \\\\\n",
+                  "2021-07-14 03:00 & 2021-07-14 03:08 & cpt & 1m0 & K93 & Opt. imaging & g',r' & 4/4 \\\\\n",
+                  "2021-07-21 03:00 & 2021-07-21 03:08 & cpt & 1m0 & K92 & Opt. imaging & g',r' & 4/4 \\\\\n",
+                ]
+
+        expected_lines = self.table_hdr + lines + self.table_ftr
+
+        self.assertEqual(1, Body.objects.all().count())
+        self.assertEqual(2, SuperBlock.objects.all().count())
+        self.assertEqual(4, Block.objects.all().count())
+        self.assertEqual(13, Frame.objects.all().count())
+        
+        out_buf = create_latex_table(self.test_body, return_table=False)
+        with open(os.path.join('/tmp', 'Didymos_obs_no_obstype.tex'), 'w') as fd:
+            out_buf.seek(0)
+            shutil.copyfileobj(out_buf, fd)
+
+        out_buf.seek(0)
+
+        for i, line in enumerate(out_buf.readlines()):
+            self.assertEqual(expected_lines[i], line)
+
+    def test_deluxetable_by_body(self):
+
+        lines = [
+                  "2021-07-04 06:00 & 2021-07-04 07:00 & coj & 2m0 & E10 & Opt. spectra & $30.0\\arcsec\\times6.0\\arcsec$ slit & 0/1 \\\\\n",
+                  "2021-07-07 03:00 & 2021-07-07 03:08 & cpt & 1m0 & K91 & Opt. imaging & g',r' & 4/4 \\\\\n",
+                  "2021-07-14 03:00 & 2021-07-14 03:08 & cpt & 1m0 & K93 & Opt. imaging & g',r' & 4/4 \\\\\n",
+                  "2021-07-21 03:00 & 2021-07-21 03:08 & cpt & 1m0 & K92 & Opt. imaging & g',r' & 4/4\n",
+                ]
+
+        expected_lines = self.deluxetable_hdr + lines + self.deluxetable_ftr
+
+        self.assertEqual(1, Body.objects.all().count())
+        self.assertEqual(2, SuperBlock.objects.all().count())
+        self.assertEqual(4, Block.objects.all().count())
+        self.assertEqual(13, Frame.objects.all().count())
+
+        out_buf = create_latex_table(self.test_body, return_table=False, deluxetable=True)
+        # with open(os.path.join('/tmp', 'Didymos_obs_no_obstype.tex'), 'w') as fd:
+            # out_buf.seek(0)
+            # shutil.copyfileobj(out_buf, fd)
+
+        out_buf.seek(0)
+
+        for i, line in enumerate(out_buf.readlines()):
+            self.assertEqual(expected_lines[i], line)
+
+    def test_table_by_name(self):
+
+        lines = [
+                  "2021-07-04 06:00 & 2021-07-04 07:00 & coj & 2m0 & E10 & Opt. spectra & $30.0\\arcsec\\times6.0\\arcsec$ slit & 0/1 \\\\\n",
+                  "2021-07-07 03:00 & 2021-07-07 03:08 & cpt & 1m0 & K91 & Opt. imaging & g',r' & 4/4 \\\\\n",
+                  "2021-07-14 03:00 & 2021-07-14 03:08 & cpt & 1m0 & K93 & Opt. imaging & g',r' & 4/4 \\\\\n",
+                  "2021-07-21 03:00 & 2021-07-21 03:08 & cpt & 1m0 & K92 & Opt. imaging & g',r' & 4/4 \\\\\n",
+                ]
+
+        expected_lines = self.table_hdr + lines + self.table_ftr
+
+        self.assertEqual(1, Body.objects.all().count())
+        self.assertEqual(2, SuperBlock.objects.all().count())
+        self.assertEqual(4, Block.objects.all().count())
+        self.assertEqual(13, Frame.objects.all().count())
+        
+        out_buf = create_latex_table(self.test_body.name, return_table=False)
+        out_buf.seek(0)
+
+        for i, line in enumerate(out_buf.readlines()):
+            self.assertEqual(expected_lines[i], line)
+
+    def test_return_table(self):
+
+        lines = [
+                  "2021-07-04 06:00 & 2021-07-04 07:00 & coj & 2m0 & E10 & Opt. spectra & $30.0\\arcsec\\times6.0\\arcsec$ slit & 0/1 \\\\\n",
+                  "2021-07-07 03:00 & 2021-07-07 03:08 & cpt & 1m0 & K91 & Opt. imaging & g',r' & 4/4 \\\\\n",
+                  "2021-07-14 03:00 & 2021-07-14 03:08 & cpt & 1m0 & K93 & Opt. imaging & g',r' & 4/4 \\\\\n",
+                  "2021-07-21 03:00 & 2021-07-21 03:08 & cpt & 1m0 & K92 & Opt. imaging & g',r' & 4/4 \\\\\n",
+                ]
+
+        expected_lines = self.table_hdr + lines + self.table_ftr
+
+        self.assertEqual(1, Body.objects.all().count())
+        self.assertEqual(2, SuperBlock.objects.all().count())
+        self.assertEqual(4, Block.objects.all().count())
+        self.assertEqual(13, Frame.objects.all().count())
+
+        out_buf, data_table = create_latex_table(self.test_body.name, return_table=True)
+        out_buf.seek(0)
+
+        for i, line in enumerate(out_buf.readlines()):
+            self.assertEqual(expected_lines[i], line)
+
+        self.assertFalse(type(data_table) == dict)
+        self.assertEqual(Block.objects.all().count(), len(data_table))
+        self.assertEqual(self.expected_colnames, data_table.colnames)
+
+    def test_table_filter_trans(self):
+
+        # Create MuSCAT block
+        self.test_objblock.id = None
+        self.test_objblock.site = 'ogg'
+        self.test_objblock.telclass = '2m0'
+        self.test_objblock.block_start : datetime(2021, 7, 22, 5, 30)
+        self.test_objblock.block_end : datetime(2021, 7, 22, 15, 30)
+        self.test_objblock.when_observed : datetime(2021, 7, 22, 15, 15)
+        self.test_objblock.save()
+
+        for i, obs_filter in enumerate(['gp', 'rp', 'ip', 'zs']):
+            frame_params = { 'block'    : self.test_objblock,
+                                  'filename' : f'ogg2m001-ep99-20210822-{42+i:04d}-e91.fits',
+                                  'sitecode' : 'F65',
+                                  'frametype': Frame.BANZAI_RED_FRAMETYPE,
+                                  'exptime' : 60,
+                                  'filter' : obs_filter,
+                                  'midpoint' : datetime(2021, 7, 22, 15, i*2+1, 0)
+                                }
+
+            test_frame = Frame.objects.create(**frame_params)
+
+        lines = [
+                  "2021-07-07 03:00 & 2021-07-07 03:08 & cpt & 1m0 & K91 & Opt. imaging & g',r' & 4/4 \\\\\n",
+                  "2021-07-14 03:00 & 2021-07-14 03:08 & cpt & 1m0 & K93 & Opt. imaging & g',r' & 4/4 \\\\\n",
+                  "2021-07-21 03:00 & 2021-07-21 03:08 & cpt & 1m0 & K92 & Opt. imaging & g',r' & 4/4 \\\\\n",
+                  "2021-07-22 15:00 & 2021-07-22 15:06 & ogg & 2m0 & F65 & Opt. imaging & g',r',i',$\mathrm{z_{s}}$ & 4/4 \\\\\n",
+                ]
+
+        expected_lines = self.table_hdr + lines + self.table_ftr
+
+        self.assertEqual(1, Body.objects.all().count())
+        self.assertEqual(2, SuperBlock.objects.all().count())
+        self.assertEqual(5, Block.objects.all().count())
+        self.assertEqual(17, Frame.objects.all().count())
+
+    def test_table_filter_trans_no_obstype(self):
+
+        # Remove spectra SuperBlock
+        self.test_sblock_spectra.delete()
+
+        # Create MuSCAT block
+        self.test_objblock.id = None
+        self.test_objblock.site = 'ogg'
+        self.test_objblock.telclass = '2m0'
+        self.test_objblock.block_start : datetime(2021, 7, 22, 5, 30)
+        self.test_objblock.block_end : datetime(2021, 7, 22, 15, 30)
+        self.test_objblock.when_observed : datetime(2021, 7, 22, 15, 15)
+        self.test_objblock.save()
+
+        for i, obs_filter in enumerate(['gp', 'rp', 'ip', 'zs']):
+            frame_params = { 'block'    : self.test_objblock,
+                                  'filename' : f'ogg2m001-ep99-20210822-{42+i:04d}-e91.fits',
+                                  'sitecode' : 'F65',
+                                  'frametype': Frame.BANZAI_RED_FRAMETYPE,
+                                  'exptime' : 60,
+                                  'filter' : obs_filter,
+                                  'midpoint' : datetime(2021, 7, 22, 15, i*2+1, 0)
+                                }
+
+            test_frame = Frame.objects.create(**frame_params)
+
+        lines = [
+                  "2021-07-07 03:00 & 2021-07-07 03:08 & cpt & 1m0 & K91 & g',r' & 4/4 \\\\\n",
+                  "2021-07-14 03:00 & 2021-07-14 03:08 & cpt & 1m0 & K93 & g',r' & 4/4 \\\\\n",
+                  "2021-07-21 03:00 & 2021-07-21 03:08 & cpt & 1m0 & K92 & g',r' & 4/4 \\\\\n",
+                  "2021-07-22 15:00 & 2021-07-22 15:07 & ogg & 2m0 & F65 & g',r',i',$\mathrm{z_{s}}$ & 4/4 \\\\\n",
+                ]
+
+        expected_lines = self.table_hdr_no_obstype + lines + self.table_ftr
+
+        self.assertEqual(1, Body.objects.all().count())
+        self.assertEqual(1, SuperBlock.objects.all().count())
+        self.assertEqual(4, Block.objects.all().count())
+        self.assertEqual(16, Frame.objects.all().count())
+
+        out_buf, data_table = create_latex_table(self.test_body.name, return_table=True)
+        out_buf.seek(0)
+
+        for i, line in enumerate(out_buf.readlines()):
+            self.assertEqual(expected_lines[i], line)
+
+        self.assertFalse(type(data_table) == dict)
+        self.assertEqual(Block.objects.all().count(), len(data_table))
+        self.expected_colnames.remove('Observation Type')
+        self.assertEqual(self.expected_colnames, data_table.colnames)
+
 @override_settings(MEDIA_ROOT=tempfile.mkdtemp())
 class TestDisplayDataproduct(TestCase):
     def setUp(self):

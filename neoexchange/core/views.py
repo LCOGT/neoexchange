@@ -12,13 +12,20 @@ GNU General Public License for more details.
 """
 
 import os
+import re
+from io import StringIO
 from shutil import move
 import copy
+import warnings
 from glob import glob
 from operator import itemgetter
 from datetime import datetime, timedelta, date
 from math import floor, ceil, degrees, radians, pi, acos, pow, cos
+
 from astropy import units as u
+from astropy.io import ascii
+from astropy.table import Table
+from astropy.wcs import FITSFixedWarning
 from astropy.coordinates import SkyCoord
 import json
 import logging
@@ -29,7 +36,7 @@ from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.messages.views import SuccessMessageMixin
-from django.core.exceptions import ObjectDoesNotExist, ValidationError
+from django.core.exceptions import ObjectDoesNotExist, ValidationError, FieldDoesNotExist
 from django.core.files.storage import default_storage
 from django.core.paginator import Paginator
 from django.db.models import Q, Prefetch
@@ -44,13 +51,11 @@ from django.views.generic.edit import FormView
 from http.client import HTTPSConnection
 import reversion
 import requests
-import re
 import numpy as np
 try:
     import pyslalib.slalib as S
 except ImportError:
     pass
-import io
 from urllib.parse import urljoin
 
 from .forms import EphemQuery, ScheduleForm, ScheduleCadenceForm, ScheduleBlockForm, \
@@ -4660,3 +4665,152 @@ def compare_NEOx_horizons_ephems(body, d, sitecode='500', debug=True):
         print(f"At {d:} (HORIZONS@{horizons_emp['datetime'][horizons_index]} , sep= {sep_r:.1f} (RA={sep_ra:.1f}, Dec={sep_dec:.1f})\nNEOX: {neox_pos.to_string('hmsdms', sep=' ', precision=4):} V={neox_emp['mag']:.1f}\n JPL: {horizons_pos.to_string('hmsdms', sep=' ', precision=4):} V={horizons_emp[mag_column][horizons_index]:.1f}")
 
     return neox_emp, horizons_emp, sep_r, sep_ra, sep_dec
+
+def get_verbose_name(model, string):
+    fields = string.split('__')
+
+    for field_name in fields[:-1]:
+        field = model._meta.get_field(field_name)
+
+        if field.many_to_one:
+            model = field.foreign_related_fields[0].model
+        elif field.many_to_many or field.one_to_one or field.one_to_many:
+            model = field.related_model
+        else:
+            raise ValueError('incorrect string')
+
+    return model._meta.get_field(fields[-1]).verbose_name
+
+def get_verbose_field(instance, field):
+    field_path = field.split('__')
+    attr = instance
+    for elem in field_path:
+        try:
+            attr = getattr(attr, elem)
+        except AttributeError:
+            return None
+    return attr
+
+def create_latex_table(body_or_name, return_table=False, deluxetable=False, dbg=False):
+    """Creates a LaTeX table for all the observations of <body_or_name>
+    This is returned as a StringIo buffer which can be written to a file
+    e.g.
+    with open(filename, 'w') as fd:
+      buf.seek(0)
+      shutil.copyfileobj(buf, fd)
+    or rendered to a Django template. If [return_table] is True, an Astropy
+    Table is returned also.
+    The default table includes an 'Observation Type' column, derived from
+    the Block.obstype; if this is the same for all Blocks, this is droppped.
+    If [deluxetable] is True then the table is written out using the
+    `aastex` io.ascii formatter instead to produce a deluxetable; longer
+    than 1 page tables will need a '\startlongtable' manually inserting
+    at the start of the table.
+    """
+    # Fields to retrieve, separate foreign keys with '__'
+    field_list = ['block_start', 'block_end', 'site', 'telclass',
+                  'MPC Site Code', 'obstype', 'Filters', 'num_exposures']
+
+    if isinstance(body_or_name, Body):
+        body = body_or_name
+    else:
+        body = Body.objects.get(name=body_or_name)
+    blocks = Block.objects.filter(body=body, num_observed__gte=1).exclude(superblock__proposal__code='SWOPE2022')
+    block_mapping = { Block.OBSTYPE_CHOICES[0][0] : Block.OBSTYPE_CHOICES[0][1].replace("Optical", "Opt."), Block.OBSTYPE_CHOICES[1][0] : Block.OBSTYPE_CHOICES[1][1].replace("Optical", "Opt.")}
+    num_blocks = blocks.count()
+    # If 'obstype' is in the field_list but there is only type of Block.obstype
+    # then drop it
+    num_obstypes = -1
+    if 'obstype' in field_list:
+        num_obstypes = blocks.values_list('obstype').distinct().count()
+        if num_obstypes == 1:
+            field_list.remove('obstype')
+    if dbg: print(f"Found {num_blocks} Blocks for {body.current_name()} with {num_obstypes} different Observation Types")
+
+    cleaned_data = {}
+    cleaned_data['field_list'] = field_list
+    table_format = 'latex'
+    latex_dict = {'tabletype': 'table',
+                 'header_start': '\\hline \\hline',
+                 'header_end': '\\hline',
+                 'data_end': '\\hline',
+                 'caption': 'Table of observations for ' + body.current_name() + ' with LCOGT',
+                 'tablefoot': ''}
+    if deluxetable is True:
+        table_format = 'aastex'
+        latex_dict = {'tabletype': 'deluxetable',
+                      'caption': 'Table of observations for ' + body.current_name() + ' with LCOGT',
+                      'tablefoot': ''}
+
+    # Suppress WCS obsfix warnings when accessing Frame objects
+    warnings.simplefilter('ignore', FITSFixedWarning)
+
+    table_data = {}
+    for field in cleaned_data.get('field_list', []):
+        for obs_record in blocks.order_by('block_start'):
+            try:
+                # verbose_name = Block._meta.get_field(field).verbose_name
+                verbose_name = get_verbose_name(Block, field)
+                data_value = get_verbose_field(obs_record, field)
+            except FieldDoesNotExist:
+                verbose_name = field
+                data_value = ''
+            except AttributeError:
+                data_value = ''
+            verbose_name = verbose_name.title()
+            frames = Frame.objects.filter(block=obs_record,frametype__in=(Frame.SPECTRUM_FRAMETYPE,Frame.BANZAI_QL_FRAMETYPE,Frame.BANZAI_RED_FRAMETYPE,Frame.SINGLE_FRAMETYPE))
+            if field == 'obstype':
+                data_value = block_mapping.get(data_value)
+            elif field == 'block_start':
+                try:
+                    first_frame = frames.earliest('midpoint')
+                    first_frame_time = first_frame.midpoint
+                    exptime = first_frame.exptime or 0.0
+                    first_frame_time = first_frame_time - timedelta(seconds=exptime / 2.0)
+                    data_value = first_frame_time.strftime("%Y-%m-%d %H:%M")
+                except Frame.DoesNotExist:
+                    data_value = "-"
+            elif field == 'block_end':
+                try:
+                    last_frame = frames.latest('midpoint')
+                    last_frame_time = last_frame.midpoint
+                    exptime = last_frame.exptime or 0.0
+                    last_frame_time = last_frame_time + timedelta(seconds=exptime / 2.0)
+                    data_value = last_frame_time.strftime("%Y-%m-%d %H:%M")
+                except Frame.DoesNotExist:
+                    data_value = "-"
+            elif field == 'MPC Site Code':
+                try:
+                    data_value =  frames.first().sitecode
+                except AttributeError:
+                    data_value = "-"
+                verbose_name = 'MPC Site Code'
+            elif field == 'Filters':
+                obs_filters = frames.values_list('filter', flat=True).distinct()
+                text_filters = []
+                for obs_filter in obs_filters:
+                    if obs_filter in ['up', 'gp', 'rp', 'ip']:
+                        obs_filter = obs_filter.replace('p', "'")
+                    elif obs_filter == 'zs':
+                        obs_filter = '$\mathrm{z_{s}}$'
+                    elif obs_filter.upper().startswith('SLIT'):
+                        slit_regex = r"SLIT_([\d.]+)X([\d.]+)AS"
+                        match = re.match(slit_regex, obs_filter.upper())
+                        if match and len(match.groups()) == 2:
+                            obs_filter = f"${match.groups()[0]}\\arcsec\\times{match.groups()[1]}\\arcsec$ slit"
+                    text_filters.append(obs_filter)
+                data_value = ",".join(text_filters)
+            elif field == 'num_exposures':
+                sched_frames = obs_record.num_exposures
+                actual_frames = obs_record.num_unique_red_frames()
+                data_value = "{}/{}".format(actual_frames, sched_frames)
+            table_data.setdefault(verbose_name, []).append(data_value)
+
+    buf = StringIO()
+    ascii.write(table_data, output=buf, format=table_format, latexdict=latex_dict)
+
+    if return_table is True:
+        table = Table(table_data)
+        return buf, table
+
+    return buf
