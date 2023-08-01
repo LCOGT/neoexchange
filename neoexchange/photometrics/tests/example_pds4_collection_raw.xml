@@ -85,12 +85,12 @@
   </Context_Area>
   <Reference_List>
     <Internal_Reference>
-      <lid_reference>urn:nasa:pds:dart_teleobs:document_lcogt:las_cumbres_dart_uncalibrated_calibrated_sis</lid_reference>
+      <lid_reference>urn:nasa:pds:dart_teleobs:document_lcogt:lcogt_dart_uncalibrated_calibrated_sis</lid_reference>
       <reference_type>collection_to_document</reference_type>
       <comment>Reference is to the Las Cumbres DART Uncalibrated, Calibrated SIS document which describes the data products in this collection.</comment>
     </Internal_Reference>
     <Internal_Reference>
-      <lid_reference>urn:nasa:pds:dart_teleobs:data_lcogtraw:overview</lid_reference>
+      <lid_reference>urn:nasa:pds:dart_teleobs:data_lcogtraw:collection_data_lcogtraw_overview</lid_reference>
       <reference_type>collection_to_document</reference_type>
       <comment>Reference is to the text file which gives an overview of the LCOGT raw Data Collection.</comment>
     </Internal_Reference>

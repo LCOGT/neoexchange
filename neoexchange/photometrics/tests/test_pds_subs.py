@@ -5801,3 +5801,27 @@ class TestCopyDocs(SimpleTestCase):
                 list(io.open(os.path.join(self.docs_dir, f'collection_data_lcogt_fliddp_overview.{extn}'))),
                 list(io.open(os.path.join(self.test_output_ddpdir, f'overview.{extn}')))
                 )
+
+    def test_repeat_copy(self):
+
+        expected_xml_labels = ['collection_data_lcogtddp_overview', ]
+
+        xml_labels = copy_docs(self.test_output_dir, 'ddp', self.docs_dir, verbose=False)
+
+        self.assertEqual(len(expected_xml_labels), len(xml_labels))
+        self.assertEqual(expected_xml_labels, xml_labels)
+        for extn in ['txt', 'xml']:
+            self.assertListEqual(
+                list(io.open(os.path.join(self.docs_dir, f'collection_data_lcogtddp_overview.{extn}'))),
+                list(io.open(os.path.join(self.test_output_ddpdir, f'overview.{extn}')))
+                )
+        # Copy again
+        xml_labels = copy_docs(self.test_output_dir, 'ddp', self.docs_dir, verbose=False)
+
+        self.assertEqual(len(expected_xml_labels), len(xml_labels))
+        self.assertEqual(expected_xml_labels, xml_labels)
+        for extn in ['txt', 'xml']:
+            self.assertListEqual(
+                list(io.open(os.path.join(self.docs_dir, f'collection_data_lcogtddp_overview.{extn}'))),
+                list(io.open(os.path.join(self.test_output_ddpdir, f'overview.{extn}')))
+                )
