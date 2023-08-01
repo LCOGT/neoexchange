@@ -4,6 +4,13 @@ Portal for scheduling observations of NEOs (and other Solar System objects) usin
 
 ## History
 
+### 3.13.2
+* Allow export of observations from  NEOexchange in LaTeX table or deluxetable format.
+* Fix some inconsistencies in PDS exports (Issue #619).
+* Filter out solar analogs that have quality<0 to allow them skipped when finding suitable ones for spectroscopy. (3.13.1.3)
+* Switch default albedo to CNEOS standard 14%, fix guider gif movie axis labelling for earlier AstroPy versions also. (3.13.1.2)
+* Add tests and traps for malformed dates in Goldstone targets CSV file. (Issue #617; 3.13.1.1)
+
 ### 3.13.1
 * Major update for DART mission support to handle exporting of lightcurves (from NEOexchange or photometrypipeline) and FITS frames to the Planetary Data System (PDS)
 
