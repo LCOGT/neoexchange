@@ -3607,7 +3607,8 @@ def run_astwarp_alignment(block, sci_dir, dest_dir):
             for frame in sub_block:
                 result_RA, result_DEC = ephem_interpolate(frame.midpoint, table)
                 fits_filename = os.path.join(sci_dir, frame.filename)
-                cropped_filename, status = run_astwarp(fits_filename, dest_dir, result_RA[0], result_DEC[0])
+                chiseled_filename, status = run_astnoisechisel(fits_filename, dest_dir, hdu = 0, bkgd_only=True)
+                cropped_filename, status = run_astwarp(chiseled_filename, dest_dir, result_RA[0], result_DEC[0])
                 filenames.append(cropped_filename)
             combined_filename, status = run_astarithmetic(filenames, dest_dir)
             combined_filenames.append(combined_filename)
@@ -3620,7 +3621,8 @@ def run_astwarp_alignment(block, sci_dir, dest_dir):
         for frame in frames:
             result_RA, result_DEC = ephem_interpolate(frame.midpoint, table)
             fits_filename = os.path.join(sci_dir, frame.filename)
-            cropped_filename, status = run_astwarp(fits_filename, dest_dir, result_RA[0], result_DEC[0])
+            chiseled_filename, status = run_astnoisechisel(fits_filename, dest_dir, hdu = 0, bkgd_only=True)
+            cropped_filename, status = run_astwarp(chiseled_filename, dest_dir, result_RA[0], result_DEC[0])
             filenames.append(cropped_filename)
         combined_filename, status = run_astarithmetic(filenames, dest_dir)
         combined_filename = [combined_filename]
@@ -3668,10 +3670,10 @@ def convert_fits_to_pdf(filename, dest_dir, crop=False, center_RA=0, center_DEC=
         hdu = 'ALIGNED'
     if '-crop' in filename:
         hdu = 'ALIGNED'
-    if '-chisel' in filename:
-        hdu = 'DETECTIONS'
     if '-combine' in filename:
         hdu = '1'
+    if '-chisel' in filename:
+        hdu = 'DETECTIONS'
     mean, std = determine_image_stats(filename, hdu)
     pdf_filename, status = run_astconvertt(filename, dest_dir, mean, std, hdu)
 

@@ -13,6 +13,7 @@ GNU General Public License for more details.
 from collections import Counter, OrderedDict
 from datetime import datetime
 import warnings
+import logging
 
 from django.conf import settings
 from django.forms.models import model_to_dict
@@ -32,6 +33,8 @@ from core.models.body import Body
 from core.models.frame import Frame
 from core.models.proposal import Proposal
 from core.models.dataproducts import DataProduct
+
+logger = logging.getLogger(__name__)
 
 TELESCOPE_CHOICES = (
                         ('1m0', '1-meter'),

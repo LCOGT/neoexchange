@@ -561,8 +561,8 @@ def normalize(images, swarp_zp_key="L1ZP"):
 
 def determine_astwarp_options(filename, dest_dir, center_RA, center_DEC, width = 1991.0, height = 511.0):
     raw_filename = os.path.basename(filename)
-    output_filename = os.path.join(dest_dir, raw_filename.replace('.fits', '-crop.fits'))
-    options = f'-hSCI --center={center_RA},{center_DEC} --widthinpix --width={width},{height} --output={output_filename} {filename}'
+    output_filename = os.path.join(dest_dir, raw_filename.replace('-chisel', '-crop'))
+    options = f'-hINPUT-NO-SKY --center={center_RA},{center_DEC} --widthinpix --width={width},{height} --output={output_filename} {filename}'
     return output_filename, options
 
 def determine_astarithmetic_options(filenames, dest_dir):
@@ -572,10 +572,13 @@ def determine_astarithmetic_options(filenames, dest_dir):
     options = f'--globalhdu ALIGNED --output={output_filename} {filenames_list} {len(filenames)} 5 0.2 sigclip-median'
     return output_filename, options
 
-def determine_astnoisechisel_options(filename, dest_dir, tilesize = '30,30', erode = 2, detgrowquant = 0.75, maxholesize = 10000):
+def determine_astnoisechisel_options(filename, dest_dir, tilesize = '30,30', erode = 2, detgrowquant = 0.75, maxholesize = 10000, hdu = 0, bkg_only=False):
     raw_filename = os.path.basename(filename)
-    output_filename = os.path.join(dest_dir, raw_filename.replace("-combine", "-chisel"))
-    options = f'--tilesize={tilesize} --erode={erode} --detgrowquant={detgrowquant} --detgrowmaxholesize={maxholesize} --output={output_filename} {filename}'
+    output_filename = os.path.join(dest_dir, raw_filename.replace(".fits", "-chisel.fits"))
+    if bkg_only:
+        options = f'-h{hdu} --tilesize={tilesize} --erode={erode} --detgrowquant={detgrowquant} --detgrowmaxholesize={maxholesize} --oneelempertile --output={output_filename} {filename}'
+    else:
+        options = f'-h{hdu} --tilesize={tilesize} --erode={erode} --detgrowquant={detgrowquant} --detgrowmaxholesize={maxholesize} --output={output_filename} {filename}'
     return output_filename, options
 
 def determine_image_stats(filename, hdu='SCI'):
@@ -1597,6 +1600,11 @@ def run_astwarp(filename, dest_dir, center_RA, center_DEC, width = 1991.0, heigh
     if os.path.exists(filename) is False:
         return None, -1
     hdulist = fits.open(filename)
+    header = hdulist['NOISECHISEL-CONFIG'].header
+    input_1 = header['INPUT_1']
+    input_2 = header['INPUT_2']
+    input_filename = os.path.join(input_1, input_2)
+    hdulist = fits.open(input_filename)
     header = hdulist['SCI'].header
     wcs_err = header['WCSERR']
     if wcs_err!=0:
@@ -1609,7 +1617,7 @@ def run_astwarp(filename, dest_dir, center_RA, center_DEC, width = 1991.0, heigh
     cropped_filename, options = determine_astwarp_options(filename, dest_dir, center_RA, center_DEC, width, height)
     if os.path.exists(cropped_filename):
         return cropped_filename, 1
-    header = fits.getheader(filename)
+    header = fits.getheader(input_filename)
     wcs = WCS(header)
     #print(header['NAXIS1'], header['NAXIS2'])
     x, y = wcs.world_to_pixel_values(center_RA, center_DEC)
@@ -1675,7 +1683,7 @@ def run_astarithmetic(input_filenames, dest_dir, binary='astarithmetic', dbg=Fal
 
     return combined_filename, retcode_or_cmdline
 
-def run_astnoisechisel(filename, dest_dir, tilesize = '30,30', erode = 2, detgrowquant=0.75, maxholesize=10000, binary='astnoisechisel', dbg=False):
+def run_astnoisechisel(filename, dest_dir, tilesize = '30,30', erode = 2, detgrowquant=0.75, maxholesize=10000, hdu = 1, binary='astnoisechisel', bkgd_only=False, dbg=False):
     '''
     Runs astnoisechisel on <filename> to produce a binary detection map
     writing output to <dest_dir>
@@ -1687,7 +1695,7 @@ def run_astnoisechisel(filename, dest_dir, tilesize = '30,30', erode = 2, detgro
         logger.error(f"Could not locate {binary} executable in PATH")
         return None, -42
     cmdline = f"{binary} "
-    chiseled_filename, options = determine_astnoisechisel_options(filename, dest_dir, tilesize, erode, detgrowquant, maxholesize)
+    chiseled_filename, options = determine_astnoisechisel_options(filename, dest_dir, tilesize, erode, detgrowquant, maxholesize, hdu, bkgd_only)
     if os.path.exists(chiseled_filename):
         return chiseled_filename, 1
     cmdline += options

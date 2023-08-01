@@ -152,7 +152,7 @@ class Command(BaseCommand):
                     pdf_filenames_combined.append(pdf_filename_combined)
                 self.stdout.write(f'Chiseled filename(s): {pdf_filenames_chiseled}')
                 self.stdout.write(f'Combined filename(s): {pdf_filenames_combined}')
-                self.stdout.write('')
+            self.stdout.write('')
 
             current_time += date_increment
 

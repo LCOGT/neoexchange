@@ -1928,42 +1928,56 @@ class TestDetermineAstnoisechiselOptions(SimpleTestCase):
         self.test_file = 'tfn1m014-fa20-20221104-0207-e91-combine.fits'
 
     def test_default_values(self):
-        expected_cmdline = f'--tilesize=30,30 --erode=2 --detgrowquant=0.75 --detgrowmaxholesize=10000 --output={self.test_dir}/{self.test_file.replace("-combine","-chisel")} {self.test_file}'
+        expected_cmdline = f'-h0 --tilesize=30,30 --erode=2 --detgrowquant=0.75 --detgrowmaxholesize=10000 --output={self.test_dir}/{self.test_file.replace("-combine","-combine-chisel")} {self.test_file}'
 
         output_filename, cmdline = determine_astnoisechisel_options(self.test_file, self.test_dir)
 
         self.assertEqual(expected_cmdline, cmdline)
 
     def test_tilesize(self):
-        expected_cmdline = f'--tilesize=100,100 --erode=2 --detgrowquant=0.75 --detgrowmaxholesize=10000 --output={self.test_dir}/{self.test_file.replace("-combine","-chisel")} {self.test_file}'
+        expected_cmdline = f'-h0 --tilesize=100,100 --erode=2 --detgrowquant=0.75 --detgrowmaxholesize=10000 --output={self.test_dir}/{self.test_file.replace("-combine","-combine-chisel")} {self.test_file}'
 
         output_filename, cmdline = determine_astnoisechisel_options(self.test_file, self.test_dir, tilesize='100,100')
 
         self.assertEqual(expected_cmdline, cmdline)
 
     def test_erode(self):
-        expected_cmdline = f'--tilesize=30,30 --erode=1 --detgrowquant=0.75 --detgrowmaxholesize=10000 --output={self.test_dir}/{self.test_file.replace("-combine","-chisel")} {self.test_file}'
+        expected_cmdline = f'-h0 --tilesize=30,30 --erode=1 --detgrowquant=0.75 --detgrowmaxholesize=10000 --output={self.test_dir}/{self.test_file.replace("-combine","-combine-chisel")} {self.test_file}'
 
         output_filename, cmdline = determine_astnoisechisel_options(self.test_file, self.test_dir, tilesize='30,30', erode=1)
 
         self.assertEqual(expected_cmdline, cmdline)
 
     def test_detgrowquant(self):
-        expected_cmdline = f'--tilesize=30,30 --erode=2 --detgrowquant=1 --detgrowmaxholesize=10000 --output={self.test_dir}/{self.test_file.replace("-combine","-chisel")} {self.test_file}'
+        expected_cmdline = f'-h0 --tilesize=30,30 --erode=2 --detgrowquant=1 --detgrowmaxholesize=10000 --output={self.test_dir}/{self.test_file.replace("-combine","-combine-chisel")} {self.test_file}'
 
         output_filename, cmdline = determine_astnoisechisel_options(self.test_file, self.test_dir, tilesize='30,30', erode=2, detgrowquant=1)
 
         self.assertEqual(expected_cmdline, cmdline)
 
     def test_maxholesize(self):
-        expected_cmdline = f'--tilesize=30,30 --erode=2 --detgrowquant=0.75 --detgrowmaxholesize=100 --output={self.test_dir}/{self.test_file.replace("-combine","-chisel")} {self.test_file}'
+        expected_cmdline = f'-h0 --tilesize=30,30 --erode=2 --detgrowquant=0.75 --detgrowmaxholesize=100 --output={self.test_dir}/{self.test_file.replace("-combine","-combine-chisel")} {self.test_file}'
 
         output_filename, cmdline = determine_astnoisechisel_options(self.test_file, self.test_dir, tilesize='30,30', erode=2, detgrowquant=0.75, maxholesize = 100)
 
         self.assertEqual(expected_cmdline, cmdline)
 
+    def test_hdu(self):
+        expected_cmdline = f'-h1 --tilesize=30,30 --erode=2 --detgrowquant=0.75 --detgrowmaxholesize=10000 --output={self.test_dir}/{self.test_file.replace("-combine","-combine-chisel")} {self.test_file}'
+
+        output_filename, cmdline = determine_astnoisechisel_options(self.test_file, self.test_dir, hdu = 1)
+
+        self.assertEqual(expected_cmdline, cmdline)
+
+    def test_bkg_only(self):
+        expected_cmdline = f'-h0 --tilesize=30,30 --erode=2 --detgrowquant=0.75 --detgrowmaxholesize=10000 --oneelempertile --output={self.test_dir}/{self.test_file.replace("-combine","-combine-chisel")} {self.test_file}'
+
+        output_filename, cmdline = determine_astnoisechisel_options(self.test_file, self.test_dir, bkg_only=True)
+
+        self.assertEqual(expected_cmdline, cmdline)
+
     def test_filename(self):
-        expected_cmdline = f'--tilesize=30,30 --erode=2 --detgrowquant=0.75 --detgrowmaxholesize=10000 --output={self.test_dir}/banzai_test_frame-chisel.fits banzai_test_frame-combine.fits'
+        expected_cmdline = f'-h0 --tilesize=30,30 --erode=2 --detgrowquant=0.75 --detgrowmaxholesize=10000 --output={self.test_dir}/banzai_test_frame-combine-chisel.fits banzai_test_frame-combine.fits'
 
         output_filename, cmdline = determine_astnoisechisel_options('banzai_test_frame-combine.fits', self.test_dir)
 
