@@ -80,6 +80,9 @@ class Command(BaseCommand):
             blockuid = block.get_blockuid
             self.stdout.write(f'DAYOBS: {dayobs}')
             self.stdout.write(f'BLKUID: {blockuid}')
+            #self.stdout.write(f'Block Start: {block.block_start}')
+            #self.stdout.write(f'Block End: {block.block_end}')
+            self.stdout.write(f'Request Number: {block.request_number}')
 
             #chooses correct input path
             input_data_path_1 = os.path.join(sci_dir, dayobs, block.body.current_name()+'_'+blockuid[0], 'Temp_cvc_multiap')

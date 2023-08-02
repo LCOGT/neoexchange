@@ -3580,6 +3580,19 @@ def run_hotpants_subtraction(ref, sci_dir, configs_dir, dest_dir):
 
     return status
 
+def configure_lightcurve_block(block, dest_dir, exptime=800, segstack_sequence=7):
+    '''
+    Routine that takes a light curve <block> and splits it into subblocks of
+    equal exposure time <exptime>. For each subblock it is sorted into substacks
+    made up of every nth frame where n=<segstack_sequence>.
+    '''
+    split_block = split_light_curve_blocks(block, exptime)
+    for subblock in split_block:
+        sorted_filenames = get_substacks(subblock, segstack_sequence)
+        for substack in sorted_filenames:
+            combined_filename, status = run_astarithmetic(filenames, dest_dir)
+    
+
 def run_astwarp_alignment(block, sci_dir, dest_dir):
     '''
     Makes an horizons ephem table for a given <block>. Finds interpolated values

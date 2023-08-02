@@ -56,6 +56,28 @@ def split_light_curve_blocks(block, exptime=800):
 
     return split_block
 
+def get_substacks(subblock, segstack_sequence=7):
+    '''
+    Routine to get substacks for a given <subblock>. <subblock> should be 
+    a list of frames. Returns the stacked filenames
+    '''
+    sorted_filenames=[]
+    for i in range(1, segstack_sequence+1):
+        ii = i
+        if i == segstack_sequence:
+            ii=0
+            #print('Reset')
+        print(i, ii)
+        filenames=[]
+        for j in range(1, len(subblock)+1):
+            if j%segstack_sequence==ii:
+                #print(frames[j-1].filename)
+                filenames.append(subblock[j-1].filename)
+        sorted_filenames.append(filenames)
+        #print(f'num frames: {int((j-i)/segstack_sequence)+1}')
+        #print(f'output: substack-{i}')
+    return sorted_filenames
+
 def filter_blocks(original_blocks, start_date, end_date, min_frames=3, max_frames=10):
     '''
     Routine to filter blocks in <original_blocks> . If <original_blocks> is None,
