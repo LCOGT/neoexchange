@@ -2057,6 +2057,18 @@ class TestDetermineAstconverttOptions(SimpleTestCase):
 
         self.assertEqual(expected_cmdline, cmdline)
 
+class TestDetermineAstmkcatalogOptions(SimpleTestCase):
+    def setUp(self):
+        self.test_dir = '/tmp/foo'
+        self.test_file = 'tfn1m014-fa20-20221104-0213-e91-chisel.fits'
+
+    def test_1(self):
+        expected_cmdline = f'{self.test_file} --ids --area --min-x --max-x --min-y --max-y -hDETECTIONS --output={self.test_dir}/{self.test_file.replace("-chisel","-cat")}'
+
+        output_filename, cmdline = determine_astmkcatalog_options(self.test_file, self.test_dir)
+
+        self.assertEqual(expected_cmdline, cmdline)
+
 class TestRunAstwarp(ExternalCodeUnitTest):
     def setUp(self):
         super(TestRunAstwarp, self).setUp()
@@ -2483,5 +2495,33 @@ class TestRunAstconvertt(ExternalCodeUnitTest):
 
         pdf_filename, status = run_astconvertt(self.test_banzai_file_COPIED, self.test_dir, self.mean, self.std)
 
+        self.assertEquals(expected_status, status)
+        self.assertTrue(os.path.exists(self.output_filename))
+
+class TestRunAstmkcatalog(ExternalCodeUnitTest): #need to finish test
+    def setUp(self):
+        super(TestRunAstmkcatalog, self).setUp()
+
+        shutil.copy(os.path.abspath(self.test_banzai_file), self.test_dir)
+        self.test_banzai_file_COPIED = os.path.join(self.test_dir, 'banzai_test_frame.fits')
+
+        self.test_filename = os.path.join(self.test_dir, self.test_banzai_file_COPIED.replace('.fits', '-chisel.fits'))
+        shutil.copy(self.test_banzai_file_COPIED, self.test_filename)
+
+        # Disable anything below CRITICAL level
+        logging.disable(logging.CRITICAL)
+
+        self.remove = True
+        self.maxDiff = None
+
+    def touch(self, fname, times=None):
+        with open(fname, 'a'):
+            os.utime(fname, times)
+
+    def test_1(self):
+        expected_status = 0
+
+        catalog_filename, status = run_astmkcatalog(self.test_filename, self.test_dir)
+        print(catalog_filename)
         self.assertEquals(expected_status, status)
         self.assertTrue(os.path.exists(self.output_filename))

@@ -609,6 +609,12 @@ def determine_astconvertt_options(filename, dest_dir, mean, std, hdu='SCI'):
     options = f'{filename} -L {low} -H {high} -h{hdu} --colormap=sls-inverse --output={output_filename}'
     return output_filename, options
 
+def determine_astmkcatalog_options(filename, dest_dir):
+    raw_filename = os.path.basename(filename)
+    output_filename = os.path.join(dest_dir, raw_filename.replace("-chisel", "-cat"))
+    options = f'{filename} --ids --area --min-x --max-x --min-y --max-y -hDETECTIONS --output={output_filename}'
+    return output_filename, options
+
 def make_pa_rate_dict(pa, deltapa, minrate, maxrate):
 
     pa_rate_dict = {    'filter_pa': pa,
@@ -1786,3 +1792,35 @@ def run_astconvertt(filename, dest_dir, mean, std, hdu='SCI', binary='astconvert
         retcode_or_cmdline = cmd_call.returncode
 
     return pdf_filename, retcode_or_cmdline
+
+def run_astmkcatalog(filename, dest_dir, binary='astmkcatalog', dbg=False):
+    '''
+    Runs astmkcatalog on <filename> to make a catalog writing output to <dest_dir>
+    '''
+    if filename is None:
+        return None, -2
+    if os.path.exists(filename) is False:
+        return None, -1
+    binary = binary or find_binary(binary)
+    if binary is None:
+        logger.error(f"Could not locate {binary} executable in PATH")
+        return None, -42
+    cmdline = f"{binary} "
+    catalog_filename, options = determine_astmkcatalog_options(filename, dest_dir)
+    if os.path.exists(catalog_filename):
+        return catalog_filename, 1
+    cmdline += options
+    cmdline = cmdline.rstrip()
+    if dbg:
+        print(cmdline)
+
+    if dbg is True:
+        retcode_or_cmdline = cmdline
+    else:
+        logger.debug(f"cmdline={cmdline}")
+        cmd_args = cmdline.split()
+        cmd_call = Popen(cmd_args, cwd=dest_dir, stdout=PIPE)
+        (out, errors) = cmd_call.communicate()
+        retcode_or_cmdline = cmd_call.returncode
+
+    return catalog_filename, retcode_or_cmdline
