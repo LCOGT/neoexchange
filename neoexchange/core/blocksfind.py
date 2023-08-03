@@ -41,15 +41,15 @@ def blocks_summary(blocks):
                 proposal_code=sblock.proposal.code
         print(f"{block.block_start}->{block.block_end} {block.num_exposures}x{block.exp_length}s observed={block.num_observed} ({proposal_code})")
 
-def split_light_curve_blocks(block, exptime=800):
+def split_light_curve_blocks(frames, exptime=800):
     '''
     Routine to split a light curve <block> into equal sized sub-blocks with
     total exposure time equal to <exptime>
     '''
-    exp_length = block.exp_length
-    frames, num_banzai, num_neox = find_frames(block)
     if len(frames)==0:
         return [], []
+    exp_length = frames[0].block.exp_length
+    print(exp_length)
     total_exp_time = len(frames) * exp_length
     div_factor = total_exp_time/exptime
     split_block = np.array_split(frames, round(div_factor))
@@ -61,22 +61,22 @@ def get_substacks(subblock, segstack_sequence=7):
     Routine to get substacks for a given <subblock>. <subblock> should be 
     a list of frames. Returns the stacked filenames
     '''
-    sorted_filenames=[]
+    sorted_frames=[]
     for i in range(1, segstack_sequence+1):
         ii = i
         if i == segstack_sequence:
             ii=0
             #print('Reset')
-        print(i, ii)
-        filenames=[]
+        #print(i, ii)
+        frames=[]
         for j in range(1, len(subblock)+1):
             if j%segstack_sequence==ii:
                 #print(frames[j-1].filename)
-                filenames.append(subblock[j-1].filename)
-        sorted_filenames.append(filenames)
+                frames.append(subblock[j-1])
+        sorted_frames.append(frames)
         #print(f'num frames: {int((j-i)/segstack_sequence)+1}')
         #print(f'output: substack-{i}')
-    return sorted_filenames
+    return sorted_frames
 
 def filter_blocks(original_blocks, start_date, end_date, min_frames=3, max_frames=10):
     '''

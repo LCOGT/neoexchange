@@ -565,14 +565,17 @@ def determine_astwarp_options(filename, dest_dir, center_RA, center_DEC, width =
     options = f'-hINPUT-NO-SKY --center={center_RA},{center_DEC} --widthinpix --width={width},{height} --output={output_filename} {filename}'
     return output_filename, options
 
-def determine_astarithmetic_options(filenames, dest_dir):
+def determine_astarithmetic_options(filenames, dest_dir, hdu = 'ALIGNED'):
     filenames_list = " ".join(filenames)
     raw_filename = os.path.basename(filenames[0])
-    output_filename = os.path.join(dest_dir, raw_filename.replace("-crop", "-combine"))
+    if "-crop" in raw_filename:
+        output_filename = os.path.join(dest_dir, raw_filename.replace("-crop", "-combine"))
+    else:
+        output_filename = os.path.join(dest_dir, raw_filename.replace(".fits", "-superstack.fits"))
     #original options (maybe from tutorial?)
     #options = f'--globalhdu ALIGNED --output={output_filename} {filenames_list} {len(filenames)} 5 0.2 sigclip-median'
     #values from Agata Rozek configuration/Makefile
-    options = f'--globalhdu ALIGNED --output={output_filename} {filenames_list} {len(filenames)} 2 0.05 sigclip-mean'
+    options = f'--globalhdu {hdu} --output={output_filename} {filenames_list} {len(filenames)} 2 0.05 sigclip-mean'
     return output_filename, options
 
 def determine_astnoisechisel_options(filename, dest_dir, tilesize = '30,30', erode = 2, detgrowquant = 0.75, maxholesize = 10000, hdu = 0, bkg_only=False):
@@ -1649,7 +1652,7 @@ def run_astwarp(filename, dest_dir, center_RA, center_DEC, width = 1991.0, heigh
 
     return cropped_filename, retcode_or_cmdline
 
-def run_astarithmetic(input_filenames, dest_dir, binary='astarithmetic', dbg=False):
+def run_astarithmetic(input_filenames, dest_dir, hdu = 'ALIGNED', binary='astarithmetic', dbg=False):
     '''
     Runs astarithmetic on list of <filenames> to median combine writing 
     output to <dest_dir>
@@ -1669,7 +1672,7 @@ def run_astarithmetic(input_filenames, dest_dir, binary='astarithmetic', dbg=Fal
         logger.error(f"Could not locate {binary} executable in PATH")
         return None, -42
     cmdline = f"{binary} "
-    combined_filename, options = determine_astarithmetic_options(filenames, dest_dir)
+    combined_filename, options = determine_astarithmetic_options(filenames, dest_dir, hdu)
     if os.path.exists(combined_filename):
         return combined_filename, 1
     cmdline += options

@@ -88,7 +88,7 @@ from core.utils import search
 from photometrics.SA_scatter import readSources, genGalPlane, plotScatter, \
     plotFormat
 from core.plots import spec_plot, lin_vis_plot, lc_plot
-from core.blocksfind import find_frames, get_ephem, ephem_interpolate, split_light_curve_blocks
+from core.blocksfind import find_frames, get_ephem, ephem_interpolate, split_light_curve_blocks, get_substacks
 
 # import matplotlib
 # matplotlib.use('Agg')
@@ -3580,18 +3580,36 @@ def run_hotpants_subtraction(ref, sci_dir, configs_dir, dest_dir):
 
     return status
 
-def configure_lightcurve_block(block, dest_dir, exptime=800, segstack_sequence=7):
+def stack_lightcurve_block(block, sci_dir, dest_dir, table, exptime=800, segstack_sequence=7):
     '''
     Routine that takes a light curve <block> and splits it into subblocks of
     equal exposure time <exptime>. For each subblock it is sorted into substacks
     made up of every nth frame where n=<segstack_sequence>.
     '''
-    split_block = split_light_curve_blocks(block, exptime)
+    frames, banzai, neox = find_frames(block)
+    split_block = split_light_curve_blocks(frames, exptime)
+    subblock_stacks = []
     for subblock in split_block:
+        print('New Subblock')
         sorted_filenames = get_substacks(subblock, segstack_sequence)
+        substacks = []
         for substack in sorted_filenames:
-            combined_filename, status = run_astarithmetic(filenames, dest_dir)
-    
+            #print(substack)
+            cropped_filenames = []
+            for frame in substack:
+                result_RA, result_DEC = ephem_interpolate(frame.midpoint, table)
+                fits_filename = os.path.join(sci_dir, frame.filename)
+                chiseled_filename, status = run_astnoisechisel(fits_filename, dest_dir, hdu = 0, bkgd_only=True)
+                cropped_filename, status = run_astwarp(chiseled_filename, dest_dir, result_RA[0], result_DEC[0])
+                cropped_filenames.append(cropped_filename)
+            combined_filename, status = run_astarithmetic(cropped_filenames, dest_dir)
+            print(combined_filename, status)
+            substacks.append(combined_filename)
+        combined_filename, status = run_astarithmetic(substacks, dest_dir, hdu = 1)
+        print(combined_filename, status)
+        subblock_stacks.append(combined_filename)
+
+    return subblock_stacks
 
 def run_astwarp_alignment(block, sci_dir, dest_dir):
     '''
@@ -3613,20 +3631,8 @@ def run_astwarp_alignment(block, sci_dir, dest_dir):
     if len(frames) > 10:
         print('Light Curve Block')
         split_block = split_light_curve_blocks(block)
-        combined_filenames = []
-        statuses = []
-        for sub_block in split_block:
-            filenames = []
-            for frame in sub_block:
-                result_RA, result_DEC = ephem_interpolate(frame.midpoint, table)
-                fits_filename = os.path.join(sci_dir, frame.filename)
-                chiseled_filename, status = run_astnoisechisel(fits_filename, dest_dir, hdu = 0, bkgd_only=True)
-                cropped_filename, status = run_astwarp(chiseled_filename, dest_dir, result_RA[0], result_DEC[0])
-                filenames.append(cropped_filename)
-            combined_filename, status = run_astarithmetic(filenames, dest_dir)
-            combined_filenames.append(combined_filename)
-            statuses.append(status)
-        return combined_filenames, statuses
+        subblock_stacks = stack_lightcurve_block(block, sci_dir, dest_dir, table)
+        return subblock_stacks, statuses
 
     else:
         print('Tail Monitoring Block')
