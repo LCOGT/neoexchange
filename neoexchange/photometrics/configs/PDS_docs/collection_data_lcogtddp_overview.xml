@@ -14,7 +14,7 @@
     <product_class>Product_Document</product_class>
     <Citation_Information>
       <author_list>Lister, T.</author_list>
-      <publication_year>2022</publication_year>
+      <publication_year>2023</publication_year>
       <description>Overview of the Las Cumbres Observatory (LCOGT) Derived Data Product Collection. This collection consists of the photometry summary tables.
        </description>
     </Citation_Information>
@@ -28,7 +28,7 @@
   </Identification_Area>
   <Reference_List>
     <Internal_Reference>
-        <lid_reference>urn:nasa:pds:dart_teleobs:document_lcogt:las_cumbres_dart_uncalibrated_calibrated_sis</lid_reference>
+        <lid_reference>urn:nasa:pds:dart_teleobs:document_lcogt:lcogt_dart_uncalibrated_calibrated_sis</lid_reference>
         <reference_type>document_to_associate</reference_type>
         <comment>Las Cumbres Observatory DART Uncalibrated, Calibrated SIS document which describes the Las Cumbres Observatory DART data products.
         </comment>
