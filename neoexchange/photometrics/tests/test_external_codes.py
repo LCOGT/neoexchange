@@ -1902,23 +1902,30 @@ class TestDetermineAstarithmeticOptions(SimpleTestCase):
         self.last3_filenames_list = " ".join(self.test_files[-3:])
 
     def test_7files(self):
-        expected_cmdline = f'--globalhdu ALIGNED --output={self.test_dir}/{self.test_files[0].replace("-crop", "-combine")} {self.filenames_list} 7 5 0.2 sigclip-median'
+        expected_cmdline = f'--globalhdu ALIGNED --output={self.test_dir}/{self.test_files[0].replace("-crop", "-combine")} {self.filenames_list} 7 2 0.05 sigclip-mean'
 
         output_filename, cmdline = determine_astarithmetic_options(self.test_files, self.test_dir)
 
         self.assertEqual(expected_cmdline, cmdline)
 
     def test_3files(self):
-        expected_cmdline = f'--globalhdu ALIGNED --output={self.test_dir}/{self.test_files[0].replace("-crop", "-combine")} {self.first3_filenames_list} 3 5 0.2 sigclip-median'
+        expected_cmdline = f'--globalhdu ALIGNED --output={self.test_dir}/{self.test_files[0].replace("-crop", "-combine")} {self.first3_filenames_list} 3 2 0.05 sigclip-mean'
 
         output_filename, cmdline = determine_astarithmetic_options(self.test_files[:3], self.test_dir)
 
         self.assertEqual(expected_cmdline, cmdline)
 
     def test_last3files(self):
-        expected_cmdline = f'--globalhdu ALIGNED --output={self.test_dir}/{self.test_files[-3].replace("-crop", "-combine")} {self.last3_filenames_list} 3 5 0.2 sigclip-median'
+        expected_cmdline = f'--globalhdu ALIGNED --output={self.test_dir}/{self.test_files[-3].replace("-crop", "-combine")} {self.last3_filenames_list} 3 2 0.05 sigclip-mean'
 
         output_filename, cmdline = determine_astarithmetic_options(self.test_files[-3:], self.test_dir)
+
+        self.assertEqual(expected_cmdline, cmdline)
+
+    def test_hdu(self):
+        expected_cmdline = f'--globalhdu 1 --output={self.test_dir}/{self.test_files[0].replace("-crop", "-combine")} {self.filenames_list} 7 2 0.05 sigclip-mean'
+
+        output_filename, cmdline = determine_astarithmetic_options(self.test_files, self.test_dir, hdu=1)
 
         self.assertEqual(expected_cmdline, cmdline)
 
