@@ -2329,6 +2329,15 @@ def submit_block_to_scheduler(elements, params):
         logger.error(msg)
         params['error_msg'] = msg
         return False, params
+    elif 'non_field_errors' in user_request:
+        errors = user_request['non_field_errors']
+        if type(errors) == list:
+            msg = "\n".join(errors)
+        else:
+            msg = errors
+        logger.error(msg)
+        params['error_msg'] = msg
+        return False, params
     elif 'name' not in user_request and 'proposal' not in user_request:
         error_msg = {}
         for x in user_request['requests']:
