@@ -2505,8 +2505,10 @@ class TestRunAstmkcatalog(ExternalCodeUnitTest): #need to finish test
         shutil.copy(os.path.abspath(self.test_banzai_file), self.test_dir)
         self.test_banzai_file_COPIED = os.path.join(self.test_dir, 'banzai_test_frame.fits')
 
-        self.test_filename = os.path.join(self.test_dir, self.test_banzai_file_COPIED.replace('.fits', '-chisel.fits'))
-        shutil.copy(self.test_banzai_file_COPIED, self.test_filename)
+        self.test_filename = self.test_banzai_file_COPIED.replace('.fits', '-chisel.fits')
+        run_astnoisechisel(self.test_banzai_file_COPIED, self.test_dir, hdu = 0)
+
+        self.output_filename = self.test_filename.replace('-chisel', '-cat')
 
         # Disable anything below CRITICAL level
         logging.disable(logging.CRITICAL)
@@ -2522,6 +2524,14 @@ class TestRunAstmkcatalog(ExternalCodeUnitTest): #need to finish test
         expected_status = 0
 
         catalog_filename, status = run_astmkcatalog(self.test_filename, self.test_dir)
-        print(catalog_filename)
+
         self.assertEquals(expected_status, status)
         self.assertTrue(os.path.exists(self.output_filename))
+
+    def test_existing_output_status(self):
+        expected_status = 1
+        self.touch(self.output_filename)
+
+        catalog_filename, status = run_astmkcatalog(self.test_filename, self.test_dir)
+
+        self.assertEquals(expected_status, status)
