@@ -10,6 +10,7 @@ from django.core.management.base import BaseCommand, CommandError
 
 from core.blocksfind import filter_blocks, find_frames, split_light_curve_blocks
 from core.views import run_astwarp_alignment_noisechisel, convert_fits_to_pdf
+from photometrics.external_codes import run_astmkcatalog
 
 
 class Command(BaseCommand):
@@ -147,14 +148,18 @@ class Command(BaseCommand):
                 #call convert_fits_to_pdf()
                 pdf_filenames_chiseled = []
                 pdf_filenames_combined = []
+                catalogs = []
                 for chiseled_filename in chiseled_filenames:
                     pdf_filename_chiseled, status = convert_fits_to_pdf(chiseled_filename, dest_dir_path)
                     pdf_filenames_chiseled.append(pdf_filename_chiseled)
+                    catalog_filename, status = run_astmkcatalog(chiseled_filename, dest_dir_path)
+                    catalogs.append(catalog_filename)
                 for combined_filename in combined_filenames:
                     pdf_filename_combined, status = convert_fits_to_pdf(combined_filename, dest_dir_path)
                     pdf_filenames_combined.append(pdf_filename_combined)
                 self.stdout.write(f'Chiseled filename(s): {pdf_filenames_chiseled}')
                 self.stdout.write(f'Combined filename(s): {pdf_filenames_combined}')
+                self.stdout.write(f'Catalog(s): {catalogs}')
             self.stdout.write('')
 
             current_time += date_increment

@@ -3589,8 +3589,8 @@ def stack_lightcurve_block(block, sci_dir, dest_dir, table, exptime=800, segstac
     frames, banzai, neox = find_frames(block)
     split_block = split_light_curve_blocks(frames, exptime)
     subblock_stacks = []
+    statuses = []
     for subblock in split_block:
-        print('New Subblock')
         sorted_filenames = get_substacks(subblock, segstack_sequence)
         substacks = []
         for substack in sorted_filenames:
@@ -3603,13 +3603,14 @@ def stack_lightcurve_block(block, sci_dir, dest_dir, table, exptime=800, segstac
                 cropped_filename, status = run_astwarp(chiseled_filename, dest_dir, result_RA[0], result_DEC[0])
                 cropped_filenames.append(cropped_filename)
             combined_filename, status = run_astarithmetic(cropped_filenames, dest_dir)
-            print(combined_filename, status)
+            #print(combined_filename, status)
             substacks.append(combined_filename)
         combined_filename, status = run_astarithmetic(substacks, dest_dir, hdu = 1)
-        print(combined_filename, status)
+        statuses.append(status)
+        #print(combined_filename, status)
         subblock_stacks.append(combined_filename)
 
-    return subblock_stacks
+    return subblock_stacks, statuses
 
 def run_astwarp_alignment(block, sci_dir, dest_dir):
     '''
@@ -3630,8 +3631,7 @@ def run_astwarp_alignment(block, sci_dir, dest_dir):
     #check if light curve block or tail monitoring block
     if len(frames) > 10:
         print('Light Curve Block')
-        split_block = split_light_curve_blocks(block)
-        subblock_stacks = stack_lightcurve_block(block, sci_dir, dest_dir, table)
+        subblock_stacks, statuses = stack_lightcurve_block(block, sci_dir, dest_dir, table)
         return subblock_stacks, statuses
 
     else:
@@ -3654,8 +3654,8 @@ def run_noisechisel(filename, dest_dir):
     '''
     if filename is None:
         return None, -7
-    if "-combine" not in filename:
-        return None, -1
+    # if "-combine" not in filename:
+        # return None, -1
 
     chiseled_filename, status = run_astnoisechisel(filename, dest_dir)
 
