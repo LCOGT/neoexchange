@@ -32,6 +32,7 @@ from astropy.wcs.utils import proj_plane_pixel_scales
 from numpy import loadtxt, split, empty, median, absolute, sqrt, ceil
 
 from core.models import detections_array_dtypes
+from core.utils import NeoException
 from astrometrics.time_subs import timeit
 from photometrics.catalog_subs import oracdr_catalog_mapping, banzai_catalog_mapping, \
     banzai_ldac_catalog_mapping, fits_ldac_to_header, open_fits_catalog
@@ -1334,6 +1335,7 @@ def updateFITSWCS(fits_file, scamp_file, scamp_xml_file, fits_file_output):
     # Check goodness of fit
     good_fit = True
     if scamp_info['xy_contrast'] < 1.4 or scamp_info['num_match'] < 4:
+#    if scamp_info['xy_contrast'] < 0.95 or scamp_info['num_match'] < 4: # More lax constraint for efXX data
         # Bad fit
         logger.warning(f"Bad fit for {os.path.basename(fits_file)} detected. Nmatch={scamp_info['num_match']} XY_contrast={scamp_info['xy_contrast']} AS_contrast={scamp_info['as_contrast']}")
         good_fit = False
