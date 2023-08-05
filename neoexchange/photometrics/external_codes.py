@@ -1230,6 +1230,14 @@ def updateFITSWCS(fits_file, scamp_file, scamp_xml_file, fits_file_output):
             pv_terms.append((keyword, value))
     scamp_head_fh.close()
 
+    # If there are PV terms, check that the CTYPEi is correct
+    if len(pv_terms) > 0:
+        if 'TAN' in ctype1:
+            logger.warning(f"Correcting RA---TAN to RA---TPV in {fits_file}")
+            ctype1 = ctype1.replace('TAN', 'TPV')
+        if 'TAN' in ctype2:
+            logger.warning(f"Correcting DEC--TAN to DEC--TPV in {fits_file}")
+            ctype2 = ctype2.replace('TAN', 'TPV')
     # update from scamp xml VOTable
     wcsrfcat = scamp_info['wcs_refcat']
     wcsimcat = scamp_info['wcs_imagecat']
