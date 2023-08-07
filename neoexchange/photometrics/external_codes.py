@@ -590,7 +590,7 @@ def determine_astnoisechisel_options(filename, dest_dir, tilesize = '30,30', ero
     if bkg_only:
         options = f'-h{hdu} --quiet --oneelempertile --interpnumngb=8 --minnumfalse=50 --output={output_filename} {filename}'
     else:
-        options = f'--quiet --label --rawoutput --output={output_filename} {filename}'
+        options = f'-h{hdu} --quiet --label --rawoutput --output={output_filename} {filename}'
     return output_filename, options
 
 def determine_image_stats(filename, hdu='SCI'):
@@ -600,7 +600,7 @@ def determine_image_stats(filename, hdu='SCI'):
     if mean is not None and std is not None:
         mean = float(mean)
         std = float(std)
-    print(mean,std)
+    #print(mean,std)
     return mean, std
 
 def determine_astconvertt_options(filename, dest_dir, mean, std, hdu='SCI'):

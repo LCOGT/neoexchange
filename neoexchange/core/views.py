@@ -3580,7 +3580,7 @@ def run_hotpants_subtraction(ref, sci_dir, configs_dir, dest_dir):
 
     return status
 
-def stack_lightcurve_block(block, sci_dir, dest_dir, table, exptime=800, segstack_sequence=13):
+def stack_lightcurve_block(block, sci_dir, dest_dir, table, exptime=800, segstack_sequence=7):
     '''
     Routine that takes a light curve <block> and splits it into subblocks of
     equal exposure time <exptime>. For each subblock it is sorted into substacks
@@ -3636,15 +3636,24 @@ def run_astwarp_alignment(block, sci_dir, dest_dir):
 
     else:
         print('Tail Monitoring Block')
-        filenames = []
-        for frame in frames:
-            result_RA, result_DEC = ephem_interpolate(frame.midpoint, table)
-            fits_filename = os.path.join(sci_dir, frame.filename)
-            chiseled_filename, status = run_astnoisechisel(fits_filename, dest_dir, hdu = 0, bkgd_only=True)
-            cropped_filename, status = run_astwarp(chiseled_filename, dest_dir, result_RA[0], result_DEC[0])
-            filenames.append(cropped_filename)
-        combined_filename, status = run_astarithmetic(filenames, dest_dir)
+        cropped_filenames = []
+        substacks = []
+        sorted_filenames = get_substacks(frames)
+        for substack in sorted_filenames:
+            #print(substack)
+            cropped_filenames = []
+            for frame in substack:
+                result_RA, result_DEC = ephem_interpolate(frame.midpoint, table)
+                fits_filename = os.path.join(sci_dir, frame.filename)
+                chiseled_filename, status = run_astnoisechisel(fits_filename, dest_dir, hdu = 0, bkgd_only=True)
+                cropped_filename, status = run_astwarp(chiseled_filename, dest_dir, result_RA[0], result_DEC[0])
+                cropped_filenames.append(cropped_filename)
+            combined_filename, status = run_astarithmetic(cropped_filenames, dest_dir)
+            #print(combined_filename, status)
+            substacks.append(combined_filename)
+        combined_filename, status = run_astarithmetic(substacks, dest_dir, hdu = 1)
         combined_filename = [combined_filename]
+        #print(combined_filename, status)
         return combined_filename, status
 
 def run_noisechisel(filename, dest_dir):
@@ -3694,7 +3703,7 @@ def convert_fits_to_pdf(filename, dest_dir, crop=False, center_RA=0, center_DEC=
         hdu = '1'
     if '-chisel' in filename:
         hdu = 'DETECTIONS'
-    print(hdu)
+    #print(hdu)
     mean, std = determine_image_stats(filename, hdu)
     pdf_filename, status = run_astconvertt(filename, dest_dir, mean, std, hdu)
 
