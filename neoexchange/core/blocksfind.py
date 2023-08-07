@@ -49,7 +49,7 @@ def split_light_curve_blocks(frames, exptime=800):
     if len(frames)==0:
         return [], []
     exp_length = frames[0].block.exp_length
-    print(exp_length)
+    #print(exp_length)
     total_exp_time = len(frames) * exp_length
     div_factor = total_exp_time/exptime
     split_block = np.array_split(frames, round(div_factor))

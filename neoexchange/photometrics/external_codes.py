@@ -581,10 +581,16 @@ def determine_astarithmetic_options(filenames, dest_dir, hdu = 'ALIGNED'):
 def determine_astnoisechisel_options(filename, dest_dir, tilesize = '30,30', erode = 2, detgrowquant = 0.75, maxholesize = 10000, hdu = 0, bkg_only=False):
     raw_filename = os.path.basename(filename)
     output_filename = os.path.join(dest_dir, raw_filename.replace(".fits", "-chisel.fits"))
+    #original options from tutorial
+    # if bkg_only:
+        # options = f'-h{hdu} --tilesize={tilesize} --erode={erode} --detgrowquant={detgrowquant} --detgrowmaxholesize={maxholesize} --oneelempertile --output={output_filename} {filename}'
+    # else:
+        # options = f'-h{hdu} --tilesize={tilesize} --erode={erode} --detgrowquant={detgrowquant} --detgrowmaxholesize={maxholesize} --output={output_filename} {filename}'
+    #values from Agata Rozek configuration/Makefile
     if bkg_only:
-        options = f'-h{hdu} --tilesize={tilesize} --erode={erode} --detgrowquant={detgrowquant} --detgrowmaxholesize={maxholesize} --oneelempertile --output={output_filename} {filename}'
+        options = f'-h{hdu} --quiet --oneelempertile --interpnumngb=8 --minnumfalse=50 --output={output_filename} {filename}'
     else:
-        options = f'-h{hdu} --tilesize={tilesize} --erode={erode} --detgrowquant={detgrowquant} --detgrowmaxholesize={maxholesize} --output={output_filename} {filename}'
+        options = f'--quiet --label --rawoutput --output={output_filename} {filename}'
     return output_filename, options
 
 def determine_image_stats(filename, hdu='SCI'):
@@ -594,7 +600,7 @@ def determine_image_stats(filename, hdu='SCI'):
     if mean is not None and std is not None:
         mean = float(mean)
         std = float(std)
-
+    print(mean,std)
     return mean, std
 
 def determine_astconvertt_options(filename, dest_dir, mean, std, hdu='SCI'):
@@ -605,7 +611,7 @@ def determine_astconvertt_options(filename, dest_dir, mean, std, hdu='SCI'):
     sigadd = 25
     low = mean + sigrem * std
     high = mean + sigadd * std
-
+    #print(low,high)
     options = f'{filename} -L {low} -H {high} -h{hdu} --colormap=sls-inverse --output={output_filename}'
     return output_filename, options
 

@@ -3580,7 +3580,7 @@ def run_hotpants_subtraction(ref, sci_dir, configs_dir, dest_dir):
 
     return status
 
-def stack_lightcurve_block(block, sci_dir, dest_dir, table, exptime=800, segstack_sequence=7):
+def stack_lightcurve_block(block, sci_dir, dest_dir, table, exptime=800, segstack_sequence=13):
     '''
     Routine that takes a light curve <block> and splits it into subblocks of
     equal exposure time <exptime>. For each subblock it is sorted into substacks
@@ -3672,6 +3672,7 @@ def run_astwarp_alignment_noisechisel(block, sci_dir, dest_dir):
     status = []
     for combined_filename in combined_filenames:
         filename, s = run_noisechisel(combined_filename, dest_dir)
+        #print(filename, s)
         chiseled_filenames.append(filename)
         status.append(s)
 
@@ -3693,6 +3694,7 @@ def convert_fits_to_pdf(filename, dest_dir, crop=False, center_RA=0, center_DEC=
         hdu = '1'
     if '-chisel' in filename:
         hdu = 'DETECTIONS'
+    print(hdu)
     mean, std = determine_image_stats(filename, hdu)
     pdf_filename, status = run_astconvertt(filename, dest_dir, mean, std, hdu)
 
