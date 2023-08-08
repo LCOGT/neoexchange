@@ -1,10 +1,12 @@
 import logging
+import os
 from core.models import Body,Block,SuperBlock,Frame
 from astropy.wcs import WCS, FITSFixedWarning, InvalidTransformError
+from astropy.io import fits
 from datetime import datetime,timedelta
 import warnings
 import calendar
-from astropy.wcs import WCS, FITSFixedWarning, InvalidTransformError
+from photutils.centroids import centroid_sources, centroid_2dg
 from astrometrics.ephem_subs import horizons_ephem
 from astropy.time import Time
 import numpy as np
@@ -188,3 +190,51 @@ def ephem_interpolate(times, table):
     result_DEC = np.interp(times, arr1, arr3)
 
     return result_RA, result_DEC
+
+def get_centroid_difference(filename, orig_sci_dir):
+    '''
+    Returns the difference between the interpolated position of Didymos
+    and the position found by photutils.centroid_sources for a given
+    <filename>.
+    '''
+    raw_filename = os.path.basename(filename)
+    if '-combine-superstack' in raw_filename:
+        orig_raw_filename = raw_filename.replace('-combine-superstack','')
+    else:
+        orig_raw_filename = raw_filename.replace('-combine','')
+    original_filename = os.path.join(orig_sci_dir, orig_raw_filename)
+
+    hdulist = fits.open(filename)
+    data = hdulist[1].data
+    header = hdulist[1].header
+    stack_wcs = WCS(header)
+
+    width = header['NAXIS1']
+    height = header['NAXIS2']
+    xpos = width/2
+    ypos = height/2
+
+    orig_hdulist = fits.open(original_filename)
+    orig_header = orig_hdulist['SCI'].header
+    time = orig_header['DATE-OBS'] #start date of first frame in stack
+    date = datetime.strptime(time, "%Y-%m-%dT%H:%M:%S.%f")
+
+    req_num = orig_header['REQNUM']
+    block = Block.objects.get(request_number = req_num)
+
+    table = get_ephem(block)
+
+    RA, DEC = ephem_interpolate(date, table)
+
+    x_interp, y_interp = stack_wcs.world_to_pixel_values(RA, DEC)
+    x_interp = x_interp[0]
+    y_interp = y_interp[0]
+
+    x, y = centroid_sources(data, xpos, ypos)
+    x = x[0]
+    y = y[0]
+
+    x_diff = abs(x_interp - x)
+    y_diff = abs(y_interp - y)
+
+    return x_diff, y_diff
