@@ -651,6 +651,8 @@ def horizons_ephem(obj_name, start, end, site_code, ephem_step_size='1h', alt_li
      'hour_angle',
      'GlxLon',
      'GlxLat',
+     'sunTargetPA'
+     'velocityPA'
      'datetime']
     If [include_moon] = True, 2 additional columns of the Moon-Object separation
     ('moon_sep'; in degrees) and the Moon phase ('moon_phase'; 0..1) are added
@@ -658,7 +660,7 @@ def horizons_ephem(obj_name, start, end, site_code, ephem_step_size='1h', alt_li
     """
 
     # Define quantities we want back from HORIZONS
-    horizons_quantities = '1,3,4,9,19,20,23,24,38,42,33'
+    horizons_quantities = '1,3,4,9,19,20,23,24,38,42,33,27'
 
     eph = Horizons(id=obj_name, id_type='smallbody', epochs={'start' : start.strftime("%Y-%m-%d %H:%M"),
             'stop' : end.strftime("%Y-%m-%d %H:%M"), 'step' : ephem_step_size}, location=site_code)
