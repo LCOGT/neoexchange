@@ -3612,6 +3612,20 @@ def stack_lightcurve_block(block, sci_dir, dest_dir, table, exptime=800, segstac
 
     return subblock_stacks, statuses
 
+def get_didymos_detection(table_filename, width = 1991.0, height = 511.0):
+    '''
+    Routine that takes a <table_filename> and returns the id of the detection
+    centered on Didymos
+    '''
+    data = np.genfromtxt(table_filename)
+
+    ids = []
+    for i in range(len(data)):
+        if data[i][2]<(width/2) and data[i][3]>(width/2) and data[i][4]<(height/2) and data[i][5]>(height/2):
+            ids.append(data[i][0])
+    #print(ids)
+    return ids
+
 def run_astwarp_alignment(block, sci_dir, dest_dir):
     '''
     Makes an horizons ephem table for a given <block>. Finds interpolated values
