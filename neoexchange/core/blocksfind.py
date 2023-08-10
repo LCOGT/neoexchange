@@ -58,7 +58,7 @@ def split_light_curve_blocks(frames, exptime=800):
 
     return split_block
 
-def get_substacks(subblock, segstack_sequence=7):
+def get_substacks(subblock, segstack_sequence=10):
     '''
     Routine to get substacks for a given <subblock>. <subblock> should be 
     a list of frames. Returns the stacked filenames

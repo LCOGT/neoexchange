@@ -578,7 +578,8 @@ def determine_astarithmetic_options(filenames, dest_dir, hdu = 'ALIGNED'):
     options = f'--globalhdu {hdu} --output={output_filename} {filenames_list} {len(filenames)} 2 0.05 sigclip-mean'
     return output_filename, options
 
-def determine_astnoisechisel_options(filename, dest_dir, tilesize = '30,30', erode = 2, detgrowquant = 0.75, maxholesize = 10000, hdu = 0, bkg_only=False):
+def determine_astnoisechisel_options(filename, dest_dir, hdu = 0, bkg_only=False):
+    #, tilesize = '30,30', erode = 2, detgrowquant = 0.75, maxholesize = 10000):
     raw_filename = os.path.basename(filename)
     output_filename = os.path.join(dest_dir, raw_filename.replace(".fits", "-chisel.fits"))
     #original options from tutorial
@@ -619,6 +620,12 @@ def determine_astmkcatalog_options(filename, dest_dir):
     raw_filename = os.path.basename(filename)
     output_filename = os.path.join(dest_dir, raw_filename.replace("-chisel", "-cat"))
     options = f'{filename} --ids --area --min-x --max-x --min-y --max-y -hDETECTIONS --output={output_filename}'
+    return output_filename, options
+
+def determine_asttable_options(filename, dest_dir):
+    raw_filename = os.path.basename(filename)
+    output_filename = os.path.join(dest_dir, raw_filename.replace(".fits", ".txt"))
+    options = f'{filename} --output={output_filename}'
     return output_filename, options
 
 def make_pa_rate_dict(pa, deltapa, minrate, maxrate):
@@ -1645,9 +1652,9 @@ def run_astwarp(filename, dest_dir, center_RA, center_DEC, width = 1991.0, heigh
     x_max = header['NAXIS1']
     y_max = header['NAXIS2']
     if x<0 or x>x_max or y<0 or y>y_max:
-        return None, -2
-    if width>x_max or height>y_max:
         return None, -3
+    if width>x_max or height>y_max:
+        return None, -4
     cmdline += options
     cmdline = cmdline.rstrip()
     if dbg:
@@ -1703,7 +1710,8 @@ def run_astarithmetic(input_filenames, dest_dir, hdu = 'ALIGNED', binary='astari
 
     return combined_filename, retcode_or_cmdline
 
-def run_astnoisechisel(filename, dest_dir, tilesize = '30,30', erode = 2, detgrowquant=0.75, maxholesize=10000, hdu = 1, binary='astnoisechisel', bkgd_only=False, dbg=False):
+def run_astnoisechisel(filename, dest_dir, hdu = 0, binary='astnoisechisel', bkgd_only=False, dbg=False):
+    #, tilesize = '30,30', erode = 2, detgrowquant=0.75, maxholesize=10000,
     '''
     Runs astnoisechisel on <filename> to produce a binary detection map
     writing output to <dest_dir>
@@ -1717,7 +1725,7 @@ def run_astnoisechisel(filename, dest_dir, tilesize = '30,30', erode = 2, detgro
         logger.error(f"Could not locate {binary} executable in PATH")
         return None, -42
     cmdline = f"{binary} "
-    chiseled_filename, options = determine_astnoisechisel_options(filename, dest_dir, tilesize, erode, detgrowquant, maxholesize, hdu, bkgd_only)
+    chiseled_filename, options = determine_astnoisechisel_options(filename, dest_dir, hdu, bkgd_only)
     if os.path.exists(chiseled_filename):
         return chiseled_filename, 1
     cmdline += options
@@ -1830,3 +1838,36 @@ def run_astmkcatalog(filename, dest_dir, binary='astmkcatalog', dbg=False):
         retcode_or_cmdline = cmd_call.returncode
 
     return catalog_filename, retcode_or_cmdline
+
+def run_asttable(filename, dest_dir, binary='asttable', dbg=False):
+    '''
+    Runs asttable on <filename> to make .txt version of the catalog writing
+    output to <dest_dir>
+    '''
+    if filename is None:
+        return None, -2
+    if os.path.exists(filename) is False:
+        return None, -1
+    binary = binary or find_binary(binary)
+    if binary is None:
+        logger.error(f"Could not locate {binary} executable in PATH")
+        return None, -42
+    cmdline = f"{binary} "
+    table_filename, options = determine_asttable_options(filename, dest_dir)
+    if os.path.exists(table_filename):
+        return table_filename, 1
+    cmdline += options
+    cmdline = cmdline.rstrip()
+    if dbg:
+        print(cmdline)
+
+    if dbg is True:
+        retcode_or_cmdline = cmdline
+    else:
+        logger.debug(f"cmdline={cmdline}")
+        cmd_args = cmdline.split()
+        cmd_call = Popen(cmd_args, cwd=dest_dir, stdout=PIPE)
+        (out, errors) = cmd_call.communicate()
+        retcode_or_cmdline = cmd_call.returncode
+
+    return table_filename, retcode_or_cmdline

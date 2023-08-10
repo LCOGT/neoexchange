@@ -3580,7 +3580,7 @@ def run_hotpants_subtraction(ref, sci_dir, configs_dir, dest_dir):
 
     return status
 
-def stack_lightcurve_block(block, sci_dir, dest_dir, table, exptime=800, segstack_sequence=7):
+def stack_lightcurve_block(block, sci_dir, dest_dir, table, exptime=800, segstack_sequence=10):
     '''
     Routine that takes a light curve <block> and splits it into subblocks of
     equal exposure time <exptime>. For each subblock it is sorted into substacks
@@ -3647,6 +3647,7 @@ def run_astwarp_alignment(block, sci_dir, dest_dir):
                 fits_filename = os.path.join(sci_dir, frame.filename)
                 chiseled_filename, status = run_astnoisechisel(fits_filename, dest_dir, hdu = 0, bkgd_only=True)
                 cropped_filename, status = run_astwarp(chiseled_filename, dest_dir, result_RA[0], result_DEC[0])
+                #print(status)
                 cropped_filenames.append(cropped_filename)
             combined_filename, status = run_astarithmetic(cropped_filenames, dest_dir)
             #print(combined_filename, status)

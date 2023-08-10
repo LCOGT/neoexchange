@@ -1935,56 +1935,56 @@ class TestDetermineAstnoisechiselOptions(SimpleTestCase):
         self.test_file = 'tfn1m014-fa20-20221104-0207-e91-combine.fits'
 
     def test_default_values(self):
-        expected_cmdline = f'-h0 --tilesize=30,30 --erode=2 --detgrowquant=0.75 --detgrowmaxholesize=10000 --output={self.test_dir}/{self.test_file.replace("-combine","-combine-chisel")} {self.test_file}'
+        expected_cmdline = f'-h0 --quiet --label --rawoutput --output={self.test_dir}/{self.test_file.replace("-combine","-combine-chisel")} {self.test_file}'
 
         output_filename, cmdline = determine_astnoisechisel_options(self.test_file, self.test_dir)
 
         self.assertEqual(expected_cmdline, cmdline)
 
-    def test_tilesize(self):
-        expected_cmdline = f'-h0 --tilesize=100,100 --erode=2 --detgrowquant=0.75 --detgrowmaxholesize=10000 --output={self.test_dir}/{self.test_file.replace("-combine","-combine-chisel")} {self.test_file}'
+    # def test_tilesize(self):
+        # expected_cmdline = f'-h0 --tilesize=100,100 --erode=2 --detgrowquant=0.75 --detgrowmaxholesize=10000 --output={self.test_dir}/{self.test_file.replace("-combine","-combine-chisel")} {self.test_file}'
 
-        output_filename, cmdline = determine_astnoisechisel_options(self.test_file, self.test_dir, tilesize='100,100')
+        # output_filename, cmdline = determine_astnoisechisel_options(self.test_file, self.test_dir, tilesize='100,100')
 
-        self.assertEqual(expected_cmdline, cmdline)
+        # self.assertEqual(expected_cmdline, cmdline)
 
-    def test_erode(self):
-        expected_cmdline = f'-h0 --tilesize=30,30 --erode=1 --detgrowquant=0.75 --detgrowmaxholesize=10000 --output={self.test_dir}/{self.test_file.replace("-combine","-combine-chisel")} {self.test_file}'
+    # def test_erode(self):
+        # expected_cmdline = f'-h0 --tilesize=30,30 --erode=1 --detgrowquant=0.75 --detgrowmaxholesize=10000 --output={self.test_dir}/{self.test_file.replace("-combine","-combine-chisel")} {self.test_file}'
 
-        output_filename, cmdline = determine_astnoisechisel_options(self.test_file, self.test_dir, tilesize='30,30', erode=1)
+        # output_filename, cmdline = determine_astnoisechisel_options(self.test_file, self.test_dir, tilesize='30,30', erode=1)
 
-        self.assertEqual(expected_cmdline, cmdline)
+        # self.assertEqual(expected_cmdline, cmdline)
 
-    def test_detgrowquant(self):
-        expected_cmdline = f'-h0 --tilesize=30,30 --erode=2 --detgrowquant=1 --detgrowmaxholesize=10000 --output={self.test_dir}/{self.test_file.replace("-combine","-combine-chisel")} {self.test_file}'
+    # def test_detgrowquant(self):
+        # expected_cmdline = f'-h0 --tilesize=30,30 --erode=2 --detgrowquant=1 --detgrowmaxholesize=10000 --output={self.test_dir}/{self.test_file.replace("-combine","-combine-chisel")} {self.test_file}'
 
-        output_filename, cmdline = determine_astnoisechisel_options(self.test_file, self.test_dir, tilesize='30,30', erode=2, detgrowquant=1)
+        # output_filename, cmdline = determine_astnoisechisel_options(self.test_file, self.test_dir, tilesize='30,30', erode=2, detgrowquant=1)
 
-        self.assertEqual(expected_cmdline, cmdline)
+        # self.assertEqual(expected_cmdline, cmdline)
 
-    def test_maxholesize(self):
-        expected_cmdline = f'-h0 --tilesize=30,30 --erode=2 --detgrowquant=0.75 --detgrowmaxholesize=100 --output={self.test_dir}/{self.test_file.replace("-combine","-combine-chisel")} {self.test_file}'
+    # def test_maxholesize(self):
+        # expected_cmdline = f'-h0 --tilesize=30,30 --erode=2 --detgrowquant=0.75 --detgrowmaxholesize=100 --output={self.test_dir}/{self.test_file.replace("-combine","-combine-chisel")} {self.test_file}'
 
-        output_filename, cmdline = determine_astnoisechisel_options(self.test_file, self.test_dir, tilesize='30,30', erode=2, detgrowquant=0.75, maxholesize = 100)
+        # output_filename, cmdline = determine_astnoisechisel_options(self.test_file, self.test_dir, tilesize='30,30', erode=2, detgrowquant=0.75, maxholesize = 100)
 
-        self.assertEqual(expected_cmdline, cmdline)
+        # self.assertEqual(expected_cmdline, cmdline)
 
     def test_hdu(self):
-        expected_cmdline = f'-h1 --tilesize=30,30 --erode=2 --detgrowquant=0.75 --detgrowmaxholesize=10000 --output={self.test_dir}/{self.test_file.replace("-combine","-combine-chisel")} {self.test_file}'
+        expected_cmdline = f'-h1 --quiet --label --rawoutput --output={self.test_dir}/{self.test_file.replace("-combine","-combine-chisel")} {self.test_file}'
 
         output_filename, cmdline = determine_astnoisechisel_options(self.test_file, self.test_dir, hdu = 1)
 
         self.assertEqual(expected_cmdline, cmdline)
 
     def test_bkg_only(self):
-        expected_cmdline = f'-h0 --tilesize=30,30 --erode=2 --detgrowquant=0.75 --detgrowmaxholesize=10000 --oneelempertile --output={self.test_dir}/{self.test_file.replace("-combine","-combine-chisel")} {self.test_file}'
+        expected_cmdline = f'-h0 --quiet --oneelempertile --interpnumngb=8 --minnumfalse=50 --output={self.test_dir}/{self.test_file.replace("-combine","-combine-chisel")} {self.test_file}'
 
         output_filename, cmdline = determine_astnoisechisel_options(self.test_file, self.test_dir, bkg_only=True)
 
         self.assertEqual(expected_cmdline, cmdline)
 
     def test_filename(self):
-        expected_cmdline = f'-h0 --tilesize=30,30 --erode=2 --detgrowquant=0.75 --detgrowmaxholesize=10000 --output={self.test_dir}/banzai_test_frame-combine-chisel.fits banzai_test_frame-combine.fits'
+        expected_cmdline = f'-h0 --quiet --label --rawoutput --output={self.test_dir}/banzai_test_frame-combine-chisel.fits banzai_test_frame-combine.fits'
 
         output_filename, cmdline = determine_astnoisechisel_options('banzai_test_frame-combine.fits', self.test_dir)
 
@@ -2066,6 +2066,18 @@ class TestDetermineAstmkcatalogOptions(SimpleTestCase):
         expected_cmdline = f'{self.test_file} --ids --area --min-x --max-x --min-y --max-y -hDETECTIONS --output={self.test_dir}/{self.test_file.replace("-chisel","-cat")}'
 
         output_filename, cmdline = determine_astmkcatalog_options(self.test_file, self.test_dir)
+
+        self.assertEqual(expected_cmdline, cmdline)
+
+class TestDetermineAsttableOptions(SimpleTestCase):
+    def setUp(self):
+        self.test_dir = '/tmp/foo'
+        self.test_file = 'tfn1m014-fa20-20221104-0213-e91-cat.fits'
+
+    def test_1(self):
+        expected_cmdline = f'{self.test_file} --output={self.test_dir}/{self.test_file.replace(".fits", ".txt")}'
+
+        output_filename, cmdline = determine_asttable_options(self.test_file, self.test_dir)
 
         self.assertEqual(expected_cmdline, cmdline)
 
@@ -2307,21 +2319,21 @@ class TestRunAstnoisechisel(ExternalCodeUnitTest):
 
         # needs to modify the original image when running astnoisechisel
         shutil.copy(os.path.abspath(self.test_banzai_file), self.test_dir)
-        self.test_banzai_file_COPIED = os.path.join(self.test_dir, 'banzai_test_frame.fits')
+        self.test_filename = os.path.join(self.test_dir, 'banzai_test_frame.fits')
 
-        self.test_filenames = []
-        for frame_num in range(200,205):
-            new_filename = f'tfn1m042-fa42-20230707-{frame_num:04d}-e91.fits'
-            new_filename = os.path.join(self.test_dir, new_filename)
-            shutil.copy(self.test_banzai_file_COPIED, new_filename)
-            run_astwarp(new_filename, self.test_dir, self.center_RA, self.center_DEC)
-            self.test_filenames.append(new_filename.replace('.fits', '-crop.fits'))
+        # self.test_filenames = []
+        # for frame_num in range(200,205):
+            # new_filename = f'tfn1m042-fa42-20230707-{frame_num:04d}-e91.fits'
+            # new_filename = os.path.join(self.test_dir, new_filename)
+            # shutil.copy(self.test_banzai_file_COPIED, new_filename)
+            # run_astwarp(new_filename, self.test_dir, self.center_RA, self.center_DEC)
+            # self.test_filenames.append(new_filename.replace('.fits', '-crop.fits'))
 
-        run_astarithmetic(self.test_filenames, self.test_dir)
+        # run_astarithmetic(self.test_filenames, self.test_dir)
 
-        self.filename = os.path.join(self.test_dir, self.test_filenames[0].replace('-crop', '-combine'))
+        # self.filename = os.path.join(self.test_dir, self.test_filenames[0].replace('-crop', '-combine'))
 
-        self.output_filename = os.path.join(self.test_dir, self.filename.replace('-combine', '-chisel'))
+        self.output_filename = os.path.join(self.test_dir, self.test_filename.replace('.fits', '-chisel.fits'))
 
         # Disable anything below CRITICAL level
         logging.disable(logging.CRITICAL)
@@ -2329,7 +2341,7 @@ class TestRunAstnoisechisel(ExternalCodeUnitTest):
         self.remove = True
         self.maxDiff = None
 
-    def return_fits_info(self, filename, keywords = ['TILESIZE', 'ERODE', 'HIERARCH detgrowquant', 'HIERARCH detgrowmaxholesize']):
+    def return_fits_info(self, filename, keywords = ['HIERARCH interpnumngb', 'HIERARCH minnumfalse']):
         info = []
         with fits.open(filename) as hdulist:
             hduname = 'NOISECHISEL-CONFIG'
@@ -2344,53 +2356,49 @@ class TestRunAstnoisechisel(ExternalCodeUnitTest):
 
     def test_default_values(self):
         expected_status = 0
-        expected_tilesize = '30,30'
-        expected_erode = 2
-        expected_detgrowquant = 0.75
-        expected_maxholesize = 10000
+        expected_interpnumngb = 8
+        expected_minimumfalse = 50
 
-        chiseled_filename, status = run_astnoisechisel(self.filename, self.test_dir)
+        chiseled_filename, status = run_astnoisechisel(self.test_filename, self.test_dir)
         info = self.return_fits_info(self.output_filename)
 
         self.assertEquals(expected_status, status)
         self.assertTrue(os.path.exists(self.output_filename))
         self.assertEquals(self.output_filename, chiseled_filename)
-        self.assertEquals(expected_tilesize, info[0])
-        self.assertEquals(expected_erode, info[1])
-        self.assertEquals(expected_detgrowquant, info[2])
-        self.assertEquals(expected_maxholesize, info[3])
+        self.assertEquals(expected_interpnumngb, info[0])
+        self.assertEquals(expected_minimumfalse, info[1])
 
-    def test_change_tilesize(self):
-        expected_tilesize = '20,20'
+    # def test_change_tilesize(self):
+        # expected_tilesize = '20,20'
 
-        chiseled_filename, status = run_astnoisechisel(self.filename, self.test_dir, tilesize='20,20')
-        info = self.return_fits_info(self.output_filename, keywords = ['TILESIZE'])
+        # chiseled_filename, status = run_astnoisechisel(self.filename, self.test_dir, tilesize='20,20')
+        # info = self.return_fits_info(self.output_filename, keywords = ['TILESIZE'])
 
-        self.assertEquals(expected_tilesize, info[0])
+        # self.assertEquals(expected_tilesize, info[0])
 
-    def test_change_erode(self):
-        expected_erode = 1
+    # def test_change_erode(self):
+        # expected_erode = 1
 
-        chiseled_filename, status = run_astnoisechisel(self.filename, self.test_dir, tilesize='20,20', erode=1)
-        info = self.return_fits_info(self.output_filename, keywords = ['ERODE'])
+        # chiseled_filename, status = run_astnoisechisel(self.filename, self.test_dir, tilesize='20,20', erode=1)
+        # info = self.return_fits_info(self.output_filename, keywords = ['ERODE'])
 
-        self.assertEquals(expected_erode, info[0])
+        # self.assertEquals(expected_erode, info[0])
 
-    def test_change_detgrowquant(self):
-        expected_detgrowquant = 1
+    # def test_change_detgrowquant(self):
+        # expected_detgrowquant = 1
 
-        chiseled_filename, status = run_astnoisechisel(self.filename, self.test_dir, detgrowquant=1)
-        info = self.return_fits_info(self.output_filename, keywords = ['HIERARCH detgrowquant'])
+        # chiseled_filename, status = run_astnoisechisel(self.filename, self.test_dir, detgrowquant=1)
+        # info = self.return_fits_info(self.output_filename, keywords = ['HIERARCH detgrowquant'])
 
-        self.assertEquals(expected_detgrowquant, info[0])
+        # self.assertEquals(expected_detgrowquant, info[0])
 
-    def test_change_maxholesize(self):
-        expected_maxholesize = 100
+    # def test_change_maxholesize(self):
+        # expected_maxholesize = 100
 
-        chiseled_filename, status = run_astnoisechisel(self.filename, self.test_dir, maxholesize=100)
-        info = self.return_fits_info(self.output_filename, keywords = ['HIERARCH detgrowmaxholesize'])
+        # chiseled_filename, status = run_astnoisechisel(self.filename, self.test_dir, maxholesize=100)
+        # info = self.return_fits_info(self.output_filename, keywords = ['HIERARCH detgrowmaxholesize'])
 
-        self.assertEquals(expected_maxholesize, info[0])
+        # self.assertEquals(expected_maxholesize, info[0])
 
     def test_nonexistent_filename(self):
         expected_status = -1
@@ -2406,7 +2414,7 @@ class TestRunAstnoisechisel(ExternalCodeUnitTest):
         expected_status = 1
         self.touch(self.output_filename)
 
-        chiseled_filename, status = run_astnoisechisel(self.filename, self.test_dir)
+        chiseled_filename, status = run_astnoisechisel(self.test_filename, self.test_dir)
 
         self.assertEquals(expected_status, status)
         self.assertTrue(os.path.exists(self.output_filename))
@@ -2498,7 +2506,7 @@ class TestRunAstconvertt(ExternalCodeUnitTest):
         self.assertEquals(expected_status, status)
         self.assertTrue(os.path.exists(self.output_filename))
 
-class TestRunAstmkcatalog(ExternalCodeUnitTest): #need to finish test
+class TestRunAstmkcatalog(ExternalCodeUnitTest):
     def setUp(self):
         super(TestRunAstmkcatalog, self).setUp()
 
@@ -2533,5 +2541,38 @@ class TestRunAstmkcatalog(ExternalCodeUnitTest): #need to finish test
         self.touch(self.output_filename)
 
         catalog_filename, status = run_astmkcatalog(self.test_filename, self.test_dir)
+
+        self.assertEquals(expected_status, status)
+
+class TestRunAsttable(ExternalCodeUnitTest):
+    def setUp(self):
+        super(TestRunAsttable, self).setUp()
+
+        shutil.copy(os.path.abspath(self.test_banzai_file), self.test_dir)
+        self.test_banzai_file_COPIED = os.path.join(self.test_dir, 'banzai_test_frame.fits')
+
+        chiseled_filename, status = run_astnoisechisel(self.test_banzai_file_COPIED, self.test_dir, hdu = 0)
+
+        self.test_filename, status = run_astmkcatalog(chiseled_filename, self.test_dir)
+
+        self.output_filename = self.test_filename.replace(".fits", ".txt")
+
+    def touch(self, fname, times=None):
+        with open(fname, 'a'):
+            os.utime(fname, times)
+
+    def test_1(self):
+        expected_status = 0
+
+        table_filename, status = run_asttable(self.test_filename, self.test_dir)
+
+        self.assertEquals(expected_status, status)
+        self.assertTrue(os.path.exists(self.output_filename))
+
+    def test_existing_output_status(self):
+        expected_status = 1
+        self.touch(self.output_filename)
+
+        table_filename, status = run_astmkcatalog(self.test_filename, self.test_dir)
 
         self.assertEquals(expected_status, status)
