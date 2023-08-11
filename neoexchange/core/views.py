@@ -21,6 +21,8 @@ from math import floor, ceil, degrees, radians, pi, acos, pow, cos
 from astropy import units as u
 from astropy.coordinates import SkyCoord
 from astropy.io import fits
+import matplotlib.pyplot as plt
+from matplotlib import rc
 import json
 import logging
 import tempfile
@@ -3730,6 +3732,36 @@ def convert_fits_to_pdf(filename, dest_dir, crop=False, center_RA=0, center_DEC=
         pdf_filename, status = run_astconvertt(filename, dest_dir, hdu, stack=stack)
 
     return pdf_filename, status
+
+def plot_didymos_images(combined_filename, didymos_extracted_filename, table):
+    '''
+    '''
+    #configure font and lines
+    rc('font',**{'name':'Arial','size':16})
+    rc('lines', **{'lw':2})
+
+    #declare output file name
+    output_plot = didymos_extracted_filename.replace('chisel','plot')
+
+    #set up line color cycler
+
+    #declare variables
+    au=149597870.7
+    arrow_len=75
+    ih=511
+    iw=1991
+    sun=
+    vel=
+    dist=
+    dscale=1000
+    pix=0.3985
+
+    xz=arrow_len
+    yz=ih-1.5*arrow_len
+    xsun=arrow_len*cos(radians(sun)+radians(90))
+    ysun=arrow_len*sin(radians(sun)+radians(90))
+    xvel=arrow_len*cos(radians(vel)+radians(90))
+    yvel=arrow_len*sin(radians(vel)+radians(90))
 
 def find_block_for_frame(catfile):
     """Try and find a Block for the original passed <catfile> filename (new style with
