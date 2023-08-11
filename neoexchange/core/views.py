@@ -3580,7 +3580,7 @@ def run_hotpants_subtraction(ref, sci_dir, configs_dir, dest_dir):
 
     return status
 
-def stack_lightcurve_block(block, sci_dir, dest_dir, table, exptime=800, segstack_sequence=10):
+def stack_lightcurve_block(block, sci_dir, dest_dir, table, exptime=800, segstack_sequence=5):
     '''
     Routine that takes a light curve <block> and splits it into subblocks of
     equal exposure time <exptime>. For each subblock it is sorted into substacks
@@ -3617,14 +3617,17 @@ def get_didymos_detection(table_filename, width = 1991.0, height = 511.0):
     Routine that takes a <table_filename> and returns the id of the detection
     centered on Didymos
     '''
+    if table_filename is None:
+        return None
     data = np.genfromtxt(table_filename)
 
-    ids = []
+    #ids = []
     for i in range(len(data)):
         if data[i][2]<(width/2) and data[i][3]>(width/2) and data[i][4]<(height/2) and data[i][5]>(height/2):
-            ids.append(data[i][0])
+            #ids.append(data[i][0])
+            didymos_id = data[i][0]
     #print(ids)
-    return ids
+    return didymos_id
 
 def run_astwarp_alignment(block, sci_dir, dest_dir):
     '''
@@ -3671,7 +3674,7 @@ def run_astwarp_alignment(block, sci_dir, dest_dir):
         #print(combined_filename, status)
         return combined_filename, status
 
-def run_noisechisel(filename, dest_dir):
+def run_noisechisel(filename, dest_dir, hdu = 1):
     '''
     Verifies that input <filename> went through stacking routine. Calls run_astnoisechisel
     to get a binary detection map of the combined file and writes output to <dest_dir>.
@@ -3681,7 +3684,7 @@ def run_noisechisel(filename, dest_dir):
     # if "-combine" not in filename:
         # return None, -1
 
-    chiseled_filename, status = run_astnoisechisel(filename, dest_dir)
+    chiseled_filename, status = run_astnoisechisel(filename, dest_dir, hdu)
 
     return chiseled_filename, status
 
@@ -3702,7 +3705,7 @@ def run_astwarp_alignment_noisechisel(block, sci_dir, dest_dir):
 
     return chiseled_filenames, combined_filenames, status
 
-def convert_fits_to_pdf(filename, dest_dir, crop=False, center_RA=0, center_DEC=0, width=1991.0, height=511.0, hdu='SCI', dbg=False):
+def convert_fits_to_pdf(filename, dest_dir, crop=False, center_RA=0, center_DEC=0, width=1991.0, height=511.0, hdu='SCI', stack=True, dbg=False):
     '''
     Calls determine_image_stats to get sigma-clipped mean and standard deviation.
     Calls run_astconvertt to convert .fits file into .pdf file.
@@ -3719,8 +3722,12 @@ def convert_fits_to_pdf(filename, dest_dir, crop=False, center_RA=0, center_DEC=
     if '-chisel' in filename:
         hdu = 'DETECTIONS'
     #print(hdu)
-    mean, std = determine_image_stats(filename, hdu)
-    pdf_filename, status = run_astconvertt(filename, dest_dir, mean, std, hdu)
+    if stack:
+        mean, std = determine_image_stats(filename, hdu)
+
+        pdf_filename, status = run_astconvertt(filename, dest_dir, hdu, mean=mean, std=std, stack=True)
+    else:
+        pdf_filename, status = run_astconvertt(filename, dest_dir, hdu, stack=stack)
 
     return pdf_filename, status
 

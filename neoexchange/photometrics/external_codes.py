@@ -578,8 +578,13 @@ def determine_astarithmetic_options(filenames, dest_dir, hdu = 'ALIGNED'):
     options = f'--globalhdu {hdu} --output={output_filename} {filenames_list} {len(filenames)} 2 0.05 sigclip-mean'
     return output_filename, options
 
+def determine_didymos_extraction_options(filename, dest_dir, didymos_id):
+    raw_filename = os.path.basename(filename)
+    output_filename = os.path.join(dest_dir, raw_filename.replace('-chisel', '-didymos_chisel'))
+    options = f'-hDETECTIONS {filename} {didymos_id} eq 1 erode 1 erode 1 erode --output={output_filename}'
+    return output_filename, options
+
 def determine_astnoisechisel_options(filename, dest_dir, hdu = 0, bkg_only=False):
-    #, tilesize = '30,30', erode = 2, detgrowquant = 0.75, maxholesize = 10000):
     raw_filename = os.path.basename(filename)
     output_filename = os.path.join(dest_dir, raw_filename.replace(".fits", "-chisel.fits"))
     #original options from tutorial
@@ -601,19 +606,25 @@ def determine_image_stats(filename, hdu='SCI'):
     if mean is not None and std is not None:
         mean = float(mean)
         std = float(std)
-    #print(mean,std)
     return mean, std
 
-def determine_astconvertt_options(filename, dest_dir, mean, std, hdu='SCI'):
+def determine_stack_astconvertt_options(filename, dest_dir, mean, std, hdu='SCI'):
     raw_filename = os.path.basename(filename)
     output_filename = os.path.join(dest_dir, raw_filename.replace(".fits", ".pdf"))
-
+    #print(type(mean), type(std))
     sigrem = -0.5
     sigadd = 25
+
     low = mean + sigrem * std
     high = mean + sigadd * std
     #print(low,high)
     options = f'{filename} -L {low} -H {high} -h{hdu} --colormap=sls-inverse --output={output_filename}'
+    return output_filename, options
+
+def determine_astconvertt_options(filename, dest_dir, hdu='SCI'):
+    raw_filename = os.path.basename(filename)
+    output_filename = os.path.join(dest_dir, raw_filename.replace(".fits", ".pdf"))
+    options = f'{filename} -h{hdu} --colormap=sls-inverse --output={output_filename}'
     return output_filename, options
 
 def determine_astmkcatalog_options(filename, dest_dir):
@@ -1710,8 +1721,40 @@ def run_astarithmetic(input_filenames, dest_dir, hdu = 'ALIGNED', binary='astari
 
     return combined_filename, retcode_or_cmdline
 
+def run_didymos_astarithmetic(filename, dest_dir, didymos_id, binary='astarithmetic', dbg=False):
+    '''
+    Runs astarithmetic on <filename> to extract didymos_detection writing
+    output to <dest_dir>
+    '''
+    if filename is None:
+        return None, -2
+    if os.path.exists(filename) is False:
+        return None, -1
+    binary = binary or find_binary(binary)
+    if binary is None:
+        logger.error(f"Could not locate {binary} executable in PATH")
+        return None, -42
+    cmdline = f"{binary} "
+    extracted_filename, options = determine_didymos_extraction_options(filename, dest_dir, didymos_id)
+    if os.path.exists(extracted_filename):
+        return extracted_filename, 1
+    cmdline += options
+    cmdline = cmdline.rstrip()
+    if dbg:
+        print(cmdline)
+
+    if dbg is True:
+        retcode_or_cmdline = cmdline
+    else:
+        logger.debug(f"cmdline={cmdline}")
+        cmd_args = cmdline.split()
+        cmd_call = Popen(cmd_args, cwd=dest_dir, stdout=PIPE)
+        (out, errors) = cmd_call.communicate()
+        retcode_or_cmdline = cmd_call.returncode
+
+    return extracted_filename, retcode_or_cmdline
+
 def run_astnoisechisel(filename, dest_dir, hdu = 0, binary='astnoisechisel', bkgd_only=False, dbg=False):
-    #, tilesize = '30,30', erode = 2, detgrowquant=0.75, maxholesize=10000,
     '''
     Runs astnoisechisel on <filename> to produce a binary detection map
     writing output to <dest_dir>
@@ -1774,7 +1817,7 @@ def run_aststatistics(filename, keyword, hdu='SCI', binary='aststatistics', dbg=
 
     return out, retcode_or_cmdline
 
-def run_astconvertt(filename, dest_dir, mean, std, hdu='SCI', binary='astconvertt', dbg=False):
+def run_astconvertt(filename, dest_dir, hdu='SCI', mean=0, std=0, stack=True, binary='astconvertt', dbg=False):
     '''
     Runs astconvertt on <filename> to convert .fits file to .pdf file writing
     output to <dest_dir>
@@ -1788,7 +1831,10 @@ def run_astconvertt(filename, dest_dir, mean, std, hdu='SCI', binary='astconvert
         logger.error(f"Could not locate {binary} executable in PATH")
         return None, -42
     cmdline = f"{binary} "
-    pdf_filename, options = determine_astconvertt_options(filename, dest_dir, mean, std, hdu)
+    if stack:
+        pdf_filename, options = determine_stack_astconvertt_options(filename, dest_dir, mean, std, hdu)
+    else:
+        pdf_filename, options = determine_astconvertt_options(filename, dest_dir, hdu)
     if os.path.exists(pdf_filename):
         return pdf_filename, 1
     cmdline += options
