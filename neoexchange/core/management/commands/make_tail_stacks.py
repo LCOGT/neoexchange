@@ -163,6 +163,7 @@ class Command(BaseCommand):
                     pdf_extracted_filename, status = convert_fits_to_pdf(extracted_filename, dest_dir_path, stack=False)
                 for combined_filename in combined_filenames:
                     pdf_filename_combined, status = convert_fits_to_pdf(combined_filename, dest_dir_path)
+                    jpg_filename_combined, status = convert_fits_to_pdf(combined_filename, dest_dir_path, out_type='jpg')
                     pdf_filenames_combined.append(pdf_filename_combined)
                 self.stdout.write(f'Chiseled filename(s): {pdf_filenames_chiseled}')
                 self.stdout.write(f'Combined filename(s): {pdf_filenames_combined}')

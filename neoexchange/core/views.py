@@ -17,7 +17,7 @@ import copy
 from glob import glob
 from operator import itemgetter
 from datetime import datetime, timedelta, date
-from math import floor, ceil, degrees, radians, pi, acos, pow, cos
+from math import floor, ceil, degrees, radians, pi, acos, pow, cos, sin, tan
 from astropy import units as u
 from astropy.coordinates import SkyCoord
 from astropy.io import fits
@@ -92,8 +92,8 @@ from photometrics.SA_scatter import readSources, genGalPlane, plotScatter, \
 from core.plots import spec_plot, lin_vis_plot, lc_plot
 from core.blocksfind import find_frames, get_ephem, ephem_interpolate, split_light_curve_blocks, get_substacks
 
-# import matplotlib
-# matplotlib.use('Agg')
+import matplotlib
+matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 
 logger = logging.getLogger(__name__)
@@ -3707,7 +3707,7 @@ def run_astwarp_alignment_noisechisel(block, sci_dir, dest_dir):
 
     return chiseled_filenames, combined_filenames, status
 
-def convert_fits_to_pdf(filename, dest_dir, crop=False, center_RA=0, center_DEC=0, width=1991.0, height=511.0, hdu='SCI', stack=True, dbg=False):
+def convert_fits_to_pdf(filename, dest_dir, out_type='pdf', crop=False, center_RA=0, center_DEC=0, width=1991.0, height=511.0, hdu='SCI', stack=True, dbg=False):
     '''
     Calls determine_image_stats to get sigma-clipped mean and standard deviation.
     Calls run_astconvertt to convert .fits file into .pdf file.
@@ -3727,21 +3727,25 @@ def convert_fits_to_pdf(filename, dest_dir, crop=False, center_RA=0, center_DEC=
     if stack:
         mean, std = determine_image_stats(filename, hdu)
 
-        pdf_filename, status = run_astconvertt(filename, dest_dir, hdu, mean=mean, std=std, stack=True)
+        pdf_filename, status = run_astconvertt(filename, dest_dir, out_type, hdu, mean=mean, std=std, stack=True)
     else:
-        pdf_filename, status = run_astconvertt(filename, dest_dir, hdu, stack=stack)
+        pdf_filename, status = run_astconvertt(filename, dest_dir, out_type, hdu, stack=stack)
 
     return pdf_filename, status
 
-def plot_didymos_images(combined_filename, didymos_extracted_filename, table):
+#def plot_didymos_images(combined_filename, didymos_extracted_filename, table):
+def plot_didymos_images(jpg_combined_filename, table):
     '''
+    Plots a <jpg_combined_filename>. Adds directional arrows for velocity
+    and sun position as well as a scale bar showing 1000 km.
     '''
-    #configure font and lines
-    rc('font',**{'name':'Arial','size':16})
-    rc('lines', **{'lw':2})
+    sun_arr = table['sunTargetPA']
+    vel_arr = table['velocityPA']
+    dist_arr = table['delta']
 
     #declare output file name
-    output_plot = didymos_extracted_filename.replace('chisel','plot')
+    output_plot = jpg_combined_filename.replace('combine-superstack','plot')
+    output_plot = output_plot.replace('.jpg', '.png')
 
     #set up line color cycler
 
@@ -3750,9 +3754,9 @@ def plot_didymos_images(combined_filename, didymos_extracted_filename, table):
     arrow_len=75
     ih=511
     iw=1991
-    sun=
-    vel=
-    dist=
+    sun=sun_arr[0]
+    vel=vel_arr[0]
+    dist=dist_arr[0]
     dscale=1000
     pix=0.3985
 
@@ -3762,6 +3766,36 @@ def plot_didymos_images(combined_filename, didymos_extracted_filename, table):
     ysun=arrow_len*sin(radians(sun)+radians(90))
     xvel=arrow_len*cos(radians(vel)+radians(90))
     yvel=arrow_len*sin(radians(vel)+radians(90))
+
+    #add arrows
+    plt.arrow(xz, yz, 0, arrow_len, width=2, length_includes_head=True, color='black')
+    plt.arrow(xz, yz, xsun, ysun, width=2, length_includes_head=True, color='black')
+    plt.arrow(xz, yz, xvel, yvel, width=2, length_includes_head=True, color='black')
+
+    #add labels
+    plt.text(xz, yz+arrow_len, 'N', fontfamily='Arial', fontsize=16)
+    plt.text(xz+xsun, yz+ysun, '-$\mathregular{R_\u2609}$', fontfamily='Arial', fontsize=16)
+    plt.text(xz+xvel, yz+yvel, '-v', fontfamily='Arial', fontsize=16)
+
+    #add scale bar
+    tickxz=arrow_len
+    tickyz=1.5*arrow_len
+
+    tickw=dscale/(dist*au)/tan(radians(pix/3600))
+    tickh=arrow_len/10
+    nticks=1
+
+    plt.arrow(tickxz, tickyz, nticks*tickw, 0, width=2, head_width=0, head_length=0, color='black')
+    plt.arrow(tickxz, tickyz-tickh, 0, 2*tickh, width=2, head_width=0, head_length=0, color='black')
+    plt.arrow(tickxz+tickw, tickyz-tickh, 0, 2*tickh, width=2, head_width=0, head_length=0, color='black')
+
+    plt.text(tickxz, tickyz-tickh*3, f'{dscale} km', fontfamily='Arial', fontsize=16)
+
+    img = plt.imread(jpg_combined_filename)
+    plt.imshow(img, extent=[0, iw, 0, ih])
+
+    plt.show()
+    #plt.savefig(output_plot, bbox_inches='tight')
 
 def find_block_for_frame(catfile):
     """Try and find a Block for the original passed <catfile> filename (new style with

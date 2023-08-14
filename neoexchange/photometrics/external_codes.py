@@ -608,9 +608,9 @@ def determine_image_stats(filename, hdu='SCI'):
         std = float(std)
     return mean, std
 
-def determine_stack_astconvertt_options(filename, dest_dir, mean, std, hdu='SCI'):
+def determine_stack_astconvertt_options(filename, dest_dir, out_type, mean, std, hdu='SCI'):
     raw_filename = os.path.basename(filename)
-    output_filename = os.path.join(dest_dir, raw_filename.replace(".fits", ".pdf"))
+    output_filename = os.path.join(dest_dir, raw_filename.replace(".fits", f".{out_type}"))
     #print(type(mean), type(std))
     sigrem = -0.5
     sigadd = 25
@@ -621,9 +621,9 @@ def determine_stack_astconvertt_options(filename, dest_dir, mean, std, hdu='SCI'
     options = f'{filename} -L {low} -H {high} -h{hdu} --colormap=sls-inverse --output={output_filename}'
     return output_filename, options
 
-def determine_astconvertt_options(filename, dest_dir, hdu='SCI'):
+def determine_astconvertt_options(filename, dest_dir, out_type='pdf', hdu='SCI'):
     raw_filename = os.path.basename(filename)
-    output_filename = os.path.join(dest_dir, raw_filename.replace(".fits", ".pdf"))
+    output_filename = os.path.join(dest_dir, raw_filename.replace(".fits", f".{out_type}"))
     options = f'{filename} -h{hdu} --colormap=sls-inverse --output={output_filename}'
     return output_filename, options
 
@@ -1817,7 +1817,7 @@ def run_aststatistics(filename, keyword, hdu='SCI', binary='aststatistics', dbg=
 
     return out, retcode_or_cmdline
 
-def run_astconvertt(filename, dest_dir, hdu='SCI', mean=0, std=0, stack=True, binary='astconvertt', dbg=False):
+def run_astconvertt(filename, dest_dir, out_type='pdf', hdu='SCI', mean=0, std=0, stack=True, binary='astconvertt', dbg=False):
     '''
     Runs astconvertt on <filename> to convert .fits file to .pdf file writing
     output to <dest_dir>
@@ -1832,9 +1832,9 @@ def run_astconvertt(filename, dest_dir, hdu='SCI', mean=0, std=0, stack=True, bi
         return None, -42
     cmdline = f"{binary} "
     if stack:
-        pdf_filename, options = determine_stack_astconvertt_options(filename, dest_dir, mean, std, hdu)
+        pdf_filename, options = determine_stack_astconvertt_options(filename, dest_dir, out_type, mean, std, hdu)
     else:
-        pdf_filename, options = determine_astconvertt_options(filename, dest_dir, hdu)
+        pdf_filename, options = determine_astconvertt_options(filename, dest_dir, out_type, hdu)
     if os.path.exists(pdf_filename):
         return pdf_filename, 1
     cmdline += options
