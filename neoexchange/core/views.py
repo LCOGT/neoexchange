@@ -3739,6 +3739,9 @@ def plot_didymos_images(jpg_combined_filename, table):
     Plots a <jpg_combined_filename>. Adds directional arrows for velocity
     and sun position as well as a scale bar showing 1000 km.
     '''
+    from cycler import cycler
+    font_size = 16
+
     sun_arr = table['sunTargetPA']
     vel_arr = table['velocityPA']
     dist_arr = table['delta']
@@ -3748,6 +3751,20 @@ def plot_didymos_images(jpg_combined_filename, table):
     output_plot = output_plot.replace('.jpg', '.png')
 
     #set up line color cycler
+    # Adapted from https://matplotlib.org/stable/tutorials/intermediate/color_cycle.html
+    colors = [ "#000000",   # black
+               "#ee7733",   #gnuplot linestyle 1
+               "#0077bb",   #gnuplot linestyle 2
+               "#33bbee",   #gnuplot linestyle 3
+               "#ee3377",   #gnuplot linestyle 4
+               "#cc3311",   #gnuplot linestyle 5
+               "#009988",   #gnuplot linestyle 6
+               "#bbbbbb",   #gnuplot linestyle 7
+             ]
+    custom_cycler = cycler(color=colors[1:])
+    # Routine needs converting to operate on fig, ax1 from plt.subplots for line
+    # below to work
+    #ax1.set_prop_cycle(custom_cycler)
 
     #declare variables
     au=149597870.7
@@ -3769,13 +3786,13 @@ def plot_didymos_images(jpg_combined_filename, table):
 
     #add arrows
     plt.arrow(xz, yz, 0, arrow_len, width=2, length_includes_head=True, color='black')
-    plt.arrow(xz, yz, xsun, ysun, width=2, length_includes_head=True, color='black')
-    plt.arrow(xz, yz, xvel, yvel, width=2, length_includes_head=True, color='black')
+    plt.arrow(xz, yz, xsun, ysun, width=2, length_includes_head=True, color=colors[1])
+    plt.arrow(xz, yz, xvel, yvel, width=2, length_includes_head=True, color=colors[2])
 
     #add labels
-    plt.text(xz, yz+arrow_len, 'N', fontfamily='Arial', fontsize=16)
-    plt.text(xz+xsun, yz+ysun, '-$\mathregular{R_\u2609}$', fontfamily='Arial', fontsize=16)
-    plt.text(xz+xvel, yz+yvel, '-v', fontfamily='Arial', fontsize=16)
+    plt.text(xz, yz+arrow_len, 'N', fontfamily='Arial', fontsize=font_size, color='black')
+    plt.text(xz+xsun, yz+ysun, '-$\mathregular{R_\u2609}$', fontfamily='Arial', fontsize=font_size, color=colors[1])
+    plt.text(xz+xvel, yz+yvel, '-v', fontfamily='Arial', fontsize=font_size, color=colors[2])
 
     #add scale bar
     tickxz=arrow_len
@@ -3789,7 +3806,7 @@ def plot_didymos_images(jpg_combined_filename, table):
     plt.arrow(tickxz, tickyz-tickh, 0, 2*tickh, width=2, head_width=0, head_length=0, color='black')
     plt.arrow(tickxz+tickw, tickyz-tickh, 0, 2*tickh, width=2, head_width=0, head_length=0, color='black')
 
-    plt.text(tickxz, tickyz-tickh*3, f'{dscale} km', fontfamily='Arial', fontsize=16)
+    plt.text(tickxz, tickyz-tickh*3, f'{dscale} km', fontfamily='Arial', fontsize=font_size)
 
     img = plt.imread(jpg_combined_filename)
     plt.imshow(img, extent=[0, iw, 0, ih])
