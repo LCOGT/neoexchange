@@ -3734,13 +3734,15 @@ def convert_fits_to_pdf(filename, dest_dir, out_type='pdf', crop=False, center_R
     return pdf_filename, status
 
 #def plot_didymos_images(combined_filename, didymos_extracted_filename, table):
-def plot_didymos_images(jpg_combined_filename, table):
+def plot_didymos_images(jpg_combined_filename, table, dscale=1000, line_width=3, font_size=16):
     '''
     Plots a <jpg_combined_filename>. Adds directional arrows for velocity
-    and sun position as well as a scale bar showing 1000 km.
+    and sun position as well as a scale bar showing [dscale] km (defaults to 1000 km).
+    Optional parameters are [line_width] (defaults to 3, which is double the
+    matplotlib's default 1.5, to match the gnuplot 'lw 2') and [font_size] (defaults
+    to 16)
     '''
     from cycler import cycler
-    font_size = 16
 
     sun_arr = table['sunTargetPA']
     vel_arr = table['velocityPA']
@@ -3774,7 +3776,6 @@ def plot_didymos_images(jpg_combined_filename, table):
     sun=sun_arr[0]
     vel=vel_arr[0]
     dist=dist_arr[0]
-    dscale=1000
     pix=0.3985
 
     xz=arrow_len
@@ -3785,9 +3786,9 @@ def plot_didymos_images(jpg_combined_filename, table):
     yvel=arrow_len*sin(radians(vel)+radians(90))
 
     #add arrows
-    plt.arrow(xz, yz, 0, arrow_len, width=2, length_includes_head=True, color='black')
-    plt.arrow(xz, yz, xsun, ysun, width=2, length_includes_head=True, color=colors[1])
-    plt.arrow(xz, yz, xvel, yvel, width=2, length_includes_head=True, color=colors[2])
+    plt.arrow(xz, yz, 0, arrow_len, width=2, lw=line_width, length_includes_head=True, color='black')
+    plt.arrow(xz, yz, xsun, ysun, width=2, lw=line_width, length_includes_head=True, color=colors[1])
+    plt.arrow(xz, yz, xvel, yvel, width=2, lw=line_width, length_includes_head=True, color=colors[2])
 
     #add labels
     plt.text(xz, yz+arrow_len, 'N', fontfamily='Arial', fontsize=font_size, color='black')
@@ -3802,9 +3803,9 @@ def plot_didymos_images(jpg_combined_filename, table):
     tickh=arrow_len/10
     nticks=1
 
-    plt.arrow(tickxz, tickyz, nticks*tickw, 0, width=2, head_width=0, head_length=0, color='black')
-    plt.arrow(tickxz, tickyz-tickh, 0, 2*tickh, width=2, head_width=0, head_length=0, color='black')
-    plt.arrow(tickxz+tickw, tickyz-tickh, 0, 2*tickh, width=2, head_width=0, head_length=0, color='black')
+    plt.arrow(tickxz, tickyz, nticks*tickw, 0, width=2, lw=line_width, head_width=0, head_length=0, color='black')
+    plt.arrow(tickxz, tickyz-tickh, 0, 2*tickh, width=2, lw=line_width, head_width=0, head_length=0, color='black')
+    plt.arrow(tickxz+tickw, tickyz-tickh, 0, 2*tickh, lw=line_width, width=2, head_width=0, head_length=0, color='black')
 
     plt.text(tickxz, tickyz-tickh*3, f'{dscale} km', fontfamily='Arial', fontsize=font_size)
 
