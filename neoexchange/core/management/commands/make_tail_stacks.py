@@ -9,7 +9,7 @@ from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 
 from core.blocksfind import filter_blocks, find_frames, split_light_curve_blocks
-from core.views import run_astwarp_alignment_noisechisel, convert_fits_to_pdf, get_didymos_detection
+from core.views import run_astwarp_alignment_noisechisel, convert_fits, get_didymos_detection
 from photometrics.external_codes import run_astmkcatalog, run_asttable, run_didymos_astarithmetic
 
 
@@ -145,13 +145,13 @@ class Command(BaseCommand):
 
                 #call run_astwarp_alignment(), and run_noisechisel()
                 chiseled_filenames, combined_filenames, status = run_astwarp_alignment_noisechisel(block, sci_dir_path, dest_dir_path)
-                #call convert_fits_to_pdf()
+                #call convert_fits()
                 pdf_filenames_chiseled = []
                 pdf_filenames_combined = []
                 catalogs = []
                 didymos_ids = []
                 for chiseled_filename in chiseled_filenames:
-                    pdf_filename_chiseled, status = convert_fits_to_pdf(chiseled_filename, dest_dir_path, stack=False)
+                    pdf_filename_chiseled, status = convert_fits(chiseled_filename, dest_dir_path, stack=False)
                     pdf_filenames_chiseled.append(pdf_filename_chiseled)
                     catalog_filename, status = run_astmkcatalog(chiseled_filename, dest_dir_path)
                     catalogs.append(catalog_filename)
@@ -160,10 +160,10 @@ class Command(BaseCommand):
                     didymos_ids.append(didymos_id)
                     extracted_filename, status = run_didymos_astarithmetic(chiseled_filename, dest_dir_path, didymos_id)
                     #print(extracted_filename)
-                    pdf_extracted_filename, status = convert_fits_to_pdf(extracted_filename, dest_dir_path, stack=False)
+                    pdf_extracted_filename, status = convert_fits(extracted_filename, dest_dir_path, stack=False)
                 for combined_filename in combined_filenames:
-                    pdf_filename_combined, status = convert_fits_to_pdf(combined_filename, dest_dir_path)
-                    jpg_filename_combined, status = convert_fits_to_pdf(combined_filename, dest_dir_path, out_type='jpg')
+                    pdf_filename_combined, status = convert_fits(combined_filename, dest_dir_path)
+                    jpg_filename_combined, status = convert_fits(combined_filename, dest_dir_path, out_type='jpg')
                     pdf_filenames_combined.append(pdf_filename_combined)
                 self.stdout.write(f'Chiseled filename(s): {pdf_filenames_chiseled}')
                 self.stdout.write(f'Combined filename(s): {pdf_filenames_combined}')

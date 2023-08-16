@@ -8620,20 +8620,22 @@ class TestRunSExtractorMakeCatalog(ExternalCodeUnitTest):
         self.assertTrue(os.path.exists(new_ldac_catalog))
         self.assertEqual(expected_ldac_catalog, new_ldac_catalog)
 
-class TestConvertFitsToPdf(ExternalCodeUnitTest):
+class TestConvertFits(ExternalCodeUnitTest):
     def setUp(self):
-        super(TestConvertFitsToPdf, self).setUp()
+        super(TestConvertFits, self).setUp()
 
         shutil.copy(os.path.abspath(self.test_banzai_file), self.test_dir)
         self.test_banzai_file_COPIED = os.path.join(self.test_dir, 'banzai_test_frame.fits')
+
+        self.test_file, status = run_astnoisechisel(self.test_banzai_file_COPIED, self.test_dir, hdu = 0, bkgd_only=True)
 
         self.remove = True
 
     def test_no_crop(self):
         expected_status = 0
-        expected_output_filename = os.path.join(self.test_dir, self.test_banzai_file_COPIED.replace('.fits', '.pdf'))
+        expected_output_filename = os.path.join(self.test_dir, self.test_file.replace('.fits', '.pdf'))
 
-        pdf_filename, status = convert_fits_to_pdf(self.test_banzai_file_COPIED, self.test_dir)
+        pdf_filename, status = convert_fits(self.test_file, self.test_dir)
 
         self.assertEquals(expected_status, status)
         self.assertTrue(os.path.exists(expected_output_filename))
@@ -8641,9 +8643,9 @@ class TestConvertFitsToPdf(ExternalCodeUnitTest):
 
     def test_crop(self):
         expected_status = 0
-        expected_output_filename = os.path.join(self.test_dir, self.test_banzai_file_COPIED.replace('.fits', '-crop.pdf'))
+        expected_output_filename = os.path.join(self.test_dir, self.test_file.replace('.fits', '-crop.pdf'))
 
-        pdf_filename, status = convert_fits_to_pdf(self.test_banzai_file_COPIED, self.test_dir, crop=True, center_RA=272.9615245, center_DEC=1.2784917)
+        pdf_filename, status = convert_fits(self.test_file, self.test_dir, crop=True, center_RA=272.9615245, center_DEC=1.2784917)
 
         self.assertEquals(expected_status, status)
         self.assertTrue(os.path.exists(expected_output_filename))
@@ -8653,7 +8655,7 @@ class TestConvertFitsToPdf(ExternalCodeUnitTest):
         expected_status = -2
         expected_output_filename = None
 
-        pdf_filename, status = convert_fits_to_pdf(self.test_banzai_file_COPIED, self.test_dir, crop=True, center_RA=300, center_DEC=5)
+        pdf_filename, status = convert_fits(self.test_file, self.test_dir, crop=True, center_RA=300, center_DEC=5)
 
         self.assertEquals(expected_status, status)
         self.assertEquals(expected_output_filename, pdf_filename)
