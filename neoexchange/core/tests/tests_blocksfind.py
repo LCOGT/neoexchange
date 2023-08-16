@@ -13,6 +13,7 @@ from core.blocksfind import *
 # Disable logging during testing
 import logging
 logger = logging.getLogger(__name__)
+
 # Disable anything below CRITICAL level
 logging.disable(logging.CRITICAL)
 
@@ -245,23 +246,22 @@ class TestSplitLightCurveBlocks(TestCase):
 
     def test_empty_block(self):
         expected_split_block = []
-        expected_dates = []
-        split_block, dates = split_light_curve_blocks(self.empty_test_block)
+        frames, banzai, neox = find_frames(self.empty_test_block) 
+        split_block = split_light_curve_blocks(frames)
         self.assertEquals(expected_split_block, split_block)
-        self.assertEquals(expected_dates, dates)
 
     def test_exptime(self):
         expected_split_block_len = 2
-        split_block, dates = split_light_curve_blocks(self.test_block, exptime=100)
+        frames, banzai, neox = find_frames(self.test_block)
+        split_block = split_light_curve_blocks(frames, exptime=100)
         self.assertEquals(expected_split_block_len, len(split_block))
-        self.assertEquals(len(split_block), len(dates))
 
 class TestFindFrames(TestCase):
     def setUp(self):
         didymos_params = { 'name' : '65803'
                          }
         self.test_body = Body.objects.create(**didymos_params)
-        
+
         neo_proposal_params = { 'code'  : 'LCO2022A-009',
                                 'title' : 'LCOGT NEO Follow-up Network'
                               }
@@ -285,7 +285,7 @@ class TestFindFrames(TestCase):
                          'superblock' : self.test_sblock,
                          'block_start' : '2022-10-20 13:00:00',
                          'block_end'   : '2022-10-21 03:00:00',
-                         'request_number' : '00001',
+                         'request_number' : '00002',
                          'num_exposures' : 5,
                          'exp_length' : 42.0,
                          'num_observed' : 1,
@@ -295,9 +295,10 @@ class TestFindFrames(TestCase):
 
         frame_params = { 'sitecode' : 'K92',
                           'filter' : 'w',
+                          'exptime' : 30,
                           'block' : self.test_block,
                           'midpoint' : datetime(2022,10,20,15,0,0),
-                          'frametype' : Frame.BANZAI_RED_FRAMETYPE
+                          'frametype' : Frame.NEOX_RED_FRAMETYPE
                         }
         self.test_frames = []
 
@@ -306,16 +307,9 @@ class TestFindFrames(TestCase):
             test_frame = Frame.objects.create(**frame_params)
             self.test_frames.append(test_frame)
 
-        #create ldac catalog versions of the same frame
-        frame_params['midpoint'] =  datetime(2022,10,20,15,0,0)
-        frame_params['frametype'] = Frame.BANZAI_LDAC_CATALOG   
-        for frame_num in range(block_params['num_exposures']):
-            frame_params['midpoint'] += timedelta(minutes = frame_num * 10)
-            test_frame = Frame.objects.create(**frame_params)
-
     def test_expected(self):
         self.assertEqual(1, Block.objects.all().count())
-        self.assertEqual(10, Frame.objects.all().count())
+        self.assertEqual(5, Frame.objects.all().count())
 
     def test_didymos_block(self):
         expected_num_frames = 5

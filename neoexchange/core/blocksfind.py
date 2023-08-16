@@ -1,15 +1,15 @@
 import logging
 import os
-from core.models import Body,Block,SuperBlock,Frame
 from astropy.wcs import WCS, FITSFixedWarning, InvalidTransformError
 from astropy.io import fits
+from astropy.time import Time
 from datetime import datetime,timedelta
 import warnings
 import calendar
 from photutils.centroids import centroid_sources, centroid_2dg
-from astrometrics.ephem_subs import horizons_ephem
-from astropy.time import Time
 import numpy as np
+from astrometrics.ephem_subs import horizons_ephem
+from core.models import Body,Block,SuperBlock,Frame
 warnings.simplefilter('ignore', category=FITSFixedWarning)
 
 logger = logging.getLogger(__name__)
@@ -30,7 +30,6 @@ def find_didymos_blocks():
 
     return blocks
 
-
 def blocks_summary(blocks):
     '''
     Prints short summary of passed <blocks>
@@ -49,7 +48,7 @@ def split_light_curve_blocks(frames, exptime=800):
     total exposure time equal to <exptime>
     '''
     if len(frames)==0:
-        return [], []
+        return []
     exp_length = frames[0].block.exp_length
     #print(exp_length)
     total_exp_time = len(frames) * exp_length
@@ -58,7 +57,7 @@ def split_light_curve_blocks(frames, exptime=800):
 
     return split_block
 
-def get_substacks(subblock, segstack_sequence=5):
+def get_substacks(subblock, segstack_sequence=7):
     '''
     Routine to get substacks for a given <subblock>. <subblock> should be 
     a list of frames. Returns the stacked filenames
@@ -110,9 +109,9 @@ def filter_blocks(original_blocks, start_date, end_date, min_frames=3, max_frame
 
 def find_frames(block):
     '''
-    Routine to find all frames for a given block and number and type(s)
-    of different filters
-    Returns list of frames
+    Routine to find all frames for a given block as well as number of banzai
+    frames and number of neox frames. 
+    Returns list of frames and number of banzai and neox frames.
     '''
     frames = Frame.objects.filter(block = block)
     banzai_frames = frames.filter(frametype = Frame.BANZAI_RED_FRAMETYPE)
@@ -122,7 +121,6 @@ def find_frames(block):
     #    print(f'Block uid: {block.get_blockuid}, Num banzai frames: {len(banzai_frames)}, Num neox frames: {len(neox_frames)}')
 
     return neox_frames, len(banzai_frames), len(neox_frames)
-
 
 def frames_summary(frames):
     '''
@@ -140,7 +138,6 @@ def frames_summary(frames):
     filter_names = ", ".join(filter_frames.values_list('filter',flat=True))
 
     print(f"number of filters: {filter_frames.count()}, filter type(s): {filter_names}")
-
 
 def get_ephem(block):
     '''
@@ -163,7 +160,6 @@ def get_ephem(block):
     table = horizons_ephem(body.current_name(), start_time, end_time, first_frame.sitecode, '1m')
 
     return table
-
 
 def ephem_interpolate(times, table):
     '''

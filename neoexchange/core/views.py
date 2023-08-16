@@ -28,6 +28,7 @@ import logging
 import tempfile
 import bokeh
 from bs4 import BeautifulSoup
+from PIL import Image, ImageFilter
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -3582,7 +3583,7 @@ def run_hotpants_subtraction(ref, sci_dir, configs_dir, dest_dir):
 
     return status
 
-def stack_lightcurve_block(block, sci_dir, dest_dir, table, exptime=800, segstack_sequence=5):
+def stack_lightcurve_block(block, sci_dir, dest_dir, table, exptime=800, segstack_sequence=7):
     '''
     Routine that takes a light curve <block> and splits it into subblocks of
     equal exposure time <exptime>. For each subblock it is sorted into substacks
@@ -3785,14 +3786,16 @@ def plot_didymos_images(jpg_combined_filename, table, dscale=1000, line_width=3,
     xvel=arrow_len*cos(radians(vel)+radians(90))
     yvel=arrow_len*sin(radians(vel)+radians(90))
 
+    plt.figure()
+
     #add arrows
     plt.arrow(xz, yz, 0, arrow_len, width=2, lw=line_width, length_includes_head=True, color='black')
-    plt.arrow(xz, yz, xsun, ysun, width=2, lw=line_width, length_includes_head=True, color=colors[1])
+    plt.arrow(xz, yz, xsun, ysun, width=2, lw=line_width, length_includes_head=True, color=colors[5])
     plt.arrow(xz, yz, xvel, yvel, width=2, lw=line_width, length_includes_head=True, color=colors[2])
 
     #add labels
     plt.text(xz, yz+arrow_len, 'N', fontfamily='Arial', fontsize=font_size, color='black')
-    plt.text(xz+xsun, yz+ysun, '-$\mathregular{R_\u2609}$', fontfamily='Arial', fontsize=font_size, color=colors[1])
+    plt.text(xz+xsun, yz+ysun, '-$\mathregular{R_\u2609}$', fontfamily='Arial', fontsize=font_size, color=colors[5])
     plt.text(xz+xvel, yz+yvel, '-v', fontfamily='Arial', fontsize=font_size, color=colors[2])
 
     #add scale bar
@@ -3807,13 +3810,27 @@ def plot_didymos_images(jpg_combined_filename, table, dscale=1000, line_width=3,
     plt.arrow(tickxz, tickyz-tickh, 0, 2*tickh, width=2, lw=line_width, head_width=0, head_length=0, color='black')
     plt.arrow(tickxz+tickw, tickyz-tickh, 0, 2*tickh, lw=line_width, width=2, head_width=0, head_length=0, color='black')
 
-    plt.text(tickxz, tickyz-tickh*3, f'{dscale} km', fontfamily='Arial', fontsize=font_size)
+    plt.text(tickxz, tickyz-tickh*4, f'{dscale} km', fontfamily='Arial', fontsize=font_size)
 
+    #add stacked image
     img = plt.imread(jpg_combined_filename)
     plt.imshow(img, extent=[0, iw, 0, ih])
 
-    plt.show()
+    #get outline of chiseled image
+    # edge_filename = didymos_extracted_filename.replace('chisel','edge')
+    # chisel = Image.open(didymos_extracted_filename)
+    # chisel = chisel.convert("L")
+    # chisel = chisel.filter(ImageFilter.FIND_EDGES)
+    # chisel.save(edge_filename)
+
+    #img_edge = plt.imread(edge_filename)
+    #plt.imshow(img_edge, extent=[0, iw, 0, ih])
+
+    mng = plt.get_current_fig_manager()
+    mng.resize(*mng.window.maxsize())
+
     #plt.savefig(output_plot, bbox_inches='tight')
+    plt.show()
 
 def find_block_for_frame(catfile):
     """Try and find a Block for the original passed <catfile> filename (new style with
