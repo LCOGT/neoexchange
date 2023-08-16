@@ -60,6 +60,7 @@ target/
 # PyCharm files
 **/.idea/workspace.xml
 **/.idea/tasks.xml
+**/.idea/
 
 # VisualStudio files
 .vs/
