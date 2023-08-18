@@ -608,7 +608,7 @@ def determine_image_stats(filename, hdu='SCI'):
         std = float(std)
     return mean, std
 
-def determine_stack_astconvertt_options(filename, dest_dir, out_type, mean, std, hdu='SCI'):
+def determine_stack_astconvertt_options(filename, dest_dir, mean, std, out_type='pdf', hdu='SCI'):
     raw_filename = os.path.basename(filename)
     output_filename = os.path.join(dest_dir, raw_filename.replace(".fits", f".{out_type}"))
     #print(type(mean), type(std))
@@ -1684,8 +1684,8 @@ def run_astwarp(filename, dest_dir, center_RA, center_DEC, width = 1991.0, heigh
 
 def run_astarithmetic(input_filenames, dest_dir, hdu = 'ALIGNED', binary='astarithmetic', dbg=False):
     '''
-    Runs astarithmetic on list of <filenames> to median combine writing 
-    output to <dest_dir>
+    Runs astarithmetic on list of <filenames> to mean combine creating a
+    stack writing output to <dest_dir>
     '''
     filenames=[]
     for filename in input_filenames:
@@ -1819,7 +1819,7 @@ def run_aststatistics(filename, keyword, hdu='SCI', binary='aststatistics', dbg=
 
 def run_astconvertt(filename, dest_dir, out_type='pdf', hdu='SCI', mean=0, std=0, stack=True, binary='astconvertt', dbg=False):
     '''
-    Runs astconvertt on <filename> to convert .fits file to .pdf file writing
+    Runs astconvertt on <filename> to convert .fits file to .<out_type> file writing
     output to <dest_dir>
     '''
     if filename is None:

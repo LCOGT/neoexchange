@@ -11,6 +11,7 @@ from django.core.management.base import BaseCommand, CommandError
 from core.blocksfind import filter_blocks, find_frames, split_light_curve_blocks
 from core.views import run_astwarp_alignment_noisechisel, convert_fits, get_didymos_detection
 from photometrics.external_codes import run_astmkcatalog, run_asttable, run_didymos_astarithmetic
+from photometrics.catalog_subs import reset_database_connection
 
 
 class Command(BaseCommand):
@@ -112,6 +113,8 @@ class Command(BaseCommand):
             sci_dir_path = output_path
             dest_dir_path = os.path.join(dest_dir, dayobs)
 
+            reset_database_connection()
+
             #make a record of stack midpoint, stack total exposure time, and moon fraction (need to get from fits header)
             if validate_only is False:
                 midpoint = block.block_start + (block.block_end - block.block_start)/2
@@ -145,6 +148,9 @@ class Command(BaseCommand):
 
                 #call run_astwarp_alignment(), and run_noisechisel()
                 chiseled_filenames, combined_filenames, status = run_astwarp_alignment_noisechisel(block, sci_dir_path, dest_dir_path)
+
+                reset_database_connection()
+
                 #call convert_fits()
                 pdf_filenames_chiseled = []
                 pdf_filenames_combined = []
