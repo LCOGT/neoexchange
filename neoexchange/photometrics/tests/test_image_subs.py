@@ -1,6 +1,6 @@
 """
 NEO exchange: NEO observing portal for Las Cumbres Observatory
-Copyright (C) 2022-2022 LCO
+Copyright (C) 2022-2023 LCO
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -22,12 +22,14 @@ import shutil
 from pathlib import Path
 
 from astropy.io import fits
+from astropy.coordinates import Angle
 from numpy import array, arange
 from numpy.testing import assert_allclose
 
 from django.test import TestCase
 from django.forms.models import model_to_dict
 
+from photometrics.catalog_subs import get_header
 from photometrics.tests.test_external_codes import ExternalCodeUnitTest
 # Import module to test
 from photometrics.image_subs import *
@@ -37,6 +39,7 @@ import logging
 logger = logging.getLogger(__name__)
 # Disable anything below CRITICAL level
 logging.disable(logging.CRITICAL)
+
 
 class TestCreateWeightImage(ExternalCodeUnitTest):
     def setUp(self):
@@ -452,3 +455,63 @@ class TestFindReferenceImage(ExternalCodeUnitTest):
         output = find_reference_images(self.test_dir, "reference*cpt*.fits")
 
         self.assertEqual(expected_output, output)
+
+
+class TestGetCD(ExternalCodeUnitTest):
+    def setUp(self):
+        super(TestGetCD, self).setUp()
+
+        self.header, cattype = get_header(self.test_banzai_file)
+        self.wcs = self.header['wcs']
+        self.pixsize_deg = 0.469552 / 3600.0
+        cross_term = 1.259428e-06
+        self.expected_cd = np.array([[-self.pixsize_deg, -cross_term], [cross_term, -self.pixsize_deg]])
+
+    def test_wcs(self):
+
+        cd = get_cd(self.wcs)
+
+        assert_allclose(self.expected_cd, cd, rtol=1e-6)
+
+    def test_fullheader(self):
+
+        cd = get_cd(self.header)
+
+        assert_allclose(self.expected_cd, cd, rtol=1e-6)
+
+
+class TestGetRot(ExternalCodeUnitTest):
+    def setUp(self):
+        super(TestGetRot, self).setUp()
+
+        self.header, cattype = get_header(self.test_banzai_file)
+        self.wcs = self.header['wcs']
+        self.expected_rot = 179.447
+
+        self.rtol = 1e-3
+
+    def test_wcs(self):
+
+        rot = get_rot(self.wcs)
+
+        assert_allclose(self.expected_rot, rot, rtol=self.rtol)
+
+    def test_fullheader(self):
+
+        rot = get_rot(self.header)
+
+        assert_allclose(self.expected_rot, rot, rtol=self.rtol)
+
+    def test_wcs_rad(self):
+        expected_rot = Angle(self.expected_rot*u.deg).to(u.rad).value
+
+        rot = get_rot(self.wcs, u.rad)
+
+        assert_allclose(expected_rot, rot, rtol=self.rtol)
+
+    def test_fullheader_rad(self):
+        expected_rot = Angle(self.expected_rot*u.deg).to(u.rad).value
+
+        rot = get_rot(self.header, u.rad)
+
+        assert_allclose(expected_rot, rot, rtol=self.rtol)

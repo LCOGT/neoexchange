@@ -19,10 +19,131 @@ import logging
 from glob import glob
 
 import numpy as np
+import astropy.units as u
 from astropy.io import fits
 
 logger = logging.getLogger(__name__)
 
+
+def get_cd(header_or_wcs):
+    """Return the coordinate conversion matrix (CD).
+
+    This is a 2x2 matrix that can be used to convert from the column and
+    row indexes of a pixel in the image array to a coordinate within a flat
+    map-projection of the celestial sphere.
+    Routine copied from the mpdaf.obj.coords"""
+
+    if type(header_or_wcs) == dict and 'wcs' in header_or_wcs:
+        wcs = header_or_wcs['wcs']
+    else:
+        wcs = header_or_wcs
+
+    # The documentation for astropy.wcs.Wcsprm indicates that
+    # get_cdelt() and get_pc() work:
+    #
+    # "even when the header specifies the linear transformation
+    #  matrix in one of the alternative CDi_ja or CROTAia
+    #  forms. This is useful when you want access to the linear
+    #  transformation matrix, but don't care how it was specified
+    #  in the header."
+    return np.dot(np.diag(wcs.wcs.get_cdelt()), wcs.wcs.get_pc())
+
+def image_angle_from_cd(cd, unit=u.deg):
+    """Return the rotation angle of the image.
+
+    Defined such that a rotation angle of zero aligns north along the positive
+    Y axis, and a positive rotation angle rotates north away from the Y axis,
+    in the sense of a rotation from north to east.
+
+    Note that the rotation angle is defined in a flat map-projection of the
+    sky. It is what would be seen if the pixels of the image were drawn with
+    their pixel widths scaled by the angular pixel increments returned by the
+    axis_increments_from_cd() method.
+
+    If the CD matrix was derived from the archaic CROTA and CDELT FITS
+    keywords, then the angle returned by this function is equal to CROTA.
+
+    Parameters
+    ----------
+    cd : numpy.ndarray
+        The 2x2 coordinate conversion matrix, with its elements
+        ordered for multiplying a column vector in FITS (x,y) axis order.
+    unit : `astropy.units.Unit`
+        The unit to give the returned angle (degrees by default).
+
+    Returns
+    -------
+    out : float
+        The angle between celestial north and the Y axis of the image,
+        in the sense of an eastward rotation of celestial north from
+        the Y-axis. The angle is returned in the range -180 to 180
+        degrees (or the equivalent for the specified unit).
+
+    """
+
+    # Get the angular increments of pixels along the Y and X axes
+    ## Calculate the width and height of the pixels.
+    dx = np.sqrt(cd[0, 0]**2 + cd[1, 0]**2)
+    dy = np.sqrt(cd[0, 1]**2 + cd[1, 1]**2)
+
+    ## Get the determinant of the coordinate transformation matrix.
+    cddet = np.linalg.det(cd)
+
+    ## Calculate the rotation angle of a unit northward vector
+    ## clockwise of the Y axis.
+    north = np.arctan2(-cd[0, 1] / cddet, cd[0, 0] / cddet)
+
+    ## Calculate the rotation angle of a unit eastward vector
+    ## clockwise of the Y axis.
+    east = np.arctan2(cd[1, 1] / cddet, -cd[1, 0] / cddet)
+
+    # Wrap the difference east-north into the range -pi to pi radians.
+    from astropy.coordinates import Angle
+    delta = Angle((east - north) * u.rad).wrap_at(np.pi * u.rad).value
+
+    # If east is anticlockwise of north make the X-axis pixel increment
+    # negative.
+    if delta < 0.0:
+        dx *= -1.0
+    step = np.array([dy, dx])
+
+    # The angle of a northward vector from the origin can be calculated by
+    # first using the inverse of the CD matrix to calculate the equivalent
+    # vector in pixel indexes, then calculating the angle of this vector to the
+    # Y axis of the image array.
+    north = np.arctan2(-cd[0, 1] * step[1] / cddet,
+                        cd[0, 0] * step[0] / cddet)
+
+    # Return the angle with the specified units.
+    return (north * u.rad).to(unit).value
+
+def get_rot(header_or_wcs, unit=u.deg):
+        """Return the rotation angle of the image.
+
+        The angle is defined such that a rotation angle of zero aligns north
+        along the positive Y axis, and a positive rotation angle rotates north
+        away from the Y axis, in the sense of a rotation from north to east.
+
+        Note that the rotation angle is defined in a flat map-projection of the
+        sky. It is what would be seen if the pixels of the image were drawn
+        with their pixel widths scaled by the angular pixel increments returned
+        by the get_axis_increments() method.
+
+        Parameters
+        ----------
+        unit : `astropy.units.Unit`
+            The unit to give the returned angle (degrees by default).
+
+        Returns
+        -------
+        out : float
+            The angle between celestial north and the Y axis of
+            the image, in the sense of an eastward rotation of
+            celestial north from the Y-axis.
+
+        """
+        cd = get_cd(header_or_wcs)
+        return image_angle_from_cd(cd, unit)
 
 def get_saturate(fits_header):
     """
