@@ -11,7 +11,7 @@ function moon_day(today) {
         return (fr - Math.floor(fr));
     };
     var thisJD = today.getJulian();
-    console.log(thisJD);
+    // console.log(thisJD);
     var year = today.getFullYear();
     var degToRad = 3.14159265 / 180;
     var K0, T, T2, T3, J0, F0, M0, M1, B1, oldJ;
