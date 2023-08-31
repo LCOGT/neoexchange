@@ -136,13 +136,13 @@ class Command(BaseCommand):
                             self.stdout.write("New Block with REQNUM=%s needed for SuperBlock #%d" % (request_num, old_sblock.id))
                             block_params = { 'superblock' : old_sblock,
                                      'active' : True,
-                                     'block_start': header.get('blksdate'),
-                                     'block_end'  : header.get('blkedate'),
+                                     'block_start': header.get('block_start'),
+                                     'block_end'  : header.get('block_end'),
                                      'body': old_sblock.body,
                                      'exp_length': header.get('exptime'),
-                                     'num_exposures': header.get('frmtotal', 0),
-                                     'site'     : header.get('siteid'),
-                                     'telclass' : header['telid'][0:3],
+                                     'num_exposures': header.get('num_exposures', 0),
+                                     'site'     : header.get('site_id'),
+                                     'telclass' : header['tel_id'][0:3],
                                      'request_number': header.get('request_number', ''),
                                      'tracking_rate' : int(header.get('tracrate_frac', 1.0)*100)
                                    }
