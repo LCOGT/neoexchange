@@ -900,12 +900,11 @@ div#show-messages {
   z-index: 99;
   width: 500px;
   box-shadow:0px 0px 40px #000;
-  -moz-box-shadow:0px 0px 40px #000;
-  -webkit-box-shadow:0px 0px 40px #000;
   border-radius: 8px;
-  -moz-border-radius: 8px;
-  -webkit-border-radius: 8px;
   font-size: 1em;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, 50%);
 }
 div#show-messages-inner {
   padding: 32px;

@@ -44,17 +44,11 @@
                                 })
 
                                 $(window).on('load',function(event){
-                                        centreDiv('#show-messages');
                                         $('#show-messages-close').bind("click",function(){
                                                 $('#show-messages').fadeOut("fast");
                                         });
                                         return false;
                                 })
-                                centreDiv = function(el){
-                                        var wide = $(window).width();
-                                        var tall = $(window).height();
-                                        $(el).css({left:(wide-$(el).outerWidth())/2,top:($(window).scrollTop()+(tall-$(el).outerHeight())/2)});
-                                }
                         });
                 </script>
                 {% block script-content %}{% endblock %}
