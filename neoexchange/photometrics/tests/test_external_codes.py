@@ -1929,6 +1929,7 @@ class TestDetermineAstarithmeticOptions(SimpleTestCase):
 
         self.assertEqual(expected_cmdline, cmdline)
 
+
 class TestDetermineDidymosExtractionOptions(SimpleTestCase):
     def setUp(self):
         self.test_dir = '/tmp/foo'
@@ -1948,6 +1949,36 @@ class TestDetermineDidymosExtractionOptions(SimpleTestCase):
         output_filename, cmdline = determine_didymos_extraction_options(self.test_file, self.test_dir, 2)
 
         self.assertEqual(expected_cmdline, cmdline)
+
+
+class TestDetermineDidymosBorderOptions(SimpleTestCase):
+    def setUp(self):
+        self.test_dir = '/tmp/foo'
+        self.test_file = 'tfn1m014-fa20-20221104-0207-e91-chisel.fits'
+        self.output_file = self.test_file.replace('-chisel', '-bd')
+        self.output_file_all = self.test_file.replace('-chisel', '-bda')
+
+    def test_border1(self):
+        expected_cmdline = f'{self.test_file} 42 eq set-i i 1 erode 1 erode 1 erode 0 where --output={self.test_dir}/{self.output_file}'
+
+        output_filename, cmdline = determine_didymos_border_options(self.test_file, self.test_dir, 42)
+
+        self.assertEqual(expected_cmdline, cmdline)
+
+    def test_borderall1(self):
+        expected_cmdline = f'{self.test_file} 0 gt set-i i 1 erode 1 erode 1 erode 0 where --output={self.test_dir}/{self.output_file_all}'
+
+        output_filename, cmdline = determine_didymos_border_options(self.test_file, self.test_dir, 2, True)
+
+        self.assertEqual(expected_cmdline, cmdline)
+
+    def test_borderall2(self):
+        expected_cmdline = f'{self.test_file} 0 gt set-i i 1 erode 1 erode 1 erode 0 where --output={self.test_dir}/{self.output_file_all}'
+
+        output_filename, cmdline = determine_didymos_border_options(self.test_file, self.test_dir, 2, all_borders=True)
+
+        self.assertEqual(expected_cmdline, cmdline)
+
 
 class TestDetermineAstnoisechiselOptions(SimpleTestCase):
     def setUp(self):

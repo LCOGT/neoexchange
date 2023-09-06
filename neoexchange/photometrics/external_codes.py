@@ -584,6 +584,26 @@ def determine_didymos_extraction_options(filename, dest_dir, didymos_id):
     options = f'-hDETECTIONS {filename} {didymos_id} eq 1 erode 1 erode 1 erode --output={output_filename}'
     return output_filename, options
 
+def determine_didymos_border_options(filename, dest_dir, didymos_id, all_borders=False):
+    """Determine the options needed for astarithmetic in order to make the
+    output file containing just the Didymos objectdetection 
+    contour ([all_borders=False; default]) or all objects ([all_borders=True])
+    Returns the filename and command line options.
+    """
+
+    raw_filename = os.path.basename(filename)
+    suffix = '-bd'
+    if all_borders:
+        suffix += 'a'
+    output_filename = os.path.join(dest_dir, raw_filename.replace('-chisel', suffix))
+    options = f'{filename} '
+    if all_borders is False:
+        options += f'{didymos_id} eq set-i '
+    else:
+        options += '0 gt set-i '
+    options += f'i 1 erode 1 erode 1 erode 0 where --output={output_filename}'
+    return output_filename, options
+
 def determine_astnoisechisel_options(filename, dest_dir, hdu = 0, bkg_only=False):
     raw_filename = os.path.basename(filename)
     output_filename = os.path.join(dest_dir, raw_filename.replace(".fits", "-chisel.fits"))
