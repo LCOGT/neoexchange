@@ -3745,6 +3745,7 @@ def plot_didymos_images(jpg_combined_filename, table, dscale=1000, line_width=3,
     to 16)
     '''
     from cycler import cycler
+    from matplotlib.colors import ListedColormap
 
     sun_arr = table['sunTargetPA']
     vel_arr = table['velocityPA']
@@ -3771,14 +3772,14 @@ def plot_didymos_images(jpg_combined_filename, table, dscale=1000, line_width=3,
     #ax1.set_prop_cycle(custom_cycler)
 
     #declare variables
-    au=149597870.7
-    arrow_len=75
-    ih=511
-    iw=1991
-    sun=sun_arr[0]
-    vel=vel_arr[0]
-    dist=dist_arr[0]
-    pix=0.3985
+    au=149597870.7      # au in km
+    arrow_len=75        # arrow length (pixels)
+    ih=511              # image height (pixels)
+    iw=1991             # image width (pixels)
+    sun=sun_arr[0]      # position angles of the extended Sun-to-target radius vector ("PsAng")
+    vel=vel_arr[0]      # negative of the targets' heliocentric velocity vector ("PsAMV")
+    dist=dist_arr[0]    # Observer->target range (au)
+    pix=0.389635        # Sinistro median pixel scale ("/pixel)
 
     xz=arrow_len
     yz=ih-1.5*arrow_len
@@ -3788,6 +3789,16 @@ def plot_didymos_images(jpg_combined_filename, table, dscale=1000, line_width=3,
     yvel=arrow_len*sin(radians(vel)+radians(90))
 
     plt.figure()
+    ax = plt.subplot(111, aspect='equal')
+    # Disable ticks and labels, use full space
+    ax.tick_params(bottom=False,left=False)
+    ax.set_xticks([])
+    ax.set_yticks([])
+    plt.subplots_adjust(left=0.0, right=1.0, bottom=0.0, top=1.0)
+
+    #add stacked image
+    img = plt.imread(jpg_combined_filename)
+    plt.imshow(img, extent=[0, iw, 0, ih], interpolation='none')
 
     #add arrows
     plt.arrow(xz, yz, 0, arrow_len, width=2, lw=line_width, length_includes_head=True, color='black')
@@ -3807,15 +3818,12 @@ def plot_didymos_images(jpg_combined_filename, table, dscale=1000, line_width=3,
     tickh=arrow_len/10
     nticks=1
 
-    plt.arrow(tickxz, tickyz, nticks*tickw, 0, width=2, lw=line_width, head_width=0, head_length=0, color='black')
-    plt.arrow(tickxz, tickyz-tickh, 0, 2*tickh, width=2, lw=line_width, head_width=0, head_length=0, color='black')
-    plt.arrow(tickxz+tickw, tickyz-tickh, 0, 2*tickh, lw=line_width, width=2, head_width=0, head_length=0, color='black')
+    barlen=3
+    plt.arrow(tickxz, tickyz, nticks*tickw, 0, width=0, head_width=0, head_length=0, lw=line_width, color='black')
+    plt.arrow(tickxz, tickyz-barlen*tickh, 0, 2*barlen*tickh, width=0, head_width=0, head_length=0, lw=line_width, color='black')
+    plt.arrow(tickxz+tickw, tickyz-barlen*tickh, 0, 2*barlen*tickh, width=0, head_width=0, head_length=0, lw=line_width, color='black')
 
-    plt.text(tickxz, tickyz-tickh*4, f'{dscale} km', fontfamily='Arial', fontsize=font_size)
-
-    #add stacked image
-    img = plt.imread(jpg_combined_filename)
-    plt.imshow(img, extent=[0, iw, 0, ih])
+    plt.text(tickxz, tickyz-tickh*4, f'{dscale} km', verticalalignment='top', fontfamily='Arial', fontsize=font_size)
 
     #get outline of chiseled image
     # edge_filename = didymos_extracted_filename.replace('chisel','edge')
@@ -3826,6 +3834,11 @@ def plot_didymos_images(jpg_combined_filename, table, dscale=1000, line_width=3,
 
     #img_edge = plt.imread(edge_filename)
     #plt.imshow(img_edge, extent=[0, iw, 0, ih])
+    contour_cmap = ListedColormap(["black", colors[2]])
+    mask = plt.imread(jpg_combined_filename.replace('superstack.jpg', 'superstack-bd.jpg'))
+
+    masked_data = np.ma.masked_where(mask < 240, mask)
+    mask_plot= plt.imshow(masked_data, cmap=contour_cmap, extent=[0, iw, 0, ih], interpolation='none')
 
     mng = plt.get_current_fig_manager()
     mng.resize(*mng.window.maxsize())
