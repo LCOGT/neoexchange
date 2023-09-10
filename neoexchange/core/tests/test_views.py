@@ -47,6 +47,7 @@ from astrometrics.ephem_subs import compute_ephem, determine_darkness_times
 from astrometrics.sources_subs import parse_mpcorbit, parse_mpcobs, \
     fetch_flux_standards, read_solar_standards
 from photometrics.catalog_subs import open_fits_catalog, get_catalog_header
+from photometrics.external_codes import run_astnoisechisel, run_astmkcatalog, run_asttable
 from photometrics.gf_movie import make_gif
 from core.frames import block_status, create_frame
 from core.models import Body, Proposal, Block, SourceMeasurement, Frame, Candidate,\
@@ -8659,3 +8660,36 @@ class TestConvertFits(ExternalCodeUnitTest):
 
         self.assertEquals(expected_status, status)
         self.assertEquals(expected_output_filename, pdf_filename)
+
+
+class TestGetDidymosDetection(ExternalCodeUnitTest):
+    def setUp(self):
+        super(TestGetDidymosDetection, self).setUp()
+
+        shutil.copy(os.path.abspath(self.test_banzai_file), self.test_dir)
+        self.test_banzai_file_COPIED = os.path.join(self.test_dir, 'banzai_test_frame.fits')
+
+        self.test_file, status = run_astnoisechisel(self.test_banzai_file_COPIED, self.test_dir, hdu = 0)
+        self.width = fits.getval(self.test_file, 'NAXIS1', ext=('DETECTIONS', 1))
+        self.height = fits.getval(self.test_file, 'NAXIS2', ext=('DETECTIONS', 1))
+
+        self.test_catalog_fits, status = run_astmkcatalog(self.test_file, self.test_dir)
+        self.test_catalog_txt, status = run_asttable(self.test_catalog_fits, self.test_dir)
+
+        self.remove = True
+
+    def test_defaults(self):
+        expected_id = 254
+
+        object_id = get_didymos_detection(self.test_catalog_txt)
+
+        self.assertEqual(expected_id, object_id)
+        self.assertTrue(isinstance(object_id, (int, np.integer)) )
+
+    def test_defaults_correct_dims(self):
+        expected_id = 801
+
+        object_id = get_didymos_detection(self.test_catalog_txt, width=self.width, height=self.height)
+
+        self.assertEqual(expected_id, object_id)
+        self.assertTrue(isinstance(object_id, (int, np.integer)) )

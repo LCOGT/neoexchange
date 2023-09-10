@@ -3624,7 +3624,8 @@ def get_didymos_detection(table_filename, width = 1991.0, height = 511.0):
     if table_filename is None:
         return None
 
-    data = np.genfromtxt(table_filename)
+    # Setting dtype=None, let numpy determine for each column individually
+    data = np.genfromtxt(table_filename, dtype=None)
 
     for i in range(len(data)):
         if data[i][2]<(width/2) and data[i][3]>(width/2) and data[i][4]<(height/2) and data[i][5]>(height/2):
