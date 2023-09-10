@@ -1959,21 +1959,21 @@ class TestDetermineDidymosBorderOptions(SimpleTestCase):
         self.output_file_all = self.test_file.replace('-chisel', '-bda')
 
     def test_border1(self):
-        expected_cmdline = f'{self.test_file} 42 eq set-i i 1 erode 1 erode 1 erode 0 where --output={self.test_dir}/{self.output_file}'
+        expected_cmdline = f'{self.test_file} 801 eq set-i i i 1 erode 1 erode 1 erode 0 where --output={self.test_dir}/{self.output_file}'
 
         output_filename, cmdline = determine_didymos_border_options(self.test_file, self.test_dir, 42)
 
         self.assertEqual(expected_cmdline, cmdline)
 
     def test_borderall1(self):
-        expected_cmdline = f'{self.test_file} 0 gt set-i i 1 erode 1 erode 1 erode 0 where --output={self.test_dir}/{self.output_file_all}'
+        expected_cmdline = f'{self.test_file} 0 gt set-i i i 1 erode 1 erode 1 erode 0 where --output={self.test_dir}/{self.output_file_all}'
 
         output_filename, cmdline = determine_didymos_border_options(self.test_file, self.test_dir, 2, True)
 
         self.assertEqual(expected_cmdline, cmdline)
 
     def test_borderall2(self):
-        expected_cmdline = f'{self.test_file} 0 gt set-i i 1 erode 1 erode 1 erode 0 where --output={self.test_dir}/{self.output_file_all}'
+        expected_cmdline = f'{self.test_file} 0 gt set-i i i 1 erode 1 erode 1 erode 0 where --output={self.test_dir}/{self.output_file_all}'
 
         output_filename, cmdline = determine_didymos_border_options(self.test_file, self.test_dir, 2, all_borders=True)
 
