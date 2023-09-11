@@ -157,12 +157,23 @@ class Command(BaseCommand):
                 catalogs = []
                 didymos_ids = []
                 for chiseled_filename in chiseled_filenames:
-                    pdf_filename_chiseled, status = convert_fits(chiseled_filename, dest_dir_path, stack=False)
+                    image_width = 1991
+                    try:
+                        image_width = fits.getval(chiseled_filename, 'NAXIS1', ext=('DETECTIONS',1))
+                    except (KeyError, ValueError):
+                        self.stdout.write(f"Couldn't determine image width from {chiseled_filename}; assuming default of {image_width}")
+                    image_height = 511
+                    try:
+                        image_height = fits.getval(chiseled_filename, 'NAXIS2', ext=('DETECTIONS',1))
+                    except (KeyError, ValueError):
+                        self.stdout.write(f"Couldn't determine image height from {chiseled_filename}; assuming default of {image_height}")
+
+                    pdf_filename_chiseled, status = convert_fits(chiseled_filename, dest_dir_path, stack=False, width=image_width, height=image_height)
                     pdf_filenames_chiseled.append(pdf_filename_chiseled)
                     catalog_filename, status = run_astmkcatalog(chiseled_filename, dest_dir_path)
                     catalogs.append(catalog_filename)
                     table_filename, status = run_asttable(catalog_filename, dest_dir_path)
-                    didymos_id = get_didymos_detection(table_filename)
+                    didymos_id = get_didymos_detection(table_filename, width=image_width, height=image_height)
                     didymos_ids.append(didymos_id)
                     extracted_filename, status = run_didymos_astarithmetic(chiseled_filename, dest_dir_path, didymos_id)
                     #print(extracted_filename)
