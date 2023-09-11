@@ -25,6 +25,7 @@ from astropy.io import fits
 from astropy.coordinates import SkyCoord
 from numpy import array, arange
 from numpy.testing import assert_allclose
+from PIL import Image, UnidentifiedImageError
 
 from django.test import TestCase, SimpleTestCase
 from django.forms.models import model_to_dict
@@ -2640,3 +2641,50 @@ class TestRunAsttable(ExternalCodeUnitTest):
         table_filename, status = run_astmkcatalog(self.test_filename, self.test_dir)
 
         self.assertEquals(expected_status, status)
+
+
+class TestRunDidymosBorderGen(ExternalCodeUnitTest):
+    def setUp(self):
+        super(TestRunDidymosBorderGen, self).setUp()
+
+        shutil.copy(os.path.abspath(self.test_banzai_file), self.test_dir)
+        self.test_banzai_file_COPIED = os.path.join(self.test_dir, 'banzai_test_frame.fits')
+
+        self.test_filename, status = run_astnoisechisel(self.test_banzai_file_COPIED, self.test_dir, hdu = 0)
+
+        self.test_catalog_filename, status = run_astmkcatalog(self.test_filename, self.test_dir)
+
+        self.expected_bd_filename = self.test_banzai_file_COPIED.replace('frame.fits', 'frame-bd.jpg')
+        self.expected_bda_filename = self.test_banzai_file_COPIED.replace('frame.fits', 'frame-bda.jpg')
+
+        self.remove = True
+
+    def test_border1(self):
+        expected_status = 0
+
+        new_filename, status = run_didymos_bordergen(self.test_filename, self.test_dir, 801, all_borders=False)
+
+        self.assertEqual(expected_status, status)
+        self.assertEqual(self.expected_bd_filename, new_filename)
+        self.assertTrue(os.path.exists(self.expected_bd_filename))
+        try:
+            img = Image.open(new_filename)
+            img_format = img.format
+        except (FileNotFoundError, UnidentifiedImageError):
+            img_format = 'FOO'
+        self.assertEqual('JPEG', img_format)
+
+    def test_all_border1(self):
+        expected_status = 0
+
+        new_filename, status = run_didymos_bordergen(self.test_filename, self.test_dir, 1, all_borders=True)
+
+        self.assertEqual(expected_status, status)
+        self.assertEqual(self.expected_bda_filename, new_filename)
+        self.assertTrue(os.path.exists(self.expected_bda_filename))
+        try:
+            img = Image.open(new_filename)
+            img_format = img.format
+        except (FileNotFoundError, UnidentifiedImageError):
+            img_format = 'FOO'
+        self.assertEqual('JPEG', img_format)

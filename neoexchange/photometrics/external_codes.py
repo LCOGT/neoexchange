@@ -1774,6 +1774,42 @@ def run_didymos_astarithmetic(filename, dest_dir, didymos_id, binary='astarithme
 
     return extracted_filename, retcode_or_cmdline
 
+def run_didymos_bordergen(filename, dest_dir, didymos_id, binary='astarithmetic', all_borders=False, dbg=False):
+    '''
+    Runs astarithmetic on <filename> to extract the detection border around
+    Didymos only ([all_borders]=False) or all detections ([all_borders=True)
+    converting it to JPG and writing this output to <dest_dir>
+    '''
+    if filename is None:
+        return None, -2
+    if os.path.exists(filename) is False:
+        return None, -1
+    binary = binary or find_binary(binary)
+    if binary is None:
+        logger.error(f"Could not locate {binary} executable in PATH")
+        return None, -42
+    cmdline = f"{binary} "
+    fits_image_filename, options = determine_didymos_border_options(filename, dest_dir, didymos_id, all_borders)
+    if os.path.exists(fits_image_filename) is False:
+        cmdline += options
+        cmdline = cmdline.rstrip()
+        if dbg:
+            print(cmdline)
+
+        if dbg is True:
+            retcode_or_cmdline = cmdline
+        else:
+            logger.debug(f"cmdline={cmdline}")
+            cmd_args = cmdline.split()
+            cmd_call = Popen(cmd_args, cwd=dest_dir, stdout=PIPE)
+            (out, errors) = cmd_call.communicate()
+            retcode_or_cmdline = cmd_call.returncode
+
+    # Convert FITS to JPG
+    image_filename, retcode_or_cmdline = run_astconvertt(fits_image_filename, dest_dir, out_type='jpg', hdu=1, stack=False, dbg=dbg)
+
+    return image_filename, retcode_or_cmdline
+
 def run_astnoisechisel(filename, dest_dir, hdu = 0, binary='astnoisechisel', bkgd_only=False, dbg=False):
     '''
     Runs astnoisechisel on <filename> to produce a binary detection map
