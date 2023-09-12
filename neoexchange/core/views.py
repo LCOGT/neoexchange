@@ -3722,12 +3722,10 @@ def convert_fits(filename, dest_dir, out_type='pdf', crop=False, center_RA=0, ce
         hdu = 'ALIGNED'
     if '-crop' in filename:
         hdu = 'ALIGNED'
-    if '-combine' in filename:
+    elif '-combine' in filename or '-didymos' in filename:
         hdu = '1'
-    if '-chisel' in filename:
+    elif '-chisel' in filename:
         hdu = 'DETECTIONS'
-    if '-didymos' in filename:
-        hdu = '1'
     #print(hdu)
     if stack:
         mean, std = determine_image_stats(filename, hdu)
