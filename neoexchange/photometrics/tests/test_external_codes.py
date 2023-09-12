@@ -1962,7 +1962,7 @@ class TestDetermineDidymosBorderOptions(SimpleTestCase):
     def test_border1(self):
         expected_cmdline = f'{self.test_file} 801 eq set-i i i 1 erode 1 erode 1 erode 0 where --output={self.test_dir}/{self.output_file}'
 
-        output_filename, cmdline = determine_didymos_border_options(self.test_file, self.test_dir, 42)
+        output_filename, cmdline = determine_didymos_border_options(self.test_file, self.test_dir, 801)
 
         self.assertEqual(expected_cmdline, cmdline)
 

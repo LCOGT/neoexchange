@@ -1894,7 +1894,7 @@ def run_astconvertt(filename, dest_dir, out_type='pdf', hdu='SCI', mean=0, std=0
         return None, -42
     cmdline = f"{binary} "
     if stack:
-        pdf_filename, options = determine_stack_astconvertt_options(filename, dest_dir, out_type, mean, std, hdu)
+        pdf_filename, options = determine_stack_astconvertt_options(filename, dest_dir, mean, std, out_type, hdu)
     else:
         pdf_filename, options = determine_astconvertt_options(filename, dest_dir, out_type, hdu)
     if os.path.exists(pdf_filename):
