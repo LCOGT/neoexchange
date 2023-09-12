@@ -3800,6 +3800,34 @@ def run_make_didymos_chisel_plots(self, chiseled_filename, dest_dir_path, output
 
     return results
 
+def make_annotated_plot(fits_combined_filepath, dscale=1000, line_width=3, font_size=16):
+    '''
+    Wrapper to generate final annotated image using plot_didymos_images(). The
+    pre-generation of the needed intermediate images with run_make_didymos_chisel_plots
+    is assumed.
+    Returns the output plot filename (or None if there is an issue)
+    '''
+
+    output_plot = None
+
+    fits_filename = os.path.basename(fits_combined_filepath)
+    fits_filename = fits_filename.replace('-combine', '').replace('-superstack', '')
+    stack_frame = Frame.objects.get(filename=fits_filename, frametype=Frame.NEOX_RED_FRAMETYPE)
+    if stack_frame:
+        midpoint = stack_frame.midpoint
+        start = midpoint.replace(second=0, microsecond=0)
+        end = start + timedelta(seconds=60)
+        ephem = horizons_ephem(stack_frame.block.body.current_name(), start, end, stack_frame.sitecode, '1m')
+        index = np.argmin(abs(ephem['datetime'].datetime-midpoint))
+        table = ephem[index:index+1]
+
+        jpg_combined_filename = fits_combined_filepath.replace('.fits', '.jpg')
+        output_plot = plot_didymos_images(jpg_combined_filename, table, dscale, line_width, font_size)
+    else:
+        logger.error(f"Couldn't find matching frame for {fits_combined_filepath}")
+
+    return output_plot
+
 def plot_didymos_images(jpg_combined_filename, table, dscale=1000, line_width=3, font_size=16):
     '''
     Plots a <jpg_combined_filename>. Adds directional arrows for velocity

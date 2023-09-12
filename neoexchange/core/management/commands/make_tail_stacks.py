@@ -154,6 +154,7 @@ class Command(BaseCommand):
                 #call convert_fits()
                 pdf_filenames_chiseled = []
                 pdf_filenames_combined = []
+                annotated_plots_combined = []
                 catalogs = []
                 didymos_ids = []
                 for chiseled_filename in chiseled_filenames:
@@ -164,10 +165,14 @@ class Command(BaseCommand):
 
                 for combined_filename in combined_filenames:
                     pdf_filename_combined, status = convert_fits(combined_filename, dest_dir_path)
-                    jpg_filename_combined, status = convert_fits(combined_filename, dest_dir_path, out_type='jpg')
                     pdf_filenames_combined.append(pdf_filename_combined)
-                self.stdout.write(f'Chiseled filename(s): {pdf_filenames_chiseled}')
-                self.stdout.write(f'Combined filename(s): {pdf_filenames_combined}')
+                    jpg_filename_combined, status = convert_fits(combined_filename, dest_dir_path, out_type='jpg')
+                    # Make annotated plots
+                    output_plot = make_annotated_plot(combined_filename)
+                    annotated_plots_combined.append(output_plot)
+                self.stdout.write(f'Chiseled  filename(s): {pdf_filenames_chiseled}')
+                self.stdout.write(f'Combined  filename(s): {pdf_filenames_combined}')
+                self.stdout.write(f'Annotated filename(s): {annotated_plots_combined}')
                 self.stdout.write(f'Catalog(s): {catalogs}')
                 self.stdout.write(f'ID(s): {didymos_ids}')
             self.stdout.write('')
