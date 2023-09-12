@@ -78,7 +78,7 @@ from astrometrics.time_subs import extract_mpc_epoch, parse_neocp_date, \
     parse_neocp_decimal_date, get_semester_dates, jd_utc2datetime, datetime2st
 from photometrics.external_codes import run_sextractor, run_swarp, run_hotpants, run_scamp, updateFITSWCS,\
     read_mtds_file, unpack_tarball, run_findorb, run_astwarp, run_astarithmetic, run_astnoisechisel, determine_image_stats,\
-    run_astconvertt
+    run_astconvertt, run_astmkcatalog, run_didymos_bordergen, run_asttable, run_didymos_astarithmetic
 from photometrics.catalog_subs import open_fits_catalog, get_catalog_header, \
     determine_filenames, increment_red_level, funpack_fits_file, update_ldac_catalog_wcs, FITSHdrException, \
     get_reference_catalog, reset_database_connection, sanitize_object_name
@@ -3734,6 +3734,71 @@ def convert_fits(filename, dest_dir, out_type='pdf', crop=False, center_RA=0, ce
         pdf_filename, status = run_astconvertt(filename, dest_dir, out_type, hdu, stack=stack)
 
     return pdf_filename, status
+
+def run_make_didymos_chisel_plots(self, chiseled_filename, dest_dir_path, output=True):
+    '''Converts passed <chiseled_filename> to PDF, generates FITS and TXT versions
+    of the detection catalog from the NoiseChisel image, finds the id in the catalog
+    of Didymos (actually the object in the frame center) and produces the contour/mask
+    images for the detection and for all detections. Outputs will go into <dest_dir_path>
+    If [output] is True, print out the output.
+    When called from a Django managment command, `self` will be
+    automatically set and the output will use `self.stdout.write`.
+    When calling from elsewhere, set `self=None` and `print()` will be used.
+
+    A dict of these results filenames, along with a list of the status codes
+    from the sub routines is returned.
+    '''
+
+    results = { 'status' : []}
+    if self is None:
+        func = print
+    else:
+        func = self.stdout.write
+
+    image_width = 1991
+    try:
+        image_width = fits.getval(chiseled_filename, 'NAXIS1', ext=('DETECTIONS',1))
+    except (KeyError, ValueError):
+        if output: func(f"Couldn't determine image width from {chiseled_filename}; assuming default of {image_width}")
+    image_height = 511
+    try:
+        image_height = fits.getval(chiseled_filename, 'NAXIS2', ext=('DETECTIONS',1))
+    except (KeyError, ValueError):
+        if output: func(f"Couldn't determine image height from {chiseled_filename}; assuming default of {image_height}")
+
+    # Convert chiseled image to PDF
+    if output: func("Converting chisel image to PDF")
+    pdf_filename_chiseled, status = convert_fits(chiseled_filename, dest_dir_path, stack=False, width=image_width, height=image_height)
+    results['pdf_filename_chiseled'] = pdf_filename_chiseled
+    results['status'].append(status)
+
+    # Generate FITS catalog of detections and convert to txt
+    if output: func("Generating detection catalog")
+    catalog_filename, status = run_astmkcatalog(chiseled_filename, dest_dir_path)
+    results['catalog_filename'] = catalog_filename
+    results['status'].append(status)
+
+    if output: func("Converting detection catalog to TXT")
+    table_filename, status = run_asttable(catalog_filename, dest_dir_path)
+    results['status'].append(status)
+
+    if output: func("Extracting Didymos detection and converting to PDF")
+    didymos_id = get_didymos_detection(table_filename, width=image_width, height=image_height)
+    results['didymos_id'] = didymos_id
+    extracted_filename, status = run_didymos_astarithmetic(chiseled_filename, dest_dir_path, didymos_id)
+    results['status'].append(status)
+    #func(extracted_filename)
+    pdf_extracted_filename, status = convert_fits(extracted_filename, dest_dir_path, stack=False)
+    results['status'].append(status)
+
+    # Produce contour border images for Didymos and all detections
+    if output: func("Generating contour/border images")
+    didymos_border_filename, status = run_didymos_bordergen(chiseled_filename, dest_dir_path, didymos_id, all_borders=False)
+    results['status'].append(status)
+    all_border_filename, status = run_didymos_bordergen(chiseled_filename, dest_dir_path, didymos_id, all_borders=True)
+    results['status'].append(status)
+
+    return results
 
 def plot_didymos_images(jpg_combined_filename, table, dscale=1000, line_width=3, font_size=16):
     '''

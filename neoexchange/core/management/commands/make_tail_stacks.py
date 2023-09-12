@@ -9,7 +9,7 @@ from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 
 from core.blocksfind import filter_blocks, find_frames, split_light_curve_blocks
-from core.views import run_astwarp_alignment_noisechisel, convert_fits, get_didymos_detection
+from core.views import run_astwarp_alignment_noisechisel, convert_fits, get_didymos_detection, run_make_didymos_chisel_plots
 from photometrics.external_codes import run_astmkcatalog, run_asttable, run_didymos_astarithmetic
 from photometrics.catalog_subs import reset_database_connection
 
@@ -157,27 +157,11 @@ class Command(BaseCommand):
                 catalogs = []
                 didymos_ids = []
                 for chiseled_filename in chiseled_filenames:
-                    image_width = 1991
-                    try:
-                        image_width = fits.getval(chiseled_filename, 'NAXIS1', ext=('DETECTIONS',1))
-                    except (KeyError, ValueError):
-                        self.stdout.write(f"Couldn't determine image width from {chiseled_filename}; assuming default of {image_width}")
-                    image_height = 511
-                    try:
-                        image_height = fits.getval(chiseled_filename, 'NAXIS2', ext=('DETECTIONS',1))
-                    except (KeyError, ValueError):
-                        self.stdout.write(f"Couldn't determine image height from {chiseled_filename}; assuming default of {image_height}")
+                    results = run_make_didymos_chisel_plots(chiseled_filename, dest_dir_path)
+                    pdf_filenames_chiseled.append(results['pdf_filename_chiseled'])
+                    catalogs.append(results['catalog_filename'])
+                    didymos_ids.append(results['didymos_id'])
 
-                    pdf_filename_chiseled, status = convert_fits(chiseled_filename, dest_dir_path, stack=False, width=image_width, height=image_height)
-                    pdf_filenames_chiseled.append(pdf_filename_chiseled)
-                    catalog_filename, status = run_astmkcatalog(chiseled_filename, dest_dir_path)
-                    catalogs.append(catalog_filename)
-                    table_filename, status = run_asttable(catalog_filename, dest_dir_path)
-                    didymos_id = get_didymos_detection(table_filename, width=image_width, height=image_height)
-                    didymos_ids.append(didymos_id)
-                    extracted_filename, status = run_didymos_astarithmetic(chiseled_filename, dest_dir_path, didymos_id)
-                    #print(extracted_filename)
-                    pdf_extracted_filename, status = convert_fits(extracted_filename, dest_dir_path, stack=False)
                 for combined_filename in combined_filenames:
                     pdf_filename_combined, status = convert_fits(combined_filename, dest_dir_path)
                     jpg_filename_combined, status = convert_fits(combined_filename, dest_dir_path, out_type='jpg')
