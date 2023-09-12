@@ -2120,6 +2120,22 @@ class TestDetermineAstconverttOptions(SimpleTestCase):
 
         self.assertEquals(expected_cmdline, cmdline)
 
+    def test_border_jpg(self):
+        test_file = self.test_file.replace('e91', 'e92-combine-superstack-bd')
+        expected_cmdline = f'{test_file} -h1  --output={self.test_dir}/{test_file.replace(".fits", ".jpg")}'
+
+        output_filename, cmdline = determine_astconvertt_options(test_file, self.test_dir, out_type='jpg', hdu=1)
+
+        self.assertEquals(expected_cmdline, cmdline)
+
+    def test_borderall_jpg(self):
+        test_file = self.test_file.replace('e91', 'e92-combine-superstack-bda')
+        expected_cmdline = f'{test_file} -h1  --output={self.test_dir}/{test_file.replace(".fits", ".jpg")}'
+
+        output_filename, cmdline = determine_astconvertt_options(test_file, self.test_dir, out_type='jpg', hdu=1)
+
+        self.assertEquals(expected_cmdline, cmdline)
+
 class TestDetermineAstmkcatalogOptions(SimpleTestCase):
     def setUp(self):
         self.test_dir = '/tmp/foo'
