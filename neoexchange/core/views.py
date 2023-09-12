@@ -3898,9 +3898,10 @@ def plot_didymos_images(jpg_combined_filename, table, dscale=1000, line_width=3,
     ax.arrow(xz, yz, xvel, yvel, width=2, lw=line_width, length_includes_head=True, color=colors[2])
 
     #add labels
-    ax.text(xz, yz+arrow_len, 'N', fontfamily='Arial', fontsize=font_size, color='black')
-    ax.text(xz+xsun, yz+ysun, '-$\mathregular{R_\u2609}$', fontfamily='Arial', fontsize=font_size, color=colors[5])
-    ax.text(xz+xvel, yz+yvel, '-v', fontfamily='Arial', fontsize=font_size, color=colors[2])
+    align = 'center'
+    ax.text(xz, yz+arrow_len, 'N', verticalalignment=align, fontfamily='Arial', fontsize=font_size, color='black')
+    ax.text(xz+xsun, yz+ysun, '-$\mathregular{R_\u2609}$', verticalalignment=align, fontfamily='Arial', fontsize=font_size, color=colors[5])
+    ax.text(xz+xvel, yz+yvel, '-v', fontfamily='Arial', verticalalignment=align, fontsize=font_size, color=colors[2])
 
     #add scale bar
     tickxz=arrow_len
@@ -3917,15 +3918,7 @@ def plot_didymos_images(jpg_combined_filename, table, dscale=1000, line_width=3,
 
     ax.text(tickxz, tickyz-tickh*4, f'{dscale} km', verticalalignment='top', fontfamily='Arial', fontsize=font_size)
 
-    #get outline of chiseled image
-    # edge_filename = didymos_extracted_filename.replace('chisel','edge')
-    # chisel = Image.open(didymos_extracted_filename)
-    # chisel = chisel.convert("L")
-    # chisel = chisel.filter(ImageFilter.FIND_EDGES)
-    # chisel.save(edge_filename)
-
-    #img_edge = plt.imread(edge_filename)
-    #plt.imshow(img_edge, extent=[0, iw, 0, ih])
+    # plot outline of chiseled detection image as mask
     contour_cmap = ListedColormap(["black", colors[2]])
     mask = plt.imread(jpg_combined_filename.replace('superstack.jpg', 'superstack-bd.jpg'))
 
