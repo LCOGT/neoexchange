@@ -108,7 +108,7 @@ class Command(BaseCommand):
                     input_data_path = input_data_path_1
                 else:
                     input_data_path = input_data_path_2
-                if validate_only is False:
+                if validate_only is False and os.path.exists(os.path.join(output_path,frame.filename)) is False:
                     shutil.copy(os.path.join(input_data_path,frame.filename), output_path)
             sci_dir_path = output_path
             dest_dir_path = os.path.join(dest_dir, dayobs)
