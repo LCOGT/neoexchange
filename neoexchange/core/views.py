@@ -3787,7 +3787,7 @@ def plot_didymos_images(jpg_combined_filename, table, dscale=1000, line_width=3,
     xvel=arrow_len*cos(radians(vel)+radians(90))
     yvel=arrow_len*sin(radians(vel)+radians(90))
 
-    plt.figure()
+    plt.figure(dpi=200, tight_layout=True)
     ax = plt.subplot(111, aspect='equal')
     # Disable ticks and labels, use full space
     ax.tick_params(bottom=False,left=False)
@@ -3797,17 +3797,17 @@ def plot_didymos_images(jpg_combined_filename, table, dscale=1000, line_width=3,
 
     #add stacked image
     img = plt.imread(jpg_combined_filename)
-    plt.imshow(img, extent=[0, iw, 0, ih], interpolation='none')
+    ax.imshow(img, extent=[0, iw, 0, ih], interpolation='none')
 
     #add arrows
-    plt.arrow(xz, yz, 0, arrow_len, width=2, lw=line_width, length_includes_head=True, color='black')
-    plt.arrow(xz, yz, xsun, ysun, width=2, lw=line_width, length_includes_head=True, color=colors[5])
-    plt.arrow(xz, yz, xvel, yvel, width=2, lw=line_width, length_includes_head=True, color=colors[2])
+    ax.arrow(xz, yz, 0, arrow_len, width=2, lw=line_width, length_includes_head=True, color='black')
+    ax.arrow(xz, yz, xsun, ysun, width=2, lw=line_width, length_includes_head=True, color=colors[5])
+    ax.arrow(xz, yz, xvel, yvel, width=2, lw=line_width, length_includes_head=True, color=colors[2])
 
     #add labels
-    plt.text(xz, yz+arrow_len, 'N', fontfamily='Arial', fontsize=font_size, color='black')
-    plt.text(xz+xsun, yz+ysun, '-$\mathregular{R_\u2609}$', fontfamily='Arial', fontsize=font_size, color=colors[5])
-    plt.text(xz+xvel, yz+yvel, '-v', fontfamily='Arial', fontsize=font_size, color=colors[2])
+    ax.text(xz, yz+arrow_len, 'N', fontfamily='Arial', fontsize=font_size, color='black')
+    ax.text(xz+xsun, yz+ysun, '-$\mathregular{R_\u2609}$', fontfamily='Arial', fontsize=font_size, color=colors[5])
+    ax.text(xz+xvel, yz+yvel, '-v', fontfamily='Arial', fontsize=font_size, color=colors[2])
 
     #add scale bar
     tickxz=arrow_len
@@ -3818,11 +3818,11 @@ def plot_didymos_images(jpg_combined_filename, table, dscale=1000, line_width=3,
     nticks=1
 
     barlen=3
-    plt.arrow(tickxz, tickyz, nticks*tickw, 0, width=0, head_width=0, head_length=0, lw=line_width, color='black')
-    plt.arrow(tickxz, tickyz-barlen*tickh, 0, 2*barlen*tickh, width=0, head_width=0, head_length=0, lw=line_width, color='black')
-    plt.arrow(tickxz+tickw, tickyz-barlen*tickh, 0, 2*barlen*tickh, width=0, head_width=0, head_length=0, lw=line_width, color='black')
+    ax.arrow(tickxz, tickyz, nticks*tickw, 0, width=0, head_width=0, head_length=0, lw=line_width, color='black')
+    ax.arrow(tickxz, tickyz-barlen*tickh, 0, 2*barlen*tickh, width=0, head_width=0, head_length=0, lw=line_width, color='black')
+    ax.arrow(tickxz+tickw, tickyz-barlen*tickh, 0, 2*barlen*tickh, width=0, head_width=0, head_length=0, lw=line_width, color='black')
 
-    plt.text(tickxz, tickyz-tickh*4, f'{dscale} km', verticalalignment='top', fontfamily='Arial', fontsize=font_size)
+    ax.text(tickxz, tickyz-tickh*4, f'{dscale} km', verticalalignment='top', fontfamily='Arial', fontsize=font_size)
 
     #get outline of chiseled image
     # edge_filename = didymos_extracted_filename.replace('chisel','edge')
@@ -3837,13 +3837,14 @@ def plot_didymos_images(jpg_combined_filename, table, dscale=1000, line_width=3,
     mask = plt.imread(jpg_combined_filename.replace('superstack.jpg', 'superstack-bd.jpg'))
 
     masked_data = np.ma.masked_where(mask < 240, mask)
-    mask_plot= plt.imshow(masked_data, cmap=contour_cmap, extent=[0, iw, 0, ih], interpolation='none')
+    mask_plot= ax.imshow(masked_data, cmap=contour_cmap, extent=[0, iw, 0, ih], interpolation='none')
 
-    mng = plt.get_current_fig_manager()
-    mng.resize(*mng.window.maxsize())
+    # mng = plt.get_current_fig_manager()
+    # mng.resize(*mng.window.maxsize())
 
-    #plt.savefig(output_plot, bbox_inches='tight')
-    plt.show()
+    plt.savefig(output_plot, bbox_inches='tight', pad_inches=0)
+    #plt.show()
+    return output_plot
 
 def find_block_for_frame(catfile):
     """Try and find a Block for the original passed <catfile> filename (new style with
