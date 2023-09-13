@@ -1,1 +1,0 @@
-/home/tlister/git/neoexchange_deploy/neoexchange/summarize_obs.py
