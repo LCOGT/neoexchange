@@ -3621,8 +3621,9 @@ def get_didymos_detection(table_filename, width = 1991.0, height = 511.0):
     Routine that takes a <table_filename> and returns the id of the detection
     centered on Didymos
     '''
+    didymos_id = None
     if table_filename is None:
-        return None
+        return didymos_id
 
     # Setting dtype=None, let numpy determine for each column individually
     data = np.genfromtxt(table_filename, dtype=None)

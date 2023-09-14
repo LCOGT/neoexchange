@@ -8676,7 +8676,17 @@ class TestGetDidymosDetection(ExternalCodeUnitTest):
         self.test_catalog_fits, status = run_astmkcatalog(self.test_file, self.test_dir)
         self.test_catalog_txt, status = run_asttable(self.test_catalog_fits, self.test_dir)
 
+        self.test_catalog_broken_txt = os.path.join('photometrics', 'tests', 'example_asttable_cat_short.txt')
+
         self.remove = True
+
+    def test_no_detection(self):
+        expected_id = None
+
+        object_id = get_didymos_detection(self.test_catalog_broken_txt)
+
+        self.assertEqual(expected_id, object_id)
+        self.assertFalse(isinstance(object_id, (int, np.integer)) )
 
     def test_defaults(self):
         expected_id = 254

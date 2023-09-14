@@ -1,0 +1,10 @@
+# Column 1: OBJ_ID [counter,i32,] Object identifier.
+# Column 2: AREA   [counter,i32,] Number of non-blank pixels.
+# Column 3: MIN_X  [pixel  ,u32,] Minimum X axis pixel position.
+# Column 4: MAX_X  [pixel  ,u32,] Maximum X axis pixel position.
+# Column 5: MIN_Y  [pixel  ,u32,] Minimum Y axis pixel position.
+# Column 6: MAX_Y  [pixel  ,u32,] Maximum Y axis pixel position.
+1      629    836    888    1      42
+2      100    921    939    1      7
+3      54     1297   1305   1      8
+4      739    1517   1571   1      32
