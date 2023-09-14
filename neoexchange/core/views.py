@@ -3693,7 +3693,7 @@ def run_noisechisel(filename, dest_dir, hdu = 1):
 
 def run_astwarp_alignment_noisechisel(block, sci_dir, dest_dir):
     '''
-    Calls run_astwarp_alignemnt on a given <block> to get a combined file.
+    Calls run_astwarp_alignment on a given <block> to get a combined file.
     Calls run_noisechisel on the combined file to get its detection map.
     '''
     combined_filenames, statuses = run_astwarp_alignment(block, sci_dir, dest_dir)
@@ -3767,7 +3767,7 @@ def run_make_didymos_chisel_plots(self, chiseled_filename, dest_dir_path, output
         if output: func(f"Couldn't determine image height from {chiseled_filename}; assuming default of {image_height}")
 
     # Convert chiseled image to PDF
-    if output: func("Converting chisel image to PDF")
+    if output: func(f"Converting chisel image ({image_width}x{image_height}) to PDF")
     pdf_filename_chiseled, status = convert_fits(chiseled_filename, dest_dir_path, stack=False, width=image_width, height=image_height)
     results['pdf_filename_chiseled'] = pdf_filename_chiseled
     results['status'].append(status)
@@ -3800,7 +3800,7 @@ def run_make_didymos_chisel_plots(self, chiseled_filename, dest_dir_path, output
 
     return results
 
-def make_annotated_plot(fits_combined_filepath, dscale=1000, line_width=3, font_size=16):
+def make_annotated_plot(fits_combined_filepath, out_type='pdf', dscale=1000, line_width=1.5, font_size=14):
     '''
     Wrapper to generate final annotated image using plot_didymos_images(). The
     pre-generation of the needed intermediate images with run_make_didymos_chisel_plots
@@ -3822,13 +3822,13 @@ def make_annotated_plot(fits_combined_filepath, dscale=1000, line_width=3, font_
         table = ephem[index:index+1]
 
         jpg_combined_filename = fits_combined_filepath.replace('.fits', '.jpg')
-        output_plot = plot_didymos_images(jpg_combined_filename, table, dscale, line_width, font_size)
+        output_plot = plot_didymos_images(jpg_combined_filename, table, out_type, dscale, line_width, font_size)
     else:
         logger.error(f"Couldn't find matching frame for {fits_combined_filepath}")
 
     return output_plot
 
-def plot_didymos_images(jpg_combined_filename, table, dscale=1000, line_width=3, font_size=16):
+def plot_didymos_images(jpg_combined_filename, table, out_type='pdf', dscale=1000, line_width=3, font_size=16):
     '''
     Plots a <jpg_combined_filename>. Adds directional arrows for velocity
     and sun position as well as a scale bar showing [dscale] km (defaults to 1000 km).
@@ -3844,8 +3844,12 @@ def plot_didymos_images(jpg_combined_filename, table, dscale=1000, line_width=3,
     dist_arr = table['delta']
 
     #declare output file name
-    output_plot = jpg_combined_filename.replace('combine-superstack','plot')
-    output_plot = output_plot.replace('.jpg', '.png')
+    output_plot = jpg_combined_filename.replace('combine-superstack', 'plot')
+    output_plot = output_plot.replace('.jpg', f".{out_type}")
+    output_path, output_name = os.path.split(output_plot)
+    output_path = os.path.join(output_path, 'plots')
+    os.makedirs(output_path, exist_ok=True)
+    output_plot = os.path.join(output_path, output_name)
 
     #set up line color cycler
     # Adapted from https://matplotlib.org/stable/tutorials/intermediate/color_cycle.html
@@ -3930,6 +3934,7 @@ def plot_didymos_images(jpg_combined_filename, table, dscale=1000, line_width=3,
 
     plt.savefig(output_plot, bbox_inches='tight', pad_inches=0)
     #plt.show()
+    plt.close()
     return output_plot
 
 def find_block_for_frame(catfile):

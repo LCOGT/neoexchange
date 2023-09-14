@@ -117,7 +117,9 @@ class Command(BaseCommand):
 
             #make a record of stack midpoint, stack total exposure time, and moon fraction (need to get from fits header)
             if validate_only is False:
-                midpoint = block.block_start + (block.block_end - block.block_start)/2
+                block_start = block.frame_set.filter(frametype=Frame.NEOX_RED_FRAMETYPE).earliest('midpoint').midpoint
+                block_end = block.frame_set.filter(frametype=Frame.NEOX_RED_FRAMETYPE).latest('midpoint').midpoint
+                midpoint = block_start + (block_end - block_start)/2
                 total_exptime = 0
                 moon_fractions = []
                 moon_dist = []
@@ -132,12 +134,12 @@ class Command(BaseCommand):
                 emp = block.body.compute_position(midpoint)
                 V_mag = emp[2]
 
-                self.stdout.write(f'Block Start Time: {block.block_start.strftime("%Y-%m-%d %H:%M")}, Midpoint: {midpoint}, Total Exposure Time: {total_exptime}, Average Moon Fraction: {avg_moon_frac}')
+                self.stdout.write(f'Block Start Time: {block_start.strftime("%Y-%m-%d %H:%M")}, Midpoint: {midpoint}, Total Exposure Time: {total_exptime:.1f}, Average Moon Fraction: {avg_moon_frac:.3f}')
 
                 #add values for astropy data table
-                blocks_start.append(block.block_start)
+                blocks_start.append(block_start)
                 blocks_mid.append(midpoint)
-                blocks_end.append(block.block_end)
+                blocks_end.append(block_end)
                 exposure_time.append(total_exptime)
                 moon_frac.append(avg_moon_frac)
                 moon_distance.append(avg_moon_dist)
