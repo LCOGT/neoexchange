@@ -134,8 +134,9 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False)
         'heliocnt_e_pos': Heliocentric Earth Position [x,y,z] (AU)
         'ltt':            Light Travel time (s)
     """
-# Light travel time for 1 AU (in sec)
+# Light travel time for 1 AU (in sec) and AU per day
     tau = 499.004783806
+    au_per_day = 1.0/(tau/86400.0)
 
 # Check if we even have a non-blank set of elements before proceeding
     if orbelems.get('epochofel', None) is None:
@@ -153,7 +154,11 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False)
         epochofel = datetime.strptime(orbelems['epochofel'], '%Y-%m-%d %H:%M:%S')
     except TypeError:
         epochofel = orbelems['epochofel']
-    epoch_mjd = datetime2mjd_utc(epochofel)
+
+    try:
+        epoch_mjd = float(epochofel)
+    except TypeError:
+        epoch_mjd = datetime2mjd_utc(epochofel)
 
     logger.debug('Element Epoch= %.1f' % epoch_mjd)
     logger.debug('MJD(UTC) =   %.15f' % mjd_utc)
@@ -214,14 +219,16 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False)
 
 # High precision/slowest version. N.B different order of bary vs. heliocentric sets
 # and position vs velocity!
-# N.B. velocities are AU/day not AU/sec !
+# N.B. returned velocities are AU/day not AU/sec !
 # Also N.B. ! Must use heliocentric positions, not barycentric as normal as
 # asteroid position from sla_planel is also heliocentric.
-    (e_pos_hel, e_vel_hel, e_pos_bar, e_vel_bar) = S.sla_epv(mjd_tt)
+    e_pos_hel, e_vel_hel, e_pos_bar, e_vel_bar = S.sla_epv(mjd_tt)
 # Uncomment the lines below to use JPL DE430 ephemeris. This, and the
 # associated code, needs to be installed...
 #    ephem = Ephemeris(430)
 #    (e_pos_hel, e_vel_hel, e_pos_bar, e_vel_bar ) = ephem.epv(mjd_tt)
+
+# Convert velocity to AU/s to match that returned from sla_planel
     e_vel_hel = e_vel_hel/86400.0
 
     logger.debug("Sun->Earth [X, Y, Z]=%s" % e_pos_hel)
