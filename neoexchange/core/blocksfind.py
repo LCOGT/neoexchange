@@ -40,7 +40,12 @@ def blocks_summary(blocks):
         if sblock:
             if sblock.proposal:
                 proposal_code=sblock.proposal.code
-        print(f"{block.block_start}->{block.block_end} {block.num_exposures}x{block.exp_length}s observed={block.num_observed} ({proposal_code})")
+        print(f"{block.request_number}: {block.block_start}->{block.block_end} {block.num_exposures:>3d}x{block.exp_length}s observed={block.num_observed} {block.site.upper()} ({proposal_code})")
+        red_frames = block.frame_set.filter(frametype=Frame.NEOX_RED_FRAMETYPE)
+        if red_frames:
+            first_frame_midpoint = red_frames.earliest('midpoint').midpoint
+            last_frame_midpoint = red_frames.latest('midpoint').midpoint
+            print(f" Frames: {first_frame_midpoint.isoformat(timespec='seconds')}->{last_frame_midpoint.isoformat(timespec='seconds')}")
 
 def split_light_curve_blocks(frames, exptime=800):
     '''
