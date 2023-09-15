@@ -21,6 +21,7 @@ from math import floor, ceil, degrees, radians, pi, acos, pow, cos, sin, tan
 from astropy import units as u
 from astropy.coordinates import SkyCoord
 from astropy.io import fits
+from matplotlib.figure import Figure
 import matplotlib.pyplot as plt
 from matplotlib import rc
 import json
@@ -3583,6 +3584,54 @@ def run_hotpants_subtraction(ref, sci_dir, configs_dir, dest_dir):
 
     return status
 
+def determine_substack_times(block, exptime=800):
+    '''Determines the span of times for substacks of the passed block
+    '''
+    time_strings = []
+
+    frames, banzai, neox = find_frames(block)
+    split_block = split_light_curve_blocks(frames, exptime)
+    for subblock in split_block:
+        first_frame = subblock[0]
+        last_frame = subblock[-1]
+        sub_start = first_frame.midpoint - timedelta(seconds=(first_frame.exptime/2.0))
+        sub_end = last_frame.midpoint + timedelta(seconds=(last_frame.exptime/2.0))
+        time_string = f'{sub_start.strftime("%Y-%m-%d %H:%M:%S")} -- {sub_end.strftime("%H:%M:%S")}'
+        time_strings.append(time_string)
+        print(time_string)
+
+    return time_strings
+
+def write_figure_latex(annotated_plots_combined, time_strings, site):
+    '''Generates LaTeX figure text and writes to a file in the directory
+    of the first entry in annotated_plots_combined'''
+
+    directory = os.path.dirname(annotated_plots_combined[0])
+    dirs = annotated_plots_combined[0].split(os.sep)
+    date_label = dirs[-3]
+    daydir_dt = datetime.strptime(date_label, '%Y%m%d')
+    daydir_dt += timedelta(days=1)
+    latex_file = os.path.join(directory, f'figure_text_{date_label}_{site}.tex')
+    with open(latex_file, 'w') as fh:
+        print('\\begin{figure}', file=fh)
+        i = 0
+        for filepath, time_string in zip(annotated_plots_combined, time_strings):
+            if filepath is not None:
+                filename = os.path.basename(filepath)
+                prefix = ' '*len('\\gridline{')
+                if i % 3 == 0:
+                    prefix = '\\gridline{'
+                print(f'{prefix}\\fig{{morph_plots/{filename}}}{{0.3\\textwidth}}{{({chr(ord("a")+i)}) {time_string}}}', end='', file=fh)
+                i += 1
+                if i % 3 == 0 or i >= len(annotated_plots_combined):
+                    print('}', file=fh)
+                else:
+                    print('', file=fh)
+        date_string = daydir_dt.strftime("%Y-%m-%d")
+        print(f'\\caption{{Median combined stacked images of Didymos from {date_string} at the \\LCO {site.upper} site.}}\n\\label{{fig:morphology_{date_label}}}\n\\end{{figure}}\n', file=fh)
+
+    print('Wrote to', latex_file)
+
 def stack_lightcurve_block(block, sci_dir, dest_dir, table, exptime=800, segstack_sequence=7):
     '''
     Routine that takes a light curve <block> and splits it into subblocks of
@@ -3615,6 +3664,49 @@ def stack_lightcurve_block(block, sci_dir, dest_dir, table, exptime=800, segstac
         subblock_stacks.append(combined_filename)
 
     return subblock_stacks, statuses
+
+def generate_plots_for_directory(dest_dir_path, site):
+    '''Produces PDF annotated plots and versions of stacked and noisechisel
+    detection images found in <dest_dir_path> and with the <site> file prefix
+    (sets to '' if <site> is the generic Sinistro "pseudosite" (`site='sin'`))
+    Returns a list of the annotated plot filenames.
+    (Extracted from inner loop of `make_tail_plots` - needs refactoring.
+    '''
+
+    print(dest_dir_path, site)
+    site_prefix = site
+    if site.lower() == 'sin':
+        site_prefix = ''
+    combined_filenames = sorted(glob(dest_dir_path + '/' + site_prefix + '*combine-superstack.fits'))
+    chiseled_filenames = sorted(glob(dest_dir_path + '/' + site_prefix + '*combine-superstack-chisel.fits'))
+    annotated_plots_combined = []
+
+    if len(combined_filenames) > 0 and len(chiseled_filenames) > 0 and len(combined_filenames) == len(chiseled_filenames):
+        pdf_filenames_chiseled = []
+        pdf_filenames_combined = []
+        catalogs = []
+        didymos_ids = []
+        for chiseled_filename in chiseled_filenames:
+            print(chiseled_filename)
+            results = run_make_didymos_chisel_plots(None, chiseled_filename, dest_dir_path)
+            pdf_filenames_chiseled.append(results['pdf_filename_chiseled'])
+            catalogs.append(results['catalog_filename'])
+            didymos_ids.append(results['didymos_id'])
+
+        for combined_filename in combined_filenames:
+            pdf_filename_combined, status = convert_fits(combined_filename, dest_dir_path)
+            pdf_filenames_combined.append(pdf_filename_combined)
+            jpg_filename_combined, status = convert_fits(combined_filename, dest_dir_path, out_type='jpg')
+            # Make annotated plots
+            output_plot = make_annotated_plot(combined_filename, out_type='pdf')
+            print(f"Generated: {output_plot}")
+            annotated_plots_combined.append(output_plot)
+    else:
+        if len(chiseled_filenames) == 0 or len(combined_filenames) == 0:
+            logger.warning("No filenames found")
+        else:
+            logger.error(f"Mismatch in number of chisel and combined filenames in {dest_dir_path}")
+    return annotated_plots_combined
 
 def get_didymos_detection(table_filename, width = 1991.0, height = 511.0):
     '''
@@ -3786,15 +3878,23 @@ def run_make_didymos_chisel_plots(self, chiseled_filename, dest_dir_path, output
     if output: func("Extracting Didymos detection and converting to PDF")
     didymos_id = get_didymos_detection(table_filename, width=image_width, height=image_height)
     results['didymos_id'] = didymos_id
-    extracted_filename, status = run_didymos_astarithmetic(chiseled_filename, dest_dir_path, didymos_id)
+    status = -3
+    if didymos_id is not None:
+        extracted_filename, status = run_didymos_astarithmetic(chiseled_filename, dest_dir_path, didymos_id)
+        #func(extracted_filename)
+    else:
+        logger.warning("Didn't find a Didymos id")
     results['status'].append(status)
-    #func(extracted_filename)
-    pdf_extracted_filename, status = convert_fits(extracted_filename, dest_dir_path, stack=False)
+    status = -3
+    if didymos_id is not None:
+        pdf_extracted_filename, status = convert_fits(extracted_filename, dest_dir_path, stack=False)
     results['status'].append(status)
 
     # Produce contour border images for Didymos and all detections
     if output: func("Generating contour/border images")
-    didymos_border_filename, status = run_didymos_bordergen(chiseled_filename, dest_dir_path, didymos_id, all_borders=False)
+    status = -3
+    if didymos_id is not None:
+        didymos_border_filename, status = run_didymos_bordergen(chiseled_filename, dest_dir_path, didymos_id, all_borders=False)
     results['status'].append(status)
     all_border_filename, status = run_didymos_bordergen(chiseled_filename, dest_dir_path, didymos_id, all_borders=True)
     results['status'].append(status)
@@ -3823,7 +3923,11 @@ def make_annotated_plot(fits_combined_filepath, out_type='pdf', dscale=1000, lin
         table = ephem[index:index+1]
 
         jpg_combined_filename = fits_combined_filepath.replace('.fits', '.jpg')
-        output_plot = plot_didymos_images(jpg_combined_filename, table, out_type, dscale, line_width, font_size)
+        border_filename = jpg_combined_filename.replace('superstack.jpg', 'superstack-bd.jpg')
+        if os.path.exists(jpg_combined_filename) and os.path.exists(border_filename):
+            output_plot = plot_didymos_images(jpg_combined_filename, table, out_type, dscale, line_width, font_size)
+        else:
+            logger.error(f"Combined filename {os.path.basename(jpg_combined_filename)} or {os.path.basename(border_filename)} missing")
     else:
         logger.error(f"Couldn't find matching frame for {fits_combined_filepath}")
 
@@ -3885,8 +3989,8 @@ def plot_didymos_images(jpg_combined_filename, table, out_type='pdf', dscale=100
     xvel=arrow_len*cos(radians(vel)+radians(90))
     yvel=arrow_len*sin(radians(vel)+radians(90))
 
-    plt.figure(dpi=200, tight_layout=True)
-    ax = plt.subplot(111, aspect='equal')
+    fig = Figure(dpi=200, tight_layout=True)
+    ax = fig.add_subplot(111, aspect='equal')
     # Disable ticks and labels, use full space
     ax.tick_params(bottom=False,left=False)
     ax.set_xticks([])
@@ -3936,6 +4040,9 @@ def plot_didymos_images(jpg_combined_filename, table, out_type='pdf', dscale=100
     plt.savefig(output_plot, bbox_inches='tight', pad_inches=0)
     #plt.show()
     plt.close()
+    # delete figure to free memory
+    del fig
+
     return output_plot
 
 def find_block_for_frame(catfile):
