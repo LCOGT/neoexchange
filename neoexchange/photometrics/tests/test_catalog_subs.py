@@ -1298,6 +1298,21 @@ class FITSUnitTest(TestCase):
         hdulist.close()
         self.swope_table_firstitem = self.test_swope_ldactable[0:1]
 
+        self.test_mrofilename = os.path.join('photometrics', 'tests', 'mro_test_frame.fits')
+        hdulist = fits.open(self.test_mrofilename)
+        self.test_mroheader = hdulist[0].header
+        hdulist.close()
+
+        self.test_mroldacfilename = os.path.join('photometrics', 'tests', 'mro_test_ldac.fits')
+        hdulist = fits.open(self.test_mroldacfilename)
+        header_array = hdulist[1].data[0][0]
+        header = fits_ldac_to_header(header_array)
+        self.test_mro_ldacwcs = WCS(header)
+        self.test_mro_ldac_pixscale = round(proj_plane_pixel_scales(self.test_mro_ldacwcs).mean()*3600.0, 5)
+        self.test_mro_ldactable = hdulist[2].data
+        hdulist.close()
+        self.mro_table_firstitem = self.test_mro_ldactable[0:1]
+
         column_types = [('ccd_x', '>f4'), 
                         ('ccd_y', '>f4'), 
                         ('obs_ra', '>f8'), 
@@ -1347,7 +1362,7 @@ class FITSUnitTest(TestCase):
                 assert_allclose(expected_wcs.cd, frame_wcs.cd, rtol=rtol, err_msg=err_msg)
 
 
-class OpenFITSCatalog(FITSUnitTest):
+class TestOpenFITSCatalog(FITSUnitTest):
 
     def test_catalog_does_not_exist(self):
         expected_hdr = {}
@@ -1663,6 +1678,49 @@ class OpenFITSCatalog(FITSUnitTest):
         self.assertEqual(expected_hdr_value, hdr['INSTRUME'])
         self.assertEqual(float, type(hdr['PC2_1']))
         self.assertEqual(expected_hdr_value2, hdr['PC2_1'])
+
+    def test_mro_header(self):
+        outpath = os.path.join("photometrics", "tests")
+        expected_header = fits.Header.fromfile(os.path.join(outpath, "mro_test_header"), sep='\n', endcard=False, padding=False)
+        expected_tbl = {}
+        expected_cattype = 'MRO'
+
+        hdr, tbl, cattype = open_fits_catalog(self.test_mrofilename)
+
+        self.assertEqual(expected_cattype, cattype)
+        self.assertEqual(expected_tbl, tbl)
+        for key in expected_header:
+            self.assertEqual(expected_header[key], hdr[key],
+                msg="Failure on %s (%s != %s)" % (key, expected_header[key], hdr[key]))
+
+    def test_mroldac_read_catalog(self):
+        unexpected_value = {}
+
+        hdr, tbl, cattype = open_fits_catalog(self.test_mroldacfilename)
+        self.assertNotEqual(unexpected_value, hdr)
+        self.assertNotEqual(unexpected_value, tbl)
+        self.assertNotEqual(unexpected_value, cattype)
+
+    def test_mroldac_catalog_read_length(self):
+        expected_hdr_len = 90
+        expected_tbl_len = len(self.test_mro_ldactable)
+        expected_cattype = 'MRO_LDAC'
+
+        hdr, tbl, cattype = open_fits_catalog(self.test_mroldacfilename)
+
+        self.assertEqual(expected_hdr_len, len(hdr))
+        self.assertEqual(expected_tbl_len, len(tbl))
+        self.assertEqual(expected_cattype, cattype)
+
+    def test_mroldac_catalog_read_hdr_keyword(self):
+        expected_hdr_value = 'MRO2K'
+        expected_hdr_value2 = '1.03149'
+
+        hdr, tbl, cattype = open_fits_catalog(self.test_mroldacfilename)
+
+        self.assertEqual(expected_hdr_value, hdr['INSTRUME'])
+        self.assertEqual(str, type(hdr['AIRMASS']))
+        self.assertEqual(expected_hdr_value2, hdr['AIRMASS'])
 
 
 class TestConvertValues(FITSUnitTest):
