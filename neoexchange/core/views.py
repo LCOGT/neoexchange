@@ -74,7 +74,7 @@ from astrometrics.time_subs import extract_mpc_epoch, parse_neocp_date, \
     parse_neocp_decimal_date, get_semester_dates, jd_utc2datetime, datetime2st
 from photometrics.external_codes import run_sextractor, run_swarp, run_hotpants, run_scamp, updateFITSWCS,\
     read_mtds_file, unpack_tarball, run_findorb
-from photometrics.catalog_subs import open_fits_catalog, get_catalog_header, \
+from photometrics.catalog_subs import open_fits_catalog, get_header, get_catalog_header, \
     determine_filenames, increment_red_level, funpack_fits_file, update_ldac_catalog_wcs, FITSHdrException, \
     get_reference_catalog, reset_database_connection, sanitize_object_name
 from photometrics.photometry_subs import calc_asteroid_snr, calc_sky_brightness
@@ -137,7 +137,7 @@ def determine_active_proposals(proposal_code=None, filter_proposals=True):
 
     if proposal_code is not None:
         try:
-            proposal = Proposal.objects.get(code=proposal_code.upper())
+            proposal = Proposal.objects.get(code=proposal_code)
             proposals = [proposal.code, ]
         except Proposal.DoesNotExist:
             logger.warning("Proposal {} does not exist".format(proposal_code))
@@ -3585,7 +3585,12 @@ def find_block_for_frame(catfile):
 
     # try and find Frame does for the fits catfile with a non-null block
     try:
-        frame = Frame.objects.get(filename=os.path.basename(catfile), block__isnull=False)
+        # Swope filenames are non-unique so need extra info from the header
+        if os.path.basename(catfile).startswith('rccd'):
+            header, cattype = get_header(catfile)
+            frame = Frame.objects.get(filename=os.path.basename(catfile), block__request_number=header['request_number'])
+        else:
+            frame = Frame.objects.get(filename=os.path.basename(catfile), block__isnull=False)
     except Frame.MultipleObjectsReturned:
         logger.error("Found multiple versions of fits frame %s pointing at multiple blocks" % os.path.basename(catfile))
         return None
@@ -3607,13 +3612,13 @@ def make_new_catalog_entry(new_ldac_catalog, header, block, frame_type=Frame.BAN
 
     num_new_frames_created = 0
 
-    # if a Frame does not exist for the catalog file with a non-null block
+    # if a Frame does not exist for the catalog file with a non-null block and the passed Block [block]
     # create one with the fits filename
     catfilename = os.path.basename(new_ldac_catalog)
-    cat_frames = Frame.objects.filter(filename=catfilename, block__isnull=False)
+    cat_frames = Frame.objects.filter(filename=catfilename, block__isnull=False, block=block)
     num_frames = cat_frames.count()
 
-    print(f"make_new_catalog_entry: zp= {header['zeropoint']} +/- {header['zeropoint_err']} {header['zeropoint_src']}")
+    print(f"make_new_catalog_entry: FWHM= {header['fwhm']} zp= {header['zeropoint']} +/- {header['zeropoint_err']} {header['zeropoint_src']}")
     if num_frames == 0:
 
         # Create a new Frame entry for new fits_file_output name
