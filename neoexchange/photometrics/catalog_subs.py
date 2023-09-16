@@ -1233,7 +1233,7 @@ def get_catalog_header(catalog_header, catalog_type='LCOGT', debug=False):
         hdr_mapping, tbl_mapping = banzai_ldac_catalog_mapping()
     elif catalog_type == 'PHOTPIPE_LDAC':
         hdr_mapping, tbl_mapping, broken_keywords = photpipe_ldac_catalog_mapping()
-    elif catalog_type == 'SWOPE' or catalog_type == 'SWOPE_LDAC':
+    elif catalog_type.startswith('SWOPE'):
         hdr_mapping, tbl_mapping = swope_ldac_catalog_mapping()
     else:
         logger.error("Unsupported catalog mapping: %s", catalog_type)
@@ -1347,6 +1347,8 @@ def get_catalog_header(catalog_header, catalog_type='LCOGT', debug=False):
                             logger.warning(f"Bad PHOTPIPE fit detected. RMS={rms}")
 
                         header_item = {item: fit_status}
+                    elif fits_keyword == '<L1ZPSRC>' and catalog_type.startswith('SWOPE'):
+                        header_item = {item: 'N/A'}
                     else:
                         header_item = {item: fixed_values_map[fits_keyword]}
             if header_item:
@@ -1477,6 +1479,8 @@ def get_catalog_items_new(header_items, table, catalog_type='LCOGT', flag_filter
         hdr_mapping, tbl_mapping = banzai_ldac_catalog_mapping()
     elif catalog_type == 'PHOTPIPE_LDAC':
         hdr_mapping, tbl_mapping, broken_keywords = photpipe_ldac_catalog_mapping()
+    elif catalog_type.startswith('SWOPE'):
+        hdr_mapping, tbl_mapping = swope_ldac_catalog_mapping()
     else:
         logger.error("Unsupported catalog mapping: %s", catalog_type)
         return None
@@ -1725,6 +1729,7 @@ def update_frame_zeropoint(header, ast_cat_name, phot_cat_name, frame_filename, 
     except Frame.DoesNotExist:
         if frame_type == Frame.NEOX_RED_FRAMETYPE:
             prior_frame_filename = frame_filename.replace('e92.fits', 'e91.fits')
+            logger.info(f"update_frame_zeropoint: Creating new NEOX_RED Frame {frame_filename} (prior filename: {prior_frame_filename})")
             try:
                 prior_frame = Frame.objects.get(filename=prior_frame_filename, frametype=Frame.BANZAI_RED_FRAMETYPE)
                 block = prior_frame.block
