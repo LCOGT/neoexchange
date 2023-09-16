@@ -1047,6 +1047,9 @@ def open_fits_catalog(catfile, header_only=False):
             cattype = 'PHOTPIPE_LDAC'
         elif 'NIGHT' in header and 'CASSPOS' in header and 'NLOOPS' in header and 'LOOP' in header:
             cattype = 'SWOPE_LDAC'
+        elif 'PROJID' in header and 'PROCHIST' in header and 'WINDVEL' in header and 'WINDGUST' in header and 'TELESCOP' in header:
+            if 'MRO' in header['TELESCOP']:
+                cattype = 'MRO_LDAC'
     elif len(hdulist) == 4 or (len(hdulist) == 3 and hdulist[1].header.get('EXTNAME', None) != 'LDAC_IMHEAD'):
         # New BANZAI-format data
         cattype = 'BANZAI'
@@ -1073,6 +1076,11 @@ def open_fits_catalog(catfile, header_only=False):
         if origin is not None and origin == 'LCO/OCIW':
             cattype = 'SWOPE'
             hdr_name = 'PRIMARY'
+        elif origin is not None and origin.startswith('NOAO-IRAF FITS Image Kernel'):
+            telescop = hdulist[0].header.get('telescop', None)
+            if telescop is not None and telescop == 'MRO 2.4-meter':
+                cattype = 'MRO'
+                hdr_name = 'PRIMARY'
         else:
             # BANZAI-format after extraction of image
             cattype = 'BANZAI'
