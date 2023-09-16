@@ -85,7 +85,22 @@ def determine_archive_start_end(obs_t=None):
     return start, end
 
 
-def get_frame_data(start_date, end_date, auth_header='', obstype='EXPOSE', proposal='LCO2015B-005', red_lvls=['90', '10']):
+def fetch_frames(url, collection, auth_headers):
+    """Download frames from the specified LCO Archive <url>, recursively calling
+    this routine to iterates over the results if there are more than the default
+    1000, saving to <collection>.
+    """
+    resp = requests.get(url,  headers=auth_headers)
+    if resp.status_code in [200, 201]:
+        response = resp.json()
+        collection += response.get('results', [])
+        if response.get('next'):
+            fetch_frames(response['next'], collection, auth_headers)
+    else:
+        logger.error("Request {} API did not return JSON: {}".format(url, resp.status_code))
+
+
+def get_frame_data(start_date, end_date, auth_headers='', obstype='EXPOSE', proposal='LCO2015B-005', red_lvls=['90', '10']):
     """Obtain the list of frames between <start_date> and <end_date>. An
     authorization token (from e.g. odin_login()) will likely be needed to get
     proprietary data. By default we download data from [proposal]=LCO2015B-005
@@ -93,7 +108,7 @@ def get_frame_data(start_date, end_date, auth_header='', obstype='EXPOSE', propo
     Each reduction level is queried in turn and results are added to a
     dictionary with the reduction level as the key (which is returned)"""
 
-    limit = 1000
+    limit = 10000
     base_url = settings.ARCHIVE_FRAMES_URL
     archive_url = '%s?limit=%d&start=%s&end=%s&OBSTYPE=%s&PROPID=%s&format=json' % (base_url, limit, start_date, end_date, obstype, proposal)
     print(archive_url)
@@ -101,13 +116,12 @@ def get_frame_data(start_date, end_date, auth_header='', obstype='EXPOSE', propo
     for reduction_lvl in red_lvls:
         search_url = archive_url + '&RLEVEL=' + reduction_lvl
 #        print("search_url=%s" % search_url)
-        resp = requests.get(search_url, headers=auth_header)
-        if resp.status_code in [200, 201]:
-            response = resp.json()
-            frames_for_red_lvl = {reduction_lvl : response.get('results', [])}
-            frames.update(frames_for_red_lvl)
-        else:
-            logger.error("Request {} API did not return JSON: {}".format(search_url, resp.status_code))
+        collection = []
+        fetch_frames(search_url, collection, auth_headers)
+
+        frames_for_red_lvl = {reduction_lvl : collection}
+        frames.update(frames_for_red_lvl)
+
     return frames
 
 
