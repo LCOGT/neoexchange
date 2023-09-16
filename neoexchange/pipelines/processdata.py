@@ -424,10 +424,20 @@ class ZeropointProcessPipeline(PipelineProcess):
 
                     # get the fits filename from the catfile in order to get the Block from the Frame
                     if 'e91_ldac.fits' in os.path.basename(catfile):
+                        red_level = 91
                         fits_file = os.path.basename(catfile.replace('e91_ldac.fits', 'e91.fits'))
                     elif 'e92_ldac.fits' in os.path.basename(catfile):
+                        red_level = 92
+                        update_frame_type = "BANZAI"
+                        update_catalog_type = "BANZAI_LDAC"
                         fits_file = os.path.basename(catfile.replace('e92_ldac.fits', 'e92.fits'))
+                    elif 'e72_ldac.fits' in os.path.basename(catfile):
+                        red_level = 72
+                        update_frame_type = "SWOPE"
+                        update_catalog_type = "SWOPE_LDAC"
+                        fits_file = os.path.basename(catfile.replace('e72_ldac.fits', 'e72.fits'))
                     else:
+                        red_level = 99
                         fits_file = os.path.basename(catfile)
 
                     fits_filepath = os.path.join(os.path.dirname(catfile), fits_file)
@@ -437,19 +447,19 @@ class ZeropointProcessPipeline(PipelineProcess):
                     header['astrometric_catalog'] = ast_cat_name
                     header['photometric_catalog'] = phot_cat_name
                     logger.debug("Calling update_frame_zeropoint")
-                    frame = update_frame_zeropoint(header, ast_cat_name, phot_cat_name, frame_filename=fits_file, frame_type=Frame.NEOX_RED_FRAMETYPE)
+                    frame = update_frame_zeropoint(header, ast_cat_name, phot_cat_name, frame_filepath=fits_filepath, frame_type=Frame.NEOX_RED_FRAMETYPE)
 
-                    # Write updated photometric calibration keywords to FITS header of e92.fits file
-                    logger.debug("Calling updateFITScalib for e92")
-                    status, new_fits_header = updateFITScalib(header, fits_filepath, "BANZAI")
+                    # Write updated photometric calibration keywords to FITS header of eX2.fits file
+                    logger.debug(f"Calling updateFITScalib for e{red_level}")
+                    status, new_fits_header = updateFITScalib(header, fits_filepath, update_frame_type)
 
-                    # Write updated photometric calibration keywords to FITS header of e92_ldac.fits catalog file
-                    logger.debug("Calling updateFITScalib for e92_ldac")
-                    status, new_fits_header = updateFITScalib(header, catfile, "BANZAI_LDAC")
+                    # Write updated photometric calibration keywords to FITS header of eX2_ldac.fits catalog file
+                    logger.debug(f"Calling updateFITScalib for e{red_level}_ldac")
+                    status, new_fits_header = updateFITScalib(header, catfile, update_catalog_type)
 
                     # update the zeropoint computed above in the CATALOG file Frame
                     logger.debug("Calling update_frame_zeropoint (2)")
-                    frame_cat = update_frame_zeropoint(header, ast_cat_name, phot_cat_name, frame_filename=os.path.basename(catfile), frame_type=Frame.BANZAI_LDAC_CATALOG)
+                    frame_cat = update_frame_zeropoint(header, ast_cat_name, phot_cat_name, frame_filepath=catfile, frame_type=Frame.BANZAI_LDAC_CATALOG)
 
                     # store the CatalogSources
                     logger.debug("Calling get_or_create_CatalogSources")
@@ -497,6 +507,7 @@ class ZeropointProcessPipeline(PipelineProcess):
 
         header, table = extract_catalog(catfile, catalog_type, flag_filter=7)
         if header and table:
+            logger.info(f"ZP setup: {header['fwhm']}")
             db_filename = self.create_caldb_filename(datadir, header, phot_cat_name)
 
             kwargs = {}
@@ -580,7 +591,7 @@ class ZeropointProcessPipeline(PipelineProcess):
             start = time.time()
             inst_mag =  phot['obs_mag']
             if len(inst_mag.shape) == 2:
-                # Slice out 3rd index (diameter=10pix)
+                # Slice out 4th index # (diameter=5")
                 inst_mag = inst_mag[0:, 4]
 
             gmi_limits = [0.2, 3.0]
