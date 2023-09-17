@@ -1230,7 +1230,6 @@ def convert_value(keyword, value):
     elif keyword == 'instrument':
         newvalue = inst_codes.get(value, value)
     elif keyword == 'filter':
-        print("In filter mapper")
         newvalue = mro_filter_codes.get(value, value)
     elif keyword == 'astrometric_fit_rms':
         # Check for bad cases of '-99/-99' and replace with None
