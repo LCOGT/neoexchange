@@ -950,7 +950,7 @@ def mro_ldac_catalog_mapping(fixed_values_map={}):
 
     new_fixed_map = { '<PROPID>'    : 'MRO2022', # Default proposal in case info is missing in the header)
                       '<SITECODE>'  : 'H01',
-                      '<L1ZPSRC'    : 'N/A',
+                      '<L1ZPSRC>'    : 'N/A',
                       '<WCCATTYP>'  : '',
                       '<WCSERR>'    : -99,
                       '<WCSRDRES>'  : -99,
@@ -963,7 +963,7 @@ def mro_ldac_catalog_mapping(fixed_values_map={}):
                     'site_id'    : '<SITENAME>',
                     'tel_id'     : 'TELESCOP',
                     'instrument' : 'INSTRUME',
-                    'filter'     : 'FILTER',
+                    'filter'     : '<FILTER>',
                     'framename'  : 'FILENAME',
                     'exptime'    : 'EXPTIME',
                     'obs_date'   : 'DATE-OBS',
@@ -1195,7 +1195,11 @@ def convert_value(keyword, value):
     FLUX2MAG = 2.5/log(10)
     # Instrument code mapping dictionary
     inst_codes = {'Direct/4Kx4K-4' : 'D4K4' }
-
+    # MRO filter number mapping dictionary
+    mro_filter_codes = { '5 1' : 'R',
+                         '4 1' : 'V',
+                         '2 1' : 'VR'
+                       }
     newvalue = value
 
     if keyword == 'obs_date' or keyword == 'block_start' or keyword == 'block_end':
@@ -1225,6 +1229,9 @@ def convert_value(keyword, value):
             pass
     elif keyword == 'instrument':
         newvalue = inst_codes.get(value, value)
+    elif keyword == 'filter':
+        print("In filter mapper")
+        newvalue = mro_filter_codes.get(value, value)
     elif keyword == 'astrometric_fit_rms':
         # Check for bad cases of '-99/-99' and replace with None
         if value.strip() == '-99/-99':
@@ -1449,8 +1456,6 @@ def get_catalog_header(catalog_header, catalog_type='LCOGT', debug=False):
                             logger.warning(f"Bad PHOTPIPE fit detected. RMS={rms}")
 
                         header_item = {item: fit_status}
-                    elif fits_keyword == '<L1ZPSRC>' and (catalog_type.startswith('SWOPE') or catalog_type.startswith('MRO')):
-                        header_item = {item: 'N/A'}
                     else:
                         header_item = {item: fixed_values_map[fits_keyword]}
             if header_item:

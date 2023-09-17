@@ -2396,7 +2396,7 @@ class FITSReadHeader(FITSUnitTest):
         expected_params = { 'site_code'  : 'H01',
                             'tel_id'     : 'MRO 2.4-meter',
                             'instrument' : 'MRO2K',
-                            'filter'     : '2 1',
+                            'filter'     : 'VR',
                             'framename'  : 'm230225,0010.fits',
                             'exptime'    : 150.0,
                             'obs_date'      : obs_date,
@@ -2424,6 +2424,84 @@ class FITSReadHeader(FITSUnitTest):
         expected_cattype = "MRO"
 
         header, table, cattype = open_fits_catalog(self.test_mrofilename)
+        self.assertEqual(expected_cattype, cattype)
+        frame_header = get_catalog_header(header, cattype)
+
+        self.compare_headers(expected_params, frame_header)
+
+    def test_mro_nowcs_header_Vfilter(self):
+        obs_date = datetime.strptime('2023-02-25T03:38:42.640', '%Y-%m-%dT%H:%M:%S.%f')
+        expected_params = { 'site_code'  : 'H01',
+                            'tel_id'     : 'MRO 2.4-meter',
+                            'instrument' : 'MRO2K',
+                            'filter'     : 'V',
+                            'framename'  : 'm230225,0010.fits',
+                            'exptime'    : 150.0,
+                            'obs_date'      : obs_date,
+                            'obs_midpoint'  : obs_date + timedelta(seconds=150.0 / 2.0),
+                            'object_name'   : 'didymosVR',
+                            'proposal'      : 'evr_neo',
+                            'field_center_ra'  : Angle('07:20:26.050', unit=u.hour).deg,
+                            'field_center_dec' : Angle('+28:58:25.60', unit=u.deg).deg,
+                            'field_width'   : '4.5181m',
+                            'field_height'  : '4.5181m',
+                            'pixel_scale'   : 0.52946,
+                            'wcs' : self.test_mro_ldacwcs,
+                            'fwhm'          : -99,
+                            'astrometric_fit_status' : -99,
+                            'astrometric_catalog'    : '',
+                            'astrometric_fit_rms'    : -99,
+                            'astrometric_fit_nstars' : -4,
+                            'zeropoint'     : -99,
+                            'zeropoint_err' : -99,
+                            'zeropoint_src' : 'N/A',
+                            'reduction_level' : 61,
+                            'xbinning' : 4,
+                            'ybinning' : 4,
+                          }
+        expected_cattype = "MRO"
+
+        header, table, cattype = open_fits_catalog(self.test_mrofilename)
+        header['FILTER'] = '4 1'
+        self.assertEqual(expected_cattype, cattype)
+        frame_header = get_catalog_header(header, cattype)
+
+        self.compare_headers(expected_params, frame_header)
+
+    def test_mro_nowcs_header_Rfilter(self):
+        obs_date = datetime.strptime('2023-02-25T03:38:42.640', '%Y-%m-%dT%H:%M:%S.%f')
+        expected_params = { 'site_code'  : 'H01',
+                            'tel_id'     : 'MRO 2.4-meter',
+                            'instrument' : 'MRO2K',
+                            'filter'     : 'R',
+                            'framename'  : 'm230225,0010.fits',
+                            'exptime'    : 150.0,
+                            'obs_date'      : obs_date,
+                            'obs_midpoint'  : obs_date + timedelta(seconds=150.0 / 2.0),
+                            'object_name'   : 'didymosVR',
+                            'proposal'      : 'evr_neo',
+                            'field_center_ra'  : Angle('07:20:26.050', unit=u.hour).deg,
+                            'field_center_dec' : Angle('+28:58:25.60', unit=u.deg).deg,
+                            'field_width'   : '4.5181m',
+                            'field_height'  : '4.5181m',
+                            'pixel_scale'   : 0.52946,
+                            'wcs' : self.test_mro_ldacwcs,
+                            'fwhm'          : -99,
+                            'astrometric_fit_status' : -99,
+                            'astrometric_catalog'    : '',
+                            'astrometric_fit_rms'    : -99,
+                            'astrometric_fit_nstars' : -4,
+                            'zeropoint'     : -99,
+                            'zeropoint_err' : -99,
+                            'zeropoint_src' : 'N/A',
+                            'reduction_level' : 61,
+                            'xbinning' : 4,
+                            'ybinning' : 4,
+                          }
+        expected_cattype = "MRO"
+
+        header, table, cattype = open_fits_catalog(self.test_mrofilename)
+        header['FILTER'] = '5 1'
         self.assertEqual(expected_cattype, cattype)
         frame_header = get_catalog_header(header, cattype)
 
