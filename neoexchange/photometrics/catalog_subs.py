@@ -967,11 +967,11 @@ def mro_ldac_catalog_mapping(fixed_values_map={}):
                     'framename'  : 'FILENAME',
                     'exptime'    : 'EXPTIME',
                     'obs_date'   : 'DATE-OBS',
-                    'block_start': '<NIGHT>',
-                    'block_end'  : '<NIGHT>',
-                    'groupid'    : '<NIGHT>',
-                    'request_number' : '<NIGHT>',
-                    'tracking_number' : '<NIGHT>',
+                    'block_start': '<FILENAME>',
+                    'block_end'  : '<FILENAME>',
+                    'groupid'    : '<FILENAME>',
+                    'request_number' : '<FILENAME>',
+                    'tracking_number' : '<FILENAME>',
                     'object_name' : 'OBJECT',
 #                    'num_exposures' : 'NLOOPS',
                     'proposal' : 'PROJID',
@@ -1219,14 +1219,28 @@ def convert_value(keyword, value):
                     elif keyword == 'block_end':
                         newvalue = dark_end
                 except ValueError:
-                    pass
-    elif keyword == 'request_number':
+                    try:
+                        # see if it's a MRO-style night desigination
+                        obs_night = datetime.strptime(value[0:7], 'm%y%m%d')
+#                        obs_night += timedelta(days=1)
+                        dark_start, dark_end = determine_darkness_times('H01', obs_night, sun_zd=90.5)
+                        if keyword == 'block_start':
+                            newvalue = dark_start
+                        elif keyword == 'block_end':
+                            newvalue = dark_end
+                    except ValueError:
+                        pass
+    elif keyword == 'request_number' or keyword == 'tracking_number':
         try:
             # see if it's a Swope-style night desigination
             obs_night = datetime.strptime(value, '%d%b%Y')
             newvalue = obs_night.strftime("%d%m%Y")
         except ValueError:
-            pass
+            try:
+                obs_night = datetime.strptime(value[0:7], 'm%y%m%d')
+                newvalue = obs_night.strftime("%d%m%Y")
+            except ValueError:
+                pass
     elif keyword == 'instrument':
         newvalue = inst_codes.get(value, value)
     elif keyword == 'filter':

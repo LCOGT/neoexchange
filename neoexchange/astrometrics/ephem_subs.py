@@ -1621,6 +1621,13 @@ def get_sitepos(site_code, dbg=False):
         site_long = -site_long  # West of Greenwich !
         site_hgt = 2280.0
         site_name = 'Swope 1m at Las Campanas Observatory'
+    elif site_code == 'H01':
+        # Latitude, longitude, height from DART MRO PDS docs
+        site_lat, status = S.sla_daf2r(33, 59,  5.4)
+        site_long, status = S.sla_daf2r(107, 11, 21.6)
+        site_long = -site_long  # West of Greenwich !
+        site_hgt = 3250.
+        site_name = 'MRO 2.4m at Magdalena Ridge Observatory'
     elif site_code == '500' or site_code == '1M0' or site_code == '0M4' or site_code == '2M0':
         site_lat = 0.0
         site_long = 0.0
