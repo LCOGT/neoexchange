@@ -1901,6 +1901,9 @@ class FITSReadHeader(FITSUnitTest):
 
         obs_date = datetime.strptime(self.test_header['DATE-OBS'], '%Y-%m-%dT%H:%M:%S.%f')
         expected_params = { 'site_code'  : 'K92',
+                            'enc_id' : self.test_header['ENCID'],
+                            'site_id' : self.test_header['SITEID'],
+                            'tel_id' : self.test_header['TELID'],
                             'instrument' : self.test_header['INSTRUME'],
                             'filter'     : self.test_header['FILTER'],
                             'framename'  : self.test_header['ORIGNAME'],
@@ -1932,6 +1935,9 @@ class FITSReadHeader(FITSUnitTest):
     def test_ldac_header(self):
         obs_date = datetime.strptime('2016-04-28T20:11:54.303', '%Y-%m-%dT%H:%M:%S.%f')
         expected_params = { 'site_code'  : 'K92',
+                            'enc_id' : 'domb',
+                            'site_id' : 'cpt',
+                            'tel_id' : '1m0a',
                             'instrument' : 'kb76',
                             'filter'     : 'w',
                             'framename'  : 'cpt1m013-kb76-20160428-0141-e00.fits',
@@ -1967,6 +1973,18 @@ class FITSReadHeader(FITSUnitTest):
     def test_banzai_header(self):
         obs_date = datetime.strptime('2016-06-06T22:48:14', '%Y-%m-%dT%H:%M:%S')
         expected_params = { 'site_code'  : 'K92',
+                            'enc_id' : 'domb',
+                            'site_id' : 'cpt',
+                            'tel_id' : '1m0a',
+                            'block_start' : datetime(2016, 6, 6, 22, 24, 44),
+                            'block_end' : datetime(2016, 6, 6, 22, 49, 38),
+                            'groupid' : 'XL8B85F_K92-20160607_ToO',
+                            'object_name' : 'XL8B85F',
+                            'proposal' : 'LCO2016A-021',
+                            'request_number' : '0000622341',
+                            'tracking_number' : '0000172724',
+                            'num_exposures' : 12,
+                            'saturation' : 0.0,
                             'instrument' : 'kb76',
                             'filter'     : 'w',
                             'framename'  : 'cpt1m013-kb76-20160606-0396-e00.fits',
@@ -2001,6 +2019,18 @@ class FITSReadHeader(FITSUnitTest):
     def test_banzai_header_gaiadr2(self):
         obs_date = datetime.strptime('2016-06-06T22:48:14', '%Y-%m-%dT%H:%M:%S')
         expected_params = { 'site_code'  : 'K92',
+                            'enc_id' : 'domb',
+                            'site_id' : 'cpt',
+                            'tel_id' : '1m0a',
+                            'block_start' : datetime(2016, 6, 6, 22, 24, 44),
+                            'block_end' : datetime(2016, 6, 6, 22, 49, 38),
+                            'groupid' : 'XL8B85F_K92-20160607_ToO',
+                            'object_name' : 'XL8B85F',
+                            'proposal' : 'LCO2016A-021',
+                            'request_number' : '0000622341',
+                            'tracking_number' : '0000172724',
+                            'num_exposures' : 12,
+                            'saturation' : 0.0,
                             'instrument' : 'kb76',
                             'filter'     : 'w',
                             'framename'  : 'cpt1m013-kb76-20160606-0396-e00.fits',
@@ -2037,6 +2067,18 @@ class FITSReadHeader(FITSUnitTest):
     def test_banzai_header_gaiadr2_devversion(self):
         obs_date = datetime.strptime('2016-06-06T22:48:14', '%Y-%m-%dT%H:%M:%S')
         expected_params = { 'site_code'  : 'K92',
+                            'enc_id' : 'domb',
+                            'site_id' : 'cpt',
+                            'tel_id' : '1m0a',
+                            'block_start' : datetime(2016, 6, 6, 22, 24, 44),
+                            'block_end' : datetime(2016, 6, 6, 22, 49, 38),
+                            'groupid' : 'XL8B85F_K92-20160607_ToO',
+                            'object_name' : 'XL8B85F',
+                            'proposal' : 'LCO2016A-021',
+                            'request_number' : '0000622341',
+                            'tracking_number' : '0000172724',
+                            'num_exposures' : 12,
+                            'saturation' : 0.0,
                             'instrument' : 'kb76',
                             'filter'     : 'w',
                             'framename'  : 'cpt1m013-kb76-20160606-0396-e00.fits',
@@ -2073,6 +2115,18 @@ class FITSReadHeader(FITSUnitTest):
     def test_banzai_header_gaiadr2_version1_0(self):
         obs_date = datetime.strptime('2016-06-06T22:48:14', '%Y-%m-%dT%H:%M:%S')
         expected_params = { 'site_code'  : 'K92',
+                            'enc_id' : 'domb',
+                            'site_id' : 'cpt',
+                            'tel_id' : '1m0a',
+                            'block_start' : datetime(2016, 6, 6, 22, 24, 44),
+                            'block_end' : datetime(2016, 6, 6, 22, 49, 38),
+                            'groupid' : 'XL8B85F_K92-20160607_ToO',
+                            'object_name' : 'XL8B85F',
+                            'proposal' : 'LCO2016A-021',
+                            'request_number' : '0000622341',
+                            'tracking_number' : '0000172724',
+                            'num_exposures' : 12,
+                            'saturation' : 0.0,
                             'instrument' : 'kb76',
                             'filter'     : 'w',
                             'framename'  : 'cpt1m013-kb76-20160606-0396-e00.fits',
@@ -2109,6 +2163,18 @@ class FITSReadHeader(FITSUnitTest):
     def test_banzai_header_bad_version(self):
         obs_date = datetime.strptime('2016-06-06T22:48:14', '%Y-%m-%dT%H:%M:%S')
         expected_params = { 'site_code'  : 'K92',
+                            'enc_id' : 'domb',
+                            'site_id' : 'cpt',
+                            'tel_id' : '1m0a',
+                            'block_start' : datetime(2016, 6, 6, 22, 24, 44),
+                            'block_end' : datetime(2016, 6, 6, 22, 49, 38),
+                            'groupid' : 'XL8B85F_K92-20160607_ToO',
+                            'object_name' : 'XL8B85F',
+                            'proposal' : 'LCO2016A-021',
+                            'request_number' : '0000622341',
+                            'tracking_number' : '0000172724',
+                            'num_exposures' : 12,
+                            'saturation' : 0.0,
                             'instrument' : 'kb76',
                             'filter'     : 'w',
                             'framename'  : 'cpt1m013-kb76-20160606-0396-e00.fits',
@@ -2145,6 +2211,18 @@ class FITSReadHeader(FITSUnitTest):
     def test_banzai_header_blank_version(self):
         obs_date = datetime.strptime('2016-06-06T22:48:14', '%Y-%m-%dT%H:%M:%S')
         expected_params = { 'site_code'  : 'K92',
+                            'enc_id' : 'domb',
+                            'site_id' : 'cpt',
+                            'tel_id' : '1m0a',
+                            'block_start' : datetime(2016, 6, 6, 22, 24, 44),
+                            'block_end' : datetime(2016, 6, 6, 22, 49, 38),
+                            'groupid' : 'XL8B85F_K92-20160607_ToO',
+                            'object_name' : 'XL8B85F',
+                            'proposal' : 'LCO2016A-021',
+                            'request_number' : '0000622341',
+                            'tracking_number' : '0000172724',
+                            'num_exposures' : 12,
+                            'saturation' : 0.0,
                             'instrument' : 'kb76',
                             'filter'     : 'w',
                             'framename'  : 'cpt1m013-kb76-20160606-0396-e00.fits',
@@ -2181,6 +2259,18 @@ class FITSReadHeader(FITSUnitTest):
     def test_banzai_header_bad_major_version(self):
         obs_date = datetime.strptime('2016-06-06T22:48:14', '%Y-%m-%dT%H:%M:%S')
         expected_params = { 'site_code'  : 'K92',
+                            'enc_id' : 'domb',
+                            'site_id' : 'cpt',
+                            'tel_id' : '1m0a',
+                            'block_start' : datetime(2016, 6, 6, 22, 24, 44),
+                            'block_end' : datetime(2016, 6, 6, 22, 49, 38),
+                            'groupid' : 'XL8B85F_K92-20160607_ToO',
+                            'object_name' : 'XL8B85F',
+                            'proposal' : 'LCO2016A-021',
+                            'request_number' : '0000622341',
+                            'tracking_number' : '0000172724',
+                            'num_exposures' : 12,
+                            'saturation' : 0.0,
                             'instrument' : 'kb76',
                             'filter'     : 'w',
                             'framename'  : 'cpt1m013-kb76-20160606-0396-e00.fits',
@@ -2217,6 +2307,18 @@ class FITSReadHeader(FITSUnitTest):
     def test_banzai_header_bad_minor_version(self):
         obs_date = datetime.strptime('2016-06-06T22:48:14', '%Y-%m-%dT%H:%M:%S')
         expected_params = { 'site_code'  : 'K92',
+                            'enc_id' : 'domb',
+                            'site_id' : 'cpt',
+                            'tel_id' : '1m0a',
+                            'block_start' : datetime(2016, 6, 6, 22, 24, 44),
+                            'block_end' : datetime(2016, 6, 6, 22, 49, 38),
+                            'groupid' : 'XL8B85F_K92-20160607_ToO',
+                            'object_name' : 'XL8B85F',
+                            'proposal' : 'LCO2016A-021',
+                            'request_number' : '0000622341',
+                            'tracking_number' : '0000172724',
+                            'num_exposures' : 12,
+                            'saturation' : 0.0,
                             'instrument' : 'kb76',
                             'filter'     : 'w',
                             'framename'  : 'cpt1m013-kb76-20160606-0396-e00.fits',
@@ -2253,6 +2355,9 @@ class FITSReadHeader(FITSUnitTest):
     def test_photpipe_header(self):
         obs_date = datetime.strptime('2022-07-31T03:38:08.692', '%Y-%m-%dT%H:%M:%S.%f')
         expected_params = { 'site_code'  : 'W85',
+                            'enc_id' : 'doma',
+                            'site_id' : 'lsc',
+                            'tel_id' : '1m0a',
                             'instrument' : 'fa15',
                             'filter'     : 'w',
                             'framename'  : 'lsc1m005-fa15-20220730-0319-e00.fits',
@@ -2720,6 +2825,9 @@ class TestExtractCatalog(FITSUnitTest):
                        'obs_midpoint': datetime(2022, 7, 31,  3, 39, 11, 178500),
                        'pixel_scale': 0.38958,
                        'site_code': 'W85',
+                       'enc_id' : 'doma',
+                       'site_id' : 'lsc',
+                       'tel_id' : '1m0a',
                        'reduction_level' : 91,
                        'zeropoint': -99.0,
                        'zeropoint_err': -99.0,
@@ -2728,8 +2836,7 @@ class TestExtractCatalog(FITSUnitTest):
                        'aperture_radius_pixels' : 11.47,
                        'aperture_radius_arcsec' : round(11.47*self.test_photpipe_ldac_pixscale, 4)}
 
-        shutil.copy(os.path.abspath(self.test_photpipefilename), self.temp_dir)
-        test_photpipefilename = os.path.join(self.temp_dir, os.path.basename(self.test_photpipefilename))
+        test_photpipefilename = shutil.copy(os.path.abspath(self.test_photpipefilename), self.temp_dir)
         header, table = extract_catalog(test_photpipefilename)
 
         self.assertTrue(os.path.exists(test_photpipefilename))
