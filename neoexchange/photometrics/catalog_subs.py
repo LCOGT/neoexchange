@@ -871,11 +871,18 @@ def photpipe_ldac_catalog_mapping():
     return header_dict, table_dict, broken_keywords
 
 
-def swope_ldac_catalog_mapping():
-    """Returns two dictionaries of the mapping between the FITS header and table
+def swope_ldac_catalog_mapping(fixed_values_map={}):
+    """Returns thre dictionaries of the mapping between the FITS header and table
     items and CatalogItem quantities for FITS_LDAC catalogs extracted from the
-    Swope format files. Items in angle brackets (<FOO>) need to
-    be derived (pixel scale) or assumed as they are missing from the headers."""
+    Swope format files, along with the updated fixed_values_map).
+    Items in angle brackets (<FOO>) need to be derived (pixel scale) or
+    assumed (from the fixed_values_map) as they are missing from the headers."""
+
+    new_fixed_map = { '<PROPID>'    : 'SWOPE2022', # Default proposal for Swope data (which has no proposal info in the header)
+                      '<SITECODE>'  : '304',
+                      '<L1ZPSRC'    : 'N/A'
+                    }
+    fixed_values_map.update(new_fixed_map)
 
     header_dict = { 'site_code'  : '<SITECODE>',
                     'site_id'    : 'SITENAME',
@@ -931,7 +938,84 @@ def swope_ldac_catalog_mapping():
                     ('threshold'     , 'MU_THRESHOLD'),
                  ])
 
-    return header_dict, table_dict
+    return header_dict, table_dict, fixed_values_map
+
+
+def mro_ldac_catalog_mapping(fixed_values_map={}):
+    """Returns thre dictionaries of the mapping between the FITS header and table
+    items and CatalogItem quantities for FITS_LDAC catalogs extracted from the
+    MRO format files, along with the updated fixed_values_map.
+    Items in angle brackets (<FOO>) need to be derived (pixel scale) or
+    assumed (from the fixed_values_map) as they are missing from the headers."""
+
+    new_fixed_map = { '<PROPID>'    : 'MRO2022', # Default proposal in case info is missing in the header)
+                      '<SITECODE>'  : 'H01',
+                      '<L1ZPSRC'    : 'N/A',
+                      '<WCCATTYP>'  : '',
+                      '<WCSERR>'    : -99,
+                      '<WCSRDRES>'  : -99,
+                      'PIXSCALE' : 0.1323658386327315, # From f/length in optics table on http://www.mro.nmt.edu/data/2.4m/
+                      '<RLEVEL>'    : 61
+                    }
+    fixed_values_map.update(new_fixed_map)
+
+    header_dict = { 'site_code'  : '<SITECODE>',
+                    'site_id'    : '<SITENAME>',
+                    'tel_id'     : 'TELESCOP',
+                    'instrument' : 'INSTRUME',
+                    'filter'     : 'FILTER',
+                    'framename'  : 'FILENAME',
+                    'exptime'    : 'EXPTIME',
+                    'obs_date'   : 'DATE-OBS',
+                    'block_start': '<NIGHT>',
+                    'block_end'  : '<NIGHT>',
+                    'groupid'    : '<NIGHT>',
+                    'request_number' : '<NIGHT>',
+                    'tracking_number' : '<NIGHT>',
+                    'object_name' : 'OBJECT',
+#                    'num_exposures' : 'NLOOPS',
+                    'proposal' : 'PROJID',
+                    'trackrate_frac' : '<TRACFRAC>',
+                    'field_center_ra' : 'RA',
+                    'field_center_dec' : 'DEC',
+                    'field_width' : 'NAXIS1',
+                    'field_height' : 'NAXIS2',
+                    'pixel_scale' : '<WCS>',
+                    'xbinning' : 'XBINNING',
+                    'ybinning' : 'YBINNING',
+                    'zeropoint'     : '<L1ZP>',
+                    'zeropoint_err' : '<L1ZPERR>',
+                    'zeropoint_src' : '<L1ZPSRC>',
+                    'fwhm'          : '<L1FWHM>',
+                    'astrometric_fit_rms'    : '<WCSRDRES>',
+                    'astrometric_fit_status' : '<WCSERR>',
+                    'astrometric_fit_nstars' : '<WCSMATCH>',
+                    'astrometric_catalog'    : '<WCCATTYP>',
+                    'photometric_catalog'    : '<L1PHTCAT>',
+                    'reduction_level'        : '<RLEVEL>',
+                    'aperture_radius_pixels' : '<SEXAPED1>',
+                    'aperture_radius_arcsec' : '<SEXAPED1>'
+                  }
+
+    table_dict = OrderedDict([
+                    ('ccd_x'         , 'XWIN_IMAGE'),
+                    ('ccd_y'         , 'YWIN_IMAGE'),
+                    ('obs_ra'        , 'ALPHA_J2000'),
+                    ('obs_dec'       , 'DELTA_J2000'),
+                    ('obs_ra_err'    , 'ERRX2_WORLD'),
+                    ('obs_dec_err'   , 'ERRY2_WORLD'),
+                    ('major_axis'    , 'AWIN_IMAGE'),
+                    ('minor_axis'    , 'BWIN_IMAGE'),
+                    ('ccd_pa'        , 'THETAWIN_IMAGE'),
+                    ('obs_mag'       , 'FLUX_APER'),
+                    ('obs_mag_err'   , 'FLUXERR_APER'),
+                    ('obs_sky_bkgd'  , 'BACKGROUND'),
+                    ('flags'         , 'FLAGS'),
+                    ('flux_max'      , 'FLUX_MAX'),
+                    ('threshold'     , 'MU_THRESHOLD'),
+                 ])
+
+    return header_dict, table_dict, fixed_values_map
 
 
 def convert_to_string_value(value):
@@ -1242,7 +1326,9 @@ def get_catalog_header(catalog_header, catalog_type='LCOGT', debug=False):
     elif catalog_type == 'PHOTPIPE_LDAC':
         hdr_mapping, tbl_mapping, broken_keywords = photpipe_ldac_catalog_mapping()
     elif catalog_type.startswith('SWOPE'):
-        hdr_mapping, tbl_mapping = swope_ldac_catalog_mapping()
+        hdr_mapping, tbl_mapping, fixed_values_map = swope_ldac_catalog_mapping(fixed_values_map)
+    elif catalog_type.startswith('MRO'):
+        hdr_mapping, tbl_mapping, fixed_values_map = mro_ldac_catalog_mapping(fixed_values_map)
     else:
         logger.error("Unsupported catalog mapping: %s", catalog_type)
         return header_items
@@ -1295,7 +1381,15 @@ def get_catalog_header(catalog_header, catalog_type='LCOGT', debug=False):
                     fits_wcs = WCS(catalog_header)
                 except InvalidTransformError:
                     raise NeoException('Invalid WCS solution')
-                pixscale = proj_plane_pixel_scales(fits_wcs).mean()*3600.0
+                pixscale = proj_plane_pixel_scales(fits_wcs).mean()
+                # Only multiply by 3600 (deg->arcsec) if it's actually a celestial WCS
+                if fits_wcs.is_celestial:
+                    pixscale *= 3600.0
+                else:
+                    if 'xbinning' in hdr_mapping and 'PIXSCALE' in fixed_values_map:
+                        pixscale = fixed_values_map['PIXSCALE'] * catalog_header[hdr_mapping['xbinning']]
+                        # Delete from map to prevent incorrect values being put in later
+                        del fixed_values_map['PIXSCALE']
                 header_item = {item: round(pixscale, 5), 'wcs' : fits_wcs}
             # See if there is a version of the keyword in the file first
             file_fits_keyword = fits_keyword[1:-1]
@@ -1355,7 +1449,7 @@ def get_catalog_header(catalog_header, catalog_type='LCOGT', debug=False):
                             logger.warning(f"Bad PHOTPIPE fit detected. RMS={rms}")
 
                         header_item = {item: fit_status}
-                    elif fits_keyword == '<L1ZPSRC>' and catalog_type.startswith('SWOPE'):
+                    elif fits_keyword == '<L1ZPSRC>' and (catalog_type.startswith('SWOPE') or catalog_type.startswith('MRO')):
                         header_item = {item: 'N/A'}
                     else:
                         header_item = {item: fixed_values_map[fits_keyword]}
@@ -1488,7 +1582,7 @@ def get_catalog_items_new(header_items, table, catalog_type='LCOGT', flag_filter
     elif catalog_type == 'PHOTPIPE_LDAC':
         hdr_mapping, tbl_mapping, broken_keywords = photpipe_ldac_catalog_mapping()
     elif catalog_type.startswith('SWOPE'):
-        hdr_mapping, tbl_mapping = swope_ldac_catalog_mapping()
+        hdr_mapping, tbl_mapping, fixed_map = swope_ldac_catalog_mapping()
     else:
         logger.error("Unsupported catalog mapping: %s", catalog_type)
         return None
