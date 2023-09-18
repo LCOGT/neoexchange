@@ -34,7 +34,8 @@ from core.models.dataproducts import DataProduct
 TELESCOPE_CHOICES = (
                         ('1m0', '1-meter'),
                         ('2m0', '2-meter'),
-                        ('0m4', '0.4-meter')
+                        ('0m4', '0.4-meter'),
+                        ('2m4', '2.4-meter')
                     )
 
 SITE_CHOICES = (
@@ -47,10 +48,11 @@ SITE_CHOICES = (
                     ('sbg', 'SBIG cameras'),
                     ('sin', 'Sinistro cameras'),
                     ('spc', 'Spectral cameras'),
-                    ('lco', 'Las Campanas')
+                    ('lco', 'Las Campanas'),
+                    ('mro', 'Magdalena Ridge')
     )
 
-NONLCO_SITES = ['lco', ]
+NONLCO_SITES = ['lco', 'mro']
 
 class SuperBlock(models.Model):
 
@@ -62,7 +64,7 @@ class SuperBlock(models.Model):
     block_start     = models.DateTimeField(null=True, blank=True, db_index=True)
     block_end       = models.DateTimeField(null=True, blank=True, db_index=True)
     groupid         = models.CharField(max_length=55, null=True, blank=True)
-    tracking_number = models.CharField(max_length=10, null=True, blank=True, db_index=True)
+    tracking_number = models.CharField(max_length=15, null=True, blank=True, db_index=True)
     period          = models.FloatField('Spacing between cadence observations (hours)', null=True, blank=True)
     jitter          = models.FloatField('Acceptable deviation before or after strict period (hours)', null=True, blank=True)
     timeused        = models.FloatField('Time used (seconds)', null=True, blank=True)
