@@ -102,6 +102,8 @@ def create_frame(params, block=None, frameid=None):
         frame_params = frame_params_from_header(params, block)
     elif params.get('ORIGIN', '') == 'LCO/OCIW':
         frame_params = frame_params_from_swope_header(params, block)
+    elif params.get('ORIGIN', '').startswith('NOAO-IRAF FITS Image Kernel'):
+        frame_params = frame_params_from_mro_header(params, block)
     else:
         # We are parsing observation logs
         frame_params = frame_params_from_log(params, block)
@@ -331,6 +333,57 @@ def frame_params_from_swope_header(params, block):
     return frame_params
 
 
+def frame_params_from_mro_header(params, block):
+    # In these cases we are parsing the MRO FITS header
+    sitecode = 'H01'
+    rlevel = Frame.MRO_RED_FRAMETYPE
+
+    dateobs_keyword = 'DATE-OBS'
+
+    frame_params = { 'midpoint' : params.get(dateobs_keyword, None),
+                     'sitecode' : sitecode,
+                     'filter'   : convert_value('filter', params.get('FILTER', "B")),
+                     'frametype': rlevel,
+                     'block'    : block,
+                     'instrument': convert_value('instrument', params.get('INSTRUME', 'MRO2K')),
+                     'filename'  : params.get('FILENAME', None),
+                     'exptime'   : params.get('EXPTIME', None),
+                 }
+
+    xbinning = params.get('XBINNING', 1)
+    ybinning = params.get('YBINNING', 1)
+    if xbinning != 1 and ybinning != 1:
+        frame_params['extrainfo'] = f'bin{xbinning}x{ybinning}'
+
+    # Try and create a WCS object from the header. If successful, add to frame
+    # params
+    wcs = None
+    try:
+        # Suppress warnings from newer astropy versions which raise
+        # FITSFixedWarning on the lack of OBSGEO-L,-B,-H keywords even
+        # though we have OBSGEO-X,-Y,-Z as recommended by the FITS
+        # Paper VII standard...
+        warnings.simplefilter('ignore', category = FITSFixedWarning)
+        wcs = WCS(params)
+        frame_params['wcs'] = wcs
+    except ValueError:
+        logger.warning("Error creating WCS entry from frameid=%s" % frameid)
+
+    # Correct filename for missing trailing .fits extension
+    if '.fits' not in frame_params['filename']:
+        frame_params['filename'] = frame_params['filename'].rstrip() + '.fits'
+    # Correct midpoint for 1/2 the exposure time
+    if frame_params['midpoint'] and frame_params['exptime']:
+        try:
+            midpoint = datetime.strptime(frame_params['midpoint'], "%Y-%m-%dT%H:%M:%S.%f")
+        except ValueError:
+            midpoint = datetime.strptime(frame_params['midpoint'], "%Y-%m-%dT%H:%M:%S")
+
+        midpoint = midpoint + timedelta(seconds=float(frame_params['exptime']) / 2.0)
+        frame_params['midpoint'] = midpoint
+    return frame_params
+
+
 def frame_params_from_log(params, block):
     # Called when parsing MPC NEOCP observations lines/logs
     our_site_codes = LCOGT_site_codes()
@@ -396,8 +449,11 @@ def images_from_fits(datapath, match_pattern='r*.fits'):
             logger.warning(f"Fixing malformed DATE-OBS in {image['basename']} to {new_dateobs}")
             fits_header['DATE-OBS'] = new_dateobs
         image['headers'] = {'data' : dict(fits_header.items()) }
-        if 'BLKUID' not in image['headers']['data'] and 'NIGHT' in image['headers']['data']:
-            image['headers']['data']['BLKUID'] = convert_value('request_number', image['headers']['data']['NIGHT'])
+        blkuid_keyword = 'NIGHT' # Swope keyword
+        if blkuid_keyword not in image['headers']['data'] and 'FILENAME' in image['headers']['data']:
+            blkuid_keyword = 'FILENAME' # MRO keyword (also in Swope which is why we need to be careful)
+        if 'BLKUID' not in image['headers']['data'] and blkuid_keyword in image['headers']['data']:
+            image['headers']['data']['BLKUID'] = convert_value('request_number', image['headers']['data'][blkuid_keyword])
             image['headers']['data']['FILENAME'] = image['basename']
         images.append(image)
 
@@ -466,9 +522,12 @@ def block_status(block_id, datapath=None):
             last_image_header = None
             if block.site.lower() in NONLCO_SITES and datapath is not None:
                 # Non-LCO data, get images from walking directory of FITS files
-                images = images_from_fits(datapath)
+                match_pattern='r*.fits'
                 # Version for Swope BANZAI reprocessing
-                #images = images_from_fits(datapath, match_pattern='ccd*e91.fits')
+                #match_pattern = 'ccd*e91.fits'
+                if block.site.lower() == 'mro':
+                    match_pattern = 'fm*.????.fits'
+                images = images_from_fits(datapath, match_pattern)
                 last_image_header = images[-1].get('headers', None)
                 num_archive_frames = len(images)
             else:
