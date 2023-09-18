@@ -2443,7 +2443,8 @@ class FITSReadHeader(FITSUnitTest):
     def test_mro_nowcs_header(self):
         obs_date = datetime.strptime('2023-02-25T03:38:42.640', '%Y-%m-%dT%H:%M:%S.%f')
         expected_params = { 'site_code'  : 'H01',
-                            'tel_id'     : 'MRO 2.4-meter',
+                            'site_id'    : 'MRO',
+                            'tel_id'     : '2m4 MRO 2.4-meter',
                             'instrument' : 'MRO2K',
                             'filter'     : 'VR',
                             'framename'  : 'm230225,0010.fits',
@@ -2456,7 +2457,7 @@ class FITSReadHeader(FITSUnitTest):
                             'block_end' : datetime(2023, 2,25, 13, 40, 0),
                             'groupid' : '25Feb2023',
                             'request_number' : '25022023',
-                            'tracking_number' : '25022023',
+                            'tracking_number' : 'MRO-25022023',
                             'field_center_ra'  : Angle('07:20:26.050', unit=u.hour).deg,
                             'field_center_dec' : Angle('+28:58:25.60', unit=u.deg).deg,
                             'field_width'   : '4.5181m',
@@ -2486,7 +2487,8 @@ class FITSReadHeader(FITSUnitTest):
     def test_mro_nowcs_header_Vfilter(self):
         obs_date = datetime.strptime('2023-02-25T03:38:42.640', '%Y-%m-%dT%H:%M:%S.%f')
         expected_params = { 'site_code'  : 'H01',
-                            'tel_id'     : 'MRO 2.4-meter',
+                            'site_id'    : 'MRO',
+                            'tel_id'     : '2m4 MRO 2.4-meter',
                             'instrument' : 'MRO2K',
                             'filter'     : 'V',
                             'framename'  : 'm230225,0010.fits',
@@ -2499,7 +2501,7 @@ class FITSReadHeader(FITSUnitTest):
                             'block_end' : datetime(2023, 2,25, 13, 40, 0),
                             'groupid' : '25Feb2023',
                             'request_number' : '25022023',
-                            'tracking_number' : '25022023',
+                            'tracking_number' : 'MRO-25022023',
                             'field_center_ra'  : Angle('07:20:26.050', unit=u.hour).deg,
                             'field_center_dec' : Angle('+28:58:25.60', unit=u.deg).deg,
                             'field_width'   : '4.5181m',
@@ -2530,7 +2532,8 @@ class FITSReadHeader(FITSUnitTest):
     def test_mro_nowcs_header_Rfilter(self):
         obs_date = datetime.strptime('2023-02-25T03:38:42.640', '%Y-%m-%dT%H:%M:%S.%f')
         expected_params = { 'site_code'  : 'H01',
-                            'tel_id'     : 'MRO 2.4-meter',
+                            'site_id'    : 'MRO',
+                            'tel_id'     : '2m4 MRO 2.4-meter',
                             'instrument' : 'MRO2K',
                             'filter'     : 'R',
                             'framename'  : 'm230225,0010.fits',
@@ -2543,7 +2546,7 @@ class FITSReadHeader(FITSUnitTest):
                             'block_end' : datetime(2023, 2,25, 13, 40, 0),
                             'groupid' : '25Feb2023',
                             'request_number' : '25022023',
-                            'tracking_number' : '25022023',
+                            'tracking_number' : 'MRO-25022023',
                             'field_center_ra'  : Angle('07:20:26.050', unit=u.hour).deg,
                             'field_center_dec' : Angle('+28:58:25.60', unit=u.deg).deg,
                             'field_width'   : '4.5181m',

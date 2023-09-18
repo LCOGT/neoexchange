@@ -952,7 +952,9 @@ def mro_ldac_catalog_mapping(fixed_values_map={}):
 
     new_fixed_map = { '<PROPID>'    : 'MRO2022', # Default proposal in case info is missing in the header)
                       '<SITECODE>'  : 'H01',
-                      '<L1ZPSRC>'    : 'N/A',
+                      '<SITENAME>'  : 'MRO',
+                      '<TELESCOPE>' : '2m4 MRO 2.4-meter',
+                      '<L1ZPSRC>'   : 'N/A',
                       '<WCCATTYP>'  : '',
                       '<WCSERR>'    : -99,
                       '<WCSRDRES>'  : -99,
@@ -963,7 +965,7 @@ def mro_ldac_catalog_mapping(fixed_values_map={}):
 
     header_dict = { 'site_code'  : '<SITECODE>',
                     'site_id'    : '<SITENAME>',
-                    'tel_id'     : 'TELESCOP',
+                    'tel_id'     : '<TELESCOPE>',
                     'instrument' : 'INSTRUME',
                     'filter'     : '<FILTER>',
                     'framename'  : 'FILENAME',
@@ -1242,7 +1244,10 @@ def convert_value(keyword, value):
         except ValueError:
             try:
                 obs_night = datetime.strptime(value[0:7], 'm%y%m%d')
-                newvalue = obs_night.strftime("%d%m%Y")
+                if keyword == 'tracking_number':
+                    newvalue = obs_night.strftime("MRO-%d%m%Y")
+                else:
+                    newvalue = obs_night.strftime("%d%m%Y")
             except ValueError:
                 pass
     elif keyword == 'instrument':
