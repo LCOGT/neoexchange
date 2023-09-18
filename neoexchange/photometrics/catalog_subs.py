@@ -1204,7 +1204,7 @@ def convert_value(keyword, value):
                        }
     newvalue = value
 
-    if keyword == 'obs_date' or keyword == 'block_start' or keyword == 'block_end':
+    if keyword == 'obs_date' or keyword == 'block_start' or keyword == 'block_end' or keyword == 'groupid':
         try:
             newvalue = datetime.strptime(value, '%Y-%m-%dT%H:%M:%S.%f')
         except ValueError:
@@ -1230,6 +1230,8 @@ def convert_value(keyword, value):
                             newvalue = dark_start
                         elif keyword == 'block_end':
                             newvalue = dark_end
+                        elif keyword == 'groupid':
+                            newvalue = obs_night.strftime('%d%b%Y')
                     except ValueError:
                         pass
     elif keyword == 'request_number' or keyword == 'tracking_number':
