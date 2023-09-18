@@ -1286,6 +1286,7 @@ class FITSUnitTest(TestCase):
         self.test_swopefilename = os.path.join('photometrics', 'tests', 'swope_test_frame.fits')
         hdulist = fits.open(self.test_swopefilename)
         self.test_swopeheader = hdulist[0].header
+        self.test_swope_wcs = WCS(self.test_swopeheader)
         hdulist.close()
 
         self.test_swopeldacfilename = os.path.join('photometrics', 'tests', 'swope_test_ldac.fits')
@@ -1359,8 +1360,12 @@ class FITSUnitTest(TestCase):
                 frame_wcs = frame_header[key].wcs
                 assert_allclose(expected_wcs.crval, frame_wcs.crval, rtol=rtol, err_msg=err_msg)
                 assert_allclose(expected_wcs.crpix, frame_wcs.crpix, rtol=rtol, err_msg=err_msg)
-                if expected_params['wcs'].is_celestial:
+                if hasattr(frame_wcs, 'cd'):
                     assert_allclose(expected_wcs.cd, frame_wcs.cd, rtol=rtol, err_msg=err_msg)
+                elif hasattr(frame_wcs, 'pc'):
+                    assert_allclose(expected_wcs.pc, frame_wcs.pc, rtol=rtol, err_msg=err_msg)
+                else:
+                    pass
 
 
 class TestOpenFITSCatalog(FITSUnitTest):
@@ -2390,6 +2395,50 @@ class FITSReadHeader(FITSUnitTest):
 
         self.assertEqual(len(expected_params), len(frame_header))
         self.compare_headers(expected_params, frame_header)
+
+    def test_swope_header(self):
+        obs_date = datetime.strptime('2022-09-25T03:26:46.0', '%Y-%m-%dT%H:%M:%S.%f')
+        expected_params = { 'site_code'  : '304',
+                            'site_id'    : 'LCO',   # Las Campanas, not us...
+                            'tel_id'     : 'Swope',
+                            'instrument' : 'D4K4',
+                            'filter'     : 'r',
+                            'framename'  : 'ccd1100c1',
+                            'exptime'    : 10.0,
+                            'num_exposures' : 200,
+                            'obs_date'      : obs_date,
+                            'obs_midpoint'  : obs_date + timedelta(seconds=10.0 / 2.0),
+                            'object_name'   : 'Didymos',
+                            'proposal'      : 'SWOPE2022',
+                            'block_start' : datetime(2022, 9, 24, 22, 30, 0),
+                            'block_end' : datetime(2022, 9, 25, 10, 30, 0),
+                            'groupid' : '24Sep2022',
+                            'request_number' : '24092022',
+                            'tracking_number' : '24092022',
+                            'field_center_ra'  : Angle('03:02:30.1', unit=u.hour).deg,
+                            'field_center_dec' : Angle('-34:23:35.90', unit=u.deg).deg,
+                            'field_width'   : '0.0725m',
+                            'field_height'  : '0.0725m',
+                            'pixel_scale'   : 0.435,
+                            'wcs' : self.test_swope_wcs,
+                            'fwhm'          : -99,
+                            'astrometric_fit_status' : -99,
+                            'astrometric_catalog'    : '2MASS',
+                            'astrometric_fit_rms'    : 0.3,
+                            'astrometric_fit_nstars' : -4,
+                            'zeropoint'     : -99,
+                            'zeropoint_err' : -99,
+                            'zeropoint_src' : 'N/A',
+                            'reduction_level' : 71
+                          }
+        expected_cattype = "SWOPE"
+
+        header, table, cattype = open_fits_catalog(self.test_swopefilename)
+        self.assertEqual(expected_cattype, cattype)
+        frame_header = get_catalog_header(header, cattype)
+
+        self.compare_headers(expected_params, frame_header)
+
 
     def test_mro_nowcs_header(self):
         obs_date = datetime.strptime('2023-02-25T03:38:42.640', '%Y-%m-%dT%H:%M:%S.%f')

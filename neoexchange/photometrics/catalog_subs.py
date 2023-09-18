@@ -880,7 +880,9 @@ def swope_ldac_catalog_mapping(fixed_values_map={}):
 
     new_fixed_map = { '<PROPID>'    : 'SWOPE2022', # Default proposal for Swope data (which has no proposal info in the header)
                       '<SITECODE>'  : '304',
-                      '<L1ZPSRC'    : 'N/A'
+                      '<L1ZPSRC>'   : 'N/A',
+                      '<WCSERR>'    : -99,
+                      '<RLEVEL>'    : 71
                     }
     fixed_values_map.update(new_fixed_map)
 
