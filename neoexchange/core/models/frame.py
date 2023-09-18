@@ -78,6 +78,8 @@ class Frame(models.Model):
     BANZAI_LDAC_CATALOG = 6
     ORACDR_QL_FRAMETYPE = 10
     BANZAI_QL_FRAMETYPE = 11
+    MRO_RAW_FRAMETYPE = 60
+    MRO_RED_FRAMETYPE = 61
     SWOPE_RAW_FRAMETYPE = 70
     SWOPE_RED_FRAMETYPE = 71
     REFERENCE_FRAMETYPE = 80
@@ -95,6 +97,8 @@ class Frame(models.Model):
                         (BANZAI_LDAC_CATALOG,  'BANZAI LDAC catalog'),
                         (ORACDR_QL_FRAMETYPE,  'ORACDR QL frame'),
                         (BANZAI_QL_FRAMETYPE,  'BANZAI QL frame'),
+                        (MRO_RAW_FRAMETYPE,  'MRO raw frame'),
+                        (MRO_RED_FRAMETYPE,  'MRO reduced frame'),
                         (SWOPE_RAW_FRAMETYPE,  'Swope raw frame'),
                         (SWOPE_RED_FRAMETYPE,  'Swope reduced frame'),
                         (REFERENCE_FRAMETYPE,  'Reference frame'),
