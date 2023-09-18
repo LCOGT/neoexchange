@@ -46,7 +46,7 @@ class StoreCatalogSourcesTest(FITSUnitTest):
         self.table_item_flags24_ldac = self.test_ldactable[2:3]
         self.table_flags0_ldac = self.test_ldactable[where(self.test_ldactable['flags'] == 0)]
         self.table_num_flags0_ldac = len(self.table_flags0_ldac)
-        self.table_num_flags0_posve_ldac = len(where(self.table_flags0_ldac['FLUX_AUTO'] > 0.0)[0])
+        self.table_num_flags0_posve_ldac = len(where(self.table_flags0_ldac['FLUX_APER'] > 0.0)[0])
 
         body_params = {    'provisional_name': '67P',
                             'origin': 'M',
