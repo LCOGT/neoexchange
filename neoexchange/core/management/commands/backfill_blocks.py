@@ -75,13 +75,17 @@ class Command(BaseCommand):
             if tracking_num and tracking_num!='UNSPECIFIED':
                 tracking_num_nopad = tracking_num.lstrip('0')
                 sblocks = SuperBlock.objects.filter(Q(tracking_number=tracking_num)|Q(tracking_number=tracking_num_nopad))
-                if len(sblocks) == 0:
+                if sblocks.count() == 0:
                     name = header.get('object_name', None)
                     if name:
                         # Take out any parentheses e.g. (28484)
                         name = name.rstrip().replace('(', '').replace(')', '').replace('Didymos', '65803')
+                        # MRO-specific oddities
+                        if header.get('site_id', '') == 'MRO':
+                            name = name.replace('R', '').replace('V', '').replace('didcomps', 'didymos').replace('comps', 'mos').replace('compc', 'mos').replace('comp', 'mos')
+                            name = name.replace('didymos', '65803')
                     bodies = Body.objects.filter(Q(provisional_name__exact = name )|Q(provisional_packed__exact = name)|Q(name__exact = name))
-                    if len(bodies) == 1:
+                    if bodies.count() == 1:
                         body = bodies[0]
                         sblock_params = { 'active': True,
                                           'block_start': header.get('block_start'),
@@ -113,7 +117,7 @@ class Command(BaseCommand):
                         block_status(new_block.id, datadir)
                     else:
                         self.stdout.write("Could not find Body from FITS data (OBJECT=%s)" % name)
-                elif len(sblocks) == 1:
+                elif sblocks.count() == 1:
                     old_sblock = sblocks[0]
                     blocks = Block.objects.filter(superblock=old_sblock)
                     if blocks.count() == 0:
@@ -150,7 +154,7 @@ class Command(BaseCommand):
                             print(new_block, created)
                             self.stdout.write("Updating status of new Block %d" % new_block.id)
                             block_status(new_block.id)
-                elif len(sblocks) >= 2:
+                elif sblocks.count() >= 2:
                         msg = "Found multiple SuperBlocks "
                         msg += "%s" % ( [sblock.id for sblock in sblocks])
                         msg += " in DB for tracking number %s. Fix up manually" % tracking_num
