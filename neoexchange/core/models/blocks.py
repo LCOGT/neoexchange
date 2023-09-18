@@ -215,6 +215,48 @@ class Block(models.Model):
     dataproduct     = GenericRelation(DataProduct, related_query_name='block')
     tracking_rate   = models.SmallIntegerField('Tracking Strategy', choices=RATE_CHOICES, blank=False, default=100)
 
+    @cached_property
+    def get_blockuid(self):
+        """Return and Cache the BLKUID. Returns a list (can be empty) of the BLKUID(s)"""
+        warnings.simplefilter('ignore', FITSFixedWarning)
+        blockuid = []
+
+        frames_qs = Frame.objects.filter(block=self, frametype=Frame.BANZAI_RED_FRAMETYPE, frameid__isnull=False)
+        if frames_qs.count() > 1:
+            frame = frames_qs.earliest('midpoint')
+            frames = [frame, ]
+            if self.num_observed >= 2:
+                if self.num_observed > 2:
+                    logger.warning(f"More than 2 observations of Block id={self.id} - cannot retrieve all BLKUIDs")
+                last_frame = Frame.objects.filter(block=self, frametype=Frame.BANZAI_RED_FRAMETYPE, frameid__isnull=False).latest('midpoint')
+                frames.append(last_frame)
+            for frame in frames:
+                if frame is not None:
+                    if frame.frameid is not None:
+                        url = f"{settings.ARCHIVE_FRAMES_URL}{frame.frameid}"
+                        headers = lco_api_call(url)
+                        frame_blockuid = headers.get('BLKUID', None)
+                        if frame_blockuid is not None:
+                            blockuid.append(str(frame_blockuid))
+        return blockuid
+
+    @cached_property
+    def get_blockdayobs(self):
+        """Return and Cache the DAY_OBS"""
+        warnings.simplefilter('ignore', FITSFixedWarning)
+        blockdayobs = None
+        frames_qs = Frame.objects.filter(block=self, frametype=Frame.BANZAI_RED_FRAMETYPE, frameid__isnull=False)
+        if frames_qs.count() > 1:
+            frame = frames_qs.first()
+            if frame is not None:
+                if frame.frameid is not None:
+                    url = f"{settings.ARCHIVE_FRAMES_URL}{frame.frameid}"
+                    headers = lco_api_call(url)
+                    blockdayobs = headers.get('DAY_OBS', None)
+                    if blockdayobs is not None:
+                        blockdayobs = str(blockdayobs).replace('-','')
+        return blockdayobs
+
     def current_name(self):
         name = ''
         if self.body is not None:
