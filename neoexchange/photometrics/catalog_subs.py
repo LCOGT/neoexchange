@@ -1198,7 +1198,7 @@ def convert_value(keyword, value):
     # Conversion factor for fluxes->magnitude
     FLUX2MAG = 2.5/log(10)
     # Instrument code mapping dictionary
-    inst_codes = {'Direct/4Kx4K-4' : 'D4K4', 'MRO2K' : 'MR2K'}
+    inst_codes = {'Direct/4Kx4K-4' : 'D4K4', 'MRO2K' : 'MR2K', 'Andor Tech' : 'MR2K'}
     # MRO filter number mapping dictionary
     mro_filter_codes = { '5 1' : 'R',
                          '4 1' : 'V',

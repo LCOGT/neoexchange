@@ -1899,6 +1899,22 @@ class TestConvertValues(FITSUnitTest):
 
         self.assertEqual(expected_value, value)
 
+    def test_mro_instrument1(self):
+
+        expected_value = 'MR2K'
+
+        value = convert_value('instrument', 'MRO2K')
+
+        self.assertEqual(expected_value, value)
+
+    def test_mro_instrument2(self):
+
+        expected_value = 'MR2K'
+
+        value = convert_value('instrument', 'Andor Tech')
+
+        self.assertEqual(expected_value, value)
+
 
 class FITSReadHeader(FITSUnitTest):
 
