@@ -1817,7 +1817,9 @@ def export_block_to_pds(input_dirs, output_dir, blocks, schema_root, docs_root=N
 
         # transfer master calibration files
         if verbose: print("Transferring master calibration frames")
-        calib_files = find_fits_files(input_dir, '\S*-(bias|bpm|dark|skyflat)')
+        calib_files = find_fits_files(input_dir, '\S*-(bias|bpm|dark|skyflat)-\S*')
+        if len(calib_files) == 0:
+            logger.error(f"No master calibration frames found in {input_dir}")
         for root, files in calib_files.items():
             sent_files, copied_files = transfer_files(root, files, paths['cal_data'], dbg=verbose)
             cal_sent_files += sent_files
@@ -1904,7 +1906,7 @@ def export_block_to_pds(input_dirs, output_dir, blocks, schema_root, docs_root=N
     # create PDS products for cal data
     if verbose: print("Creating cal PDS collection")
     path_to_all_cals = os.path.join(os.path.dirname(paths['cal_data']), '')
-    all_cal_dirs_files = find_fits_files(path_to_all_cals, '\S*-(bias|bpm|dark|skyflat|e92)')
+    all_cal_dirs_files = find_fits_files(path_to_all_cals, '\S*-(bias|bpm|dark|skyflat|e92)\S*')
     all_cal_files = []
     for cal_dir, cal_files in all_cal_dirs_files.items():
         if verbose: print(cal_dir, len(cal_files))
