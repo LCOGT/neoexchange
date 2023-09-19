@@ -1042,7 +1042,7 @@ def fits_ldac_to_header(header_array):
                 comment_text = card[8:]
                 header.add_comment(comment_text)
             elif keyword.rstrip() != "HISTORY":
-                comment_loc = card.rfind('/ ')
+                comment_loc = card.rfind(' /')
                 # if no comment found, (comment_loc= -1), set to length of string
                 # to ensure we get everything
                 if comment_loc == -1:
@@ -1066,7 +1066,7 @@ def fits_ldac_to_header(header_array):
                             value = False
                 comment = ''
                 if 8 < comment_loc <= len(card):
-                    comment = card[comment_loc+2:]
+                    comment = card[comment_loc+2:].lstrip()
                 header.append((keyword, value, comment), bottom=True)
 
         i += 1

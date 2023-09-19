@@ -23,7 +23,7 @@ import shutil
 import stat
 
 from mock import patch
-from django.test import TestCase
+from django.test import TestCase, SimpleTestCase
 from django.forms.models import model_to_dict
 from astropy.io import fits
 from astropy.wcs import WCS
@@ -2591,7 +2591,7 @@ class FITSReadHeader(FITSUnitTest):
         self.compare_headers(expected_params, frame_header)
 
 
-class FITSLDACToHeader(FITSUnitTest):
+class FITSLDACToHeader(SimpleTestCase):
 
     def setUp(self):
 
@@ -2600,6 +2600,8 @@ class FITSLDACToHeader(FITSUnitTest):
                                    'NAXIS   =                    2 / number of array dimensions',
                                    'NAXIS1  =                 2028',
                                    'NAXIS2  =                 2038',
+                                   'CCDATEMP=  -85.000000000000000 /CCD temperature setpoint in C',
+                                   "AIRMASS = '1.03149 '           / Airmass at beginning of exposure",
                                    "COMMENT   FITS (Flexible Image Transport System) format is defined in 'Astronomy",
                                    "COMMENT   and Astrophysics', volume 376, page 359; bibcode: 2001A&A...376..359H"], 
                                    dtype='|U80')
@@ -2609,19 +2611,33 @@ class FITSLDACToHeader(FITSUnitTest):
         header = fits_ldac_to_header(self.header_array)
 
         self.assertEqual(header['BITPIX'], -32)
+        self.assertEqual(header.comments['BITPIX'], 'array data type')
         self.assertEqual(header['NAXIS1'], 2028)
+        self.assertEqual(header.comments['NAXIS1'], '')
         self.assertEqual(header['NAXIS2'], 2038)
+        self.assertEqual(header.comments['NAXIS2'], '')
 
     def test_comments(self):
 
         self.header_array[2] = 'NAXIS1  =                 2028 / length of data axis 1'
-        self.header_array[3] = 'NAXIS2  =                 2038 / length of data axis 2'
+        self.header_array[3] = 'NAXIS2  =                 2038 /length of data axis 2'
 
         header = fits_ldac_to_header(self.header_array)
 
         self.assertEqual(header['BITPIX'], -32)
+        self.assertEqual(header.comments['BITPIX'], 'array data type')
+        self.assertEqual(type(header['NAXIS1']), int)
         self.assertEqual(header['NAXIS1'], 2028)
+        self.assertEqual(header.comments['NAXIS1'], 'length of data axis 1')
+        self.assertEqual(type(header['NAXIS2']), int)
         self.assertEqual(header['NAXIS2'], 2038)
+        self.assertEqual(header.comments['NAXIS2'], 'length of data axis 2')
+        self.assertEqual(type(header['CCDATEMP']), float)
+        self.assertEqual(header['CCDATEMP'], -85)
+        self.assertEqual(header.comments['CCDATEMP'], 'CCD temperature setpoint in C')
+        self.assertEqual(type(header['AIRMASS']), str)
+        self.assertEqual(header['AIRMASS'], '1.03149')
+        self.assertEqual(header.comments['AIRMASS'], 'Airmass at beginning of exposure')
 
 
 class FITSSubsetCatalogTable(FITSUnitTest):
@@ -2902,6 +2918,7 @@ class TestExtractCatalog(FITSUnitTest):
                        'astrometric_fit_rms': 0.14473999999999998,
                        'astrometric_fit_status': 0,
                        'exptime': 115.0,
+                       'enc_id' : 'domb',
                        'field_center_dec': -9.767727777777779,
                        'field_center_ra': 219.83084166666666,
                        'field_height': '15.9562m',
@@ -2914,6 +2931,8 @@ class TestExtractCatalog(FITSUnitTest):
                        'obs_midpoint': datetime(2016, 4, 28, 20, 12, 51, 803000),
                        'pixel_scale': 0.46976,
                        'site_code': 'K92',
+                       'site_id' : 'cpt',
+                       'tel_id' : '1m0a',
                        'reduction_level' : 91,
                        'zeropoint': -99.0,
                        'zeropoint_err': -99.0,
@@ -2922,8 +2941,7 @@ class TestExtractCatalog(FITSUnitTest):
                        'aperture_radius_pixels' : 2.5,
                        'aperture_radius_arcsec' : round(2.5*self.test_ldac_pixscale, 4)}
 
-        shutil.copy(os.path.abspath(self.test_ldacfilename), self.temp_dir)
-        test_ldacfilename = os.path.join(self.temp_dir, os.path.basename(self.test_ldacfilename))
+        test_ldacfilename = shutil.copy(os.path.abspath(self.test_ldacfilename), self.temp_dir)
         header, table = extract_catalog(test_ldacfilename, 'FITS_LDAC', remove=True)
 
         self.assertTrue(os.path.exists(test_ldacfilename))
@@ -2937,6 +2955,7 @@ class TestExtractCatalog(FITSUnitTest):
                        'astrometric_fit_nstars': 22,
                        'astrometric_fit_rms': 0.14473999999999998,
                        'astrometric_fit_status': 0,
+                       'enc_id' : 'domb',
                        'exptime': 115.0,
                        'field_center_dec': -9.767727777777779,
                        'field_center_ra': 219.83084166666666,
@@ -2950,6 +2969,8 @@ class TestExtractCatalog(FITSUnitTest):
                        'obs_midpoint': datetime(2016, 4, 28, 20, 12, 51, 803000),
                        'pixel_scale': 0.46976,
                        'site_code': 'K92',
+                       'site_id' : 'cpt',
+                       'tel_id' : '1m0a',
                        'reduction_level' : 91,
                        'zeropoint': -99.0,
                        'zeropoint_err': -99.0,
@@ -2958,8 +2979,7 @@ class TestExtractCatalog(FITSUnitTest):
                        'aperture_radius_pixels' : 2.5,
                        'aperture_radius_arcsec' : round(2.5*self.test_ldac_pixscale, 4)}
 
-        shutil.copy(os.path.abspath(self.test_ldacfilename), self.temp_dir)
-        test_ldacfilename = os.path.join(self.temp_dir, os.path.basename(self.test_ldacfilename))
+        test_ldacfilename = shutil.copy(os.path.abspath(self.test_ldacfilename), self.temp_dir)
         header, table = extract_catalog(test_ldacfilename)
 
         self.assertTrue(os.path.exists(test_ldacfilename))
