@@ -21,6 +21,7 @@ from glob import glob
 import numpy as np
 import astropy.units as u
 from astropy.io import fits
+from astropy.wcs import WCS
 
 logger = logging.getLogger(__name__)
 
@@ -31,10 +32,12 @@ def get_cd(header_or_wcs):
     This is a 2x2 matrix that can be used to convert from the column and
     row indexes of a pixel in the image array to a coordinate within a flat
     map-projection of the celestial sphere.
-    Routine copied from the mpdaf.obj.coords"""
+    Routine adapted from the mpdaf.obj.coords"""
 
     if type(header_or_wcs) == dict and 'wcs' in header_or_wcs:
         wcs = header_or_wcs['wcs']
+    elif type(header_or_wcs) == fits.Header:
+        wcs = WCS(header_or_wcs)
     else:
         wcs = header_or_wcs
 

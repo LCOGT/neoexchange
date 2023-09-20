@@ -11,7 +11,7 @@ from lxml import etree
 import astropy.units as u
 from astropy.time import Time
 from astropy.table import Column, Table
-from astropy.wcs import FITSFixedWarning
+from astropy.wcs import WCS, FITSFixedWarning
 from astropy.coordinates import SkyCoord
 from astropy.io import fits
 from astropy.io.ascii.core import InconsistentTableError
@@ -26,6 +26,7 @@ from photometrics.lightcurve_subs import *
 from photometrics.catalog_subs import open_fits_catalog
 from photometrics.external_codes import convert_file_to_crlf, funpack_file, reformat_header
 from photometrics.photometry_subs import map_filter_to_wavelength, map_filter_to_bandwidth
+from photometrics.image_subs import get_rot
 
 import logging
 logger = logging.getLogger(__name__)
@@ -430,13 +431,23 @@ def create_obj_orient(header, nsmap):
         except (ValueError, KeyError):
             logger.error("No WCS present and couldn't extract pointing from RA/DEC keywords (or not present")
 
+    rot_angle = 0.0
+    try:
+        rot_angle = get_rot(header)
+        logger.info("rot angle (before)=", rot_angle)
+        # Normalize small -ve angle to 0.0
+        if rot_angle > -0.001:
+            rot_angle = abs(rot_angle)
+        logger.info("rot angle ( after)=", rot_angle)
+    except ValueError:
+        pass
     ra_str = "{:.6f}".format(ra_val)
     etree.SubElement(obj_orient, etree.QName(geom_ns, "right_ascension_angle"), attrib={'unit' : "deg"}).text = ra_str
 
     dec_str = "{:.6f}".format(dec_val)
     etree.SubElement(obj_orient, etree.QName(geom_ns, "declination_angle"), attrib={'unit' : "deg"}).text = dec_str
 
-    rotangle_str = "{:.1f}".format(0.0)
+    rotangle_str = "{:.1f}".format(rot_angle)
     etree.SubElement(obj_orient, etree.QName(geom_ns, "celestial_north_clock_angle"), attrib={'unit' : "deg"}).text = rotangle_str
 
     # Create Reference_Frame_Identification
