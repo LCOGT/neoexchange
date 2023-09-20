@@ -283,8 +283,9 @@ def create_discipline_area(header, filename, nsmap):
     img_disp.append(disp_direction)
 
     # Create Object Orientation
-    obj_orient = create_obj_orient(headers[0], nsmap)
-    img_disp.append(obj_orient)
+    if obstype == 'EXPOSE':
+        obj_orient = create_obj_orient(headers[0], nsmap)
+        img_disp.append(obj_orient)
     # Add the whole Geometry subclass to the Discipline Area
     discp_area.append(geom)
 
