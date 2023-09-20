@@ -21,7 +21,25 @@ the master flat field images.
 Data Set Overview
 =================
 
-Raw image data (see data_lcogtraw_fli_collection) are calibrated through
+Due to the time of the DART impact (2022-09-26 23:14 UTC), all data is from the
+night of 2022-09-26 at the LCOGT South Africa (cpt; see Naming Convention) site
+covering the time period 2022-09-26T23:00 to 2022-09-27T02:57 and the following
+telescopes and FLI instruments (see Naming Convention below for explanation):
+
+* CPT 1m0 #10 (cpt1m010) telescope and ef02 instrument in Dome A (721 g' frames)
+* CPT 1m0 #13 (cpt1m013) telescope and ef03 instrument in Dome B (620 i' frames)
+* CPT 1m0 #12 (cpt1m012) telescope and ef04 instrument in Dome C (672 clear frames)
+
+The FLI imaging instruments are a 1k x 1k CCD that images a 5.8 arcminute square
+field of view. The CCDs are back illuminated and have 13-micron pixels. The
+unbinned detector provides a pixel scale of 0.340 arcsec/pixel but for the vast
+majority of these observations, the instrument was operated in 2x2 pixel binning,
+giving 0.680 arcsec/pixel. (Due to the nature of the way these observations were
+scheduled in blocks of ~40 minutes long, the frames consist of a repeating set
+of 2, 10 & 30s exposures in bin2x2 mode, followed by a "reset" exposure of 0.2s
+in the clear filter to set the instrument back to its regular autoguider mode).
+
+Raw image data (see data_lcogt_fliraw_fli_collection) are calibrated through
 two pipelines, the observatory-wide BANZAI pipeline (McCully, C. et al.
 2018.  Real-time processing of the imaging data from the network of Las
 Cumbres Observatory Telescopes using BANZAI. Proceedings of the SPIE,
@@ -31,27 +49,20 @@ Solar System science. Icarus, 364, 114387). BANZAI
 is used  to perform the basic calibration steps of:
 1. Overscan subtraction: all images with a valid BIASSEC header keyword
 have a median value removed estimated from the BIASSEC region
-2. Crosstalk correction (1m Sinistro imagers only): these imagers
-readout through 4 amplifiers and there is crosstalk between the
-quadrants which is removed using linear coefficients that relate each
-quadrant to every other quadrant.
-3. Gain correction: All pixels in the frame are multiplied by the gain,
+2. Gain correction: All pixels in the frame are multiplied by the gain,
 using the GAIN header keyword. Thus, the science frames output by
 BANZAI are all in units of electrons.
-4. Mosaic (1m Sinistro imagers only): If the file has multiple
-extensions, BANZAI produces a single mosaiced frame. This uses the
-DETSEC header keywords.
-5. Trim: After being mosaiced, the data is trimmed to a usable region
+3. Trim: In this step, the data is trimmed to a usable region
 for science. This is set based on the TRIMSEC header keyword.
-6. Bias Subtraction: Full frame master bias images are subtracted from
+4. Bias Subtraction: Full frame master bias images are subtracted from
 each of the darks, flat field images, and science frames. The master
 bias frame that was taken closest in time to the current data will be
 used. 
-7. Dark Subtraction: Full-frame master dark frames, scaled to the
+5. Dark Subtraction: Full-frame master dark frames, scaled to the
 exposure time of the frame, are subtracted from all flat-field and
 science images. The most recent master dark frame is used, normally
 this is taken on the same day.
-8. Flat Field Correction: Master flat field images (normalized to unity
+6. Flat Field Correction: Master flat field images (normalized to unity
 using the inner quarter of the image) are divided out of every science
 frame. The most recent master flat-field image for the given telescope,
 filter, and binning is used.
@@ -65,9 +76,12 @@ Calibration with SCAMP. ASPC, 351,112), photometrically calibrates the
 zero point of the images based on the measured flux of field stars that 
 have known catalog magnitudes (from Gaia-DR2 catalogs for these data), 
 and then using these astrometric and photometric solutions derives a 
-calibrated magnitude for Didymos. The photometry tables included in 
-Derived Data Product data_lcogtddp collection are the output of these 
-pipelines.
+calibrated magnitude for Didymos. Due to the small field of view and 
+sometime use of short (2s) exposures, some of the frames did not solve 
+astrometrically. This is indicated in the FITS header by the WCSERR 
+keyword having a non-zero value. The photometry tables included in 
+Derived Data Product data_lcogt_fliddp collection are the output of 
+these pipelines.
 
 Naming Convention
 =================

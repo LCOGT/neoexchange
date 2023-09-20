@@ -21,16 +21,18 @@ Data Set Overview
 =================
 
 The photometry of Didymos is measured from the calibrated frames (see 
-data_lcogtcal_fli collection) using the NEOexchange pipeline. This performs 
-source detection in the images using SExtractor (Bertin, E and Arnouts, 
-S. 1996. SExtractor: Software for source extraction. A&AS, 117, 393), 
-astrometric fits to the detected sources based on the known positions 
-of Gaia DR2 stars in the field using SCAMP (Bertin, E. 2006.  Automatic 
-Astrometric and Photometric Calibration with SCAMP. ASPC, 351,112), 
-photometrically calibrates the zero point of the images based on the 
-measured flux of field stars that have known catalog magnitudes 
+data_lcogt_flical_fli collection) using the NEOexchange pipeline. This performs
+source detection in the images using SExtractor (Bertin, E and Arnouts,
+S. 1996. SExtractor: Software for source extraction. A&AS, 117, 393),
+astrometric fits to the detected sources based on the known positions
+of Gaia DR2 stars in the field using SCAMP (Bertin, E. 2006.  Automatic
+Astrometric and Photometric Calibration with SCAMP. ASPC, 351,112),
+photometrically calibrates the zero point of the images based on the
+measured flux of field stars that have known catalog magnitudes
 (from the Gaia-DR2 catalog), and then uses these astrometric and photometric
-solutions to derive a calibrated magnitude in 20 apertures (1"..20") for Didymos.
+solutions to derive a calibrated magnitude in 11 apertures (labelled with
+mag_aperture_0 to mag_aperture_10 in the FITS binary table with radius of
+1"..11" in steps of 1") for Didymos.
 Due to the small field of view and sometime use of short (2s) exposures,
 some of the frames did not solve astrometrically. We used custom written
 code to propogate the WCS fit and zeropoint by linear interpolation from 
@@ -88,8 +90,8 @@ obs_ra: Observed right ascension of Didymos (degrees)
 obs_dec: Observed declination of Didymos (degrees)
 flux_radius: Radius of the aperture with 50% of the flux (pixels)
 fwhm: Full Width Half Maximum of the frame (arcsec)
-mag_aperture_<index>: Magnitude of Didymos in the <index>'th aperture (where <index>=0...20)
-mag_err_aperture_<index>:Magnitude error of Didymos in the <index>'th aperture (where <index>=0...20)
+mag_aperture_<index>: Magnitude of Didymos in the <index>'th aperture (where <index>=0...10)
+mag_err_aperture_<index>:Magnitude error of Didymos in the <index>'th aperture (where <index>=0...10)
 
 References
 ==========
