@@ -916,7 +916,10 @@ def open_fits_catalog(catfile, header_only=False):
         else:
             # BANZAI-format after extraction of image
             cattype = 'BANZAI'
-            hdr_name = 'SCI'
+            for hdr_name in ['SCI', 'BPM']:
+                if hdr_name in hdulist:
+                    logger.debug("Found", hdr_name)
+                    break
         try:
             sci_index = hdulist.index_of(hdr_name)
         except KeyError:
