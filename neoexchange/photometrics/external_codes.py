@@ -34,7 +34,8 @@ from core.models import detections_array_dtypes
 from core.utils import NeoException
 from astrometrics.time_subs import timeit
 from photometrics.catalog_subs import oracdr_catalog_mapping, banzai_catalog_mapping, \
-    banzai_ldac_catalog_mapping, swope_ldac_catalog_mapping, fits_ldac_to_header
+    banzai_ldac_catalog_mapping, swope_ldac_catalog_mapping, fits_ldac_to_header, \
+    convert_value
 from photometrics.image_subs import create_weight_image, create_rms_image, get_saturate
 
 logger = logging.getLogger(__name__)
@@ -286,13 +287,17 @@ def determine_sextractor_options(fits_file, dest_dir, checkimage_type=[], catalo
         if keyword == '<MAXLIN>':
             value = get_saturate(header)
         elif keyword == '<WCS>':
-            pixscale = proj_plane_pixel_scales(fits_wcs).mean()*3600.0
+            pixscale = proj_plane_pixel_scales(fits_wcs).mean()
+            if fits_wcs.is_celestial:
+                pixscale *= 3600.0
             if '-ef02' in fits_file:
                 pixscale = 0.6816372440944882
             elif '-ef03' in fits_file:
                 pixscale = 0.6800909318996416
             elif '-ef04' in fits_file:
                 pixscale = 0.68127658
+            elif 'fm2' in fits_file and abs(pixscale-1.0) < 1e-3:
+                pixscale = 0.13045502719133564 * header.get('XBINNING', 1)
             value = round(pixscale, 5)
         else:
             value = header.get(keyword, -99)
@@ -682,6 +687,7 @@ def add_l1filter(fits_file):
     prihdr = hdulist[0].header
     filter_val = prihdr.get('FILTER', None)
     if filter_val:
+        filter_val = convert_value('filter', filter_val)
         prihdr['L1FILTER'] = (filter_val, 'Copy of FILTER for SCAMP')
     hdulist.close()
 

@@ -43,12 +43,19 @@ class Command(BaseCommand):
     def file_mapping(self, origin='LCO'):
         mapping = {'LCO' : { 'proc-astromfit' : ('e91.fits', 'e91_ldac.fits'),
                              'proc-extract' : ('e91.fits', 'e92.fits'),
-                             'proc-zeropoint' : ('e91.fits', 'e92_ldac.fits')
+                             'proc-zeropoint' : ('e91.fits', 'e92_ldac.fits'),
+                             'final_catalog_type' : 'BANZAI_LDAC'
                            },
                    'SWOPE' : { 'proc-astromfit' : ('.fits', '_ldac.fits'),
-                             'proc-extract' : ('.fits', '-e72.fits'),
-                             'proc-zeropoint' : ('.fits', '-e72_ldac.fits')
-                           }
+                               'proc-extract' : ('.fits', '-e72.fits'),
+                               'proc-zeropoint' : ('.fits', '-e72_ldac.fits'),
+                               'final_catalog_type' : 'SWOPE_LDAC'
+                           },
+                   'MRO'  : { 'proc-astromfit' : ('e61.fits', 'e61_ldac.fits'),
+                              'proc-extract' : ('e61.fits', 'e62.fits'),
+                              'proc-zeropoint' : ('e91.fits', 'e62_ldac.fits'),
+                              'final_catalog_type' : 'MRO_LDAC'
+                           },
                   }
         return mapping[origin]
 
@@ -76,7 +83,7 @@ class Command(BaseCommand):
 
         # Ensure trailing slash is present
         dataroot = os.path.join(dataroot, '')
-        fits_files, fits_catalogs = determine_images_and_catalogs(self, dataroot) #, red_level='') # red_level must be null to pickup Swope data
+        fits_files, fits_catalogs = determine_images_and_catalogs(self, dataroot, red_level='') # red_level must be null to pickup Swope/MRO data
 
         if fits_files is None or len(fits_files) == 0:
             raise CommandError(f"No FITS files found in {dataroot}")
@@ -88,6 +95,8 @@ class Command(BaseCommand):
         origin = 'LCO'
         if 'rccd' in fits_files[0]:
             origin = 'SWOPE'
+        elif 'fm2' in fits_files[0]:
+            origin = 'MRO'
         mapping = self.file_mapping(origin)
         # Process all files through all pipeline steps
         for fits_filepath in fits_files:
@@ -120,7 +129,7 @@ class Command(BaseCommand):
                         'inputs' : {'ldac_catalog' : os.path.join(dataroot, options['tempdir'], fits_file.replace(mapping['proc-zeropoint'][0], mapping['proc-zeropoint'][1])),
                                     'datadir' : os.path.join(dataroot, options['tempdir']),
                                     'zeropoint_tolerance' : options['zp_tolerance'],
-                                    'catalog_type' : 'BANZAI_LDAC' if origin == 'LCO' else 'SWOPE_LDAC',
+                                    'catalog_type' : mapping['final_catalog_type'],
                                     'desired_catalog' : options['refcat'],
                                     'color_const' : options['color_const'],
                                     'solar' : options['solar']

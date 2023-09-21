@@ -130,8 +130,8 @@ class Command(BaseCommand):
                         if request_num in existing_requests:
                             sub_block = blocks.get(request_number=request_num)
                             self.stdout.write("Found Block %d with matching REQNUM=%s" % (sub_block.id, sub_block.request_number))
-                            frames = Frame.objects.filter(block=sub_block, frametype__in=(Frame.BANZAI_QL_FRAMETYPE, Frame.BANZAI_RED_FRAMETYPE))
-                            if len(fits_files) >= frames.count():
+                            frames = Frame.objects.filter(block=sub_block, frametype__in=(Frame.BANZAI_RED_FRAMETYPE, Frame.SWOPE_RED_FRAMETYPE, Frame.MRO_RED_FRAMETYPE))
+                            if len(fits_files) > frames.count():
                                 self.stdout.write("Updating status of Block #%d (found %d FITS files, know of %d Frames in DB)" % (sub_block.id,len(fits_files), frames.count()))
                                 block_status(sub_block.id, datadir)
                             else:
