@@ -526,7 +526,7 @@ def block_status(block_id, datapath=None):
                 # Version for Swope BANZAI reprocessing
                 #match_pattern = 'ccd*e91.fits'
                 if block.site.lower() == 'mro':
-                    match_pattern = 'fm*.????.fits'
+                    match_pattern = 'fm*-????-e61.fits'
                 images = images_from_fits(datapath, match_pattern)
                 last_image_header = images[-1].get('headers', None)
                 num_archive_frames = len(images)
