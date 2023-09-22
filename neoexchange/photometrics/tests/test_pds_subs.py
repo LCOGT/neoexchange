@@ -3308,6 +3308,7 @@ class TestWritePDSLabel(TestCase):
 
     def setUp(self):
         self.schemadir = os.path.abspath(os.path.join('photometrics', 'tests', 'test_schemas'))
+        self.new_schemadir = os.path.abspath(os.path.join('photometrics', 'configs', 'PDS_schemas'))
         schema_mappings = pds_schema_mappings(self.schemadir, '*.xsd')
         self.pds_schema = schema_mappings['PDS4::PDS']
         self.test_dir = tempfile.mkdtemp(prefix='tmp_neox_')
@@ -3315,6 +3316,7 @@ class TestWritePDSLabel(TestCase):
         self.test_xml_cat = os.path.abspath(os.path.join('photometrics', 'tests', 'example_pds4_label.xml'))
         self.test_xml_cat_didymos = os.path.abspath(os.path.join('photometrics', 'tests', 'example_pds4_label_didymos.xml'))
         self.test_xml_raw_cat = os.path.abspath(os.path.join('photometrics', 'tests', 'example_pds4_label_raw.xml'))
+        self.test_xml_raw_dispdir_cat = os.path.abspath(os.path.join('photometrics', 'tests', 'example_pds4_label_raw_dispdir.xml'))
         self.test_xml_ddp_cat = os.path.abspath(os.path.join('photometrics', 'tests', 'example_pds4_label_ddp.xml'))
         self.test_xml_ddp_bintable_cat = os.path.abspath(os.path.join('photometrics', 'tests', 'example_pds4_label_ddp_bintable.xml'))
         self.test_xml_bpm_cat = os.path.abspath(os.path.join('photometrics', 'tests', 'example_pds4_label_bpm.xml'))
@@ -3533,6 +3535,31 @@ class TestWritePDSLabel(TestCase):
         status = write_product_label_xml(self.test_raw_file, output_xml_file, self.schemadir, mod_time=datetime(2021,10,15))
 
         self.compare_xml_files(self.test_xml_raw_cat, output_xml_file)
+
+    def test_write_raw_dispdir_label(self):
+        """Test with updated (correct) DisplayDirection"""
+
+        # Copy file and modify to update header to closer to test output
+        hdulist = fits.open(self.test_raw_file, mode='readonly')
+        hdulist[0].header['date-obs'] = '2022-10-30T02:16:03.159'
+        hdulist[0].header['utstop'] = '02:16:48.159'
+        hdulist[0].header['siteid'] = 'tfn'
+        hdulist[0].header['site'] = 'LCOGT node at Tenerife'
+        hdulist[0].header['enclosur'] = 'Dome-14'
+        hdulist[0].header['telescop'] = '1m0-14'
+        hdulist[0].header['object'] = '65803'
+        hdulist[0].header['exptime'] = 45.0
+        hdulist[0].header['crval1'] = 115.0318790
+        hdulist[0].header['crval2'] = 4.2200758
+        test_tfn_raw_file = os.path.join(self.test_dir, 'tfn1m014-fa20-20221029-0335-e00.fits')
+        hdulist.writeto(test_tfn_raw_file, checksum=True, overwrite=True)
+        hdulist.close()
+
+        output_xml_file = os.path.join(self.test_dir, 'test_example_label.xml')
+
+        status = write_product_label_xml(test_tfn_raw_file, output_xml_file, self.new_schemadir, mod_time=datetime(2023, 3, 9))
+
+        self.compare_xml_files(self.test_xml_raw_dispdir_cat, output_xml_file)
 
     def test_write_ddp_label(self):
 

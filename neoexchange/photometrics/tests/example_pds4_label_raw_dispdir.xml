@@ -76,7 +76,7 @@
       </Internal_Reference>
     </Target_Identification>
     <Discipline_Area>
-    <disp:Display_Settings>
+      <disp:Display_Settings>
         <Local_Internal_Reference>
             <local_identifier_reference>amp1_image</local_identifier_reference>
             <local_reference_type>display_settings_to_array</local_reference_type>
@@ -198,24 +198,24 @@
       </Element_Array>
       <Axis_Array>
         <axis_name>Line</axis_name>
-        <elements>2058</elements>
+        <elements>522</elements>
         <sequence_number>1</sequence_number>
       </Axis_Array>
       <Axis_Array>
         <axis_name>Sample</axis_name>
-        <elements>2080</elements>
+        <elements>544</elements>
         <sequence_number>2</sequence_number>
       </Axis_Array>
     </Array_2D_Image>
     <Header>
       <name>amp2_header</name>
-      <offset unit="byte">8585280</offset>
+      <offset unit="byte">593280</offset>
       <object_length unit="byte">2880</object_length>
       <parsing_standard_id>FITS 3.0</parsing_standard_id>
     </Header>
     <Array_2D_Image>
       <local_identifier>amp2_image</local_identifier>
-      <offset unit="byte">8588160</offset>
+      <offset unit="byte">596160</offset>
       <axes>2</axes>
       <axis_index_order>Last Index Fastest</axis_index_order>
       <Element_Array>
@@ -225,24 +225,24 @@
       </Element_Array>
       <Axis_Array>
         <axis_name>Line</axis_name>
-        <elements>2058</elements>
+        <elements>522</elements>
         <sequence_number>1</sequence_number>
       </Axis_Array>
       <Axis_Array>
         <axis_name>Sample</axis_name>
-        <elements>2080</elements>
+        <elements>544</elements>
         <sequence_number>2</sequence_number>
       </Axis_Array>
     </Array_2D_Image>
     <Header>
       <name>amp3_header</name>
-      <offset unit="byte">17150400</offset>
+      <offset unit="byte">1166400</offset>
       <object_length unit="byte">2880</object_length>
       <parsing_standard_id>FITS 3.0</parsing_standard_id>
     </Header>
     <Array_2D_Image>
       <local_identifier>amp3_image</local_identifier>
-      <offset unit="byte">17153280</offset>
+      <offset unit="byte">1169280</offset>
       <axes>2</axes>
       <axis_index_order>Last Index Fastest</axis_index_order>
       <Element_Array>
@@ -252,24 +252,24 @@
       </Element_Array>
       <Axis_Array>
         <axis_name>Line</axis_name>
-        <elements>2058</elements>
+        <elements>522</elements>
         <sequence_number>1</sequence_number>
       </Axis_Array>
       <Axis_Array>
         <axis_name>Sample</axis_name>
-        <elements>2080</elements>
+        <elements>544</elements>
         <sequence_number>2</sequence_number>
       </Axis_Array>
     </Array_2D_Image>
     <Header>
       <name>amp4_header</name>
-      <offset unit="byte">25715520</offset>
+      <offset unit="byte">1739520</offset>
       <object_length unit="byte">2880</object_length>
       <parsing_standard_id>FITS 3.0</parsing_standard_id>
     </Header>
     <Array_2D_Image>
       <local_identifier>amp4_image</local_identifier>
-      <offset unit="byte">25718400</offset>
+      <offset unit="byte">1742400</offset>
       <axes>2</axes>
       <axis_index_order>Last Index Fastest</axis_index_order>
       <Element_Array>
@@ -279,12 +279,12 @@
       </Element_Array>
       <Axis_Array>
         <axis_name>Line</axis_name>
-        <elements>2058</elements>
+        <elements>522</elements>
         <sequence_number>1</sequence_number>
       </Axis_Array>
       <Axis_Array>
         <axis_name>Sample</axis_name>
-        <elements>2080</elements>
+        <elements>544</elements>
         <sequence_number>2</sequence_number>
       </Axis_Array>
     </Array_2D_Image>
