@@ -243,6 +243,16 @@ def create_discipline_area(header, filename, nsmap):
     obstype = headers[0].get('obstype', '').rstrip()
     origin = headers[0].get('origin', '').rstrip()
     array_name_prefix = 'ccd'
+    # Dictionary of Direction mapping organized by origin and area_name. For each
+    # area_name, there is a tuple for the left_to_right, bottom_to_top options
+
+    direction_mapping = { 'LCOGT' : {'amp1_image' : (True, False),
+                                     'amp2_image' : (True, True),
+                                     'amp3_image' : (False, True),
+                                     'amp4_image' : (False, False),
+                                    }
+                        }
+    directions = direction_mapping.get(origin, {})
     if origin == 'LCOGT':
         array_name_prefix = 'amp'
     area_names = []
@@ -267,12 +277,23 @@ def create_discipline_area(header, filename, nsmap):
         if naxis == 2 and naxis1 > 0 and naxis2 > 0:
             area_names.append(area_name)
 
-    # Create Display Settings discipline area
-    disp_settings = create_display_settings(area_names, nsmap)
-    # Create Display Direction discipline area
-    disp_direction = create_display_direction(nsmap, 'PDS4::DISP')
-    disp_settings.append(disp_direction)
-    discp_area.append(disp_settings)
+        # Create Display Settings discipline area
+        left_to_right = directions.get(area_name, (True, True))[0]
+        bottom_to_top = directions.get(area_name, (True, True))[1]
+        if len(headers) > 1:
+            # Don't create section for primary header if it is a MEF
+            if extn > 0:
+                disp_settings = create_display_settings(area_name, nsmap)
+                # Create Display Direction discipline area
+                disp_direction = create_display_direction(nsmap, 'PDS4::DISP', left_to_right, bottom_to_top)
+                disp_settings.append(disp_direction)
+                discp_area.append(disp_settings)
+        else:
+            disp_settings = create_display_settings(area_name, nsmap)
+            # Create Display Direction discipline area
+            disp_direction = create_display_direction(nsmap, 'PDS4::DISP', left_to_right, bottom_to_top)
+            disp_settings.append(disp_direction)
+            discp_area.append(disp_settings)
 
     # Create Imaging area
     img_area = create_image_area(headers[0], area_names, nsmap)
@@ -316,16 +337,22 @@ def create_display_settings(filenames, nsmap):
 
     return disp_settings
 
-def create_display_direction(nsmap, namespace):
+def create_display_direction(nsmap, namespace, left_to_right=True, bottom_to_top=True):
 
     disp_ns = nsmap[namespace]['namespace']
     ns_shortname = namespace.split('::')[1].lower()
     etree.register_namespace(ns_shortname, disp_ns)
     disp_direction = etree.Element(etree.QName(disp_ns,"Display_Direction"))
     etree.SubElement(disp_direction, etree.QName(disp_ns, "horizontal_display_axis")).text = "Sample"
-    etree.SubElement(disp_direction, etree.QName(disp_ns, "horizontal_display_direction")).text = "Left to Right"
+    display_direction = "Left to Right"
+    if left_to_right is False:
+        display_direction = "Right to Left"
+    etree.SubElement(disp_direction, etree.QName(disp_ns, "horizontal_display_direction")).text = display_direction
     etree.SubElement(disp_direction, etree.QName(disp_ns, "vertical_display_axis")).text = "Line"
-    etree.SubElement(disp_direction, etree.QName(disp_ns, "vertical_display_direction")).text = "Bottom to Top"
+    display_direction = "Bottom to Top"
+    if bottom_to_top is False:
+        display_direction = "Top to Bottom"
+    etree.SubElement(disp_direction, etree.QName(disp_ns, "vertical_display_direction")).text = display_direction
 
     return disp_direction
 
