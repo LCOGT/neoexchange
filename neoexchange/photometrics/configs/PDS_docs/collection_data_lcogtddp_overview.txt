@@ -19,20 +19,32 @@ tables, which are a PDS4 derived product.
 Data Set Overview
 =================
 
-The photometry of Didymos is measured from the calibrated frames (see
-date_lcogtcal collection) using the NEOexchange or PHOTOMETRYPIPELINE
-pipelines. Both perform source detection in the images using SExtractor
-(Bertin, E and Arnouts, S. 1996. SExtractor: Software for source
-extraction. A&AS, 117, 393), astrometric fits to the detected sources
-based on the known positions of Gaia DR2 stars in the field using SCAMP
-(Bertin, E. 2006.  Automatic Astrometric and Photometric Calibration
-with SCAMP. ASPC, 351,112), photometrically calibrates the zero point
-of the images based on the measured flux of field stars that have known
-catalog magnitudes (typically from eithe the PanSTARRS or Gaia-DR2
-catalogs), and then using these astrometric and photometric solutions
-derives a calibrated magnitude for Didymos. The photometry tables
-included in this collection are the output of these pipelines.
+Imaging data were collected with the Sinistro imagers on the LCOGT 1m 
+telescope network between 2022-07-31 and 2023-01-27 UTC for measuring 
+lightcurves of the Didymos system. In total there are 47 
+"telescope-night" combinations of data (in individual directories), 
+although not all were usable for measuring lightcurves and determining 
+mutual event times to the required precision. In particular the following
+datasets didn't produce usable photometry:
+lcogt_1m0_06_fa07_20221231 (from the 1m in Dome B at the ELP site)
+lcogt_1m0_08_fa05_20230101 (from the 1m in Dome A at the ELP site)
+See the dart_teleobs:data_lcogtraw overview.txt document for more details on
+the Sinistro imagers and filters used.
 
+The photometry of Didymos is measured from the calibrated frames (see 
+date_lcogtcal collection) using the NEOexchange or PHOTOMETRYPIPELINE 
+pipelines. Both perform source detection in the images using SExtractor 
+(Bertin, E and Arnouts, S. 1996. SExtractor: Software for source 
+extraction. A&AS, 117, 393), astrometric fits to the detected sources 
+based on the known positions of Gaia DR2 stars in the field using SCAMP 
+(Bertin, E. 2006.  Automatic Astrometric and Photometric Calibration 
+with SCAMP. ASPC, 351,112), photometrically calibrates the zero point 
+of the images based on the measured flux of field stars that have known 
+catalog magnitudes (typically from either the PanSTARRS or Gaia-DR2 
+catalogs), and then using these astrometric and photometric solutions 
+to convert to PanSTARRS r magnitudes and derive a calibrated magnitude 
+for Didymos. The photometry tables included in this collection are the 
+output of these pipelines.
 
 The photometry summary table is named according to the following convention: 
 lcogt_<site>_<inst.>_<YYYYMMDD>_<request #>_<astname#>_photometry.tab

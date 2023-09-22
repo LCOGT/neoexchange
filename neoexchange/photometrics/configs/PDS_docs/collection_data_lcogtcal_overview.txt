@@ -20,6 +20,15 @@ the master flat field images.
 Data Set Overview
 =================
 
+Imaging data were collected with the Sinistro imagers on the LCOGT 1m 
+telescope network between 2022-07-31 and 2023-01-27 UTC for measuring 
+lightcurves of the Didymos system. In total there are 47 
+"telescope-night" combinations of data (in individual directories), 
+although not all were usable for measuring lightcurves and determining 
+mutual event times to the required precision. See the 
+dart_teleobs:data_lcogtraw overview.txt document for more details on
+the Sinistro imagers and filters used.
+
 Raw image data (see data_lcogtraw collection) are calibrated through
 two pipelines, the observatory-wide BANZAI pipeline (McCully, C. et al.
 2018.  Real-time processing of the imaging data from the network of Las
