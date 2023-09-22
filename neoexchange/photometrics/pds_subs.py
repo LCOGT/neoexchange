@@ -160,6 +160,8 @@ def create_id_area(filename, model_version='1.15.0.0', collection_type='cal', mo
             product_title = product_title.replace("Data Collection", "Collection")
     else:
         filename = ':' + os.path.splitext(filename)[0]
+        # Only lower case permitted..
+        filename = filename.replace(' ', '').lower()
         product_type = 'Product_Observational'
         suffix = ' Image'
         if collection_type == 'ddp':
@@ -1447,7 +1449,8 @@ def transfer_files(input_dir, files, output_dir, dbg=False):
             #input_dir = 'Science Archive'
 
         input_filepath = os.path.join(input_dir, file)
-        output_filepath = os.path.join(output_dir, file)
+        # PDS logical_identifiers and therefore filenames, don't support uppercase
+        output_filepath = os.path.join(output_dir, file.lower())
         if dbg: print(f"{action} {input_filepath}  -> {output_filepath.replace('.fz', '')}")
         if os.path.exists(input_filepath):
             if ('e91.fits' not in file and os.path.exists(output_filepath) is False and os.path.exists(output_filepath.replace('.fz', '')) is False) \
@@ -1458,7 +1461,7 @@ def transfer_files(input_dir, files, output_dir, dbg=False):
                     if dbg: print("funpack file")
                     status = funpack_file(output_filepath)
                 if dbg: print(action)
-                files_copied.append(file.replace('.fz', ''))
+                files_copied.append(file.lower().replace('.fz', ''))
             else:
                 if dbg: print("Already exists")
             all_files.append(file.replace('.fz', ''))
