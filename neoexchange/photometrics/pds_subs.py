@@ -438,6 +438,8 @@ def create_obj_orient(header, nsmap):
         # Normalize small -ve angle to 0.0
         if rot_angle > -0.001:
             rot_angle = abs(rot_angle)
+        elif rot_angle < -0.001:
+            rot_angle = 360.0 + rot_angle
         logger.info("rot angle ( after)=", rot_angle)
     except ValueError:
         pass
