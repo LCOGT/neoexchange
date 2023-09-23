@@ -732,7 +732,7 @@ def create_context_area(filepath, collection_type):
                      'fs' : 'Spectral', 'xx' : 'Unknown' }
     obs_components = {
                         'Host' : 'Las Cumbres Observatory (LCOGT)',
-                        'Telescope' : ['LCOGT ' + headers[0].get('TELESCOP','') + ' Telescope' for headers in all_headers],
+                        'Telescope' : list(set(['LCOGT ' + headers[0].get('TELESCOP','') + ' Telescope' for headers in all_headers])),
                         'Instrument' : inst_mapping[headers[0].get('INSTRUME', 'xx')[0:2]] + ' Imager',
                      }
     for component in obs_components:
