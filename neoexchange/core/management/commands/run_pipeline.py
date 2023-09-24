@@ -53,7 +53,7 @@ class Command(BaseCommand):
                            },
                    'MRO'  : { 'proc-astromfit' : ('e61.fits', 'e61_ldac.fits'),
                               'proc-extract' : ('e61.fits', 'e62.fits'),
-                              'proc-zeropoint' : ('e91.fits', 'e62_ldac.fits'),
+                              'proc-zeropoint' : ('e61.fits', 'e62_ldac.fits'),
                               'final_catalog_type' : 'MRO_LDAC'
                            },
                   }
@@ -99,11 +99,16 @@ class Command(BaseCommand):
             origin = 'MRO'
         mapping = self.file_mapping(origin)
         # Process all files through all pipeline steps
-        for fits_filepath in fits_files:
+        for fits_filepath in fits_files[0:1]:
             # fits_filepath is the full path including the dataroot and obs_date e.g. /apophis/eng/rocks/20220731/cpt1m010-fa16-20220731-0146-e91.fits
             # fits_file is the basename e.g. cpt1m010-fa16-20220731-0146-e91.fits
             fits_file = os.path.basename(fits_filepath)
             steps = [{
+                        'name'   : 'proc-prepare',
+                        'inputs' : {'fits_file':fits_filepath,
+                                    'origin': origin}
+                    },
+                    {
                         'name'   : 'proc-extract',
                         'inputs' : {'fits_file':fits_filepath,
                                    'datadir': os.path.join(dataroot, options['tempdir']),

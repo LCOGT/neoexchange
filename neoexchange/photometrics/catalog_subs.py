@@ -2435,3 +2435,44 @@ def find_first_last_frames(fits_files):
         if frame.midpoint > last_frame.midpoint:
             last_frame = frame
     return first_frame, last_frame
+
+
+def create_initial_MRO_wcs(fits_file):
+    """
+    Create an initial MRO WCS in <fits_file> if not present
+    """
+
+    status = 0
+    try:
+        hdulist = fits.open(fits_file, mode='update')
+    except IOError as e:
+        logger.error("Unable to open FITS catalog %s (Reason=%s)" % (fits_file, e))
+        return -1
+
+    # Verify HDUs first
+    try:
+        for hdu in hdulist:
+            hdu.verify('exception')
+    except OSError:
+        logger.error("Verification of FITS catalog {} failed".format(fits_file))
+        return -2
+
+    fits_header = hdulist[0].header
+    w = WCS(fits_header)
+    if w.is_celestial is False:
+        new_wcs = WCS(naxis=2)
+        new_wcs._naxis = (fits_header['NAXIS1'], fits_header['NAXIS2'])
+        new_wcs.wcs.crpix = [fits_header['NAXIS1']/2.0, fits_header['NAXIS2']/2.0]
+        pixscale = 0.1323658386327315
+        x_pixscale = pixscale * fits_header['XBINNING']
+        y_pixscale = pixscale * fits_header['YBINNING']
+        # Assume North up East left
+        new_wcs.wcs.cdelt = np.array([-x_pixscale/3600.0, y_pixscale/3600.0])
+        tel_pos = coord.SkyCoord(fits_header['RA'], fits_header['DEC'], unit=(u.hourangle, u.deg))
+        new_wcs.wcs.crval = [tel_pos.ra.deg, tel_pos.dec.deg]
+        new_wcs.wcs.ctype = ["RA---TAN", "DEC--TAN"]
+        fits_header.update(new_wcs.to_header())
+        hdulist.writeto(fits_file, checksum=True, overwrite=True)
+    del w
+    hdulist.close()
+    return status

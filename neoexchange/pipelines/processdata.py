@@ -24,11 +24,57 @@ from core.tasks import send_task, run_pipeline
 from photometrics.catalog_subs import FITSHdrException, open_fits_catalog, \
     get_catalog_header, increment_red_level, get_reference_catalog, extract_catalog, \
     existing_catalog_coverage, reset_database_connection, get_header, \
-    update_zeropoint, update_frame_zeropoint, get_or_create_CatalogSources
+    update_zeropoint, update_frame_zeropoint, get_or_create_CatalogSources, \
+    create_initial_MRO_wcs
 from photometrics.photometry_subs import map_filter_to_calfilter
 from photometrics.external_codes import updateFITSWCS, updateFITScalib
 
 logger = logging.getLogger(__name__)
+
+class PrepareFramePipeline(PipelineProcess):
+    """
+    Performs frame preparation for a FITS image.
+    (This is currently a no-op for everything other than MRO data (which
+    needs an initial WCS creating)
+    """
+    short_name = 'prepare'
+    long_name = 'Prepare images for pipeline processing'
+    inputs = {
+        'fits_file': {
+            'default': None,
+            'long_name': 'Filepath to image file to process'
+        },
+        'origin' : {
+            'default': 'LCO',
+            'long_name': "Origin of the data (only origin='MRO' triggers processing)"
+        }
+    }
+    class Meta:
+        proxy = True
+
+    def do_pipeline(self, tmpdir, **inputs):
+        fits_filepath = inputs.get('fits_file')
+        origin = inputs.get('origin')
+        try:
+            if origin == 'MRO' and fits_filepath:
+                status = create_initial_MRO_wcs(fits_filepath)
+
+                if status < 0:
+                    msg = f"Error creating initial WCS for fits frame {fits_filepath}"
+                    logger.error(msg)
+                    self.log(msg)
+                    raise NeoException(msg)
+
+        except NeoException as ex:
+            logger.error('Error with frame preparation: {}'.format(ex))
+            self.log('Error with frame preparation: {}'.format(ex))
+            raise AsyncError('Error performing frame preparation')
+        except TimeLimitExceeded:
+            raise AsyncError("Frame preparation took longer than 10 mins to create")
+        except PipelineProcess.DoesNotExist:
+            raise AsyncError("Record has been deleted")
+        self.log('Pipeline Completed')
+        return
 
 class SExtractorProcessPipeline(PipelineProcess):
     """

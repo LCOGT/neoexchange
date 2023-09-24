@@ -7,7 +7,7 @@ from django.utils.crypto import get_random_string
 import rollbar
 
 
-VERSION = '3.14.4b'
+VERSION = '3.14.5b'
 
 
 CURRENT_PATH = os.path.dirname(os.path.realpath(__file__))
@@ -161,6 +161,7 @@ INSTALLED_APPS = (
 PIPELINES = {
     'dldata' : 'pipelines.downloaddata.DownloadProcessPipeline',
     'ephem'  : 'pipelines.ephemeris.LongTermEphemeris',
+    'proc-prepare'   : 'pipelines.processdata.PrepareFramePipeline',
     'proc-extract'   : 'pipelines.processdata.SExtractorProcessPipeline',
     'proc-astromfit' : 'pipelines.processdata.ScampProcessPipeline',
     'proc-zeropoint' : 'pipelines.processdata.ZeropointProcessPipeline',
