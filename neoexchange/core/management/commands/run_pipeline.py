@@ -99,7 +99,7 @@ class Command(BaseCommand):
             origin = 'MRO'
         mapping = self.file_mapping(origin)
         # Process all files through all pipeline steps
-        for fits_filepath in fits_files[0:1]:
+        for fits_filepath in fits_files:
             # fits_filepath is the full path including the dataroot and obs_date e.g. /apophis/eng/rocks/20220731/cpt1m010-fa16-20220731-0146-e91.fits
             # fits_file is the basename e.g. cpt1m010-fa16-20220731-0146-e91.fits
             fits_file = os.path.basename(fits_filepath)

@@ -332,9 +332,13 @@ class ScampProcessPipeline(PipelineProcess):
             logger.error("Bad header for %s (%s)" % (catfile, e))
             return -1
 
+        rmag_limit="<=18.0"
+        if "2m0" in header['tel_id'] or "2m4" in header['tel_id']:
+            # Deepen catalog for larger diameter/smaller FOV telescopes
+            rmag_limit="<=20.5"
         refcat, num_ref_srcs = get_reference_catalog(dest_dir, header['field_center_ra'],
             header['field_center_dec'], header['field_width'], header['field_height'],
-            cat_name=desired_catalog)
+            cat_name=desired_catalog, rmag_limit=rmag_limit)
         if refcat is None or num_ref_srcs is None:
             logger.error(f"Could not obtain reference catalog for fits frame {catfile:}")
             return -6
@@ -482,6 +486,11 @@ class ZeropointProcessPipeline(PipelineProcess):
                         update_frame_type = "SWOPE"
                         update_catalog_type = "SWOPE_LDAC"
                         fits_file = os.path.basename(catfile.replace('e72_ldac.fits', 'e72.fits'))
+                    elif 'e62_ldac.fits' in os.path.basename(catfile):
+                        red_level = 62
+                        update_frame_type = "MRO"
+                        update_catalog_type = "MRO_LDAC"
+                        fits_file = os.path.basename(catfile.replace('e62_ldac.fits', 'e62.fits'))
                     else:
                         red_level = 99
                         fits_file = os.path.basename(catfile)

@@ -34,8 +34,8 @@ from core.models import detections_array_dtypes
 from core.utils import NeoException
 from astrometrics.time_subs import timeit
 from photometrics.catalog_subs import oracdr_catalog_mapping, banzai_catalog_mapping, \
-    banzai_ldac_catalog_mapping, swope_ldac_catalog_mapping, fits_ldac_to_header, \
-    convert_value
+    banzai_ldac_catalog_mapping, swope_ldac_catalog_mapping, mro_ldac_catalog_mapping,\
+    fits_ldac_to_header, convert_value
 from photometrics.image_subs import create_weight_image, create_rms_image, get_saturate
 
 logger = logging.getLogger(__name__)
@@ -1368,7 +1368,9 @@ def updateFITScalib(header, fits_file, catalog_type='BANZAI'):
     elif catalog_type == 'BANZAI_LDAC':
         hdr_mapping, tbl_mapping = banzai_ldac_catalog_mapping()
     elif catalog_type == 'SWOPE' or catalog_type == 'SWOPE_LDAC':
-        hdr_mapping, tbl_mapping = swope_ldac_catalog_mapping()
+        hdr_mapping, tbl_mapping, fixed_map = swope_ldac_catalog_mapping()
+    elif catalog_type == 'MRO' or catalog_type == 'MRO_LDAC':
+        hdr_mapping, tbl_mapping, fixed_map = mro_ldac_catalog_mapping()
     else:
         logger.error(f"Unsupported catalog mapping: {catalog_type}")
         return -2, None
@@ -1379,7 +1381,7 @@ def updateFITScalib(header, fits_file, catalog_type='BANZAI'):
         logger.error(f"Unable to open FITS image {fits_file} (Reason={e})")
         return -1, None
 
-    if catalog_type == 'BANZAI' or catalog_type == 'SWOPE':
+    if catalog_type == 'BANZAI' or catalog_type == 'SWOPE' or catalog_type == 'MRO':
         fits_header = hdulist[0].header
     else:
         header_array = hdulist[1].data[0][0]
@@ -1390,7 +1392,7 @@ def updateFITScalib(header, fits_file, catalog_type='BANZAI'):
         prior_keyword = "PNTOFST"
     elif "L1ELLIPA" in fits_header:
         prior_keyword = "L1ELLIPA"
-    elif catalog_type.startswith('SWOPE') and "WCSERR" in fits_header:
+    elif (catalog_type.startswith('SWOPE') or catalog_type.startswith('MRO')) and "WCSERR" in fits_header:
         prior_keyword = "WCSERR"
     else:
         prior_keyword = None
@@ -1407,7 +1409,7 @@ def updateFITScalib(header, fits_file, catalog_type='BANZAI'):
             else:
                 logger.warning(f"FITS Keyword not found for {key}")
 
-    if catalog_type == 'BANZAI_LDAC' or catalog_type == 'SWOPE_LDAC':
+    if catalog_type == 'BANZAI_LDAC' or catalog_type == 'SWOPE_LDAC' or catalog_type == 'MRO_LDAC':
         # Construct new BinTable from lengthened header
 
         newhdr_string = fits_header.tostring(endcard=False)

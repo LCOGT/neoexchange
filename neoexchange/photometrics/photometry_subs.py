@@ -607,7 +607,10 @@ def map_filter_to_calfilter(passband='rp'):
                        'i' : 'i',
                        'w' : 'r',
                        'clear' : 'r',
-                       'zs' : 'z'
+                       'zs' : 'z',
+                       'V' : 'g',  # Should be V but needs Johnson-Cousins support in calvicat
+                       'R' : 'r',  # Should be R but needs Johnson-Cousins support in calvicat
+                       'VR' : 'r'  # Should be R but needs Johnson-Cousins support in calvicat
                      }
     return filter_mapping.get(passband.replace('p', ''), None)
 

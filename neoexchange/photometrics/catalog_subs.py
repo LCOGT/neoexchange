@@ -1610,6 +1610,8 @@ def get_catalog_items_new(header_items, table, catalog_type='LCOGT', flag_filter
         hdr_mapping, tbl_mapping, broken_keywords = photpipe_ldac_catalog_mapping()
     elif catalog_type.startswith('SWOPE'):
         hdr_mapping, tbl_mapping, fixed_map = swope_ldac_catalog_mapping()
+    elif catalog_type.startswith('MRO'):
+        hdr_mapping, tbl_mapping, fixed_map = mro_ldac_catalog_mapping()
     else:
         logger.error("Unsupported catalog mapping: %s", catalog_type)
         return None
