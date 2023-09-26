@@ -739,7 +739,7 @@ def run_sextractor(source_dir, dest_dir, fits_file, checkimage_type=[], binary=N
 
     cmdline = "%s %s -c %s %s" % ( binary, fits_file, sextractor_config_file, options )
     cmdline = cmdline.rstrip()
-
+    print("Extractor cmdline=", cmdline)
     if dbg is True:
         retcode_or_cmdline = cmdline
     else:
@@ -1272,8 +1272,8 @@ def updateFITSWCS(fits_file, scamp_file, scamp_xml_file, fits_file_output):
     header['PPRECIPE'] = 'NEOEXCHANGE'
     # WCS headers
     if good_fit:
-        header['WCSDELRA'] = (header['CRVAL1'] - crval1, '[arcsec] Shift of fitted WCS w.r.t. nominal')
-        header['WCSDELDE'] = (header['CRVAL2'] - crval2, '[arcsec] Shift of fitted WCS w.r.t. nominal')
+        header['WCSDELRA'] = ((header['CRVAL1'] - crval1)*3600.0, '[arcsec] Shift of fitted WCS w.r.t. nominal')
+        header['WCSDELDE'] = ((header['CRVAL2'] - crval2)*3600.0, '[arcsec] Shift of fitted WCS w.r.t. nominal')
         header['CTYPE1'] = ctype1
         header['CTYPE2'] = ctype2
         header['CRVAL1'] = crval1
