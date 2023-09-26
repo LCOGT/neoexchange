@@ -30,6 +30,7 @@ def summarize_observations(target_name='65803', start_date='2022-07-15', proposa
             blocks = blocks.exclude(superblock__proposal__code=exclude_proposal)
     if end_date is not None:
         blocks = blocks.filter(block_end__lt=end_date)
+    exclude_ef = True
     filt_width = 6
     # if blocks.filter(site='ogg', telclass='2m0').count() > 0:
         # # Set wider width for MuSCAT blocks
@@ -45,6 +46,9 @@ def summarize_observations(target_name='65803', start_date='2022-07-15', proposa
 
         all_raw_frames = Frame.objects.filter(block=block, frametype__in=frame_types)
         all_frames = Frame.objects.filter(block=block, frametype=Frame.NEOX_RED_FRAMETYPE)
+        if exclude_ef is True:
+            all_raw_frames = all_raw_frames.exclude(instrument__startswith='ef')
+            all_frames = all_frames.exclude(instrument__startswith='ef')
         num_good_zp = all_frames.filter(zeropoint__gte=0).count()
         num_raw_frames = all_raw_frames.count()
         num_all_frames = all_frames.count()
@@ -53,7 +57,7 @@ def summarize_observations(target_name='65803', start_date='2022-07-15', proposa
         username = block.superblock.proposal.pi
         if num_raw_frames > min_frames:
             filters = all_raw_frames.values_list('filter',flat=True).distinct()
-            for obs_filter in filters:
+            for filter_count, obs_filter in enumerate(filters):
                 filter_str = obs_filter #", ".join(list(filters))
                 raw_frames = all_raw_frames.filter(filter=obs_filter)
                 num_raw_frames = raw_frames.count()
@@ -76,7 +80,12 @@ def summarize_observations(target_name='65803', start_date='2022-07-15', proposa
                 num_dp = DataProduct.objects.filter(filetype=DataProduct.DART_TXT, object_id=block.superblock.pk).count()
                 if len(srcs_fwhm) > 0:
                     fwhm = np.mean(srcs_fwhm)
-                print(f'{block.superblock.tracking_number} {block.request_number} {block.site} ({first_frame.sitecode}) {block_start.strftime("%Y-%m-%d %H:%M")} -> {block_end.strftime("%Y-%m-%d %H:%M")} ({block_length_hrs:>4.2f} hrs) {block.get_obsdetails().replace(" secs", "s"):10s}({exp_length_hms}) {filter_str:{filt_width}s} {num_raw_frames:>3d}(e91)->{num_good_zp:>3d}/{num_all_frames:>3d} SNR= {snr:>6.1f} {fwhm:>5.1f} DPs={num_dp} {block.superblock.proposal.code}')
+                blockuid_str = ','.join(block.get_blockuid)
+                block_details = f'{block.superblock.tracking_number} {block.request_number} {blockuid_str}'
+                if filter_count >= 1:
+                    # For multi-filter blocks, blank out the Block details after the first iteration
+                    block_details =  ' '*len(block_details)
+                print(f'{block_details} {block.site} ({first_frame.sitecode}) {block_start.strftime("%Y-%m-%d %H:%M")} -> {block_end.strftime("%Y-%m-%d %H:%M")} ({block_length_hrs:>4.2f} hrs) {block.get_obsdetails().replace(" secs", "s"):10s}({exp_length_hms}) {filter_str:{filt_width}s} {num_raw_frames:>3d}(e91)->{num_good_zp:>3d}/{num_all_frames:>3d} SNR= {snr:>6.1f} {fwhm:>5.1f}  {num_dp} {block.superblock.proposal.code}')
 #                print(f'{block.superblock.tracking_number} {block.request_number} {block.site} ({first_frame.sitecode}) {block_start.strftime("%Y-%m-%d %H:%M")} -> {block_end.strftime("%Y-%m-%d %H:%M")} ({block_length_hrs:>4.2f} hrs) {block.get_obsdetails().replace(" secs", "s"):10s}{filter_str:{filt_width}s} {num_raw_frames:>3d}(e91)->{num_good_zp:>3d}/{num_all_frames:>3d} SNR= {snr:>6.1f} {fwhm:>5.1f} {username:.26s}')
     if return_blocks:
         return blocks
