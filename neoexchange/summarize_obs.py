@@ -41,7 +41,7 @@ def summarize_observations(target_name='65803', start_date='2022-07-15', proposa
         frame_types.append(Frame.SWOPE_RED_FRAMETYPE)
     except AttributeError:
         pass
-    print(f'#Track# Rquest# Site(MPC)  Block start         Block end       Block length Obs details       Filter #raw #good_zp/#num all frames   FWHM   DPs')
+    print(f'#Track# Rquest# Blockuid# Site(MPC)  Block start         Block end       Block length Obs details       Filter  #raw #good_zp/#num all frames   FWHM DPs')
     for block in blocks.order_by('block_start'):
 
         all_raw_frames = Frame.objects.filter(block=block, frametype__in=frame_types)
