@@ -3632,7 +3632,7 @@ def write_figure_latex(annotated_plots_combined, time_strings, site):
 
     print('Wrote to', latex_file)
 
-def stack_lightcurve_block(block, sci_dir, dest_dir, table, exptime=800, segstack_sequence=7):
+def stack_lightcurve_block(block, sci_dir, dest_dir, table, exptime=800, segstack_sequence=7, width=1991.0, height=911.0):
     '''
     Routine that takes a light curve <block> and splits it into subblocks of
     equal exposure time <exptime>. For each subblock it is sorted into substacks
@@ -3653,12 +3653,12 @@ def stack_lightcurve_block(block, sci_dir, dest_dir, table, exptime=800, segstac
                 result_RA, result_DEC = ephem_interpolate(frame.midpoint, table)
                 fits_filename = os.path.join(sci_dir, frame.filename)
                 chiseled_filename, status = run_astnoisechisel(fits_filename, dest_dir, hdu = 0, bkgd_only=True)
-                cropped_filename, status = run_astwarp(chiseled_filename, dest_dir, result_RA[0], result_DEC[0])
+                cropped_filename, status = run_astwarp(chiseled_filename, dest_dir, result_RA[0], result_DEC[0], width, height)
                 cropped_filenames.append(cropped_filename)
             combined_filename, status = run_astarithmetic(cropped_filenames, dest_dir)
             #print(combined_filename, status)
             substacks.append(combined_filename)
-        combined_filename, status = run_astarithmetic(substacks, dest_dir, hdu = 1)
+        combined_filename, status = run_astarithmetic(substacks, dest_dir, hdu=1)
         statuses.append(status)
         #print(combined_filename, status)
         subblock_stacks.append(combined_filename)
@@ -3726,7 +3726,7 @@ def get_didymos_detection(table_filename, width = 1991.0, height = 511.0):
 
     return didymos_id
 
-def run_astwarp_alignment(block, sci_dir, dest_dir):
+def run_astwarp_alignment(block, sci_dir, dest_dir, width=1991.0, height=911.0):
     '''
     Makes an horizons ephem table for a given <block>. Finds interpolated values
     for both RA and DEC for each frame in the block. Calls run_astwarp to crop
@@ -3746,7 +3746,7 @@ def run_astwarp_alignment(block, sci_dir, dest_dir):
     #check if light curve block or tail monitoring block
     if len(frames) > 10:
         print('Light Curve Block')
-        subblock_stacks, statuses = stack_lightcurve_block(block, sci_dir, dest_dir, table)
+        subblock_stacks, statuses = stack_lightcurve_block(block, sci_dir, dest_dir, table, width=width, height=height)
         return subblock_stacks, statuses
 
     else:
@@ -3761,7 +3761,7 @@ def run_astwarp_alignment(block, sci_dir, dest_dir):
                 result_RA, result_DEC = ephem_interpolate(frame.midpoint, table)
                 fits_filename = os.path.join(sci_dir, frame.filename)
                 chiseled_filename, status = run_astnoisechisel(fits_filename, dest_dir, hdu = 0, bkgd_only=True)
-                cropped_filename, status = run_astwarp(chiseled_filename, dest_dir, result_RA[0], result_DEC[0])
+                cropped_filename, status = run_astwarp(chiseled_filename, dest_dir, result_RA[0], result_DEC[0], width, height)
                 #print(status)
                 cropped_filenames.append(cropped_filename)
             combined_filename, status = run_astarithmetic(cropped_filenames, dest_dir)
@@ -3784,12 +3784,12 @@ def run_noisechisel(filename, dest_dir, hdu = 1):
 
     return chiseled_filename, status
 
-def run_astwarp_alignment_noisechisel(block, sci_dir, dest_dir):
+def run_astwarp_alignment_noisechisel(block, sci_dir, dest_dir, width=1991.0, height=911.0):
     '''
     Calls run_astwarp_alignment on a given <block> to get a combined file.
     Calls run_noisechisel on the combined file to get its detection map.
     '''
-    combined_filenames, statuses = run_astwarp_alignment(block, sci_dir, dest_dir)
+    combined_filenames, statuses = run_astwarp_alignment(block, sci_dir, dest_dir, width, height)
 
     chiseled_filenames = []
     status = []

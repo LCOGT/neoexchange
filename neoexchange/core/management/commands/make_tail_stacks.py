@@ -9,7 +9,8 @@ from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 
 from core.blocksfind import filter_blocks, find_frames, split_light_curve_blocks
-from core.views import run_astwarp_alignment_noisechisel, convert_fits, get_didymos_detection, run_make_didymos_chisel_plots
+from core.views import run_astwarp_alignment_noisechisel, convert_fits, \
+    get_didymos_detection, run_make_didymos_chisel_plots, make_annotated_plot
 from photometrics.external_codes import run_astmkcatalog, run_asttable, run_didymos_astarithmetic
 from photometrics.catalog_subs import reset_database_connection
 
@@ -18,12 +19,16 @@ class Command(BaseCommand):
     help = 'Generates stacked and noise chiseled outputs for Blocks. Generates pdf of final output files.'
 
     def add_arguments(self, parser):
+        width = 1991.0
+        height = 911.0
         parser.add_argument('start_date', help='Start date (YYYYMMDD-HH:MM)')
         parser.add_argument('end_date', help='End date (YYYYMMDD-HH:MM)')
         parser.add_argument('days_inc', type=float, help='Increment days')
         parser.add_argument('--sci_dir', default=settings.DATA_ROOT, help='Directory where input files are stored')
         parser.add_argument('--dest_dir', default=os.path.join(settings.DATA_ROOT, 'Stacks'), help='Directory where output files will be written')
         parser.add_argument('--validate_only', type=bool, default=False, help='If set to True, the command will skip the copying, stacking, and chiseling processes. It will instead check for missing data/directories')
+        parser.add_argument('--width', type=float, default=width, help=f'Width of chiseled imaged (pixels; default={width:.1f}')
+        parser.add_argument('--height', type=float, default=height, help=f'height of chiseled imaged (pixels; default={height:.1f}')
 
     def handle(self, *args, **options):
         start_date = parse(options['start_date'])
@@ -32,6 +37,8 @@ class Command(BaseCommand):
         sci_dir = options['sci_dir']
         dest_dir = options['dest_dir']
         validate_only = options['validate_only']
+        width = options['width']
+        height = options['height']
 
         #lists for astropy data table
         blocks_start = []
@@ -149,7 +156,7 @@ class Command(BaseCommand):
                 output_data_paths.append(output_path)
 
                 #call run_astwarp_alignment(), and run_noisechisel()
-                chiseled_filenames, combined_filenames, status = run_astwarp_alignment_noisechisel(block, sci_dir_path, dest_dir_path)
+                chiseled_filenames, combined_filenames, status = run_astwarp_alignment_noisechisel(block, sci_dir_path, dest_dir_path, width, height)
 
                 reset_database_connection()
 
