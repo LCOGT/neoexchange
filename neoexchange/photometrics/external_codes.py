@@ -570,6 +570,11 @@ def determine_astarithmetic_options(filenames, dest_dir, hdu = 'ALIGNED'):
     raw_filename = os.path.basename(filenames[0])
     if "-crop" in raw_filename:
         output_filename = os.path.join(dest_dir, raw_filename.replace("-crop", "-combine"))
+    elif "-combine-superstack" in raw_filename:
+        # Set output filename to middle of list
+        midpoint_index = int(len(filenames) / 2)
+        raw_filename = os.path.basename(filenames[midpoint_index])
+        output_filename = os.path.join(dest_dir, raw_filename.replace("-combine-superstack", "-combine-hyperstack"))
     else:
         output_filename = os.path.join(dest_dir, raw_filename.replace(".fits", "-superstack.fits"))
     #original options (maybe from tutorial?)

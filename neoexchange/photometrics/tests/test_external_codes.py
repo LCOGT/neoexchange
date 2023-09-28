@@ -1901,6 +1901,10 @@ class TestDetermineAstarithmeticOptions(SimpleTestCase):
         self.filenames_list = " ".join(self.test_files)
         self.first3_filenames_list = " ".join(self.test_files[:3])
         self.last3_filenames_list = " ".join(self.test_files[-3:])
+        self.test_stack_files = [f.replace('-crop', '-combine-superstack') for f in self.test_files]
+        self.stack_filenames_list = " ".join(self.test_stack_files)
+
+        self.maxDiff = None
 
     def test_7files(self):
         expected_cmdline = f'--globalhdu ALIGNED --output={self.test_dir}/{self.test_files[0].replace("-crop", "-combine")} {self.filenames_list} 7 2 0.05 sigclip-mean'
@@ -1927,6 +1931,15 @@ class TestDetermineAstarithmeticOptions(SimpleTestCase):
         expected_cmdline = f'--globalhdu 1 --output={self.test_dir}/{self.test_files[0].replace("-crop", "-combine")} {self.filenames_list} 7 2 0.05 sigclip-mean'
 
         output_filename, cmdline = determine_astarithmetic_options(self.test_files, self.test_dir, hdu=1)
+
+        self.assertEqual(expected_cmdline, cmdline)
+
+    def test_stacks(self):
+        midpoint_index = int(len(self.test_stack_files) / 2)
+        output_file = os.path.join(self.test_dir, self.test_files[midpoint_index].replace("-crop", "-combine-hyperstack"))
+        expected_cmdline = f'--globalhdu ALIGNED --output={output_file} {self.stack_filenames_list} 7 2 0.05 sigclip-mean'
+
+        output_filename, cmdline = determine_astarithmetic_options(self.test_stack_files, self.test_dir)
 
         self.assertEqual(expected_cmdline, cmdline)
 
