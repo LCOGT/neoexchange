@@ -34,7 +34,7 @@ from numpy import loadtxt, split, empty, median, absolute, sqrt
 from core.models import detections_array_dtypes
 from astrometrics.time_subs import timeit
 from photometrics.catalog_subs import oracdr_catalog_mapping, banzai_catalog_mapping, \
-    banzai_ldac_catalog_mapping, fits_ldac_to_header
+    banzai_ldac_catalog_mapping, fits_ldac_to_header, open_fits_catalog
 from photometrics.image_subs import create_weight_image, create_rms_image, get_saturate
 
 logger = logging.getLogger(__name__)
@@ -622,10 +622,13 @@ def determine_astnoisechisel_options(filename, dest_dir, hdu = 0, bkg_only=False
     # else:
         # options = f'-h{hdu} --tilesize={tilesize} --erode={erode} --detgrowquant={detgrowquant} --detgrowmaxholesize={maxholesize} --output={output_filename} {filename}'
     #values from Agata Rozek configuration/Makefile
+    tilesize = ''
+    if 'fm2' in filename:
+        tilesize='--tilesize=15,15'
     if bkg_only:
-        options = f'-h{hdu} --quiet --oneelempertile --interpnumngb=8 --minnumfalse=50 --output={output_filename} {filename}'
+        options = f'-h{hdu} --quiet {tilesize} --oneelempertile --interpnumngb=8 --minnumfalse=50 --output={output_filename} {filename}'
     else:
-        options = f'-h{hdu} --quiet --label --rawoutput --output={output_filename} {filename}'
+        options = f'-h{hdu} --quiet {tilesize} --label --rawoutput --output={output_filename} {filename}'
     return output_filename, options
 
 def determine_image_stats(filename, hdu='SCI'):
@@ -1672,15 +1675,14 @@ def run_astwarp(filename, dest_dir, center_RA, center_DEC, width = 1991.0, heigh
         return None, -2
     if os.path.exists(filename) is False:
         return None, -1
-    hdulist = fits.open(filename)
-    header = hdulist['NOISECHISEL-CONFIG'].header
-    input_1 = header['INPUT_1']
-    input_2 = header['INPUT_2']
+    with fits.open(filename) as hdulist:
+        header = hdulist['NOISECHISEL-CONFIG'].header
+        input_1 = header['INPUT_1']
+        input_2 = header['INPUT_2']
     input_filename = os.path.join(input_1, input_2)
-    hdulist = fits.open(input_filename)
-    header = hdulist['SCI'].header
+    header, dummy_table, cattype = open_fits_catalog(input_filename, header_only=True)
     wcs_err = header['WCSERR']
-    if wcs_err!=0:
+    if wcs_err != 0:
         return None, -5
     binary = binary or find_binary(binary)
     if binary is None:
@@ -1690,7 +1692,6 @@ def run_astwarp(filename, dest_dir, center_RA, center_DEC, width = 1991.0, heigh
     cropped_filename, options = determine_astwarp_options(filename, dest_dir, center_RA, center_DEC, width, height)
     if os.path.exists(cropped_filename):
         return cropped_filename, 1
-    header = fits.getheader(input_filename)
     wcs = WCS(header)
     #print(header['NAXIS1'], header['NAXIS2'])
     x, y = wcs.world_to_pixel_values(center_RA, center_DEC)
