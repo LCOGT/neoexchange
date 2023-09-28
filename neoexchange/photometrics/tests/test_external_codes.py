@@ -1936,7 +1936,7 @@ class TestDetermineAstarithmeticOptions(SimpleTestCase):
 
     def test_stacks(self):
         midpoint_index = int(len(self.test_stack_files) / 2)
-        output_file = os.path.join(self.test_dir, self.test_files[midpoint_index].replace("-crop", "-combine-hyperstack"))
+        output_file = os.path.join(self.test_dir, self.test_files[midpoint_index].replace("-crop", "-combine-hyperstack").replace("-0210", ""))
         expected_cmdline = f'--globalhdu ALIGNED --output={output_file} {self.stack_filenames_list} 7 2 0.05 sigclip-mean'
 
         output_filename, cmdline = determine_astarithmetic_options(self.test_stack_files, self.test_dir)

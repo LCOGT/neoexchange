@@ -15,6 +15,7 @@ GNU General Public License for more details.
 
 import logging
 import os
+import re
 from math import floor
 from datetime import datetime, timedelta
 
@@ -574,6 +575,9 @@ def determine_astarithmetic_options(filenames, dest_dir, hdu = 'ALIGNED'):
         # Set output filename to middle of list
         midpoint_index = int(len(filenames) / 2)
         raw_filename = os.path.basename(filenames[midpoint_index])
+        # Rip out run number from the middle if found with the regexp
+        runnum_regex = r"(-\d{4})-e"
+        raw_filename =  re.sub(runnum_regex, '-e', raw_filename)
         output_filename = os.path.join(dest_dir, raw_filename.replace("-combine-superstack", "-combine-hyperstack"))
     else:
         output_filename = os.path.join(dest_dir, raw_filename.replace(".fits", "-superstack.fits"))
