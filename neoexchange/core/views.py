@@ -3584,13 +3584,17 @@ def run_hotpants_subtraction(ref, sci_dir, configs_dir, dest_dir):
 
     return status
 
-def determine_substack_times(block, exptime=800):
-    '''Determines the span of times for substacks of the passed block
+def determine_substack_times(block, exptime=800, split=True):
+    '''Determines the span of times for substacks of the passed block. If
+    [split] is False, then it determines the time span for the whole Block
     '''
     time_strings = []
 
     frames, banzai, neox = find_frames(block)
-    split_block = split_light_curve_blocks(frames, exptime)
+    if split:
+        split_block = split_light_curve_blocks(frames, exptime)
+    else:
+        split_block = [list(frames),]
     for subblock in split_block:
         first_frame = subblock[0]
         last_frame = subblock[-1]
@@ -3608,9 +3612,14 @@ def write_figure_latex(annotated_plots_combined, time_strings, site):
 
     directory = os.path.dirname(annotated_plots_combined[0])
     dirs = annotated_plots_combined[0].split(os.sep)
-    date_label = dirs[-3]
-    daydir_dt = datetime.strptime(date_label, '%Y%m%d')
-    daydir_dt += timedelta(days=1)
+    try:
+        date_label = dirs[-3]
+        daydir_dt = datetime.strptime(date_label, '%Y%m%d')
+        daydir_dt += timedelta(days=1)
+    except ValueError:
+        # MRO data
+        date_label = dirs[-2]
+        daydir_dt = datetime.strptime(date_label, 'mro_%y%m%d')
     latex_file = os.path.join(directory, f'figure_text_{date_label}_{site}.tex')
     with open(latex_file, 'w') as fh:
         print('\\begin{figure}', file=fh)
@@ -3628,7 +3637,11 @@ def write_figure_latex(annotated_plots_combined, time_strings, site):
                 else:
                     print('', file=fh)
         date_string = daydir_dt.strftime("%Y-%m-%d")
-        print(f'\\caption{{Median combined stacked images of Didymos from {date_string} at the \\LCO {site.upper} site.}}\n\\label{{fig:morphology_{date_label}}}\n\\end{{figure}}\n', file=fh)
+        if site.lower() == 'mro':
+            site_string = 'MRO.'
+        else:
+            site_string = f'the \\LCO {site.upper()} site.'
+        print(f'\\caption{{Median combined stacked images of Didymos from {date_string} at {site_string}}}\n\\label{{fig:morphology_{date_label}}}\n\\end{{figure}}\n', file=fh)
 
     print('Wrote to', latex_file)
 
@@ -3662,23 +3675,31 @@ def stack_lightcurve_block(block, sci_dir, dest_dir, table, exptime=800, segstac
         statuses.append(status)
         #print(combined_filename, status)
         subblock_stacks.append(combined_filename)
+    # Make a per-Block "hyperstack" from the substacks
+    super_combined_filename, status = run_astarithmetic(subblock_stacks, dest_dir, hdu=1)
+    print(super_combined_filename, status)
+    subblock_stacks.append(super_combined_filename)
+    statuses.append(status)
 
     return subblock_stacks, statuses
 
 def generate_plots_for_directory(dest_dir_path, site):
     '''Produces PDF annotated plots and versions of stacked and noisechisel
     detection images found in <dest_dir_path> and with the <site> file prefix
-    (sets to '' if <site> is the generic Sinistro "pseudosite" (`site='sin'`))
+    (sets to '' if <site> is the generic Sinistro "pseudosite" (`site='sin'`)
+    or MRO)
     Returns a list of the annotated plot filenames.
     (Extracted from inner loop of `make_tail_plots` - needs refactoring.
     '''
 
     print(dest_dir_path, site)
     site_prefix = site
-    if site.lower() == 'sin':
+    if site.lower() == 'sin' or site.lower() == 'mro':
         site_prefix = ''
     combined_filenames = sorted(glob(dest_dir_path + '/' + site_prefix + '*combine-superstack.fits'))
+    combined_filenames += sorted(glob(dest_dir_path + '/' + site_prefix + '*combine-hyperstack.fits'))
     chiseled_filenames = sorted(glob(dest_dir_path + '/' + site_prefix + '*combine-superstack-chisel.fits'))
+    chiseled_filenames += sorted(glob(dest_dir_path + '/' + site_prefix + '*combine-hyperstack-chisel.fits'))
     annotated_plots_combined = []
 
     if len(combined_filenames) > 0 and len(chiseled_filenames) > 0 and len(combined_filenames) == len(chiseled_filenames):
@@ -3912,8 +3933,18 @@ def make_annotated_plot(fits_combined_filepath, out_type='pdf', dscale=1000, lin
     output_plot = None
 
     fits_filename = os.path.basename(fits_combined_filepath)
-    fits_filename = fits_filename.replace('-combine', '').replace('-superstack', '')
-    stack_frame = Frame.objects.get(filename=fits_filename, frametype=Frame.NEOX_RED_FRAMETYPE)
+    fits_filename = fits_filename.replace('-combine', '').replace('-superstack', '').replace('-hyperstack', '')
+    prefix = 'superstack'
+    try:
+        stack_frame = Frame.objects.get(filename=fits_filename, frametype=Frame.NEOX_RED_FRAMETYPE)
+    except Frame.DoesNotExist:
+        stack_frame = None
+        index = fits_filename.rfind('-')
+        if index > 0:
+            stack_frames = Frame.objects.filter(filename__startswith=fits_filename[0:index], frametype=Frame.NEOX_RED_FRAMETYPE).order_by('midpoint')
+            midpoint_index = int(stack_frames.count() / 2)
+            stack_frame = stack_frames[midpoint_index]
+            prefix = 'hyperstack'
     if stack_frame:
         midpoint = stack_frame.midpoint
         start = midpoint.replace(second=0, microsecond=0)
@@ -3923,7 +3954,7 @@ def make_annotated_plot(fits_combined_filepath, out_type='pdf', dscale=1000, lin
         table = ephem[index:index+1]
 
         jpg_combined_filename = fits_combined_filepath.replace('.fits', '.jpg')
-        border_filename = jpg_combined_filename.replace('superstack.jpg', 'superstack-bd.jpg')
+        border_filename = jpg_combined_filename.replace(prefix+'.jpg', prefix+'-bd.jpg')
         if os.path.exists(jpg_combined_filename) and os.path.exists(border_filename):
             output_plot = plot_didymos_images(jpg_combined_filename, table, out_type, dscale, line_width, font_size)
         else:
@@ -3949,7 +3980,7 @@ def plot_didymos_images(jpg_combined_filename, table, out_type='pdf', dscale=100
     dist_arr = table['delta']
 
     #declare output file name
-    output_plot = jpg_combined_filename.replace('combine-superstack', 'plot')
+    output_plot = jpg_combined_filename.replace('combine-superstack', 'plot').replace('combine-hyperstack', 'plot')
     output_plot = output_plot.replace('.jpg', f".{out_type}")
     output_path, output_name = os.path.split(output_plot)
     output_path = os.path.join(output_path, 'plots')
@@ -4029,7 +4060,7 @@ def plot_didymos_images(jpg_combined_filename, table, out_type='pdf', dscale=100
 
     # plot outline of chiseled detection image as mask
     contour_cmap = ListedColormap(["black", colors[2]])
-    mask = plt.imread(jpg_combined_filename.replace('superstack.jpg', 'superstack-bd.jpg'))
+    mask = plt.imread(jpg_combined_filename.replace('superstack.jpg', 'superstack-bd.jpg').replace('hyperstack.jpg', 'hyperstack-bd.jpg'))
 
     masked_data = np.ma.masked_where(mask < 240, mask)
     mask_plot= ax.imshow(masked_data, cmap=contour_cmap, extent=[0, iw, 0, ih], interpolation='none')
