@@ -3703,9 +3703,9 @@ def generate_plots_for_directory(dest_dir_path, site):
     if site.lower() == 'sin' or site.lower() == 'mro':
         site_prefix = ''
     combined_filenames = sorted(glob(dest_dir_path + '/' + site_prefix + '*combine-superstack.fits'))
-    combined_filenames = sorted(glob(dest_dir_path + '/' + site_prefix + '*combine-hyperstack.fits'))
+    combined_filenames += sorted(glob(dest_dir_path + '/' + site_prefix + '*combine-hyperstack.fits'))
     chiseled_filenames = sorted(glob(dest_dir_path + '/' + site_prefix + '*combine-superstack-chisel.fits'))
-    chiseled_filenames = sorted(glob(dest_dir_path + '/' + site_prefix + '*combine-hyperstack-chisel.fits'))
+    chiseled_filenames += sorted(glob(dest_dir_path + '/' + site_prefix + '*combine-hyperstack-chisel.fits'))
     annotated_plots_combined = []
 
     if len(combined_filenames) > 0 and len(chiseled_filenames) > 0 and len(combined_filenames) == len(chiseled_filenames):
