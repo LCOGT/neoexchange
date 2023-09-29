@@ -3618,8 +3618,12 @@ def write_figure_latex(annotated_plots_combined, time_strings, site):
         daydir_dt += timedelta(days=1)
     except ValueError:
         # MRO data
-        date_label = dirs[-2]
-        daydir_dt = datetime.strptime(date_label, 'mro_%y%m%d')
+        try:
+            date_label = dirs[-3]
+            daydir_dt = datetime.strptime(date_label, 'mro_%y%m%d')
+        except ValueError:
+            date_label = dirs[-2]
+            daydir_dt = datetime.strptime(date_label, 'mro_%y%m%d')
     latex_file = os.path.join(directory, f'figure_text_{date_label}_{site}.tex')
     with open(latex_file, 'w') as fh:
         print('\\begin{figure}', file=fh)
@@ -3641,9 +3645,11 @@ def write_figure_latex(annotated_plots_combined, time_strings, site):
             site_string = 'MRO.'
         else:
             site_string = f'the \\LCO {site.upper()} site.'
+        # XXX Needs update of date_string for actual date span
         print(f'\\caption{{Median combined stacked images of Didymos from {date_string} at {site_string}}}\n\\label{{fig:morphology_{date_label}}}\n\\end{{figure}}\n', file=fh)
 
     print('Wrote to', latex_file)
+    return latex_file
 
 def stack_lightcurve_block(block, sci_dir, dest_dir, table, exptime=800, segstack_sequence=7, width=1991.0, height=911.0):
     '''
@@ -3697,9 +3703,9 @@ def generate_plots_for_directory(dest_dir_path, site):
     if site.lower() == 'sin' or site.lower() == 'mro':
         site_prefix = ''
     combined_filenames = sorted(glob(dest_dir_path + '/' + site_prefix + '*combine-superstack.fits'))
-    combined_filenames += sorted(glob(dest_dir_path + '/' + site_prefix + '*combine-hyperstack.fits'))
+    combined_filenames = sorted(glob(dest_dir_path + '/' + site_prefix + '*combine-hyperstack.fits'))
     chiseled_filenames = sorted(glob(dest_dir_path + '/' + site_prefix + '*combine-superstack-chisel.fits'))
-    chiseled_filenames += sorted(glob(dest_dir_path + '/' + site_prefix + '*combine-hyperstack-chisel.fits'))
+    chiseled_filenames = sorted(glob(dest_dir_path + '/' + site_prefix + '*combine-hyperstack-chisel.fits'))
     annotated_plots_combined = []
 
     if len(combined_filenames) > 0 and len(chiseled_filenames) > 0 and len(combined_filenames) == len(chiseled_filenames):
@@ -3719,7 +3725,9 @@ def generate_plots_for_directory(dest_dir_path, site):
             pdf_filenames_combined.append(pdf_filename_combined)
             jpg_filename_combined, status = convert_fits(combined_filename, dest_dir_path, out_type='jpg')
             # Make annotated plots
-            output_plot = make_annotated_plot(combined_filename, out_type='pdf')
+            image_width = fits.getval(combined_filename, 'NAXIS1', ext=1)
+            image_height = fits.getval(combined_filename, 'NAXIS2', ext=1)
+            output_plot = make_annotated_plot(combined_filename, out_type='pdf', width=image_width, height=image_height)
             print(f"Generated: {output_plot}")
             annotated_plots_combined.append(output_plot)
     else:
@@ -3922,7 +3930,7 @@ def run_make_didymos_chisel_plots(self, chiseled_filename, dest_dir_path, output
 
     return results
 
-def make_annotated_plot(fits_combined_filepath, out_type='pdf', dscale=1000, line_width=1.5, font_size=14):
+def make_annotated_plot(fits_combined_filepath, out_type='pdf', dscale=1000, width=1991.0, height=911.0, line_width=1.5, font_size=14):
     '''
     Wrapper to generate final annotated image using plot_didymos_images(). The
     pre-generation of the needed intermediate images with run_make_didymos_chisel_plots
@@ -3956,7 +3964,7 @@ def make_annotated_plot(fits_combined_filepath, out_type='pdf', dscale=1000, lin
         jpg_combined_filename = fits_combined_filepath.replace('.fits', '.jpg')
         border_filename = jpg_combined_filename.replace(prefix+'.jpg', prefix+'-bd.jpg')
         if os.path.exists(jpg_combined_filename) and os.path.exists(border_filename):
-            output_plot = plot_didymos_images(jpg_combined_filename, table, out_type, dscale, line_width, font_size)
+            output_plot = plot_didymos_images(jpg_combined_filename, table, out_type, dscale, width, height, line_width, font_size)
         else:
             logger.error(f"Combined filename {os.path.basename(jpg_combined_filename)} or {os.path.basename(border_filename)} missing")
     else:
@@ -3964,7 +3972,7 @@ def make_annotated_plot(fits_combined_filepath, out_type='pdf', dscale=1000, lin
 
     return output_plot
 
-def plot_didymos_images(jpg_combined_filename, table, out_type='pdf', dscale=1000, line_width=3, font_size=16):
+def plot_didymos_images(jpg_combined_filename, table, out_type='pdf', dscale=1000, iw=1991.0, ih=911.0, line_width=3, font_size=16):
     '''
     Plots a <jpg_combined_filename>. Adds directional arrows for velocity
     and sun position as well as a scale bar showing [dscale] km (defaults to 1000 km).
@@ -3973,7 +3981,9 @@ def plot_didymos_images(jpg_combined_filename, table, out_type='pdf', dscale=100
     to 16)
     '''
     from cycler import cycler
+    import matplotlib
     from matplotlib.colors import ListedColormap
+    matplotlib.use('Agg')
 
     sun_arr = table['sunTargetPA']
     vel_arr = table['velocityPA']
@@ -4006,12 +4016,15 @@ def plot_didymos_images(jpg_combined_filename, table, out_type='pdf', dscale=100
     #declare variables
     au=149597870.7      # au in km
     arrow_len=75        # arrow length (pixels)
-    ih=511              # image height (pixels)
-    iw=1991             # image width (pixels)
     sun=sun_arr[0]      # position angles of the extended Sun-to-target radius vector ("PsAng")
     vel=vel_arr[0]      # negative of the targets' heliocentric velocity vector ("PsAMV")
     dist=dist_arr[0]    # Observer->target range (au)
     pix=0.389635        # Sinistro median pixel scale ("/pixel)
+    barlen=3
+    if 'fm2' in jpg_combined_filename or 'mro_2' in jpg_combined_filename:
+        pix=0.5214399        # MRO median pixel scale ("/pixel)
+        barlen=1.5
+        # Decrease arrow_len ?
 
     xz=arrow_len
     yz=ih-1.5*arrow_len
@@ -4020,16 +4033,18 @@ def plot_didymos_images(jpg_combined_filename, table, out_type='pdf', dscale=100
     xvel=arrow_len*cos(radians(vel)+radians(90))
     yvel=arrow_len*sin(radians(vel)+radians(90))
 
+    # Create figure without using pyplot (plt). Must not use any plt.foo() methods
+    # that draw otherwise an all-white plot results... :-(
     fig = Figure(dpi=200, tight_layout=True)
     ax = fig.add_subplot(111, aspect='equal')
     # Disable ticks and labels, use full space
     ax.tick_params(bottom=False,left=False)
     ax.set_xticks([])
     ax.set_yticks([])
-    plt.subplots_adjust(left=0.0, right=1.0, bottom=0.0, top=1.0)
+    fig.subplots_adjust(left=0.0, right=1.0, bottom=0.0, top=1.0)
 
     #add stacked image
-    img = plt.imread(jpg_combined_filename)
+    img = matplotlib.image.imread(jpg_combined_filename)
     ax.imshow(img, extent=[0, iw, 0, ih], interpolation='none')
 
     #add arrows
@@ -4039,7 +4054,7 @@ def plot_didymos_images(jpg_combined_filename, table, out_type='pdf', dscale=100
 
     #add labels
     align = 'center'
-    ax.text(xz, yz+arrow_len, 'N', verticalalignment=align, fontfamily='Arial', fontsize=font_size, color='black')
+    ax.text(xz, yz+arrow_len, 'N', verticalalignment='bottom', horizontalalignment='center', fontfamily='Arial', fontsize=font_size, color='black')
     ax.text(xz+xsun, yz+ysun, '-$\mathregular{R_\u2609}$', verticalalignment=align, fontfamily='Arial', fontsize=font_size, color=colors[5])
     ax.text(xz+xvel, yz+yvel, '-v', fontfamily='Arial', verticalalignment=align, fontsize=font_size, color=colors[2])
 
@@ -4051,7 +4066,6 @@ def plot_didymos_images(jpg_combined_filename, table, out_type='pdf', dscale=100
     tickh=arrow_len/10
     nticks=1
 
-    barlen=3
     ax.arrow(tickxz, tickyz, nticks*tickw, 0, width=0, head_width=0, head_length=0, lw=line_width, color='black')
     ax.arrow(tickxz, tickyz-barlen*tickh, 0, 2*barlen*tickh, width=0, head_width=0, head_length=0, lw=line_width, color='black')
     ax.arrow(tickxz+tickw, tickyz-barlen*tickh, 0, 2*barlen*tickh, width=0, head_width=0, head_length=0, lw=line_width, color='black')
@@ -4060,17 +4074,12 @@ def plot_didymos_images(jpg_combined_filename, table, out_type='pdf', dscale=100
 
     # plot outline of chiseled detection image as mask
     contour_cmap = ListedColormap(["black", colors[2]])
-    mask = plt.imread(jpg_combined_filename.replace('superstack.jpg', 'superstack-bd.jpg').replace('hyperstack.jpg', 'hyperstack-bd.jpg'))
+    mask = matplotlib.image.imread(jpg_combined_filename.replace('superstack.jpg', 'superstack-bd.jpg').replace('hyperstack.jpg', 'hyperstack-bd.jpg'))
 
     masked_data = np.ma.masked_where(mask < 240, mask)
     mask_plot= ax.imshow(masked_data, cmap=contour_cmap, extent=[0, iw, 0, ih], interpolation='none')
 
-    # mng = plt.get_current_fig_manager()
-    # mng.resize(*mng.window.maxsize())
-
-    plt.savefig(output_plot, bbox_inches='tight', pad_inches=0)
-    #plt.show()
-    plt.close()
+    fig.savefig(output_plot, bbox_inches='tight', pad_inches=0)
     # delete figure to free memory
     del fig
 

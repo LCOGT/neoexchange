@@ -173,11 +173,11 @@ class Command(BaseCommand):
                     didymos_ids.append(results['didymos_id'])
 
                 for combined_filename in combined_filenames:
-                    pdf_filename_combined, status = convert_fits(combined_filename, dest_dir_path)
+                    pdf_filename_combined, status = convert_fits(combined_filename, dest_dir_path, width=width, height=height)
                     pdf_filenames_combined.append(pdf_filename_combined)
-                    jpg_filename_combined, status = convert_fits(combined_filename, dest_dir_path, out_type='jpg')
+                    jpg_filename_combined, status = convert_fits(combined_filename, dest_dir_path, out_type='jpg', width=width, height=height)
                     # Make annotated plots
-                    output_plot = make_annotated_plot(combined_filename)
+                    output_plot = make_annotated_plot(combined_filename, width=width, height=height)
                     annotated_plots_combined.append(output_plot)
                 self.stdout.write(f'Chiseled  filename(s): {pdf_filenames_chiseled}')
                 self.stdout.write(f'Combined  filename(s): {pdf_filenames_combined}')
