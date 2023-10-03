@@ -275,11 +275,11 @@ class Block(models.Model):
 
     def num_red_frames(self):
         """Returns the total number of reduced frames (quicklook and fully reduced)"""
-        return self.frame_set.filter(frametype__in=[11, 91]).count()
+        return self.frame_set.filter(frametype__in=[11, 61, 71, 91]).count()
 
     def num_unique_red_frames(self):
         """Returns the number of *unique* reduced frames (quicklook OR fully reduced)"""
-        reduced_frames = self.frame_set.filter(frametype=91)
+        reduced_frames = self.frame_set.filter(frametype__in=[61, 71, 91])
         ql_frames = self.frame_set.filter(frametype=11)
         if reduced_frames.count() >= ql_frames.count():
             total_exposure_number = reduced_frames.count()

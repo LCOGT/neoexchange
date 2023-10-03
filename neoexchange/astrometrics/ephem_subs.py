@@ -1626,8 +1626,16 @@ def get_sitepos(site_code, dbg=False):
         site_lat, status = S.sla_daf2r(33, 59,  5.4)
         site_long, status = S.sla_daf2r(107, 11, 21.6)
         site_long = -site_long  # West of Greenwich !
-        site_hgt = 3250.
+        site_hgt = 3250.0
         site_name = 'MRO 2.4m at Magdalena Ridge Observatory'
+    elif site_code == 'SOR-XXXX-4M0A' or site_code == 'I33':
+        # Latitude, longitude, height from Mamajek et al. 2012
+        site_lat, status = S.sla_daf2r(30, 14, 16.41)
+        site_lat = -site_lat   # Southern hemisphere !
+        site_long, status = S.sla_daf2r(70, 44, 01.11)
+        site_long = -site_long  # West of Greenwich !
+        site_hgt = 2738
+        site_name = 'SOAR 4.1m at Cerro Pachon, Chile'
     elif site_code == '500' or site_code == '1M0' or site_code == '0M4' or site_code == '2M0':
         site_lat = 0.0
         site_long = 0.0

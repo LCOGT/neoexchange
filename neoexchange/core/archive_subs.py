@@ -339,6 +339,13 @@ def make_data_dir(data_dir, frame):
     if "tar.gz" in filename and frame['SITEID'] == 'ogg':
         day_dir = datetime.strftime(dd-timedelta(days=1), '%Y%m%d')
 
+    if frame.get('SITEID', '') == 'lco' or frame.get('sitecode', '') == '304':
+        # Swope data, modify path
+        data_dir = os.path.join(data_dir, 'Swope')
+    elif frame.get('SITEID', '') == 'mro' or frame.get('sitecode', '') == 'H01':
+        # MRO data, modify path
+        data_dir = os.path.join(data_dir, 'MRO', 'data_mrocal')
+        day_dir = 'mro_' + datetime.strftime(dd, '%y%m%d')
     out_path = os.path.join(data_dir, day_dir)
     if not os.path.exists(out_path):
         try:

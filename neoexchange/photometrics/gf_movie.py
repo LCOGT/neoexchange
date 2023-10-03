@@ -263,14 +263,27 @@ def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=True,
             sup_title = f'REQ# {header_n["REQNUM"]} -- {header_n["OBJECT"]} at {header_n["SITEID"].upper()} ({header_n["INSTRUME"]}) -- Filter: {header_n["FILTER"]}'
         else:
             sup_title = title
-        fig.suptitle(sup_title)
-        ax.set_title('UT Date: {} ({} of {})'.format(date.strftime('%x %X'), current_count,
-                                                     int(len(good_fits_files) - (copies - 1) * start_frames)), pad=10)
+        framenum = header_n.get("FRAMENUM", None)
+        if framenum is None:
+            try:
+                framenum = int(header_n["FILENAME"].replace('ccd', '').replace('c1', ''))
+            except ValueError:
+                # MRO filename handling
+                chunks = header_n["FILENAME"].replace(',', '.').split('.')
+                if len(chunks) == 3:
+                    framenum = int(chunks[1])
+        ax.set_title(sup_title + '\n' + f'UT Date: {date.strftime("%Y/%m/%d %H:%M:%S")} -- #{framenum:04d} '
+                                        f'({current_count} of'
+                                        f' {int(len(good_fits_files) - (copies - 1) * start_frames)})')
 
         # Set frame to be center of chip in arcmin
         shape = data.shape
         x_frac = 0
         y_frac = 0
+        scale_keyword = 'PIXSCALE'
+        if 'PIXSCALE' not in header_n:
+            scale_keyword = 'SECPIX'
+        pixscale = header_n.get(scale_keyword, 1.0)
         if center is not None:
             width = (center * 60) / header_n['PIXSCALE']
             y_frac = np.max(int((shape[0] - width) / 2), 0)
