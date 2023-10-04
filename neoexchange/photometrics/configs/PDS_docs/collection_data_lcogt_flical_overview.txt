@@ -34,10 +34,18 @@ The FLI imaging instruments are a 1k x 1k CCD that images a 5.8 arcminute square
 field of view. The CCDs are back illuminated and have 13-micron pixels. The
 unbinned detector provides a pixel scale of 0.340 arcsec/pixel but for the vast
 majority of these observations, the instrument was operated in 2x2 pixel binning,
-giving 0.680 arcsec/pixel. (Due to the nature of the way these observations were
-scheduled in blocks of ~40 minutes long, the frames consist of a repeating set
-of 2, 10 & 30s exposures in bin2x2 mode, followed by a "reset" exposure of 0.2s
-in the clear filter to set the instrument back to its regular autoguider mode).
+giving 0.680 arcsec/pixel. 
+
+(Due to the nature of the way these observations were scheduled in 
+blocks of ~40 minutes long, the frames consist of a repeating set of 2, 
+10 & 30s exposures in bin2x2 mode, followed by a "reset" exposure of 
+0.2s in the clear filter to set the instrument back to its regular 
+autoguider mode. All of the data were taken tracking Didymos (indicated 
+by SRCTYPE='MINORPLANET' as opposed to SRCTYPE='EXTRASOLAR' for 
+sidereally-tracked data) at the full on-sky rate (indicated by the 
+tracking fraction keyword TRACFRAC=1.0 in the header) but the very 
+short "reset" expsoures do not show any evidence of the trailing caused 
+by the non-sidereal tracking).
 
 Raw image data (see data_lcogt_fliraw_fli_collection) are calibrated through
 two pipelines, the observatory-wide BANZAI pipeline (McCully, C. et al.
@@ -172,18 +180,21 @@ outlier rejection.
 The naming scheme for the master calibration frames follow the same
 general format as the Calibrated Images described above but the <type>
 and <reduction level> sections are replaced by:
-<calib type>-<readout window (Opt.)>-<readout speed (Opt.)>-bin<X binning>x<Y binning>-<filter>
+<calib type>-<readout speed (Opt.)>-bin<X binning>x<Y binning>-<filter>
 
-where <calib type> for master calibration frames is one of {bpm (bad
-pixel mask), bias (master bias), dark (master dark), skyflat (master
-sky flatfield)}, <readout window> (optional) and is one of {full_frame
-or center; 1m Sinistro imagers only), <readout speed> (optional) and
-<filter> is only present for skyflat calibration types. Some examples
-of these combinations are:
-cpt1m012-fa06-20210402-dark-bin1x1.fits and
-cpt1m012-fa06-20210402-bias-bin1x1.fits
-which are master dark and bias calibration frames for 1x1 binning from
-LCOGT 1m #12 in South Africa (cpt site) from 2021-04-02.
+where <calib type> for master calibration frames is one of {bpm (bad 
+pixel mask), bias (master bias), dark (master dark), skyflat (master 
+sky flatfield)}, <readout speed> (optional) and <filter> is only 
+present for skyflat calibration types. Some examples of these 
+combinations are:
+cpt1m012-ef04-20210402-dark-2_mhz-bin1x1.fits and
+cpt1m012-ef04-20210402-bias-2_mhz-bin1x1.fits
+which are master dark and bias calibration frames for 1x1 binning with 
+the 2 MHz readout speed from LCOGT 1m #12 in South Africa (cpt site) 
+from 2021-04-02. (In order to comply with PDS label requirements, the 
+filename is forced to lowercase so the readout speed will be altered 
+from the actual '2_MHz' (2 megahertz) in the original filename to 
+'2_mhz' in the PDS collection.
 
 References
 ==========
