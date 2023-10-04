@@ -3041,7 +3041,7 @@ class TestCreateDisciplineArea(SimpleTestCase):
                   <geom:Object_Orientation_RA_Dec>
                     <geom:right_ascension_angle unit="deg">272.953000</geom:right_ascension_angle>
                     <geom:declination_angle unit="deg">1.280402</geom:declination_angle>
-                    <geom:celestial_north_clock_angle unit="deg">0.0</geom:celestial_north_clock_angle>
+                    <geom:celestial_north_clock_angle unit="deg">179.4</geom:celestial_north_clock_angle>
                     <geom:Reference_Frame_Identification>
                       <geom:name>J2000</geom:name>
                       <geom:comment>equinox of RA and DEC</geom:comment>
@@ -3061,8 +3061,41 @@ class TestCreateDisciplineArea(SimpleTestCase):
               <disp:Display_Settings xmlns:disp="http://pds.nasa.gov/pds4/disp/v1">
                 <Local_Internal_Reference>
                   <local_identifier_reference>ccd1_image</local_identifier_reference>
+                  <local_reference_type>display_settings_to_array</local_reference_type>
+                </Local_Internal_Reference>
+                <disp:Display_Direction>
+                  <disp:horizontal_display_axis>Sample</disp:horizontal_display_axis>
+                  <disp:horizontal_display_direction>Left to Right</disp:horizontal_display_direction>
+                  <disp:vertical_display_axis>Line</disp:vertical_display_axis>
+                  <disp:vertical_display_direction>Bottom to Top</disp:vertical_display_direction>
+                </disp:Display_Direction>
+              </disp:Display_Settings>
+              <disp:Display_Settings xmlns:disp="http://pds.nasa.gov/pds4/disp/v1">
+                <Local_Internal_Reference>
                   <local_identifier_reference>ccd2_image</local_identifier_reference>
+                  <local_reference_type>display_settings_to_array</local_reference_type>
+                </Local_Internal_Reference>
+                <disp:Display_Direction>
+                  <disp:horizontal_display_axis>Sample</disp:horizontal_display_axis>
+                  <disp:horizontal_display_direction>Left to Right</disp:horizontal_display_direction>
+                  <disp:vertical_display_axis>Line</disp:vertical_display_axis>
+                  <disp:vertical_display_direction>Bottom to Top</disp:vertical_display_direction>
+                </disp:Display_Direction>
+              </disp:Display_Settings>
+              <disp:Display_Settings xmlns:disp="http://pds.nasa.gov/pds4/disp/v1">
+                <Local_Internal_Reference>
                   <local_identifier_reference>ccd3_image</local_identifier_reference>
+                  <local_reference_type>display_settings_to_array</local_reference_type>
+                </Local_Internal_Reference>
+                <disp:Display_Direction>
+                  <disp:horizontal_display_axis>Sample</disp:horizontal_display_axis>
+                  <disp:horizontal_display_direction>Left to Right</disp:horizontal_display_direction>
+                  <disp:vertical_display_axis>Line</disp:vertical_display_axis>
+                  <disp:vertical_display_direction>Bottom to Top</disp:vertical_display_direction>
+                </disp:Display_Direction>
+              </disp:Display_Settings>
+              <disp:Display_Settings xmlns:disp="http://pds.nasa.gov/pds4/disp/v1">
+                <Local_Internal_Reference>
                   <local_identifier_reference>ccd4_image</local_identifier_reference>
                   <local_reference_type>display_settings_to_array</local_reference_type>
                 </Local_Internal_Reference>
@@ -3127,9 +3160,18 @@ class TestCreateDisciplineArea(SimpleTestCase):
               <disp:Display_Settings xmlns:disp="http://pds.nasa.gov/pds4/disp/v1">
                 <Local_Internal_Reference>
                   <local_identifier_reference>amp1_image</local_identifier_reference>
+                  <local_reference_type>display_settings_to_array</local_reference_type>
+                </Local_Internal_Reference>
+                <disp:Display_Direction>
+                  <disp:horizontal_display_axis>Sample</disp:horizontal_display_axis>
+                  <disp:horizontal_display_direction>Left to Right</disp:horizontal_display_direction>
+                  <disp:vertical_display_axis>Line</disp:vertical_display_axis>
+                  <disp:vertical_display_direction>Top to Bottom</disp:vertical_display_direction>
+                </disp:Display_Direction>
+              </disp:Display_Settings>
+              <disp:Display_Settings xmlns:disp="http://pds.nasa.gov/pds4/disp/v1">
+                <Local_Internal_Reference>
                   <local_identifier_reference>amp2_image</local_identifier_reference>
-                  <local_identifier_reference>amp3_image</local_identifier_reference>
-                  <local_identifier_reference>amp4_image</local_identifier_reference>
                   <local_reference_type>display_settings_to_array</local_reference_type>
                 </Local_Internal_Reference>
                 <disp:Display_Direction>
@@ -3137,6 +3179,30 @@ class TestCreateDisciplineArea(SimpleTestCase):
                   <disp:horizontal_display_direction>Left to Right</disp:horizontal_display_direction>
                   <disp:vertical_display_axis>Line</disp:vertical_display_axis>
                   <disp:vertical_display_direction>Bottom to Top</disp:vertical_display_direction>
+                </disp:Display_Direction>
+              </disp:Display_Settings>
+              <disp:Display_Settings xmlns:disp="http://pds.nasa.gov/pds4/disp/v1">
+                <Local_Internal_Reference>
+                  <local_identifier_reference>amp3_image</local_identifier_reference>
+                  <local_reference_type>display_settings_to_array</local_reference_type>
+                </Local_Internal_Reference>
+                <disp:Display_Direction>
+                  <disp:horizontal_display_axis>Sample</disp:horizontal_display_axis>
+                  <disp:horizontal_display_direction>Right to Left</disp:horizontal_display_direction>
+                  <disp:vertical_display_axis>Line</disp:vertical_display_axis>
+                  <disp:vertical_display_direction>Bottom to Top</disp:vertical_display_direction>
+                </disp:Display_Direction>
+              </disp:Display_Settings>
+              <disp:Display_Settings xmlns:disp="http://pds.nasa.gov/pds4/disp/v1">
+                <Local_Internal_Reference>
+                  <local_identifier_reference>amp4_image</local_identifier_reference>
+                  <local_reference_type>display_settings_to_array</local_reference_type>
+                </Local_Internal_Reference>
+                <disp:Display_Direction>
+                  <disp:horizontal_display_axis>Sample</disp:horizontal_display_axis>
+                  <disp:horizontal_display_direction>Right to Left</disp:horizontal_display_direction>
+                  <disp:vertical_display_axis>Line</disp:vertical_display_axis>
+                  <disp:vertical_display_direction>Top to Bottom</disp:vertical_display_direction>
                 </disp:Display_Direction>
               </disp:Display_Settings>
               <img:Imaging xmlns:img="http://pds.nasa.gov/pds4/img/v1">
@@ -3194,6 +3260,17 @@ class TestCreateDisciplineArea(SimpleTestCase):
               <disp:Display_Settings xmlns:disp="http://pds.nasa.gov/pds4/disp/v1">
                 <Local_Internal_Reference>
                   <local_identifier_reference>tfn1m001-fa11-20211013-dark-bin1x1</local_identifier_reference>
+                  <local_reference_type>display_settings_to_array</local_reference_type>
+                </Local_Internal_Reference>
+                <disp:Display_Direction>
+                  <disp:horizontal_display_axis>Sample</disp:horizontal_display_axis>
+                  <disp:horizontal_display_direction>Left to Right</disp:horizontal_display_direction>
+                  <disp:vertical_display_axis>Line</disp:vertical_display_axis>
+                  <disp:vertical_display_direction>Bottom to Top</disp:vertical_display_direction>
+                </disp:Display_Direction>
+              </disp:Display_Settings>
+              <disp:Display_Settings xmlns:disp="http://pds.nasa.gov/pds4/disp/v1">
+                <Local_Internal_Reference>
                   <local_identifier_reference>bpm_image</local_identifier_reference>
                   <local_identifier_reference>err_image</local_identifier_reference>
                   <local_reference_type>display_settings_to_array</local_reference_type>
@@ -3238,7 +3315,7 @@ class TestCreateDisciplineArea(SimpleTestCase):
                   <geom:Object_Orientation_RA_Dec>
                     <geom:right_ascension_angle unit="deg">272.953000</geom:right_ascension_angle>
                     <geom:declination_angle unit="deg">1.280402</geom:declination_angle>
-                    <geom:celestial_north_clock_angle unit="deg">0.0</geom:celestial_north_clock_angle>
+                    <geom:celestial_north_clock_angle unit="deg">179.4</geom:celestial_north_clock_angle>
                     <geom:Reference_Frame_Identification>
                       <geom:name>J2000</geom:name>
                       <geom:comment>equinox of RA and DEC</geom:comment>

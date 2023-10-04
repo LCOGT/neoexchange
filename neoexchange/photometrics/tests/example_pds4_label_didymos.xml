@@ -117,7 +117,7 @@
           <geom:Object_Orientation_RA_Dec>
             <geom:right_ascension_angle unit="deg">272.953000</geom:right_ascension_angle>
             <geom:declination_angle unit="deg">1.280402</geom:declination_angle>
-            <geom:celestial_north_clock_angle unit="deg">0.0</geom:celestial_north_clock_angle>
+            <geom:celestial_north_clock_angle unit="deg">179.4</geom:celestial_north_clock_angle>
             <geom:Reference_Frame_Identification>
               <geom:name>J2000</geom:name>
               <geom:comment>equinox of RA and DEC</geom:comment>
