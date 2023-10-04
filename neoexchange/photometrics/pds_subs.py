@@ -645,6 +645,16 @@ def determine_filename_from_table(table_file):
 
     return filename
 
+def instrument_type_mappings():
+    """Returns the mapping dictionary for LCOGT instrument classes e.g.
+    'fa' -> 'Sinistro'
+    """
+
+    inst_mapping = { 'kb': 'SBIG', 'ef' : 'FLI', 'fa' : 'Sinistro',
+                 'fs' : 'Spectral', 'ep' : 'MuSCAT', 'en' : 'FLOYDS',
+                 'sq' : 'QHY', 'xx' : 'Unknown' }
+    return inst_mapping
+
 def create_context_area(filepath, collection_type):
     """Creates the Context Area set of classes and returns an etree.Element with it.
     Documentation on filling this out taken from
@@ -728,8 +738,7 @@ def create_context_area(filepath, collection_type):
 
     # Create Observing System subclass of Observation Area
     obs_system = etree.SubElement(context_area, "Observing_System")
-    inst_mapping = { 'kb': 'SBIG', 'ef' : 'FLI', 'fa' : 'Sinistro',
-                     'fs' : 'Spectral', 'xx' : 'Unknown' }
+    inst_mapping = instrument_type_mappings()
     obs_components = {
                         'Host' : 'Las Cumbres Observatory (LCOGT)',
                         'Telescope' : sorted(list(set(['LCOGT ' + headers[0].get('TELESCOP','') + ' Telescope' for headers in all_headers]))),
