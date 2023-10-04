@@ -1001,7 +1001,7 @@ def create_file_area_bintable(filename):
               'filter' : { 'field_location' : 89, 'data_type' : 'ASCII_String', 'field_length' : 36, 'description' : 'Name of the filter used' },
               'obs_ra'  : { 'field_location' : 125, 'data_type' : 'IEEE754MSBDouble', 'field_length' : 8, 'description' : 'Right ascension of the asteroid' },
               'obs_dec' : { 'field_location' : 133, 'data_type' : 'IEEE754MSBDouble', 'field_length' : 8, 'description' : 'Declination of the asteroid' },
-              'flux_radius' : { 'field_location' : 141, 'data_type' : 'IEEE754MSBDouble', 'field_length' : 8, 'description' : 'Flux radius' },
+              'flux_radius' : { 'field_location' : 141, 'data_type' : 'IEEE754MSBDouble', 'field_length' : 8, 'description' : 'Radius of the aperture with 50% of the flux (pixels)' },
               'fwhm' : { 'field_location' : 149, 'data_type' : 'IEEE754MSBDouble', 'field_length' : 8, 'description' : 'Full Width Half Maximum of the frame' },
               }
     file_area_table = etree.Element("File_Area_Observational")

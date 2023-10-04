@@ -156,7 +156,7 @@
           <field_location unit="byte">141</field_location>
           <data_type>IEEE754MSBDouble</data_type>
           <field_length unit="byte">8</field_length>
-          <description>Flux radius</description>
+          <description>Radius of the aperture with 50% of the flux (pixels)</description>
         </Field_Binary>
         <Field_Binary>
           <name>fwhm</name>
