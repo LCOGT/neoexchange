@@ -5,14 +5,17 @@
   <Identification_Area>
     <logical_identifier>urn:nasa:pds:dart_teleobs:document_lcogt</logical_identifier>
     <version_id>1.0</version_id>
-    <title>DART Telescopic Observations, Las Cumbres Observatory (LCOGT) Documentation Collection</title>
+    <title>DART Las Cumbres Observatory 1.0m Telescope Documentation Collection</title>
     <information_model_version>1.19.0.0</information_model_version>
     <product_class>Product_Collection</product_class>
     <Citation_Information>
       <author_list>Lister, T.</author_list>
+      <editor_list>Espiritu, R.</editor_list>
       <publication_year>2023</publication_year>
       <keyword>LCOGT</keyword>
-      <description>DART Telescopic Observation Bundle, LCOGT Documentation Collection</description>
+      <description>
+        The document_lcogt collection contains documentation describing the data collections that store telescopic observation data provided by Las Cumbres Observatory (LCOGT) in support of the Double Asteroid Redirection Test (DART) mission.
+      </description>
     </Citation_Information>
     <Modification_History>
       <Modification_Detail>
@@ -33,31 +36,66 @@
     </Investigation_Area>
     <Observing_System>
       <Observing_System_Component>
-        <name>Las Cumbres Observatory Observatory</name>
+        <name>Las Cumbres Observatory (LCOGT))</name>
         <type>Host</type>
-        <description>The description for the Las Cumbres Observatory can be 
-        found in the document collection for this bundle.</description>
+        <Internal_Reference>
+          <lid_reference>urn:nasa:pds:context:facility:observatory.las_cumbres</lid_reference>
+          <reference_type>is_facility</reference_type>
+        </Internal_Reference>
       </Observing_System_Component>
       <Observing_System_Component>
         <name>Las Cumbres Observatory 1-meter Telescopes</name>
         <type>Telescope</type>
-        <description>The description for the Las Cumbres Observatory 1-meter telescopes can be found in the
-        document collection for this bundle.</description>
+        <description>The 1m telescopes of the Las Cumbres Observatory global telescope network are built to be identical.
+          They are Equatorial C-ring mounted Ritchey-Chretian Cassegrain telescopes. Refer to
+          urn:nasa:pds:dart_teleobs:document_lcogt:lcogt_dart_uncalibrated_calibrated_sis
+          for more information as well as the the file naming convention indicating which telescope in the network
+          was used to generate a given data product.</description>
+        <Internal_Reference>
+          <lid_reference>urn:nasa:pds:context:telescope:las_cumbres.1m0_telescopes</lid_reference>
+          <reference_type>is_telescope</reference_type>
+        </Internal_Reference>
       </Observing_System_Component>
       <Observing_System_Component>
-        <name>Sinistro Imager</name>
+        <name>Las Cumbres 1m Telescopes - Sinistro Imager</name>
         <type>Instrument</type>
         <description>The description for the Sinistro Imager can be 
         found in the document collection for this bundle.</description>
+        <Internal_Reference>
+          <lid_reference>urn:nasa:pds:context:instrument:las_cumbres.1m0_telescopes.sinistro</lid_reference>
+          <reference_type>is_instrument</reference_type>
+        </Internal_Reference>
       </Observing_System_Component>
       <Observing_System_Component>
-        <name>FLI Imager</name>
+        <name>Las Cumbres 1m Telescopes - FLI Imager</name>
         <type>Instrument</type>
         <description>The description for the FLI Imager can be 
         found in the document collection for this bundle.</description>
+        <Internal_Reference>
+          <lid_reference>urn:nasa:pds:context:instrument:las_cumbres.1m0_telescopes.fli</lid_reference>
+          <reference_type>is_instrument</reference_type>
+        </Internal_Reference>
       </Observing_System_Component>
     </Observing_System>
   </Context_Area>
+  <Reference_List>
+    <Internal_Reference>
+      <lid_reference>urn:nasa:pds:dart_teleobs:document_lcogt:lcogt_dart_uncalibrated_calibrated_sis</lid_reference>
+      <reference_type>collection_to_document</reference_type>
+      <comment>LCOGT DART Uncalibrated/Calibrated Data Product Software Interface Specification document which describes the observatory and the data products in this collection.
+      </comment>
+    </Internal_Reference>
+    <Internal_Reference>
+      <lid_reference>urn:nasa:pds:dart_teleobs:document_lcogt:sinistro_description</lid_reference>
+      <reference_type>collection_to_document</reference_type>
+      <comment>Overview of the Sinistro Imager instruments on the LCOGT 1-meter Telescopes.</comment>
+    </Internal_Reference>
+    <Internal_Reference>
+      <lid_reference>urn:nasa:pds:dart_teleobs:document_lcogt:fli_description</lid_reference>
+      <reference_type>collection_to_document</reference_type>
+      <comment>Overview of the FLI Imager instruments on the LCOGT 1-meter Telescopes.</comment>
+    </Internal_Reference>
+  </Reference_List>
   <Collection>
     <collection_type>Document</collection_type>
   </Collection>
@@ -65,12 +103,12 @@
     <File>
       <file_name>collection_lcogtdoc.csv</file_name>
       <creation_date_time>2023-04-26</creation_date_time>
-      <file_size unit="byte">238</file_size>
+      <file_size unit="byte">223</file_size>
     </File>
     <Inventory>
       <offset unit="byte">0</offset>
       <parsing_standard_id>PDS DSV 1</parsing_standard_id>
-      <records>2</records>
+      <records>3</records>
       <record_delimiter>Carriage-Return Line-Feed</record_delimiter>
       <field_delimiter>Comma</field_delimiter>
       <Record_Delimited>
