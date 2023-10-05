@@ -729,9 +729,9 @@ def create_context_area(filepath, collection_type):
         if filepath[-1] == os.sep:
             filepath = filepath[:-1]
         block_dir = os.path.basename(filepath)
-        if block_dir == 'data_lcogtddp':
-            # Generating a collection, have been passed a path ending in 'data_lcogtddp'
-            frames_filepath = os.path.realpath(os.path.join(filepath, '..', 'data_lcogtcal'))
+        if block_dir == 'data_lcogtddp' or block_dir == 'data_lcogt_fliddp':
+            # Generating a collection, have been passed a path ending in 'data_lcogtddp' or 'data_lcogt_fliddp'
+            frames_filepath = os.path.realpath(os.path.join(filepath, '..', block_dir.replace('ddp', 'cal')))
         else:
             frames_filepath = os.path.realpath(os.path.join(filepath, '..', '..', 'data_lcogtcal', block_dir))
     elif collection_type == 'raw':
@@ -1939,12 +1939,12 @@ def export_block_to_pds(input_dirs, output_dir, blocks, schema_root, docs_root=N
         if len(calib_files) == 0:
             logger.error(f"No master calibration frames found in {input_dir}")
         for root, files in calib_files.items():
-            sent_files, copied_files = transfer_files(root, files, paths['cal_data'], dbg=verbose)
+            sent_files, copied_files = transfer_files(root, files, paths['calib'], dbg=verbose)
             cal_sent_files += sent_files
 
         # Create PDS labels for cal data
-        if verbose: print("Creating cal PDS labels")
-        xml_labels = create_pds_labels(paths['cal_data'], schema_root, match='.*[bpm|bias|dark|flat|e92]*')
+        if verbose: print("Creating cal PDS labels for e92 data")
+        xml_labels = create_pds_labels(paths['cal_data'], schema_root, match='.*e92*')
         xml_files += xml_labels
 
         # transfer ddp data
@@ -2020,6 +2020,11 @@ def export_block_to_pds(input_dirs, output_dir, blocks, schema_root, docs_root=N
     # Copy cal overview docs
     cal_doc_files = copy_docs(paths['root'], 'cal', docs_dir, verbose)
     cal_sent_files += cal_doc_files
+
+    if verbose: print("Creating cal PDS labels for master calibs: ", end='')
+    xml_labels = create_pds_labels(paths['calib'], schema_root, match='.*[bpm|bias|dark|flat]*')
+    xml_files += xml_labels
+    if verbose: print(len(xml_labels))
 
     # create PDS products for cal data
     if verbose: print("Creating cal PDS collection")
