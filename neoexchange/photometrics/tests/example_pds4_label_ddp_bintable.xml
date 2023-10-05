@@ -33,7 +33,6 @@
       <Observing_System_Component>
         <name>Las Cumbres Observatory (LCOGT)</name>
         <type>Host</type>
-        <description>The description for the host can be found in the document collection for this bundle.</description>
         <Internal_Reference>
           <lid_reference>urn:nasa:pds:context:facility:observatory.las_cumbres</lid_reference>
           <reference_type>is_facility</reference_type>
@@ -43,18 +42,22 @@
         <name>Las Cumbres Global Telescope Network - 1m Telescopes</name>
         <type>Telescope</type>
         <description>
-          LCOGT 1m0-12 Telescope
+          The 1m telescopes of the Las Cumbres global network are built to be identical.
+          They are Equatorial C-ring mounted Ritchey-Chretian Cassegrain telescopes.
+          The specific telescope used to generate this data product is the
+          LCOGT 1m0-12 Telescope,
           LCOGT CPT Node 1m0 Dome C at Sutherland
-          The description for the telescope can be found in the document collection for this bundle.</description>
+          Refer to urn:nasa:pds:dart_teleobs:document_lcogt:lcogt_dart_uncalibrated_calibrated_sis
+          for more information.</description>
         <Internal_Reference>
-          <lid_reference>urn:nasa:pds:context:instrument_host:las_cumbres.1m0_telescopes</lid_reference>
+          <lid_reference>urn:nasa:pds:context:telescope:las_cumbres.1m0_telescopes</lid_reference>
           <reference_type>is_telescope</reference_type>
         </Internal_Reference>
       </Observing_System_Component>
       <Observing_System_Component>
-        <name>Las Cumbres 1m Telescopes - FLI Camera</name>
+        <name>Las Cumbres 1m Telescopes - FLI Imager</name>
         <type>Instrument</type>
-        <description>The description for the instrument can be found in the document collection for this bundle.</description>
+        <description>The description for the FLI Imager can be found in urn:nasa:pds:dart_teleobs:document_lcogt:fli_description.</description>
         <Internal_Reference>
           <lid_reference>urn:nasa:pds:context:instrument:las_cumbres.1m0_telescopes.fli</lid_reference>
           <reference_type>is_instrument</reference_type>

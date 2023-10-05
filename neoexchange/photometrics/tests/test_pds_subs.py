@@ -160,17 +160,164 @@ class TestCreateIDArea(SimpleTestCase):
         """
 
         obj1 = objectify.fromstring(expected)
-        expect = etree.tostring(obj1)
-        result = etree.tostring(xml_element)
+        expect = etree.tostring(obj1, pretty_print=True).decode()
+        result = etree.tostring(xml_element, pretty_print=True).decode()
 
         self.assertEquals(expect, result)
+
+    def test_raw_sinistro(self):
+        expected = '''
+            <Identification_Area>
+                <logical_identifier>urn:nasa:pds:dart_teleobs:data_lcogtraw:tfn1m014-fa20-20221129-0351-e00</logical_identifier>
+                <version_id>1.0</version_id>
+                <title>Las Cumbres Observatory Sinistro Imager Raw Image: tfn1m014-fa20-20221129-0351-e00</title>
+                <information_model_version>1.15.0.0</information_model_version>
+                <product_class>Product_Observational</product_class>
+                <Modification_History>
+                    <Modification_Detail>
+                        <modification_date>2021-05-10</modification_date>
+                        <version_id>1.0</version_id>
+                        <description>initial version</description>
+                    </Modification_Detail>
+                </Modification_History>
+              </Identification_Area>'''
+
+        id_area = create_id_area('tfn1m014-fa20-20221129-0351-e00', collection_type='raw', mod_time=datetime(2021,5,10))
+
+        self.compare_xml(expected, id_area)
+
+    def test_cal_sinistro(self):
+        expected = '''
+            <Identification_Area>
+                <logical_identifier>urn:nasa:pds:dart_teleobs:data_lcogtcal:tfn1m014-fa20-20221129-0351-e92</logical_identifier>
+                <version_id>1.0</version_id>
+                <title>Las Cumbres Observatory Sinistro Imager Calibrated Image: tfn1m014-fa20-20221129-0351-e92</title>
+                <information_model_version>1.15.0.0</information_model_version>
+                <product_class>Product_Observational</product_class>
+                <Modification_History>
+                    <Modification_Detail>
+                        <modification_date>2021-05-10</modification_date>
+                        <version_id>1.0</version_id>
+                        <description>initial version</description>
+                    </Modification_Detail>
+                </Modification_History>
+              </Identification_Area>'''
+
+        id_area = create_id_area('tfn1m014-fa20-20221129-0351-e92', mod_time=datetime(2021,5,10))
+
+        self.compare_xml(expected, id_area)
+
+    def test_bpm_sinistro(self):
+        expected = '''
+            <Identification_Area>
+                <logical_identifier>urn:nasa:pds:dart_teleobs:data_lcogtcal:lsc1m005-fa15-20190624-bpm-full_frame</logical_identifier>
+                <version_id>1.0</version_id>
+                <title>Las Cumbres Observatory Sinistro Imager Bad Pixel Mask Image: lsc1m005-fa15-20190624-bpm-full_frame</title>
+                <information_model_version>1.15.0.0</information_model_version>
+                <product_class>Product_Observational</product_class>
+                <Modification_History>
+                    <Modification_Detail>
+                        <modification_date>2021-05-10</modification_date>
+                        <version_id>1.0</version_id>
+                        <description>initial version</description>
+                    </Modification_Detail>
+                </Modification_History>
+              </Identification_Area>'''
+
+        id_area = create_id_area('lsc1m005-fa15-20190624-bpm-full_frame.fits', collection_type='bpm', mod_time=datetime(2021,5,10))
+
+        self.compare_xml(expected, id_area)
+
+    def test_masterbias_sinistro(self):
+        expected = '''
+            <Identification_Area>
+                <logical_identifier>urn:nasa:pds:dart_teleobs:data_lcogtcal:lcogt_1m0_05_fa15_20221008/lsc1m005-fa15-20221008-bias-bin1x1</logical_identifier>
+                <version_id>1.0</version_id>
+                <title>Las Cumbres Observatory Sinistro Imager Master Bias Image: lcogt_1m0_05_fa15_20221008/lsc1m005-fa15-20221008-bias-bin1x1</title>
+                <information_model_version>1.15.0.0</information_model_version>
+                <product_class>Product_Observational</product_class>
+                <Modification_History>
+                    <Modification_Detail>
+                        <modification_date>2021-05-10</modification_date>
+                        <version_id>1.0</version_id>
+                        <description>initial version</description>
+                    </Modification_Detail>
+                </Modification_History>
+              </Identification_Area>'''
+
+        id_area = create_id_area('lcogt_1m0_05_fa15_20221008/lsc1m005-fa15-20221008-bias-bin1x1.fits', collection_type='mbias', mod_time=datetime(2021,5,10))
+
+        self.compare_xml(expected, id_area)
+
+    def test_masterdark_sinistro(self):
+        expected = '''
+            <Identification_Area>
+                <logical_identifier>urn:nasa:pds:dart_teleobs:data_lcogtcal:lcogt_1m0_05_fa15_20221008/lsc1m005-fa15-20221008-dark-bin1x1</logical_identifier>
+                <version_id>1.0</version_id>
+                <title>Las Cumbres Observatory Sinistro Imager Master Dark Image: lcogt_1m0_05_fa15_20221008/lsc1m005-fa15-20221008-dark-bin1x1</title>
+                <information_model_version>1.15.0.0</information_model_version>
+                <product_class>Product_Observational</product_class>
+                <Modification_History>
+                    <Modification_Detail>
+                        <modification_date>2021-05-10</modification_date>
+                        <version_id>1.0</version_id>
+                        <description>initial version</description>
+                    </Modification_Detail>
+                </Modification_History>
+              </Identification_Area>'''
+
+        id_area = create_id_area('lcogt_1m0_05_fa15_20221008/lsc1m005-fa15-20221008-dark-bin1x1.fits', collection_type='mdark', mod_time=datetime(2021,5,10))
+
+        self.compare_xml(expected, id_area)
+
+    def test_masterflat_sinistro(self):
+        expected = '''
+            <Identification_Area>
+                <logical_identifier>urn:nasa:pds:dart_teleobs:data_lcogtcal:lcogt_1m0_05_fa15_20221008/lsc1m005-fa15-20221001-skyflat-bin1x1-w</logical_identifier>
+                <version_id>1.0</version_id>
+                <title>Las Cumbres Observatory Sinistro Imager Master Flat Image: lcogt_1m0_05_fa15_20221008/lsc1m005-fa15-20221001-skyflat-bin1x1-w</title>
+                <information_model_version>1.15.0.0</information_model_version>
+                <product_class>Product_Observational</product_class>
+                <Modification_History>
+                    <Modification_Detail>
+                        <modification_date>2021-05-10</modification_date>
+                        <version_id>1.0</version_id>
+                        <description>initial version</description>
+                    </Modification_Detail>
+                </Modification_History>
+              </Identification_Area>'''
+
+        id_area = create_id_area('lcogt_1m0_05_fa15_20221008/lsc1m005-fa15-20221001-skyflat-bin1x1-w.fits', collection_type='mflat', mod_time=datetime(2021,5,10))
+
+        self.compare_xml(expected, id_area)
+
+    def test_ddp(self):
+        expected = '''
+            <Identification_Area>
+                <logical_identifier>urn:nasa:pds:dart_teleobs:data_lcogtddp:lcogt_elp_fa07_20230126_3110515_65803didymos_photometry</logical_identifier>
+                <version_id>1.0</version_id>
+                <title>Las Cumbres Observatory Derived Data Product: lcogt_elp_fa07_20230126_3110515_65803didymos_photometry</title>
+                <information_model_version>1.15.0.0</information_model_version>
+                <product_class>Product_Observational</product_class>
+                <Modification_History>
+                    <Modification_Detail>
+                        <modification_date>2021-05-10</modification_date>
+                        <version_id>1.0</version_id>
+                        <description>initial version</description>
+                    </Modification_Detail>
+                </Modification_History>
+              </Identification_Area>'''
+
+        id_area = create_id_area('lcogt_elp_fa07_20230126_3110515_65803didymos_photometry.tab', collection_type='ddp', mod_time=datetime(2021,5,10))
+
+        self.compare_xml(expected, id_area)
 
     def test_default_version(self):
         expected = '''
             <Identification_Area>
                 <logical_identifier>urn:nasa:pds:dart_teleobs:data_lcogtcal:banzai_test_frame</logical_identifier>
                 <version_id>1.0</version_id>
-                <title>Las Cumbres Observatory Calibrated Image: banzai_test_frame</title>
+                <title>Las Cumbres Observatory Sinistro Imager Calibrated Image: banzai_test_frame</title>
                 <information_model_version>1.15.0.0</information_model_version>
                 <product_class>Product_Observational</product_class>
                 <Modification_History>
@@ -191,7 +338,7 @@ class TestCreateIDArea(SimpleTestCase):
             <Identification_Area>
                 <logical_identifier>urn:nasa:pds:dart_teleobs:data_lcogtcal:banzai_test_frame</logical_identifier>
                 <version_id>1.0</version_id>
-                <title>Las Cumbres Observatory Calibrated Image: banzai_test_frame</title>
+                <title>Las Cumbres Observatory Sinistro Imager Calibrated Image: banzai_test_frame</title>
                 <information_model_version>1.14.0.0</information_model_version>
                 <product_class>Product_Observational</product_class>
                 <Modification_History>
@@ -212,7 +359,7 @@ class TestCreateIDArea(SimpleTestCase):
             <Identification_Area>
                 <logical_identifier>urn:nasa:pds:dart_teleobs:data_lcogtcal:banzai_test_frame</logical_identifier>
                 <version_id>1.0</version_id>
-                <title>Las Cumbres Observatory Calibrated Image: banzai_test_frame</title>
+                <title>Las Cumbres Observatory Sinistro Imager Calibrated Image: banzai_test_frame</title>
                 <information_model_version>1.15.0.0</information_model_version>
                 <product_class>Product_Observational</product_class>
                 <Modification_History>
@@ -229,12 +376,12 @@ class TestCreateIDArea(SimpleTestCase):
 
         self.compare_xml(expected, id_area)
 
-    def test_upper_case(self):
+    def test_fli(self):
         expected = '''
             <Identification_Area>
-                <logical_identifier>urn:nasa:pds:dart_teleobs:data_lcogtcal:banzai_test_frame-2mhz</logical_identifier>
+                <logical_identifier>urn:nasa:pds:dart_teleobs:data_lcogtcal:banzai_test_frame-ef04-2mhz</logical_identifier>
                 <version_id>1.0</version_id>
-                <title>Las Cumbres Observatory Calibrated Image: banzai_test_frame-2mhz</title>
+                <title>Las Cumbres Observatory FLI Imager Calibrated Image: banzai_test_frame-ef04-500khz</title>
                 <information_model_version>1.15.0.0</information_model_version>
                 <product_class>Product_Observational</product_class>
                 <Modification_History>
@@ -246,7 +393,26 @@ class TestCreateIDArea(SimpleTestCase):
                 </Modification_History>
               </Identification_Area>'''
 
-        id_area = create_id_area('banzai_test_frame-2MHz.fits', mod_time=datetime(2021,5,10))
+        id_area = create_id_area('banzai_test_frame-ef04-500kHz.fits', mod_time=datetime(2021,5,10))
+
+    def test_fli_upper_case(self):
+        expected = '''
+            <Identification_Area>
+                <logical_identifier>urn:nasa:pds:dart_teleobs:data_lcogtcal:banzai_test_frame-ef04-2mhz</logical_identifier>
+                <version_id>1.0</version_id>
+                <title>Las Cumbres Observatory FLI Imager Calibrated Image: banzai_test_frame-ef04-2mhz</title>
+                <information_model_version>1.15.0.0</information_model_version>
+                <product_class>Product_Observational</product_class>
+                <Modification_History>
+                    <Modification_Detail>
+                        <modification_date>2021-05-10</modification_date>
+                        <version_id>1.0</version_id>
+                        <description>initial version</description>
+                    </Modification_Detail>
+                </Modification_History>
+              </Identification_Area>'''
+
+        id_area = create_id_area('banzai_test_frame-ef04-2MHz.fits', mod_time=datetime(2021,5,10))
 
         self.compare_xml(expected, id_area)
 
@@ -260,6 +426,7 @@ class TestCreateObsArea(TestCase):
 
         self.test_banzai_file = os.path.abspath(os.path.join('photometrics', 'tests', 'banzai_test_frame.fits'))
         self.test_banzai_header, table, cattype = open_fits_catalog(self.test_banzai_file, header_only=True)
+        self.test_banzai_header['INSTRUME'] = 'fa14'
         self.test_raw_file = os.path.abspath(os.path.join('photometrics', 'tests', 'mef_raw_test_frame.fits'))
         self.test_raw_header, table, cattype = open_fits_catalog(self.test_raw_file, header_only=True)
 
@@ -314,8 +481,8 @@ class TestCreateObsArea(TestCase):
         """
 
         obj1 = objectify.fromstring(expected)
-        expect = etree.tostring(obj1).decode()
-        result = etree.tostring(xml_element).decode()
+        expect = etree.tostring(obj1, pretty_print=True).decode()
+        result = etree.tostring(xml_element, pretty_print=True).decode()
 
         self.assertEquals(expect, result)
 
@@ -338,7 +505,6 @@ class TestCreateObsArea(TestCase):
                 <Observing_System_Component>
                   <name>Las Cumbres Observatory (LCOGT)</name>
                   <type>Host</type>
-                  <description>The description for the host can be found in the document collection for this bundle.</description>
                   <Internal_Reference>
                     <lid_reference>urn:nasa:pds:context:facility:observatory.las_cumbres</lid_reference>
                     <reference_type>is_facility</reference_type>
@@ -348,18 +514,22 @@ class TestCreateObsArea(TestCase):
                   <name>Las Cumbres Global Telescope Network - 1m Telescopes</name>
                   <type>Telescope</type>
                   <description>
-          LCOGT 1m0-13 Telescope
+          The 1m telescopes of the Las Cumbres global network are built to be identical.
+          They are Equatorial C-ring mounted Ritchey-Chretian Cassegrain telescopes.
+          The specific telescope used to generate this data product is the
+          LCOGT 1m0-13 Telescope,
           LCOGT CPT Node 1m0 Dome B at Sutherland
-          The description for the telescope can be found in the document collection for this bundle.</description>
+          Refer to urn:nasa:pds:dart_teleobs:document_lcogt:lcogt_dart_uncalibrated_calibrated_sis
+          for more information.</description>
                   <Internal_Reference>
-                    <lid_reference>urn:nasa:pds:context:instrument_host:las_cumbres.1m0_telescopes</lid_reference>
+                    <lid_reference>urn:nasa:pds:context:telescope:las_cumbres.1m0_telescopes</lid_reference>
                     <reference_type>is_telescope</reference_type>
                   </Internal_Reference>
                 </Observing_System_Component>
                 <Observing_System_Component>
-                  <name>Las Cumbres 1m Telescopes - Sinistro Camera</name>
+                  <name>Las Cumbres 1m Telescopes - Sinistro Imager</name>
                   <type>Instrument</type>
-                  <description>The description for the instrument can be found in the document collection for this bundle.</description>
+                  <description>The description for the Sinistro Imager can be found in urn:nasa:pds:dart_teleobs:document_lcogt:sinistro_description.</description>
                   <Internal_Reference>
                     <lid_reference>urn:nasa:pds:context:instrument:las_cumbres.1m0_telescopes.sinistro</lid_reference>
                     <reference_type>is_instrument</reference_type>
@@ -395,7 +565,6 @@ class TestCreateObsArea(TestCase):
                 <Observing_System_Component>
                   <name>Las Cumbres Observatory (LCOGT)</name>
                   <type>Host</type>
-                  <description>The description for the host can be found in the document collection for this bundle.</description>
                   <Internal_Reference>
                     <lid_reference>urn:nasa:pds:context:facility:observatory.las_cumbres</lid_reference>
                     <reference_type>is_facility</reference_type>
@@ -405,18 +574,22 @@ class TestCreateObsArea(TestCase):
                   <name>Las Cumbres Global Telescope Network - 1m Telescopes</name>
                   <type>Telescope</type>
                   <description>
-          LCOGT 1m0-13 Telescope
+          The 1m telescopes of the Las Cumbres global network are built to be identical.
+          They are Equatorial C-ring mounted Ritchey-Chretian Cassegrain telescopes.
+          The specific telescope used to generate this data product is the
+          LCOGT 1m0-13 Telescope,
           LCOGT CPT Node 1m0 Dome B at Sutherland
-          The description for the telescope can be found in the document collection for this bundle.</description>
+          Refer to urn:nasa:pds:dart_teleobs:document_lcogt:lcogt_dart_uncalibrated_calibrated_sis
+          for more information.</description>
                   <Internal_Reference>
-                    <lid_reference>urn:nasa:pds:context:instrument_host:las_cumbres.1m0_telescopes</lid_reference>
+                    <lid_reference>urn:nasa:pds:context:telescope:las_cumbres.1m0_telescopes</lid_reference>
                     <reference_type>is_telescope</reference_type>
                   </Internal_Reference>
                 </Observing_System_Component>
                 <Observing_System_Component>
-                  <name>Las Cumbres 1m Telescopes - Sinistro Camera</name>
+                  <name>Las Cumbres 1m Telescopes - Sinistro Imager</name>
                   <type>Instrument</type>
-                  <description>The description for the instrument can be found in the document collection for this bundle.</description>
+                  <description>The description for the Sinistro Imager can be found in urn:nasa:pds:dart_teleobs:document_lcogt:sinistro_description.</description>
                   <Internal_Reference>
                     <lid_reference>urn:nasa:pds:context:instrument:las_cumbres.1m0_telescopes.sinistro</lid_reference>
                     <reference_type>is_instrument</reference_type>
@@ -574,17 +747,32 @@ class TestCreateContextArea(TestCase):
               <Observing_System_Component>
                 <name>Las Cumbres Observatory (LCOGT)</name>
                 <type>Host</type>
-                <description>The description for the Las Cumbres Observatory (LCOGT) can be found in the document collection for this bundle.</description>
+                <Internal_Reference>
+                  <lid_reference>urn:nasa:pds:context:facility:observatory.las_cumbres</lid_reference>
+                  <reference_type>is_facility</reference_type>
+                </Internal_Reference>
               </Observing_System_Component>
               <Observing_System_Component>
-                <name>LCOGT 1m0-13 Telescope</name>
+                <name>Las Cumbres Global Telescope Network - 1m Telescopes</name>
                 <type>Telescope</type>
-                <description>The description for the LCOGT 1m0-13 Telescope can be found in the document collection for this bundle.</description>
+                <description>The 1m telescopes of the Las Cumbres global network are built to be identical.
+                  They are Equatorial C-ring mounted Ritchey-Chretian Cassegrain telescopes. Refer to
+                  urn:nasa:pds:dart_teleobs:document_lcogt:lcogt_dart_uncalibrated_calibrated_sis
+                  for more information as well as the the file naming convention indicating which telescope in the network
+                  was used to generate a given data product.</description>
+                <Internal_Reference>
+                  <lid_reference>urn:nasa:pds:context:telescope:las_cumbres.1m0_telescopes</lid_reference>
+                  <reference_type>is_telescope</reference_type>
+                </Internal_Reference>
               </Observing_System_Component>
               <Observing_System_Component>
-                <name>SBIG Imager</name>
+                <name>Las Cumbres 1m Telescopes - SBIG Imager</name>
                 <type>Instrument</type>
-                <description>The description for the SBIG Imager can be found in the document collection for this bundle.</description>
+                <description>The description for the SBIG Imager can be found in urn:nasa:pds:dart_teleobs:document_lcogt:sbig_description.</description>
+                <Internal_Reference>
+                  <lid_reference>urn:nasa:pds:context:instrument:las_cumbres.1m0_telescopes.sbig</lid_reference>
+                  <reference_type>is_instrument</reference_type>
+                </Internal_Reference>
               </Observing_System_Component>
             </Observing_System>
             <Target_Identification>
@@ -644,17 +832,32 @@ class TestCreateContextArea(TestCase):
               <Observing_System_Component>
                 <name>Las Cumbres Observatory (LCOGT)</name>
                 <type>Host</type>
-                <description>The description for the Las Cumbres Observatory (LCOGT) can be found in the document collection for this bundle.</description>
+                <Internal_Reference>
+                  <lid_reference>urn:nasa:pds:context:facility:observatory.las_cumbres</lid_reference>
+                  <reference_type>is_facility</reference_type>
+                </Internal_Reference>
               </Observing_System_Component>
               <Observing_System_Component>
-                <name>LCOGT 1m0-13 Telescope</name>
+                <name>Las Cumbres Global Telescope Network - 1m Telescopes</name>
                 <type>Telescope</type>
-                <description>The description for the LCOGT 1m0-13 Telescope can be found in the document collection for this bundle.</description>
+                <description>The 1m telescopes of the Las Cumbres global network are built to be identical.
+                  They are Equatorial C-ring mounted Ritchey-Chretian Cassegrain telescopes. Refer to
+                  urn:nasa:pds:dart_teleobs:document_lcogt:lcogt_dart_uncalibrated_calibrated_sis
+                  for more information as well as the the file naming convention indicating which telescope in the network
+                  was used to generate a given data product.</description>
+                <Internal_Reference>
+                  <lid_reference>urn:nasa:pds:context:telescope:las_cumbres.1m0_telescopes</lid_reference>
+                  <reference_type>is_telescope</reference_type>
+                </Internal_Reference>
               </Observing_System_Component>
               <Observing_System_Component>
-                <name>SBIG Imager</name>
+                <name>Las Cumbres 1m Telescopes - SBIG Imager</name>
                 <type>Instrument</type>
-                <description>The description for the SBIG Imager can be found in the document collection for this bundle.</description>
+                <description>The description for the SBIG Imager can be found in urn:nasa:pds:dart_teleobs:document_lcogt:sbig_description.</description>
+                <Internal_Reference>
+                  <lid_reference>urn:nasa:pds:context:instrument:las_cumbres.1m0_telescopes.sbig</lid_reference>
+                  <reference_type>is_instrument</reference_type>
+                </Internal_Reference>
               </Observing_System_Component>
             </Observing_System>
             <Target_Identification>
@@ -714,17 +917,32 @@ class TestCreateContextArea(TestCase):
               <Observing_System_Component>
                 <name>Las Cumbres Observatory (LCOGT)</name>
                 <type>Host</type>
-                <description>The description for the Las Cumbres Observatory (LCOGT) can be found in the document collection for this bundle.</description>
+                <Internal_Reference>
+                  <lid_reference>urn:nasa:pds:context:facility:observatory.las_cumbres</lid_reference>
+                  <reference_type>is_facility</reference_type>
+                </Internal_Reference>
               </Observing_System_Component>
               <Observing_System_Component>
-                <name>LCOGT 1m0-13 Telescope</name>
+                <name>Las Cumbres Global Telescope Network - 1m Telescopes</name>
                 <type>Telescope</type>
-                <description>The description for the LCOGT 1m0-13 Telescope can be found in the document collection for this bundle.</description>
+                <description>The 1m telescopes of the Las Cumbres global network are built to be identical.
+                  They are Equatorial C-ring mounted Ritchey-Chretian Cassegrain telescopes. Refer to
+                  urn:nasa:pds:dart_teleobs:document_lcogt:lcogt_dart_uncalibrated_calibrated_sis
+                  for more information as well as the the file naming convention indicating which telescope in the network
+                  was used to generate a given data product.</description>
+                <Internal_Reference>
+                  <lid_reference>urn:nasa:pds:context:telescope:las_cumbres.1m0_telescopes</lid_reference>
+                  <reference_type>is_telescope</reference_type>
+                </Internal_Reference>
               </Observing_System_Component>
               <Observing_System_Component>
-                <name>Sinistro Imager</name>
+                <name>Las Cumbres 1m Telescopes - Sinistro Imager</name>
                 <type>Instrument</type>
-                <description>The description for the Sinistro Imager can be found in the document collection for this bundle.</description>
+                <description>The description for the Sinistro Imager can be found in urn:nasa:pds:dart_teleobs:document_lcogt:sinistro_description.</description>
+                <Internal_Reference>
+                  <lid_reference>urn:nasa:pds:context:instrument:las_cumbres.1m0_telescopes.sinistro</lid_reference>
+                  <reference_type>is_instrument</reference_type>
+                </Internal_Reference>
               </Observing_System_Component>
             </Observing_System>
             <Target_Identification>
@@ -889,17 +1107,32 @@ class TestCreateContextArea(TestCase):
               <Observing_System_Component>
                 <name>Las Cumbres Observatory (LCOGT)</name>
                 <type>Host</type>
-                <description>The description for the Las Cumbres Observatory (LCOGT) can be found in the document collection for this bundle.</description>
+                <Internal_Reference>
+                  <lid_reference>urn:nasa:pds:context:facility:observatory.las_cumbres</lid_reference>
+                  <reference_type>is_facility</reference_type>
+                </Internal_Reference>
               </Observing_System_Component>
               <Observing_System_Component>
-                <name>LCOGT 1m0-13 Telescope</name>
+                <name>Las Cumbres Global Telescope Network - 1m Telescopes</name>
                 <type>Telescope</type>
-                <description>The description for the LCOGT 1m0-13 Telescope can be found in the document collection for this bundle.</description>
+                <description>The 1m telescopes of the Las Cumbres global network are built to be identical.
+                  They are Equatorial C-ring mounted Ritchey-Chretian Cassegrain telescopes. Refer to
+                  urn:nasa:pds:dart_teleobs:document_lcogt:lcogt_dart_uncalibrated_calibrated_sis
+                  for more information as well as the the file naming convention indicating which telescope in the network
+                  was used to generate a given data product.</description>
+                <Internal_Reference>
+                  <lid_reference>urn:nasa:pds:context:telescope:las_cumbres.1m0_telescopes</lid_reference>
+                  <reference_type>is_telescope</reference_type>
+                </Internal_Reference>
               </Observing_System_Component>
               <Observing_System_Component>
-                <name>Sinistro Imager</name>
+                <name>Las Cumbres 1m Telescopes - Sinistro Imager</name>
                 <type>Instrument</type>
-                <description>The description for the Sinistro Imager can be found in the document collection for this bundle.</description>
+                <description>The description for the Sinistro Imager can be found in urn:nasa:pds:dart_teleobs:document_lcogt:sinistro_description.</description>
+                <Internal_Reference>
+                  <lid_reference>urn:nasa:pds:context:instrument:las_cumbres.1m0_telescopes.sinistro</lid_reference>
+                  <reference_type>is_instrument</reference_type>
+                </Internal_Reference>
               </Observing_System_Component>
             </Observing_System>
             <Target_Identification>
@@ -972,27 +1205,32 @@ class TestCreateContextArea(TestCase):
               <Observing_System_Component>
                 <name>Las Cumbres Observatory (LCOGT)</name>
                 <type>Host</type>
-                <description>The description for the Las Cumbres Observatory (LCOGT) can be found in the document collection for this bundle.</description>
+                <Internal_Reference>
+                  <lid_reference>urn:nasa:pds:context:facility:observatory.las_cumbres</lid_reference>
+                  <reference_type>is_facility</reference_type>
+                </Internal_Reference>
               </Observing_System_Component>
               <Observing_System_Component>
-                <name>LCOGT 1m0-10 Telescope</name>
+                <name>Las Cumbres Global Telescope Network - 1m Telescopes</name>
                 <type>Telescope</type>
-                <description>The description for the LCOGT 1m0-10 Telescope can be found in the document collection for this bundle.</description>
+                <description>The 1m telescopes of the Las Cumbres global network are built to be identical.
+                  They are Equatorial C-ring mounted Ritchey-Chretian Cassegrain telescopes. Refer to
+                  urn:nasa:pds:dart_teleobs:document_lcogt:lcogt_dart_uncalibrated_calibrated_sis
+                  for more information as well as the the file naming convention indicating which telescope in the network
+                  was used to generate a given data product.</description>
+                <Internal_Reference>
+                  <lid_reference>urn:nasa:pds:context:telescope:las_cumbres.1m0_telescopes</lid_reference>
+                  <reference_type>is_telescope</reference_type>
+                </Internal_Reference>
               </Observing_System_Component>
               <Observing_System_Component>
-                <name>LCOGT 1m0-12 Telescope</name>
-                <type>Telescope</type>
-                <description>The description for the LCOGT 1m0-12 Telescope can be found in the document collection for this bundle.</description>
-              </Observing_System_Component>
-              <Observing_System_Component>
-                <name>LCOGT 1m0-13 Telescope</name>
-                <type>Telescope</type>
-                <description>The description for the LCOGT 1m0-13 Telescope can be found in the document collection for this bundle.</description>
-              </Observing_System_Component>
-              <Observing_System_Component>
-                <name>FLI Imager</name>
+                <name>Las Cumbres 1m Telescopes - FLI Imager</name>
                 <type>Instrument</type>
-                <description>The description for the FLI Imager can be found in the document collection for this bundle.</description>
+                <description>The description for the FLI Imager can be found in urn:nasa:pds:dart_teleobs:document_lcogt:fli_description.</description>
+                <Internal_Reference>
+                  <lid_reference>urn:nasa:pds:context:instrument:las_cumbres.1m0_telescopes.fli</lid_reference>
+                  <reference_type>is_instrument</reference_type>
+                </Internal_Reference>
               </Observing_System_Component>
             </Observing_System>
             <Target_Identification>
@@ -1070,17 +1308,32 @@ class TestCreateContextArea(TestCase):
               <Observing_System_Component>
                 <name>Las Cumbres Observatory (LCOGT)</name>
                 <type>Host</type>
-                <description>The description for the Las Cumbres Observatory (LCOGT) can be found in the document collection for this bundle.</description>
+                <Internal_Reference>
+                  <lid_reference>urn:nasa:pds:context:facility:observatory.las_cumbres</lid_reference>
+                  <reference_type>is_facility</reference_type>
+                </Internal_Reference>
               </Observing_System_Component>
               <Observing_System_Component>
-                <name>LCOGT 1m0-13 Telescope</name>
+                <name>Las Cumbres Global Telescope Network - 1m Telescopes</name>
                 <type>Telescope</type>
-                <description>The description for the LCOGT 1m0-13 Telescope can be found in the document collection for this bundle.</description>
+                <description>The 1m telescopes of the Las Cumbres global network are built to be identical.
+                  They are Equatorial C-ring mounted Ritchey-Chretian Cassegrain telescopes. Refer to
+                  urn:nasa:pds:dart_teleobs:document_lcogt:lcogt_dart_uncalibrated_calibrated_sis
+                  for more information as well as the the file naming convention indicating which telescope in the network
+                  was used to generate a given data product.</description>
+                <Internal_Reference>
+                  <lid_reference>urn:nasa:pds:context:telescope:las_cumbres.1m0_telescopes</lid_reference>
+                  <reference_type>is_telescope</reference_type>
+                </Internal_Reference>
               </Observing_System_Component>
               <Observing_System_Component>
-                <name>Sinistro Imager</name>
+                <name>Las Cumbres 1m Telescopes - Sinistro Imager</name>
                 <type>Instrument</type>
-                <description>The description for the Sinistro Imager can be found in the document collection for this bundle.</description>
+                <description>The description for the Sinistro Imager can be found in urn:nasa:pds:dart_teleobs:document_lcogt:sinistro_description.</description>
+                <Internal_Reference>
+                  <lid_reference>urn:nasa:pds:context:instrument:las_cumbres.1m0_telescopes.sinistro</lid_reference>
+                  <reference_type>is_instrument</reference_type>
+                </Internal_Reference>
               </Observing_System_Component>
             </Observing_System>
             <Target_Identification>
@@ -1264,17 +1517,32 @@ class TestCreateContextArea(TestCase):
               <Observing_System_Component>
                 <name>Las Cumbres Observatory (LCOGT)</name>
                 <type>Host</type>
-                <description>The description for the Las Cumbres Observatory (LCOGT) can be found in the document collection for this bundle.</description>
+                <Internal_Reference>
+                  <lid_reference>urn:nasa:pds:context:facility:observatory.las_cumbres</lid_reference>
+                  <reference_type>is_facility</reference_type>
+                </Internal_Reference>
               </Observing_System_Component>
               <Observing_System_Component>
-                <name>LCOGT 1m0-13 Telescope</name>
+                <name>Las Cumbres Global Telescope Network - 1m Telescopes</name>
                 <type>Telescope</type>
-                <description>The description for the LCOGT 1m0-13 Telescope can be found in the document collection for this bundle.</description>
+                <description>The 1m telescopes of the Las Cumbres global network are built to be identical.
+                  They are Equatorial C-ring mounted Ritchey-Chretian Cassegrain telescopes. Refer to
+                  urn:nasa:pds:dart_teleobs:document_lcogt:lcogt_dart_uncalibrated_calibrated_sis
+                  for more information as well as the the file naming convention indicating which telescope in the network
+                  was used to generate a given data product.</description>
+                <Internal_Reference>
+                  <lid_reference>urn:nasa:pds:context:telescope:las_cumbres.1m0_telescopes</lid_reference>
+                  <reference_type>is_telescope</reference_type>
+                </Internal_Reference>
               </Observing_System_Component>
               <Observing_System_Component>
-                <name>Sinistro Imager</name>
+                <name>Las Cumbres 1m Telescopes - Sinistro Imager</name>
                 <type>Instrument</type>
-                <description>The description for the Sinistro Imager can be found in the document collection for this bundle.</description>
+                <description>The description for the Sinistro Imager can be found in urn:nasa:pds:dart_teleobs:document_lcogt:sinistro_description.</description>
+                <Internal_Reference>
+                  <lid_reference>urn:nasa:pds:context:instrument:las_cumbres.1m0_telescopes.sinistro</lid_reference>
+                  <reference_type>is_instrument</reference_type>
+                </Internal_Reference>
               </Observing_System_Component>
             </Observing_System>
             <Target_Identification>
@@ -1349,27 +1617,32 @@ class TestCreateContextArea(TestCase):
               <Observing_System_Component>
                 <name>Las Cumbres Observatory (LCOGT)</name>
                 <type>Host</type>
-                <description>The description for the Las Cumbres Observatory (LCOGT) can be found in the document collection for this bundle.</description>
+                <Internal_Reference>
+                  <lid_reference>urn:nasa:pds:context:facility:observatory.las_cumbres</lid_reference>
+                  <reference_type>is_facility</reference_type>
+                </Internal_Reference>
               </Observing_System_Component>
               <Observing_System_Component>
-                <name>LCOGT 1m0-10 Telescope</name>
+                <name>Las Cumbres Global Telescope Network - 1m Telescopes</name>
                 <type>Telescope</type>
-                <description>The description for the LCOGT 1m0-10 Telescope can be found in the document collection for this bundle.</description>
+                <description>The 1m telescopes of the Las Cumbres global network are built to be identical.
+                  They are Equatorial C-ring mounted Ritchey-Chretian Cassegrain telescopes. Refer to
+                  urn:nasa:pds:dart_teleobs:document_lcogt:lcogt_dart_uncalibrated_calibrated_sis
+                  for more information as well as the the file naming convention indicating which telescope in the network
+                  was used to generate a given data product.</description>
+                <Internal_Reference>
+                  <lid_reference>urn:nasa:pds:context:telescope:las_cumbres.1m0_telescopes</lid_reference>
+                  <reference_type>is_telescope</reference_type>
+                </Internal_Reference>
               </Observing_System_Component>
               <Observing_System_Component>
-                <name>LCOGT 1m0-12 Telescope</name>
-                <type>Telescope</type>
-                <description>The description for the LCOGT 1m0-12 Telescope can be found in the document collection for this bundle.</description>
-              </Observing_System_Component>
-              <Observing_System_Component>
-                <name>LCOGT 1m0-13 Telescope</name>
-                <type>Telescope</type>
-                <description>The description for the LCOGT 1m0-13 Telescope can be found in the document collection for this bundle.</description>
-              </Observing_System_Component>
-              <Observing_System_Component>
-                <name>FLI Imager</name>
+                <name>Las Cumbres 1m Telescopes - FLI Imager</name>
                 <type>Instrument</type>
-                <description>The description for the FLI Imager can be found in the document collection for this bundle.</description>
+                <description>The description for the FLI Imager can be found in urn:nasa:pds:dart_teleobs:document_lcogt:fli_description.</description>
+                <Internal_Reference>
+                  <lid_reference>urn:nasa:pds:context:instrument:las_cumbres.1m0_telescopes.fli</lid_reference>
+                  <reference_type>is_instrument</reference_type>
+                </Internal_Reference>
               </Observing_System_Component>
             </Observing_System>
             <Target_Identification>
@@ -1449,17 +1722,32 @@ class TestCreateContextArea(TestCase):
               <Observing_System_Component>
                 <name>Las Cumbres Observatory (LCOGT)</name>
                 <type>Host</type>
-                <description>The description for the Las Cumbres Observatory (LCOGT) can be found in the document collection for this bundle.</description>
+                <Internal_Reference>
+                  <lid_reference>urn:nasa:pds:context:facility:observatory.las_cumbres</lid_reference>
+                  <reference_type>is_facility</reference_type>
+                </Internal_Reference>
               </Observing_System_Component>
               <Observing_System_Component>
-                <name>LCOGT 1m0-13 Telescope</name>
+                <name>Las Cumbres Global Telescope Network - 1m Telescopes</name>
                 <type>Telescope</type>
-                <description>The description for the LCOGT 1m0-13 Telescope can be found in the document collection for this bundle.</description>
+                <description>The 1m telescopes of the Las Cumbres global network are built to be identical.
+                  They are Equatorial C-ring mounted Ritchey-Chretian Cassegrain telescopes. Refer to
+                  urn:nasa:pds:dart_teleobs:document_lcogt:lcogt_dart_uncalibrated_calibrated_sis
+                  for more information as well as the the file naming convention indicating which telescope in the network
+                  was used to generate a given data product.</description>
+                <Internal_Reference>
+                  <lid_reference>urn:nasa:pds:context:telescope:las_cumbres.1m0_telescopes</lid_reference>
+                  <reference_type>is_telescope</reference_type>
+                </Internal_Reference>
               </Observing_System_Component>
               <Observing_System_Component>
-                <name>Sinistro Imager</name>
+                <name>Las Cumbres 1m Telescopes - Sinistro Imager</name>
                 <type>Instrument</type>
-                <description>The description for the Sinistro Imager can be found in the document collection for this bundle.</description>
+                <description>The description for the Sinistro Imager can be found in urn:nasa:pds:dart_teleobs:document_lcogt:sinistro_description.</description>
+                <Internal_Reference>
+                  <lid_reference>urn:nasa:pds:context:instrument:las_cumbres.1m0_telescopes.sinistro</lid_reference>
+                  <reference_type>is_instrument</reference_type>
+                </Internal_Reference>
               </Observing_System_Component>
             </Observing_System>
             <Target_Identification>
@@ -1526,6 +1814,11 @@ class TestCreateFileAreaObs(SimpleTestCase):
         lco_bpm_exthdr = fits.Header.fromtextfile(os.path.join(tests_path, 'example_lco_calib_bpmhdr'))
         lco_err_exthdr = fits.Header.fromtextfile(os.path.join(tests_path, 'example_lco_calib_errhdr'))
         self.test_lco_calib_header = [lco_calib_prihdr, lco_bpm_exthdr, lco_err_exthdr]
+
+        self.lco_fli_raw_header = fits.Header.fromtextfile(os.path.join(tests_path, 'example_lco_fli_raw_hdr'))
+        self.test_fli_raw_filename = 'cpt1m010-ef02-20220926-0242-e00.fits'
+        self.lco_fli_cal_header = fits.Header.fromtextfile(os.path.join(tests_path, 'example_lco_fli_cal_hdr'))
+        self.test_fli_cal_filename = 'cpt1m010-ef02-20220926-0242-e92.fits'
 
         self.maxDiff = None
 
@@ -1671,7 +1964,7 @@ class TestCreateFileAreaObs(SimpleTestCase):
           <File_Area_Observational>
             <File>
               <file_name>mef_raw_test_frame.fits</file_name>
-              <comment>Raw LCOGT image file</comment>
+              <comment>Sinistro Imager Raw LCOGT image file</comment>
             </File>
             <Header>
               <name>main_header</name>
@@ -1798,7 +2091,7 @@ class TestCreateFileAreaObs(SimpleTestCase):
           <File_Area_Observational>
             <File>
               <file_name>mef_raw_test_frame.fits</file_name>
-              <comment>Raw LCOGT image file</comment>
+              <comment>Sinistro Imager Raw LCOGT image file</comment>
             </File>
             <Header>
               <name>main_header</name>
@@ -2005,6 +2298,84 @@ class TestCreateFileAreaObs(SimpleTestCase):
           </File_Area_Observational>'''
 
         file_obs_area = create_file_area_obs(self.test_lco_calib_header, 'tfn1m001-fa11-20211013-dark-bin1x1.fits')
+
+        self.compare_xml(expected, file_obs_area)
+
+    def test_lco_fli_raw(self):
+        expected = '''
+          <File_Area_Observational>
+            <File>
+              <file_name>cpt1m010-ef02-20220926-0242-e00.fits</file_name>
+              <comment>FLI Imager Raw LCOGT image file</comment>
+            </File>
+            <Header>
+              <name>main_header</name>
+              <offset unit="byte">0</offset>
+              <object_length unit="byte">20160</object_length>
+              <parsing_standard_id>FITS 3.0</parsing_standard_id>
+            </Header>
+            <Array_2D_Image>
+              <local_identifier>cpt1m010-ef02-20220926-0242-e00</local_identifier>
+              <offset unit="byte">20160</offset>
+              <axes>2</axes>
+              <axis_index_order>Last Index Fastest</axis_index_order>
+              <Element_Array>
+                <data_type>SignedMSB2</data_type>
+                <scaling_factor>1.0</scaling_factor>
+                <value_offset>32768.0</value_offset>
+              </Element_Array>
+              <Axis_Array>
+                <axis_name>Line</axis_name>
+                <elements>512</elements>
+                <sequence_number>1</sequence_number>
+              </Axis_Array>
+              <Axis_Array>
+                <axis_name>Sample</axis_name>
+                <elements>512</elements>
+                <sequence_number>2</sequence_number>
+              </Axis_Array>
+            </Array_2D_Image>
+          </File_Area_Observational>'''
+
+        file_obs_area = create_file_area_obs(self.lco_fli_raw_header, self.test_fli_raw_filename)
+
+        self.compare_xml(expected, file_obs_area)
+
+    def test_lco_fli_cal(self):
+        expected = '''
+          <File_Area_Observational>
+            <File>
+              <file_name>cpt1m010-ef02-20220926-0242-e92.fits</file_name>
+              <comment>FLI Imager Calibrated LCOGT image file</comment>
+            </File>
+            <Header>
+              <name>main_header</name>
+              <offset unit="byte">0</offset>
+              <object_length unit="byte">23040</object_length>
+              <parsing_standard_id>FITS 3.0</parsing_standard_id>
+            </Header>
+            <Array_2D_Image>
+              <local_identifier>cpt1m010-ef02-20220926-0242-e92</local_identifier>
+              <offset unit="byte">23040</offset>
+              <axes>2</axes>
+              <axis_index_order>Last Index Fastest</axis_index_order>
+              <Element_Array>
+                <data_type>IEEE754MSBSingle</data_type>
+              </Element_Array>
+              <Axis_Array>
+                <axis_name>Line</axis_name>
+                <elements>507</elements>
+                <sequence_number>1</sequence_number>
+              </Axis_Array>
+              <Axis_Array>
+                <axis_name>Sample</axis_name>
+                <elements>500</elements>
+                <sequence_number>2</sequence_number>
+              </Axis_Array>
+            </Array_2D_Image>
+          </File_Area_Observational>'''
+
+        file_obs_area = create_file_area_obs(self.lco_fli_cal_header, self.test_fli_cal_filename)
 
         self.compare_xml(expected, file_obs_area)
 
@@ -3504,6 +3875,11 @@ class TestWritePDSLabel(TestCase):
 
     def test_write_proc_label(self):
 
+        # modify instrument in FITS file to match Sinistro
+        with fits.open(self.test_banzai_file, mode='update') as hdulist:
+            hdulist[0].header['INSTRUME'] = 'fa16'
+            hdulist.close()
+
         output_xml_file = os.path.join(self.test_dir, 'test_example_label.xml')
 
         status = write_product_label_xml(self.test_banzai_file, output_xml_file, self.schemadir, mod_time=datetime(2021,5,4))
@@ -3512,10 +3888,11 @@ class TestWritePDSLabel(TestCase):
 
     def test_write_proc_label_body_name(self):
 
-        # modify object name in FITS file to match Body
-        hdulist = fits.open(self.test_banzai_file, mode='update')
-        hdulist[0].header['OBJECT'] = '65803'
-        hdulist.close()
+        # modify instrument and object name in FITS file to match Body
+        with fits.open(self.test_banzai_file, mode='update') as hdulist:
+            hdulist[0].header['OBJECT'] = '65803'
+            hdulist[0].header['INSTRUME'] = 'fa16'
+            hdulist.close()
 
         output_xml_file = os.path.join(self.test_dir, 'test_example_label.xml')
 
@@ -3536,6 +3913,8 @@ class TestWritePDSLabel(TestCase):
         # Create example bpm frame
         hdulist = fits.open(self.test_raw_file)
         for hdu in hdulist:
+            if hdu.name == 'PRIMARY':
+                hdu.header['instrume'] = 'fa05'
             hdu.header['obstype'] = 'BPM'
             hdu.header['moltype'] = 'BIAS'
             hdu.header['exptime'] = 900
@@ -3555,6 +3934,7 @@ class TestWritePDSLabel(TestCase):
 
         # Create example bias frame
         hdulist = fits.open(self.test_banzai_file)
+        hdulist[0].header['instrume'] = 'fa05'
         hdulist[0].header['obstype'] = 'BIAS'
         hdulist[0].header['moltype'] = 'BIAS'
         hdulist[0].header['exptime'] = 0
@@ -3573,6 +3953,7 @@ class TestWritePDSLabel(TestCase):
 
         # Create example dark frame
         hdulist = fits.open(self.test_banzai_file)
+        hdulist[0].header['instrume'] = 'fa05'
         hdulist[0].header['obstype'] = 'DARK'
         hdulist[0].header['moltype'] = 'DARK'
         hdulist[0].header['exptime'] = 300
@@ -3591,6 +3972,7 @@ class TestWritePDSLabel(TestCase):
 
         # Create example flat frame
         hdulist = fits.open(self.test_banzai_file)
+        hdulist[0].header['instrume'] = 'fa05'
         hdulist[0].header['obstype'] = 'SKYFLAT'
         hdulist[0].header['moltype'] = 'SKYFLAT'
         hdulist[0].header['exptime'] = 2.5

@@ -164,9 +164,19 @@ def create_id_area(filename, model_version='1.15.0.0', collection_type='cal', mo
         filename = filename.replace(' ', '').lower()
         product_type = 'Product_Observational'
         suffix = ' Image'
+        instrument_type = ''
         if collection_type == 'ddp':
             suffix = ''
-        product_title = f'Las Cumbres Observatory {proc_levels[collection_type]["title"]}{suffix}{filename.replace(":", ": ")}'
+        else:
+            inst_mapping = instrument_type_mappings()
+            for key, instrument_type in inst_mapping.items():
+                if '-'+key in filename:
+                    break
+            if instrument_type == 'Unknown':
+                instrument_type = inst_mapping['fa']
+            if instrument_type != 'FLOYDS':
+                instrument_type = instrument_type + " Imager "
+        product_title = f'Las Cumbres Observatory {instrument_type}{proc_levels[collection_type]["title"]}{suffix}{filename.replace(":", ": ")}'
 
     xml_elements = {'logical_identifier' : 'urn:nasa:pds:dart_teleobs:data_lcogt' + proc_levels[collection_type]['level'] + filename,
                     'version_id' : '1.0',
@@ -514,7 +524,7 @@ def create_obs_area(header, filename):
     tel_class = header.get('TELESCOP', 'XXX')[0:3]
     tel_class_descrip = tel_class.replace("m0", "m").replace("0m4", "0.4m")
     inst_class = header.get('INSTRUME', 'XXX')[0:2]
-    inst_classes = { 'fa' : 'Sinistro', 'ef' : 'FLI'}
+    inst_classes = instrument_type_mappings()
     inst_class_descrip = inst_classes.get(inst_class, 'Sinistro')
     obs_system = etree.SubElement(obs_area, "Observing_System")
     obs_components = {
@@ -523,10 +533,10 @@ def create_obs_area(header, filename):
                                    'reference_type' : 'is_facility'
                                  },
                         'Telescope' : { 'name' : f'Las Cumbres Global Telescope Network - {tel_class_descrip:} Telescopes',
-                                        'lid_reference' : f"urn:nasa:pds:context:instrument_host:las_cumbres.{tel_class:}_telescopes",
+                                        'lid_reference' : f"urn:nasa:pds:context:telescope:las_cumbres.{tel_class:}_telescopes",
                                         'reference_type' : 'is_telescope'
                                       },
-                        'Instrument' : { 'name' : f'Las Cumbres {tel_class_descrip:} Telescopes - {inst_class_descrip} Camera',
+                        'Instrument' : { 'name' : f'Las Cumbres {tel_class_descrip:} Telescopes - {inst_class_descrip} Imager',
                                          'lid_reference' : f"urn:nasa:pds:context:instrument:las_cumbres.{tel_class:}_telescopes.{inst_class_descrip.lower()}",
                                          'reference_type' : 'is_instrument'
                                        }
@@ -535,14 +545,22 @@ def create_obs_area(header, filename):
         comp = etree.SubElement(obs_system, "Observing_System_Component")
         etree.SubElement(comp, "name").text = obs_components[component]['name']
         etree.SubElement(comp, "type").text = component
-        description = f"The description for the {component.lower():} can be found in the document collection for this bundle."
+        description = ""
         if component == 'Telescope':
             site_code = header.get('MPCCODE', None)
             if site_code is None:
                 site_code = LCOGT_domes_to_site_codes(header.get('siteid', ''), header.get('encid', ''),  header.get('telid', ''))
             site_name = get_sitepos(site_code)[0]
-            description = f"\n          LCOGT {header.get('TELESCOP',''):} Telescope\n          {site_name.replace('LCO', 'LCOGT'):}\n          {description:}"
-        etree.SubElement(comp, "description").text = description
+            description =   "\n          The 1m telescopes of the Las Cumbres global network are built to be identical."
+            description +=  "\n          They are Equatorial C-ring mounted Ritchey-Chretian Cassegrain telescopes."
+            description +=  "\n          The specific telescope used to generate this data product is the"
+            description += f"\n          LCOGT {header.get('TELESCOP',''):} Telescope,\n          {site_name.replace('LCO', 'LCOGT'):}"
+            description += f"\n          Refer to urn:nasa:pds:dart_teleobs:document_lcogt:lcogt_dart_uncalibrated_calibrated_sis" 
+            description += f"\n          for more information."
+        elif component == 'Instrument':
+            description = f"The description for the {inst_class_descrip} Imager can be found in urn:nasa:pds:dart_teleobs:document_lcogt:{inst_class_descrip.lower()}_description."
+        if description != "":
+            etree.SubElement(comp, "description").text = description
         int_reference = etree.SubElement(comp, "Internal_Reference")
         etree.SubElement(int_reference, "lid_reference").text = obs_components[component]['lid_reference']
         etree.SubElement(int_reference, "reference_type").text = obs_components[component]['reference_type']
@@ -739,10 +757,36 @@ def create_context_area(filepath, collection_type):
     # Create Observing System subclass of Observation Area
     obs_system = etree.SubElement(context_area, "Observing_System")
     inst_mapping = instrument_type_mappings()
+    tel_class = headers[0].get('TELESCOP', 'XXX')[0:3]
+    tel_class_descrip = tel_class.replace("m0", "m").replace("0m4", "0.4m")
+    inst_class = headers[0].get('INSTRUME', 'XXX')[0:2]
+    inst_classes = instrument_type_mappings()
+    inst_class_descrip = inst_classes.get(inst_class, 'Sinistro')
+    ws = ' '*18
     obs_components = {
-                        'Host' : 'Las Cumbres Observatory (LCOGT)',
-                        'Telescope' : sorted(list(set(['LCOGT ' + headers[0].get('TELESCOP','') + ' Telescope' for headers in all_headers]))),
-                        'Instrument' : inst_mapping[headers[0].get('INSTRUME', 'xx')[0:2]] + ' Imager',
+        'Host' : { 'name' : 'Las Cumbres Observatory (LCOGT)',
+                   'lid_reference' : 'urn:nasa:pds:context:facility:observatory.las_cumbres',
+                   'reference_type' : 'is_facility',
+                   'description' : ''
+                 },
+        'Telescope' : { 'name' : f'Las Cumbres Global Telescope Network - {tel_class_descrip:} Telescopes',
+                        'lid_reference' : f"urn:nasa:pds:context:telescope:las_cumbres.{tel_class:}_telescopes",
+                        'reference_type' : 'is_telescope',
+                        'description' : "The 1m telescopes of the Las Cumbres global network are built to be identical.\n" +
+                                        ws + "They are Equatorial C-ring mounted Ritchey-Chretian Cassegrain telescopes. Refer to\n" +
+                                        ws + "urn:nasa:pds:dart_teleobs:document_lcogt:lcogt_dart_uncalibrated_calibrated_sis\n" +
+                                        ws + "for more information as well as the the file naming convention indicating which telescope in the network\n" +
+                                        ws + "was used to generate a given data product."
+                      },
+        'Instrument' : { 'name' : f'Las Cumbres {tel_class_descrip:} Telescopes - {inst_class_descrip} Imager',
+                         'lid_reference' : f"urn:nasa:pds:context:instrument:las_cumbres.{tel_class:}_telescopes.{inst_class_descrip.lower()}",
+                         'reference_type' : 'is_instrument',
+                         'description' : f"The description for the {inst_class_descrip} Imager can be found in urn:nasa:pds:dart_teleobs:document_lcogt:{inst_class_descrip.lower()}_description."
+                       }
+                        # 'Host' : 'Las Cumbres Observatory (LCOGT)',
+                        # 'Telescope' : 'Las Cumbres Global Telescope Network - 1m Telescopes',
+# #                        'Telescope' : sorted(list(set(['LCOGT ' + headers[0].get('TELESCOP','') + ' Telescope' for headers in all_headers]))),
+                        # 'Instrument' : inst_mapping[headers[0].get('INSTRUME', 'xx')[0:2]] + ' Imager',
                      }
     for component in obs_components:
         if type(obs_components[component]) == list:
@@ -751,15 +795,21 @@ def create_context_area(filepath, collection_type):
                 comp = etree.SubElement(obs_system, "Observing_System_Component")
                 etree.SubElement(comp, "name").text = obs_components[component][i]
                 etree.SubElement(comp, "type").text = component
-                description = f"The description for the {obs_components[component][i]} can be found in the document collection for this bundle."
-                etree.SubElement(comp, "description").text = description
+                description = obs_components[component][i]['description']
+                if description != '':
+                    etree.SubElement(comp, "description").text = description
                 i+=1
         else:
             comp = etree.SubElement(obs_system, "Observing_System_Component")
-            etree.SubElement(comp, "name").text = obs_components[component]
+            etree.SubElement(comp, "name").text = obs_components[component]['name']
             etree.SubElement(comp, "type").text = component
-            description = f"The description for the {obs_components[component]} can be found in the document collection for this bundle."
-            etree.SubElement(comp, "description").text = description
+            description = obs_components[component]['description']
+            if description != '':
+                etree.SubElement(comp, "description").text = description
+
+        int_reference = etree.SubElement(comp, "Internal_Reference")
+        etree.SubElement(int_reference, "lid_reference").text = obs_components[component]['lid_reference']
+        etree.SubElement(int_reference, "reference_type").text = obs_components[component]['reference_type']
 
     # Create Target Identification subclass
     target_id = etree.SubElement(context_area, "Target_Identification")
@@ -797,13 +847,17 @@ def create_file_area_obs(header, filename):
     file_element = etree.SubElement(file_area_obs, "File")
     etree.SubElement(file_element, "file_name").text = os.path.basename(filename)
     obstype = headers[0].get('obstype', 'expose').upper()
-    comment = "Calibrated LCOGT image file"
+    inst_class = headers[0].get('INSTRUME', 'XXX')[0:2]
+    inst_classes = instrument_type_mappings()
+    inst_class_descrip = inst_classes.get(inst_class, 'Sinistro') + ' Imager '
+
+    comment = f"{inst_class_descrip}Calibrated LCOGT image file"
     if obstype == 'BIAS' or obstype == 'DARK' or obstype == 'SKYFLAT':
         comment = f"Median combined stack of {obstype.lower()} images. Used in calibration pipeline to generate the calibrated image data."
     elif obstype == 'BPM':
          comment = f"Bad Pixel Mask image. Used in calibration pipeline to generate the calibrated image data."
     elif obstype == "EXPOSE" and headers[0].get('rlevel', 0) == 0:
-        comment = "Raw LCOGT image file"
+        comment = f"{inst_class_descrip}Raw LCOGT image file"
 
     origin = headers[0].get('origin', '').rstrip()
     if origin == 'LCOGT':
