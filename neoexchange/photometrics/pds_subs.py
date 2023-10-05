@@ -1828,9 +1828,16 @@ def export_block_to_pds(input_dirs, output_dir, blocks, schema_root, docs_root=N
         # 1. we don't store this info in NEOx so need Archive API call to get
         #    it (now a Block property)
         # 2. we can have multiple BLKUIDs for the same Block if it restarts
-        #    and is rescheduled and re-observed (ignore for now...)
-        blkuid = block.get_blockuid
-        if blkuid is None or blkuid not in input_dir:
+        #    and is rescheduled and re-observed (Now returns a list and works
+        #    if 2 total observations, fails if >=3)
+        blkuids = block.get_blockuid
+        match_found = False
+        for blkuid in blkuids:
+            if blkuid is not None and blkuid in input_dir:
+                logger.info(f"Block/data match found (Block has BLKUID={blkuid}, appears in {input_dir}")
+                match_found = True
+                break
+        if match_found is False:
             logger.error(f"Block/data mismatch ! (Block has BLKUID={blkuid}, does not appear in {input_dir}")
             continue
         # Create directory structure
