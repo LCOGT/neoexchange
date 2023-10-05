@@ -4819,6 +4819,7 @@ class TestExportBlockToPDS(TestCase):
                             'raw_data' : os.path.join(self.expected_root_dir, 'data_lcogtraw', block_dir),
                             'cal_data' : os.path.join(self.expected_root_dir, 'data_lcogtcal', block_dir),
                             'ddp_data' : os.path.join(self.expected_root_dir, 'data_lcogtddp', block_dir),
+                            'calib'    : os.path.join(self.expected_root_dir, 'data_lcogtcal', 'calibration'),
                             'root'     : self.test_output_dir
                           }
 
@@ -4846,6 +4847,7 @@ class TestExportBlockToPDS(TestCase):
                             'raw_data' : os.path.join(self.expected_root_dir, 'data_lcogt_fliraw', block_dir),
                             'cal_data' : os.path.join(self.expected_root_dir, 'data_lcogt_flical', block_dir),
                             'ddp_data' : os.path.join(self.expected_root_dir, 'data_lcogt_fliddp', block_dir),
+                            'calib'    : os.path.join(self.expected_root_dir, 'data_lcogt_flical', 'calibration'),
                             'root'     : self.test_output_dir
                           }
 

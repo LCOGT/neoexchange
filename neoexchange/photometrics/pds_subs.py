@@ -1438,6 +1438,7 @@ def create_dart_directories(output_dir, block):
     └── <output_dir>
         └── lcogt_data
             ├── data_lcogtcal
+            │   └── calibration
             │   └── lcogt_1m0_01_fa11_20211013
             ├── data_lcogtddp
             │   └── lcogt_1m0_01_fa11_20211013
@@ -1464,6 +1465,10 @@ def create_dart_directories(output_dir, block):
                 dir_path = os.path.join(output_dir, dir_name, block_dir)
                 os.makedirs(dir_path, exist_ok=True)
                 status[dir_key] = dir_path
+            # Create central calibration location under data_lcogt{prefix}cal
+            dir_path = os.path.join(output_dir, f'data_lcogt{prefix}cal', 'calibration')
+            os.makedirs(dir_path, exist_ok=True)
+            status['calib'] = dir_path
             status['root'] = output_dir
         else:
             logger.warning(f"Could not decode filename: {first_filename}")
