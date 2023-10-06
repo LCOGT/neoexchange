@@ -95,6 +95,11 @@
       <reference_type>collection_to_document</reference_type>
       <comment>Overview of the FLI Imager instruments on the LCOGT 1-meter Telescopes.</comment>
     </Internal_Reference>
+    <Internal_Reference>
+      <lid_reference>urn:nasa:pds:dart_teleobs:document_lcogt:source_extractor_flags</lid_reference>
+      <reference_type>collection_to_document</reference_type>
+      <comment>Overview of the Source Extractor flags values for the photometry products.</comment>
+    </Internal_Reference>
   </Reference_List>
   <Collection>
     <collection_type>Document</collection_type>
@@ -102,8 +107,8 @@
   <File_Area_Inventory>
     <File>
       <file_name>collection_lcogtdoc.csv</file_name>
-      <creation_date_time>2023-04-26</creation_date_time>
-      <file_size unit="byte">223</file_size>
+      <creation_date_time>2023-10-05</creation_date_time>
+      <file_size unit="byte">295</file_size>
     </File>
     <Inventory>
       <offset unit="byte">0</offset>
