@@ -379,7 +379,7 @@ class TestCreateIDArea(SimpleTestCase):
     def test_fli(self):
         expected = '''
             <Identification_Area>
-                <logical_identifier>urn:nasa:pds:dart_teleobs:data_lcogtcal:banzai_test_frame-ef04-2mhz</logical_identifier>
+                <logical_identifier>urn:nasa:pds:dart_teleobs:data_lcogt_flical:banzai_test_frame-ef04-500khz</logical_identifier>
                 <version_id>1.0</version_id>
                 <title>Las Cumbres Observatory FLI Imager Calibrated Image: banzai_test_frame-ef04-500khz</title>
                 <information_model_version>1.15.0.0</information_model_version>
@@ -393,12 +393,140 @@ class TestCreateIDArea(SimpleTestCase):
                 </Modification_History>
               </Identification_Area>'''
 
-        id_area = create_id_area('banzai_test_frame-ef04-500kHz.fits', mod_time=datetime(2021,5,10))
+        id_area = create_id_area('banzai_test_frame-ef04-500kHz.fits', collection_type='_flical', mod_time=datetime(2021,5,10))
+
+        self.compare_xml(expected, id_area)
+
+    def test_fli_raw(self):
+        expected = '''
+            <Identification_Area>
+                <logical_identifier>urn:nasa:pds:dart_teleobs:data_lcogt_fliraw:banzai_test_frame-ef04-2mhz</logical_identifier>
+                <version_id>1.0</version_id>
+                <title>Las Cumbres Observatory FLI Imager Raw Image: banzai_test_frame-ef04-2mhz</title>
+                <information_model_version>1.15.0.0</information_model_version>
+                <product_class>Product_Observational</product_class>
+                <Modification_History>
+                    <Modification_Detail>
+                        <modification_date>2021-05-10</modification_date>
+                        <version_id>1.0</version_id>
+                        <description>initial version</description>
+                    </Modification_Detail>
+                </Modification_History>
+              </Identification_Area>'''
+
+        id_area = create_id_area('banzai_test_frame-ef04-2MHz.fits', collection_type='_fliraw', mod_time=datetime(2021,5,10))
+
+        self.compare_xml(expected, id_area)
+
+    def test_fli_ddp(self):
+        expected = '''
+            <Identification_Area>
+                <logical_identifier>urn:nasa:pds:dart_teleobs:data_lcogt_fliddp:banzai_test_frame-ef04-2mhz</logical_identifier>
+                <version_id>1.0</version_id>
+                <title>Las Cumbres Observatory Derived Data Product: banzai_test_frame-ef04-2mhz</title>
+                <information_model_version>1.15.0.0</information_model_version>
+                <product_class>Product_Observational</product_class>
+                <Modification_History>
+                    <Modification_Detail>
+                        <modification_date>2021-05-10</modification_date>
+                        <version_id>1.0</version_id>
+                        <description>initial version</description>
+                    </Modification_Detail>
+                </Modification_History>
+              </Identification_Area>'''
+
+        id_area = create_id_area('banzai_test_frame-ef04-2MHz.fits', collection_type='_fliddp', mod_time=datetime(2021,5,10))
+
+        self.compare_xml(expected, id_area)
+
+    def test_fli_bpm(self):
+        expected = '''
+            <Identification_Area>
+                <logical_identifier>urn:nasa:pds:dart_teleobs:data_lcogt_flical:banzai_test_frame-ef04-2mhz</logical_identifier>
+                <version_id>1.0</version_id>
+                <title>Las Cumbres Observatory FLI Imager Bad Pixel Mask Image: banzai_test_frame-ef04-2mhz</title>
+                <information_model_version>1.15.0.0</information_model_version>
+                <product_class>Product_Observational</product_class>
+                <Modification_History>
+                    <Modification_Detail>
+                        <modification_date>2021-05-10</modification_date>
+                        <version_id>1.0</version_id>
+                        <description>initial version</description>
+                    </Modification_Detail>
+                </Modification_History>
+              </Identification_Area>'''
+
+        id_area = create_id_area('banzai_test_frame-ef04-2MHz.fits', collection_type='_flibpm', mod_time=datetime(2021,5,10))
+
+        self.compare_xml(expected, id_area)
+
+    def test_fli_mbias(self):
+        expected = '''
+            <Identification_Area>
+                <logical_identifier>urn:nasa:pds:dart_teleobs:data_lcogt_flical:banzai_test_frame-ef04-2mhz</logical_identifier>
+                <version_id>1.0</version_id>
+                <title>Las Cumbres Observatory FLI Imager Master Bias Image: banzai_test_frame-ef04-2mhz</title>
+                <information_model_version>1.15.0.0</information_model_version>
+                <product_class>Product_Observational</product_class>
+                <Modification_History>
+                    <Modification_Detail>
+                        <modification_date>2021-05-10</modification_date>
+                        <version_id>1.0</version_id>
+                        <description>initial version</description>
+                    </Modification_Detail>
+                </Modification_History>
+              </Identification_Area>'''
+
+        id_area = create_id_area('banzai_test_frame-ef04-2MHz.fits', collection_type='_flimbias', mod_time=datetime(2021,5,10))
+
+        self.compare_xml(expected, id_area)
+
+    def test_fli_mdark(self):
+        expected = '''
+            <Identification_Area>
+                <logical_identifier>urn:nasa:pds:dart_teleobs:data_lcogt_flical:banzai_test_frame-ef04-2mhz</logical_identifier>
+                <version_id>1.0</version_id>
+                <title>Las Cumbres Observatory FLI Imager Master Dark Image: banzai_test_frame-ef04-2mhz</title>
+                <information_model_version>1.15.0.0</information_model_version>
+                <product_class>Product_Observational</product_class>
+                <Modification_History>
+                    <Modification_Detail>
+                        <modification_date>2021-05-10</modification_date>
+                        <version_id>1.0</version_id>
+                        <description>initial version</description>
+                    </Modification_Detail>
+                </Modification_History>
+              </Identification_Area>'''
+
+        id_area = create_id_area('banzai_test_frame-ef04-2MHz.fits', collection_type='_flimdark', mod_time=datetime(2021,5,10))
+
+        self.compare_xml(expected, id_area)
+
+    def test_fli_mflat(self):
+        expected = '''
+            <Identification_Area>
+                <logical_identifier>urn:nasa:pds:dart_teleobs:data_lcogt_flical:banzai_test_frame-ef04-2mhz</logical_identifier>
+                <version_id>1.0</version_id>
+                <title>Las Cumbres Observatory FLI Imager Master Flat Image: banzai_test_frame-ef04-2mhz</title>
+                <information_model_version>1.15.0.0</information_model_version>
+                <product_class>Product_Observational</product_class>
+                <Modification_History>
+                    <Modification_Detail>
+                        <modification_date>2021-05-10</modification_date>
+                        <version_id>1.0</version_id>
+                        <description>initial version</description>
+                    </Modification_Detail>
+                </Modification_History>
+              </Identification_Area>'''
+
+        id_area = create_id_area('banzai_test_frame-ef04-2MHz.fits', collection_type='_flimflat', mod_time=datetime(2021,5,10))
+
+        self.compare_xml(expected, id_area)
 
     def test_fli_upper_case(self):
         expected = '''
             <Identification_Area>
-                <logical_identifier>urn:nasa:pds:dart_teleobs:data_lcogtcal:banzai_test_frame-ef04-2mhz</logical_identifier>
+                <logical_identifier>urn:nasa:pds:dart_teleobs:data_lcogt_flical:banzai_test_frame-ef04-2mhz</logical_identifier>
                 <version_id>1.0</version_id>
                 <title>Las Cumbres Observatory FLI Imager Calibrated Image: banzai_test_frame-ef04-2mhz</title>
                 <information_model_version>1.15.0.0</information_model_version>
@@ -412,7 +540,7 @@ class TestCreateIDArea(SimpleTestCase):
                 </Modification_History>
               </Identification_Area>'''
 
-        id_area = create_id_area('banzai_test_frame-ef04-2MHz.fits', mod_time=datetime(2021,5,10))
+        id_area = create_id_area('banzai_test_frame-ef04-2MHz.fits', collection_type='_flical', mod_time=datetime(2021,5,10))
 
         self.compare_xml(expected, id_area)
 
@@ -3625,7 +3753,195 @@ class TestCreateDisciplineArea(SimpleTestCase):
 
         self.compare_xml(expected, file_obs_area)
 
-    def test_calib_frame(self):
+    def test_calib_frame_bpm(self):
+        expected = '''
+            <Discipline_Area>
+              <disp:Display_Settings xmlns:disp="http://pds.nasa.gov/pds4/disp/v1">
+                <Local_Internal_Reference>
+                  <local_identifier_reference>amp1_image</local_identifier_reference>
+                  <local_reference_type>display_settings_to_array</local_reference_type>
+                </Local_Internal_Reference>
+                <disp:Display_Direction>
+                  <disp:horizontal_display_axis>Sample</disp:horizontal_display_axis>
+                  <disp:horizontal_display_direction>Left to Right</disp:horizontal_display_direction>
+                  <disp:vertical_display_axis>Line</disp:vertical_display_axis>
+                  <disp:vertical_display_direction>Top to Bottom</disp:vertical_display_direction>
+                </disp:Display_Direction>
+              </disp:Display_Settings>
+              <disp:Display_Settings xmlns:disp="http://pds.nasa.gov/pds4/disp/v1">
+                <Local_Internal_Reference>
+                  <local_identifier_reference>amp2_image</local_identifier_reference>
+                  <local_reference_type>display_settings_to_array</local_reference_type>
+                </Local_Internal_Reference>
+                <disp:Display_Direction>
+                  <disp:horizontal_display_axis>Sample</disp:horizontal_display_axis>
+                  <disp:horizontal_display_direction>Left to Right</disp:horizontal_display_direction>
+                  <disp:vertical_display_axis>Line</disp:vertical_display_axis>
+                  <disp:vertical_display_direction>Bottom to Top</disp:vertical_display_direction>
+                </disp:Display_Direction>
+              </disp:Display_Settings>
+              <disp:Display_Settings xmlns:disp="http://pds.nasa.gov/pds4/disp/v1">
+                <Local_Internal_Reference>
+                  <local_identifier_reference>amp3_image</local_identifier_reference>
+                  <local_reference_type>display_settings_to_array</local_reference_type>
+                </Local_Internal_Reference>
+                <disp:Display_Direction>
+                  <disp:horizontal_display_axis>Sample</disp:horizontal_display_axis>
+                  <disp:horizontal_display_direction>Right to Left</disp:horizontal_display_direction>
+                  <disp:vertical_display_axis>Line</disp:vertical_display_axis>
+                  <disp:vertical_display_direction>Bottom to Top</disp:vertical_display_direction>
+                </disp:Display_Direction>
+              </disp:Display_Settings>
+              <disp:Display_Settings xmlns:disp="http://pds.nasa.gov/pds4/disp/v1">
+                <Local_Internal_Reference>
+                  <local_identifier_reference>amp4_image</local_identifier_reference>
+                  <local_reference_type>display_settings_to_array</local_reference_type>
+                </Local_Internal_Reference>
+                <disp:Display_Direction>
+                  <disp:horizontal_display_axis>Sample</disp:horizontal_display_axis>
+                  <disp:horizontal_display_direction>Right to Left</disp:horizontal_display_direction>
+                  <disp:vertical_display_axis>Line</disp:vertical_display_axis>
+                  <disp:vertical_display_direction>Top to Bottom</disp:vertical_display_direction>
+                </disp:Display_Direction>
+              </disp:Display_Settings>
+              <img:Imaging xmlns:img="http://pds.nasa.gov/pds4/img/v1">
+                <Local_Internal_Reference>
+                  <local_identifier_reference>amp1_image</local_identifier_reference>
+                  <local_identifier_reference>amp2_image</local_identifier_reference>
+                  <local_identifier_reference>amp3_image</local_identifier_reference>
+                  <local_identifier_reference>amp4_image</local_identifier_reference>
+                  <local_reference_type>imaging_parameters_to_image_object</local_reference_type>
+                </Local_Internal_Reference>
+                <img:Exposure>
+                  <img:exposure_duration unit="s">94.975</img:exposure_duration>
+                </img:Exposure>
+                <img:Optical_Filter>
+                  <img:filter_name>w</img:filter_name>
+                  <img:bandwidth unit="Angstrom">4409.8</img:bandwidth>
+                  <img:center_filter_wavelength unit="Angstrom">6080.0</img:center_filter_wavelength>
+                </img:Optical_Filter>
+              </img:Imaging>
+              <geom:Geometry xmlns:geom="http://pds.nasa.gov/pds4/geom/v1">
+                <geom:Image_Display_Geometry>
+                  <Local_Internal_Reference>
+                    <local_identifier_reference>amp1_image</local_identifier_reference>
+                    <local_identifier_reference>amp2_image</local_identifier_reference>
+                    <local_identifier_reference>amp3_image</local_identifier_reference>
+                    <local_identifier_reference>amp4_image</local_identifier_reference>
+                    <local_reference_type>display_to_data_object</local_reference_type>
+                  </Local_Internal_Reference>
+                  <geom:Display_Direction>
+                    <geom:horizontal_display_axis>Sample</geom:horizontal_display_axis>
+                    <geom:horizontal_display_direction>Left to Right</geom:horizontal_display_direction>
+                    <geom:vertical_display_axis>Line</geom:vertical_display_axis>
+                    <geom:vertical_display_direction>Bottom to Top</geom:vertical_display_direction>
+                  </geom:Display_Direction>
+                  <geom:Object_Orientation_RA_Dec>
+                    <geom:right_ascension_angle unit="deg">287.324817</geom:right_ascension_angle>
+                    <geom:declination_angle unit="deg">59.493929</geom:declination_angle>
+                    <geom:celestial_north_clock_angle unit="deg">0.0</geom:celestial_north_clock_angle>
+                    <geom:Reference_Frame_Identification>
+                      <geom:name>J2000</geom:name>
+                      <geom:comment>equinox of RA and DEC</geom:comment>
+                    </geom:Reference_Frame_Identification>
+                  </geom:Object_Orientation_RA_Dec>
+                </geom:Image_Display_Geometry>
+              </geom:Geometry>
+            </Discipline_Area>'''
+
+        self.test_raw_header[0]['OBSTYPE'] = 'BPM'
+        file_obs_area = create_discipline_area(self.test_raw_header, 'tfn1m001-fa11-20211013-bpm-bin1x1.fits', self.schema_mappings)
+
+        self.compare_xml(expected, file_obs_area)
+
+    def test_calib_frame_bias(self):
+        expected = '''
+            <Discipline_Area>
+              <disp:Display_Settings xmlns:disp="http://pds.nasa.gov/pds4/disp/v1">
+                <Local_Internal_Reference>
+                  <local_identifier_reference>tfn1m001-fa11-20211013-bias-bin1x1</local_identifier_reference>
+                  <local_reference_type>display_settings_to_array</local_reference_type>
+                </Local_Internal_Reference>
+                <disp:Display_Direction>
+                  <disp:horizontal_display_axis>Sample</disp:horizontal_display_axis>
+                  <disp:horizontal_display_direction>Left to Right</disp:horizontal_display_direction>
+                  <disp:vertical_display_axis>Line</disp:vertical_display_axis>
+                  <disp:vertical_display_direction>Bottom to Top</disp:vertical_display_direction>
+                </disp:Display_Direction>
+              </disp:Display_Settings>
+              <disp:Display_Settings xmlns:disp="http://pds.nasa.gov/pds4/disp/v1">
+                <Local_Internal_Reference>
+                  <local_identifier_reference>bpm_image</local_identifier_reference>
+                  <local_reference_type>display_settings_to_array</local_reference_type>
+                </Local_Internal_Reference>
+                <disp:Display_Direction>
+                  <disp:horizontal_display_axis>Sample</disp:horizontal_display_axis>
+                  <disp:horizontal_display_direction>Left to Right</disp:horizontal_display_direction>
+                  <disp:vertical_display_axis>Line</disp:vertical_display_axis>
+                  <disp:vertical_display_direction>Bottom to Top</disp:vertical_display_direction>
+                </disp:Display_Direction>
+              </disp:Display_Settings>
+              <disp:Display_Settings xmlns:disp="http://pds.nasa.gov/pds4/disp/v1">
+                <Local_Internal_Reference>
+                  <local_identifier_reference>err_image</local_identifier_reference>
+                  <local_reference_type>display_settings_to_array</local_reference_type>
+                </Local_Internal_Reference>
+                <disp:Display_Direction>
+                  <disp:horizontal_display_axis>Sample</disp:horizontal_display_axis>
+                  <disp:horizontal_display_direction>Left to Right</disp:horizontal_display_direction>
+                  <disp:vertical_display_axis>Line</disp:vertical_display_axis>
+                  <disp:vertical_display_direction>Bottom to Top</disp:vertical_display_direction>
+                </disp:Display_Direction>
+              </disp:Display_Settings>
+              <img:Imaging xmlns:img="http://pds.nasa.gov/pds4/img/v1">
+                <Local_Internal_Reference>
+                    <local_identifier_reference>tfn1m001-fa11-20211013-bias-bin1x1</local_identifier_reference>
+                    <local_identifier_reference>bpm_image</local_identifier_reference>
+                    <local_identifier_reference>err_image</local_identifier_reference>
+                    <local_reference_type>imaging_parameters_to_image_object</local_reference_type>
+                  </Local_Internal_Reference>
+                <img:Exposure>
+                  <img:exposure_duration unit="s">100.000</img:exposure_duration>
+                </img:Exposure>
+                <img:Optical_Filter>
+                  <img:filter_name>w</img:filter_name>
+                  <img:bandwidth unit="Angstrom">4409.8</img:bandwidth>
+                  <img:center_filter_wavelength unit="Angstrom">6080.0</img:center_filter_wavelength>
+                </img:Optical_Filter>
+              </img:Imaging>
+              <geom:Geometry xmlns:geom="http://pds.nasa.gov/pds4/geom/v1">
+                <geom:Image_Display_Geometry>
+                  <Local_Internal_Reference>
+                    <local_identifier_reference>tfn1m001-fa11-20211013-bias-bin1x1</local_identifier_reference>
+                    <local_identifier_reference>bpm_image</local_identifier_reference>
+                    <local_identifier_reference>err_image</local_identifier_reference>
+                    <local_reference_type>display_to_data_object</local_reference_type>
+                  </Local_Internal_Reference>
+                  <geom:Display_Direction>
+                    <geom:horizontal_display_axis>Sample</geom:horizontal_display_axis>
+                    <geom:horizontal_display_direction>Left to Right</geom:horizontal_display_direction>
+                    <geom:vertical_display_axis>Line</geom:vertical_display_axis>
+                    <geom:vertical_display_direction>Bottom to Top</geom:vertical_display_direction>
+                  </geom:Display_Direction>
+                  <geom:Object_Orientation_RA_Dec>
+                    <geom:right_ascension_angle unit="deg">272.953000</geom:right_ascension_angle>
+                    <geom:declination_angle unit="deg">1.280402</geom:declination_angle>
+                    <geom:celestial_north_clock_angle unit="deg">179.4</geom:celestial_north_clock_angle>
+                    <geom:Reference_Frame_Identification>
+                      <geom:name>J2000</geom:name>
+                      <geom:comment>equinox of RA and DEC</geom:comment>
+                    </geom:Reference_Frame_Identification>
+                  </geom:Object_Orientation_RA_Dec>
+                </geom:Image_Display_Geometry>
+              </geom:Geometry>
+            </Discipline_Area>'''
+
+        self.test_lco_calib_header[0]['OBSTYPE'] = 'BIAS'
+        file_obs_area = create_discipline_area(self.test_lco_calib_header, 'tfn1m001-fa11-20211013-bias-bin1x1.fits', self.schema_mappings)
+
+        self.compare_xml(expected, file_obs_area)
+
+    def test_calib_frame_dark(self):
         expected = '''
             <Discipline_Area>
               <disp:Display_Settings xmlns:disp="http://pds.nasa.gov/pds4/disp/v1">
@@ -3643,6 +3959,17 @@ class TestCreateDisciplineArea(SimpleTestCase):
               <disp:Display_Settings xmlns:disp="http://pds.nasa.gov/pds4/disp/v1">
                 <Local_Internal_Reference>
                   <local_identifier_reference>bpm_image</local_identifier_reference>
+                  <local_reference_type>display_settings_to_array</local_reference_type>
+                </Local_Internal_Reference>
+                <disp:Display_Direction>
+                  <disp:horizontal_display_axis>Sample</disp:horizontal_display_axis>
+                  <disp:horizontal_display_direction>Left to Right</disp:horizontal_display_direction>
+                  <disp:vertical_display_axis>Line</disp:vertical_display_axis>
+                  <disp:vertical_display_direction>Bottom to Top</disp:vertical_display_direction>
+                </disp:Display_Direction>
+              </disp:Display_Settings>
+              <disp:Display_Settings xmlns:disp="http://pds.nasa.gov/pds4/disp/v1">
+                <Local_Internal_Reference>
                   <local_identifier_reference>err_image</local_identifier_reference>
                   <local_reference_type>display_settings_to_array</local_reference_type>
                 </Local_Internal_Reference>
@@ -3697,6 +4024,93 @@ class TestCreateDisciplineArea(SimpleTestCase):
             </Discipline_Area>'''
 
         file_obs_area = create_discipline_area(self.test_lco_calib_header, 'tfn1m001-fa11-20211013-dark-bin1x1.fits', self.schema_mappings)
+
+        self.compare_xml(expected, file_obs_area)
+
+    def test_calib_frame_flat(self):
+        expected = '''
+            <Discipline_Area>
+              <disp:Display_Settings xmlns:disp="http://pds.nasa.gov/pds4/disp/v1">
+                <Local_Internal_Reference>
+                  <local_identifier_reference>tfn1m001-fa11-20211013-flat-bin1x1</local_identifier_reference>
+                  <local_reference_type>display_settings_to_array</local_reference_type>
+                </Local_Internal_Reference>
+                <disp:Display_Direction>
+                  <disp:horizontal_display_axis>Sample</disp:horizontal_display_axis>
+                  <disp:horizontal_display_direction>Left to Right</disp:horizontal_display_direction>
+                  <disp:vertical_display_axis>Line</disp:vertical_display_axis>
+                  <disp:vertical_display_direction>Bottom to Top</disp:vertical_display_direction>
+                </disp:Display_Direction>
+              </disp:Display_Settings>
+              <disp:Display_Settings xmlns:disp="http://pds.nasa.gov/pds4/disp/v1">
+                <Local_Internal_Reference>
+                  <local_identifier_reference>bpm_image</local_identifier_reference>
+                  <local_reference_type>display_settings_to_array</local_reference_type>
+                </Local_Internal_Reference>
+                <disp:Display_Direction>
+                  <disp:horizontal_display_axis>Sample</disp:horizontal_display_axis>
+                  <disp:horizontal_display_direction>Left to Right</disp:horizontal_display_direction>
+                  <disp:vertical_display_axis>Line</disp:vertical_display_axis>
+                  <disp:vertical_display_direction>Bottom to Top</disp:vertical_display_direction>
+                </disp:Display_Direction>
+              </disp:Display_Settings>
+              <disp:Display_Settings xmlns:disp="http://pds.nasa.gov/pds4/disp/v1">
+                <Local_Internal_Reference>
+                  <local_identifier_reference>err_image</local_identifier_reference>
+                  <local_reference_type>display_settings_to_array</local_reference_type>
+                </Local_Internal_Reference>
+                <disp:Display_Direction>
+                  <disp:horizontal_display_axis>Sample</disp:horizontal_display_axis>
+                  <disp:horizontal_display_direction>Left to Right</disp:horizontal_display_direction>
+                  <disp:vertical_display_axis>Line</disp:vertical_display_axis>
+                  <disp:vertical_display_direction>Bottom to Top</disp:vertical_display_direction>
+                </disp:Display_Direction>
+              </disp:Display_Settings>
+              <img:Imaging xmlns:img="http://pds.nasa.gov/pds4/img/v1">
+                <Local_Internal_Reference>
+                    <local_identifier_reference>tfn1m001-fa11-20211013-flat-bin1x1</local_identifier_reference>
+                    <local_identifier_reference>bpm_image</local_identifier_reference>
+                    <local_identifier_reference>err_image</local_identifier_reference>
+                    <local_reference_type>imaging_parameters_to_image_object</local_reference_type>
+                  </Local_Internal_Reference>
+                <img:Exposure>
+                  <img:exposure_duration unit="s">100.000</img:exposure_duration>
+                </img:Exposure>
+                <img:Optical_Filter>
+                  <img:filter_name>w</img:filter_name>
+                  <img:bandwidth unit="Angstrom">4409.8</img:bandwidth>
+                  <img:center_filter_wavelength unit="Angstrom">6080.0</img:center_filter_wavelength>
+                </img:Optical_Filter>
+              </img:Imaging>
+              <geom:Geometry xmlns:geom="http://pds.nasa.gov/pds4/geom/v1">
+                <geom:Image_Display_Geometry>
+                  <Local_Internal_Reference>
+                    <local_identifier_reference>tfn1m001-fa11-20211013-flat-bin1x1</local_identifier_reference>
+                    <local_identifier_reference>bpm_image</local_identifier_reference>
+                    <local_identifier_reference>err_image</local_identifier_reference>
+                    <local_reference_type>display_to_data_object</local_reference_type>
+                  </Local_Internal_Reference>
+                  <geom:Display_Direction>
+                    <geom:horizontal_display_axis>Sample</geom:horizontal_display_axis>
+                    <geom:horizontal_display_direction>Left to Right</geom:horizontal_display_direction>
+                    <geom:vertical_display_axis>Line</geom:vertical_display_axis>
+                    <geom:vertical_display_direction>Bottom to Top</geom:vertical_display_direction>
+                  </geom:Display_Direction>
+                  <geom:Object_Orientation_RA_Dec>
+                    <geom:right_ascension_angle unit="deg">272.953000</geom:right_ascension_angle>
+                    <geom:declination_angle unit="deg">1.280402</geom:declination_angle>
+                    <geom:celestial_north_clock_angle unit="deg">179.4</geom:celestial_north_clock_angle>
+                    <geom:Reference_Frame_Identification>
+                      <geom:name>J2000</geom:name>
+                      <geom:comment>equinox of RA and DEC</geom:comment>
+                    </geom:Reference_Frame_Identification>
+                  </geom:Object_Orientation_RA_Dec>
+                </geom:Image_Display_Geometry>
+              </geom:Geometry>
+            </Discipline_Area>'''
+
+        self.test_lco_calib_header[0]['OBSTYPE'] = 'SKYFLAT'
+        file_obs_area = create_discipline_area(self.test_lco_calib_header, 'tfn1m001-fa11-20211013-flat-bin1x1.fits', self.schema_mappings)
 
         self.compare_xml(expected, file_obs_area)
 
@@ -5297,12 +5711,14 @@ class TestExportBlockToPDS(TestCase):
             self.assertTrue(os.path.exists(expected_file), f'{expected_file} does not exist')
             self.assertTrue(os.path.isfile(expected_file), f'{expected_file} is not a file')
         for collection_type in ['raw', 'cal']:
-            filepath = os.path.join(self.expected_root_dir, 'data_lcogt' + collection_type, self.test_blockdir, '') #Null string on end so 'glob' works in directory
-            fits_files = glob(filepath + "*fits")
-            xml_files = glob(filepath + "*xml")
+            filepath = os.path.join(self.expected_root_dir, 'data_lcogt' + collection_type, '') #Null string on end so 'glob' works in directory
+            fits_files = glob(filepath + f"**{os.sep}*.fits", recursive=True)
+            xml_files = glob(filepath + f"**{os.sep}*.xml", recursive=True)
             self.assertNotEqual(len(fits_files), 0)
             self.assertNotEqual(len(xml_files), 0)
-            self.assertEqual(len(fits_files), len(xml_files), msg=f"Comparison failed on {collection_type:} files in {filepath:}")
+            # There will be 2 more XML files than FITS files due to the 'overview.xml'
+            # and the 'collection_data_lcogt{collection_type}.xml' so subtract these
+            self.assertEqual(len(fits_files), len(xml_files)-2, msg=f"Comparison failed on {collection_type:} files in {filepath:}")
             collection_filepath = os.path.join(self.expected_root_dir, f'data_lcogt{collection_type}', f'collection_data_lcogt{collection_type}.csv')
             t = Table.read(collection_filepath, format='ascii.csv', data_start=0)
             self.assertEqual(len(fits_files)+1, len(t), msg=f"Comparison failed on {collection_type:} lines in {collection_filepath:}")
@@ -5383,9 +5799,9 @@ class TestExportBlockToPDS(TestCase):
             self.assertTrue(os.path.exists(expected_file), f'{expected_file} does not exist')
             self.assertTrue(os.path.isfile(expected_file), f'{expected_file} is not a file')
         for collection_type in ['_fliraw', '_flical', ]:
-            filepath = os.path.join(self.expected_root_dir, 'data_lcogt' + collection_type, self.test_blockdir, '') #Null string on end so 'glob' works in directory
-            fits_files = glob(filepath + "*fits")
-            xml_files = glob(filepath + "*xml")
+            filepath = os.path.join(self.expected_root_dir, 'data_lcogt' + collection_type, '') #Null string on end so 'glob' works in directory
+            fits_files = glob(filepath + f"**{os.sep}*fits")
+            xml_files = glob(filepath + f"**{os.sep}*xml")
             self.assertNotEqual(len(fits_files), 0)
             self.assertNotEqual(len(xml_files), 0)
             self.assertEqual(len(fits_files), len(xml_files), msg=f"Comparison failed on {collection_type:} files in {filepath:}")
@@ -5516,9 +5932,9 @@ class TestExportBlockToPDS(TestCase):
             self.assertTrue(os.path.exists(expected_file), f'{expected_file} does not exist')
             self.assertTrue(os.path.isfile(expected_file), f'{expected_file} is not a file')
         for collection_type in ['raw', 'cal']:
-            filepath = os.path.join(self.expected_root_dir, 'data_lcogt' + collection_type, self.test_blockdir, '') #Null string on end so 'glob' works in directory
-            fits_files = glob(filepath + "*fits")
-            xml_files = glob(filepath + "*xml")
+            filepath = os.path.join(self.expected_root_dir, 'data_lcogt' + collection_type, '') #Null string on end so 'glob' works in directory
+            fits_files = glob(filepath + f"**{os.sep}*fits")
+            xml_files = glob(filepath + f"**{os.sep}*xml")
             self.assertNotEqual(len(fits_files), 0)
             self.assertNotEqual(len(xml_files), 0)
             self.assertEqual(len(fits_files), len(xml_files), msg=f"Comparison failed on {collection_type:} files in {filepath:}")
@@ -5652,32 +6068,30 @@ class TestExportBlockToPDS(TestCase):
             self.assertTrue(os.path.isfile(expected_file), f'{expected_file} is not a file')
         for collection_type in ['raw', 'cal',]:
             if verbose: print(f" {collection_type}\n=====")
-            all_fits_files = []
-            for block_dir in [self.test_blockdir, self.test_blockdir2]:
-                filepath = os.path.join(self.expected_root_dir, 'data_lcogt' + collection_type, block_dir, '') #Null string on end so 'glob' works in directory
-                fits_files = sorted(glob(filepath + "tfn*fits")) +  sorted(glob(filepath + "cpt*fits")) + sorted(glob(filepath + "banzai*fits"))
-                all_fits_files += fits_files
-                xml_files = glob(filepath + "*xml")
-                self.assertEqual(len(fits_files), len(xml_files), msg=f"Comparison failed on {collection_type:} files in {filepath:}")
+            filepath = os.path.join(self.expected_root_dir, 'data_lcogt' + collection_type, '') #Null string on end so 'glob' works in directory
+            all_fits_files = glob(filepath + f"**{os.sep}*fits")
+            xml_files = glob(filepath + f"**{os.sep}*xml")
+            self.assertEqual(len(all_fits_files), len(xml_files), msg=f"Comparison failed on {collection_type:} files in {filepath:}")
             collection_filepath = os.path.join(self.expected_root_dir, f'data_lcogt{collection_type}', f'collection_data_lcogt{collection_type}.csv')
             t = Table.read(collection_filepath, format='ascii.csv', data_start=0, names=('P/S', 'lidvid'))
+            t.sort('lidvid')
             self.assertEqual(len(all_fits_files), len(t)-1, msg=f"Failed on {collection_type}") # -1 due to extra overview file at the end
             prod_type = 'e00'
-            fits_files = [x for x in self.test_banzai_files if prod_type in x]
-            if collection_type == 'cal':
-                fits_files = [os.path.basename(x) for x in all_fits_files] #[x for x in self.test_banzai_files if prod_type not in x and 'e91' not in x]
+            # fits_files = [x for x in self.test_banzai_files if prod_type in x]
+            # if collection_type == 'cal':
+            fits_files = [os.path.basename(x) for x in all_fits_files] #[x for x in self.test_banzai_files if prod_type not in x and 'e91' not in x]
 
             expected_lines = [('P', f'urn:nasa:pds:dart_teleobs:data_lcogt{collection_type}:{os.path.splitext(x)[0]}::1.0' ) for x in fits_files]
+            expected_lid = f'urn:nasa:pds:dart_teleobs:data_lcogt{collection_type}:collection_data_lcogt{collection_type}_overview::1.0'
+            expected_lines += [('P', expected_lid)]
+            expected_lines = sorted(expected_lines)
             if verbose: print("expected_lines:")
             if verbose: print("\n".join([f"  {x[0]} {x[1]}" for x in expected_lines]))
             if verbose: print
             if verbose: print(t[0:len(fits_files)])
-            for fits_row in t[0:len(fits_files)]:
-                self.assertEqual(expected_lines[fits_row.index][0], fits_row[0])
-                self.assertEqual(expected_lines[fits_row.index][1], fits_row[1])
-            self.assertEqual('P', t[-1][0])
-            expected_lid = f'urn:nasa:pds:dart_teleobs:data_lcogt{collection_type}:collection_data_lcogt{collection_type}_overview::1.0'
-            self.assertEqual(expected_lid, t[-1][1])
+            for tbl_row in t[0:len(fits_files)]:
+                self.assertEqual(expected_lines[tbl_row.index][0], tbl_row[0])
+                self.assertEqual(expected_lines[tbl_row.index][1], tbl_row[1])
 
 
 class TestTransferFiles(SimpleTestCase):

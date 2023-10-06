@@ -150,6 +150,13 @@ def create_id_area(filename, model_version='1.15.0.0', collection_type='cal', mo
         if key == 'ddp':
             proc_levels[key]['prod_fmt'] = 'ASCII'
 
+    # Strip off prefix if present but hold onto it for use in the <logical_identifier>
+    if '_fli' in collection_type:
+        prefix = '_fli'
+        collection_type = collection_type.replace('_fli','')
+    else:
+        prefix = ''
+
     id_area = etree.Element("Identification_Area")
     if filename is None:
         filename = ''
@@ -178,7 +185,7 @@ def create_id_area(filename, model_version='1.15.0.0', collection_type='cal', mo
                 instrument_type = instrument_type + " Imager "
         product_title = f'Las Cumbres Observatory {instrument_type}{proc_levels[collection_type]["title"]}{suffix}{filename.replace(":", ": ")}'
 
-    xml_elements = {'logical_identifier' : 'urn:nasa:pds:dart_teleobs:data_lcogt' + proc_levels[collection_type]['level'] + filename,
+    xml_elements = {'logical_identifier' : 'urn:nasa:pds:dart_teleobs:data_lcogt' + prefix + proc_levels[collection_type]['level'] + filename,
                     'version_id' : '1.0',
                     'title' : product_title,
                     'information_model_version' : model_version,
@@ -291,8 +298,9 @@ def create_discipline_area(header, filename, nsmap):
         left_to_right = directions.get(area_name, (True, True))[0]
         bottom_to_top = directions.get(area_name, (True, True))[1]
         if len(headers) > 1:
-            # Don't create section for primary header if it is a MEF
-            if extn > 0:
+            # Don't create section for primary header if it is a MEF (but do
+            # if it's a calibration frame)
+            if extn > 0 or obstype in ['BIAS', 'DARK', 'SKYFLAT']:
                 disp_settings = create_display_settings(area_name, nsmap)
                 # Create Display Direction discipline area
                 disp_direction = create_display_direction(nsmap, 'PDS4::DISP', left_to_right, bottom_to_top)
@@ -1323,7 +1331,10 @@ def write_product_collection_xml(filepath, xml_file, schema_root, mod_time=None)
         logger.error("Unknown collection type")
         return False
 
-    id_area = create_id_area(None, schema_mappings['PDS4::PDS']['version'], collection_type, mod_time)
+    prefix = ''
+    if '_fli' in xml_file:
+        prefix = '_fli'
+    id_area = create_id_area(None, schema_mappings['PDS4::PDS']['version'], prefix+collection_type, mod_time)
     productCollection.append(id_area)
 
     # Add Context Area
