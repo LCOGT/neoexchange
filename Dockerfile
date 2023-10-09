@@ -90,7 +90,7 @@ RUN cd ${DAMIT_VERSION} \
 ################################################################################
 # Production Container
 ################################################################################
-FROM rockylinux:8
+FROM rockylinux:9
 
 # Copy findorb from builder container
 COPY --from=findorbbuilder /root /root
@@ -110,7 +110,7 @@ RUN yum -y install epel-release glibc-langpack-en\
             gcc \
             gcc-c++ \
             gcc-gfortran \
-            lcogt-python39 \
+            python3 \
             libffi-devel \
             libjpeg-devel \
             libpng-devel \
