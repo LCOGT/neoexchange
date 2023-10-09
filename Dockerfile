@@ -116,6 +116,7 @@ RUN yum -y install epel-release glibc-langpack-en\
             libffi-devel \
             libjpeg-devel \
             libpng-devel \
+            freetype-devel \
             mariadb-connector-c-devel \
             make diffutils file
 
