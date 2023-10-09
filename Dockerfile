@@ -152,8 +152,8 @@ RUN curl -fsSLO "$SUPERCRONIC_URL" \
 
 # Install Node.JS
 #RUN dnf -y module install nodejs:14
-ENV NVM_DIR /root.nvm
 RUN curl --silent -o- https://raw.githubusercontent.com/nvm-sh/nvm/master/install.sh | bash
+ENV NVM_DIR /root/.nvm
 RUN source $NVM_DIR/nvm.sh \
         && nvm install 14
 
