@@ -111,10 +111,12 @@ RUN yum -y install epel-release glibc-langpack-en\
             gcc-c++ \
             gcc-gfortran \
             python3 \
+            python3-devel \
+            python3-pip \
             libffi-devel \
             libjpeg-devel \
             libpng-devel \
-            mariadb-devel \
+            mariadb-connector-c-devel \
             make diffutils file
 
 # Copy Python dependencies manifest
@@ -148,21 +150,24 @@ RUN curl -fsSLO "$SUPERCRONIC_URL" \
         && ln -s "/usr/local/bin/${SUPERCRONIC}" /usr/local/bin/supercronic
 
 # Install Node.JS
-RUN dnf -y module install nodejs:14
+#RUN dnf -y module install nodejs:14
+RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/master/install.sh | bash \
+        && [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh" \
+        && nvm install 14
 
 # Install packages and update base system
 # XXX Need to install powertools repo
 RUN yum -y install \
-            cdsclient \
             ImageMagick \
             less \
-            mtdlink \
-            plplot \
-            scamp \
-            sextractor \
             tcsh \
             wget \
             which \
+#            cdsclient \
+#            mtdlink \
+#            plplot \
+#            scamp \
+#            sextractor \
         && yum -y clean all
 
 # Copy operating system configuration files
