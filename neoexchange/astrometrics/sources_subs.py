@@ -598,6 +598,10 @@ def fetch_mpcobs(asteroid, debug=False):
 # the other links. Turn any pluses (which were spaces) into underscores.
     link = [x.get('href') for x in refs if 'tmp/'+asteroid.replace('+', '_').replace('/', '_') in x.get('href')]
 
+    if len(link) == 0:
+        # Try again in case the link is now a `tmp2/`
+        link = [x.get('href') for x in refs if 'tmp2/'+asteroid.replace('+', '_').replace('/', '_') in x.get('href')]
+
     if len(link) == 1:
         # Replace the '..' part with proper URL
 
