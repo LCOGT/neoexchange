@@ -4,6 +4,9 @@ Portal for scheduling observations of NEOs (and other Solar System objects) usin
 
 ## History
 
+### 3.13.3.1
+* Add fix for changed link to file of observations when querying MPC body.
+
 ### 3.13.2
 * Allow export of observations from  NEOexchange in LaTeX table or deluxetable format.
 * Fix some inconsistencies in PDS exports (Issue #619).
