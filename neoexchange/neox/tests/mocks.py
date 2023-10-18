@@ -1673,10 +1673,8 @@ def mock_fetch_filter_list(site, spec):
     elif '2m0' in telid.lower():
         if spec:
             camid = "2m0-FLOYDS-SciCam"
-        elif "OGG" in siteid.upper():
-            camid = "2M0-SCICAM-MUSCAT"
         else:
-            camid = "2m0-SciCam-Spectral"
+            camid = "2M0-SCICAM-MUSCAT"
     else:
         camid = ''
 
@@ -1801,10 +1799,8 @@ def mock_fetch_filter_list(site, spec):
     if '2m0' in telid.lower():
         if spec:
             resp = spec_2m_rsp
-        elif 'OGG' in siteid.upper():
-            resp = muscat_2m_rsp
         else:
-            resp = phot_2m_rsp
+            resp = muscat_2m_rsp
     elif '1m0' in telid.lower() or '0m4' in telid.lower():
         resp = coj_1m_rsp
     else:
@@ -1821,10 +1817,8 @@ def mock_fetch_filter_list(site, spec):
 def mock_fetch_filter_list_no2m(site, spec):
     if spec:
         camid = "2m0-FLOYDS-SciCam"
-    elif "F65" in site.upper():
-        camid = "2M0-SCICAM-MUSCAT"
     else:
-        camid = "2M0-SCICAM-SPECTRAL"
+        camid = "2M0-SCICAM-MUSCAT"
 
     return [], "The {} at {} is not schedulable.".format(camid, site)
 
