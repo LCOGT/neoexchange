@@ -1106,6 +1106,11 @@ class TestSubmitBlockToScheduler(TestCase):
         params['start_time'] = dark_start
         params['end_time'] = dark_end
         params['site_code'] = site_code
+        params['muscat_exp_times'] =  {'gp_explength': 60,
+                                    'rp_explength': 30,
+                                    'ip_explength': 30,
+                                    'zp_explength': 60,
+                                    }
 
         user_request = make_requestgroup(self.body_elements, params)
 
@@ -1308,7 +1313,7 @@ class TestSubmitBlockToScheduler(TestCase):
         self.assertEqual(user_request['submitter'], 'bsimpson')
         self.assertNotIn('mode', instrument_configs.keys())
 
-    def test_2m_no_binning_requestgroup(self):
+    def test_2m_muscat_requestgroup(self):
 
         site_code = '2M0'
         utc_date = datetime(2015, 6, 19, 00, 00, 00) + timedelta(days=1)
@@ -1317,7 +1322,11 @@ class TestSubmitBlockToScheduler(TestCase):
         params['start_time'] = dark_start
         params['end_time'] = dark_end
         params['site_code'] = site_code
-        params['bin_mode'] = '2k_2x2'
+        params['muscat_exp_times'] = {'gp_explength': 60,
+                                    'rp_explength': 30,
+                                    'ip_explength': 30,
+                                    'zp_explength': 60,
+                                    }
 
         user_request = make_requestgroup(self.body_elements, params)
 
@@ -1876,6 +1885,16 @@ class TestFetchFilterList(TestCase):
                  {'name': 'Bessell-B', 'code': 'B', 'schedulable': True, 'default': False},
                  {'name': '200um Pinhole', 'code': '200um-Pinhole', 'schedulable': False, 'default': False}]}}}
 
+        self.all_2m_muscat = {"2M0-SCICAM-MUSCAT": {
+            "type": "IMAGE",
+            "class": "2m0",
+            "name": "2.0 meter Muscat",
+            "optical_elements": {'filters': [
+                 {'name': 'SDSS-rp', 'code': 'rp', 'schedulable': True, 'default': False},
+                 {'name': 'SDSS-ip', 'code': 'ip', 'schedulable': True, 'default': False},
+                 {'name': 'SDSS-gp', 'code': 'gp', 'schedulable': True, 'default': False},
+                 {'name': 'PanSTARRS-Z', 'code': 'zs', 'schedulable': True, 'default': False}]}}}
+
         self.spec_2m_rsp = {'2M0-FLOYDS-SCICAM': {
             'type': 'SPECTRA',
             'class': '2m0',
@@ -1902,10 +1921,10 @@ class TestFetchFilterList(TestCase):
         filter_list = parse_filter_file(self.all_1m_rsp, False)
         self.assertCountEqual(expected_filter_list, filter_list)
 
-    def test_2m_spectral(self):
-        expected_filter_list = ['air', 'Astrodon-UV', 'B', 'V', 'R', 'I', 'up', 'gp', 'rp', 'ip', 'Skymapper-VS', 'solar', 'zs', 'Y']
+    def test_2m_muscat(self):
+        expected_filter_list = ['gp', 'rp', 'ip', 'zs']
 
-        filter_list = parse_filter_file(self.all_2m_rsp, False)
+        filter_list = parse_filter_file(self.all_2m_muscat, False)
         self.assertCountEqual(expected_filter_list, filter_list)
 
     def test_unavailable_telescope(self):
@@ -4403,11 +4422,11 @@ class TestConfigureDefaults(TestCase):
         test_params = self.obs_params
         test_params['site_code'] = 'E10'
 
-        expected_params = { 'instrument':  '2M0-SCICAM-SPECTRAL',
+        expected_params = { 'instrument':  '2M0-SCICAM-MUSCAT',
                             'pondtelescope': '2m0',
                             'observatory': '',
                             'site': 'COJ',
-                            'binning': 2,
+                            'binning': 1,
                             'exp_count': 10,
                             'exp_time': 42.0}
         expected_params.update(test_params)
@@ -4640,8 +4659,8 @@ class TestConfigureDefaults(TestCase):
         self.assertEqual(params, expected_params)
 
     def test_2m_coj(self):
-        expected_params = { 'binning': 2,
-                            'instrument': '2M0-SCICAM-SPECTRAL',
+        expected_params = { 'binning': 1,
+                            'instrument': '2M0-SCICAM-MUSCAT',
                             'observatory': '',
                             'pondtelescope': '2m0',
                             'site': 'COJ',
@@ -4845,10 +4864,10 @@ class TestMakeconfiguration(TestCase):
                           'acquisition_config': {},
                           'guiding_config': {},
                           'instrument_configs': [{
-                              'optical_elements': {'diffuser_g_position': 'out',
-                                                   'diffuser_r_position': 'out',
-                                                   'diffuser_i_position': 'out',
-                                                   'diffuser_z_position': 'out'},
+                              'optical_elements': {'narrowband_g_position': 'out',
+                                                   'narrowband_r_position': 'out',
+                                                   'narrowband_i_position': 'out',
+                                                   'narrowband_z_position': 'out'},
                               'exposure_count': 1,
                               'exposure_time': 60.0,
                               'extra_params': {
