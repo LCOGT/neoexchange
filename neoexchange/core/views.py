@@ -4641,7 +4641,7 @@ def compare_NEOx_horizons_ephems(body, d, sitecode='500', debug=True):
     of the separation (as Astropy Angle instances in u.arcsec in the sense of
     the values that need to be added to the NEOx position to the HORIZONS one)"""
 
-    if type(body) != Body:
+    if hasattr(body, 'name') is False:
         body = Body.objects.get(name=body)
 
     neox_emp = compute_ephem(d, model_to_dict(body), sitecode, perturb=True, display=debug)
