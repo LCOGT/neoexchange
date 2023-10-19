@@ -227,14 +227,20 @@ class TestScheduleForm(TestCase):
         self.assertIn('TFN 1.0m - Z31,Z24; (Tenerife, Spain)', form.as_p())
         self.assertIn('TFN 0.4m - Z17,Z21; (Tenerife, Spain)', form.as_p())
 
+    def test_form_has_muscat_fields(self):
+        form = ScheduleForm()
+        self.assertIsInstance(form, ScheduleForm)
+        self.assertIn('FTS 2.0m - E10; (Siding Spring, Aust.) [MuSCAT4]', form.as_p())
+        self.assertIn('FTN 2.0m - F65; (Maui, Hawaii ) [MuSCAT3]', form.as_p())
+
     def test_sched_form_has_all_sites(self):
         form = ScheduleForm()
         self.assertIsInstance(form, ScheduleForm)
         self.assertIn('ELP 1.0m - V37,V39; (McDonald, Texas)', form.as_p())
         self.assertIn('value="V37"', form.as_p())
-        self.assertIn('FTN 2.0m - F65; (Maui, Hawaii )', form.as_p())
+        self.assertIn('FTN 2.0m - F65; (Maui, Hawaii ) [MuSCAT3]', form.as_p())
         self.assertIn('value="F65"', form.as_p())
-        self.assertIn('FTS 2.0m - E10; (Siding Spring, Aust.)', form.as_p())
+        self.assertIn('FTS 2.0m - E10; (Siding Spring, Aust.) [MuSCAT4]', form.as_p())
         self.assertIn('value="E10"', form.as_p())
         self.assertIn('LSC 1.0m - W85-87; (CTIO, Chile)', form.as_p())
         self.assertIn('value="W86"', form.as_p())
@@ -339,14 +345,21 @@ class TestScheduleCadenceForm(TestCase):
         self.assertNotIn('TFN 1.0m - Z31; (Dome A; Tenerife, Spain)', form.as_p())
         self.assertNotIn('TFN 1.0m - Z24; (Dome B; Tenerife, Spain)', form.as_p())
 
+    def test_form_has_muscat_fields(self):
+        form = ScheduleForm()
+        self.assertIsInstance(form, ScheduleForm)
+        self.assertIn('FTS 2.0m - E10; (Siding Spring, Aust.) [MuSCAT4]', form.as_p())
+        self.assertIn('FTN 2.0m - F65; (Maui, Hawaii ) [MuSCAT3]', form.as_p())
+
+
     def test_sched_form_has_all_sites(self):
         form = ScheduleCadenceForm()
         self.assertIsInstance(form, ScheduleCadenceForm)
         self.assertIn('ELP 1.0m - V37,V39; (McDonald, Texas)', form.as_p())
         self.assertIn('value="V37"', form.as_p())
-        self.assertIn('FTN 2.0m - F65; (Maui, Hawaii )', form.as_p())
+        self.assertIn('FTN 2.0m - F65; (Maui, Hawaii ) [MuSCAT3]', form.as_p())
         self.assertIn('value="F65"', form.as_p())
-        self.assertIn('FTS 2.0m - E10; (Siding Spring, Aust.)', form.as_p())
+        self.assertIn('FTS 2.0m - E10; (Siding Spring, Aust.) [MuSCAT4]', form.as_p())
         self.assertIn('value="E10"', form.as_p())
         self.assertIn('LSC 1.0m - W85-87; (CTIO, Chile)', form.as_p())
         self.assertIn('value="W86"', form.as_p())

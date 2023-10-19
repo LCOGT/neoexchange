@@ -42,7 +42,7 @@ SITES = (('1M0', '------------ Any 1.0m ------------'),
          ('L09', 'CPT 0.4m - L09; (Sutherland, S. Africa)'),
          ('Z21', 'TFN 0.4m - Z17,Z21; (Tenerife, Spain)'),
          ('2M0', '------------ Any 2.0m ------------'),
-         ('E10', 'FTS 2.0m - E10; (Siding Spring, Aust.)'),
+         ('E10', 'FTS 2.0m - E10; (Siding Spring, Aust.) [MuSCAT4]'),
          ('F65', 'FTN 2.0m - F65; (Maui, Hawaii ) [MuSCAT3]'),
          ('non', '------------ Non LCO  ------------'),
          ('474', 'Mt John 1.8m - 474 (Mt John, NZ)'))
