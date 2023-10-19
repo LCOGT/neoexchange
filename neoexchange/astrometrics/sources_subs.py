@@ -2744,6 +2744,7 @@ def fetch_list_targets(list_targets):
                         line = str(line).replace(',', '')
                     if '\n' in line:
                         line = str(line).replace('\n', '')
+                    line = line.strip()
                     new_target_list.append(line)
             continue
         if '_' in obj_id:
