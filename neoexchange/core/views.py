@@ -1336,10 +1336,8 @@ def schedule_check(data, body, ok_to_schedule=True):
     elif data['site_code'] == 'E10' or data['site_code'] == 'F65' or data['site_code'] == '2M0':
         if spectroscopy:
             filter_pattern = 'slit_6.0as'
-        elif data['site_code'] == 'F65':
-            filter_pattern = 'gp'
         else:
-            filter_pattern = 'solar'
+            filter_pattern = 'gp'
     else:
         filter_pattern = 'w'
 
@@ -1428,7 +1426,7 @@ def schedule_check(data, body, ok_to_schedule=True):
         if exp_length is None or exp_count is None:
             ok_to_schedule = False
         # Set MuSCAT Exptimes
-        if 'F65' in data['site_code']:
+        if 'F65' in data['site_code'] or 'E10' in data['site_code']:
             muscat_exp_times = {}
             muscat_filt_list = ['gp_explength', 'rp_explength', 'ip_explength', 'zp_explength']
             for filt in muscat_filt_list:
@@ -1592,7 +1590,7 @@ def schedule_check(data, body, ok_to_schedule=True):
         'fractional_rate': fractional_tracking_rate,
     }
 
-    if not spectroscopy and 'F65' in data['site_code']:
+    if not spectroscopy and ('F65' in data['site_code'] or 'E10' in data['site_code']):
         resp['muscat_sync'] = muscat_sync
         for filt in muscat_filt_list:
             resp[filt] = muscat_exp_times[filt]

@@ -2456,6 +2456,42 @@ class TestScheduleCheck(TestCase):
             self.assertEqual(new_resp[key], resp[key])
 
 
+    @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
+    @patch('core.views.datetime', MockDateTime)
+    def test_fts_muscat_sub(self):
+        MockDateTime.change_datetime(2018, 11, 29, 23, 0, 0)
+
+        data = {'site_code': 'E10',
+                'utc_date': datetime(2018, 12, 1).date(),
+                'proposal_code': self.neo_proposal.code
+                }
+
+        body = self.make_visible_obj(datetime(2018, 11, 30, 23, 0, 0))
+
+        new_resp = {'site_code': 'E10',
+                    'available_filters': 'gp, rp, ip, zp',
+                    'exp_count': 4,
+                    'exp_length': 235.0,
+                    'slot_length': 22.5,
+                    'filter_pattern': 'gp',
+                    'pattern_iterations': 4.0,
+                    'gp_explength': 235.0,
+                    'rp_explength': 235.0,
+                    'ip_explength': 235.0,
+                    'zp_explength': 235.0,
+                    'muscat_sync': False,
+                    'group_name': 'over_there_E10-20181201',
+                    'lco_enc': 'CLMA',
+                    'lco_site': 'COJ',
+                    'lco_tel': '2M0',
+                    }
+
+        resp = schedule_check(data, body)
+
+        for key in new_resp:
+            self.assertEqual(new_resp[key], resp[key], msg=f"failed on {key}")
+
+
 class TestUpdateMPCOrbit(TestCase):
 
     def setUp(self):
