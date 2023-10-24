@@ -3737,20 +3737,26 @@ def generate_plots_for_directory(dest_dir_path, site):
             logger.error(f"Mismatch in number of chisel and combined filenames in {dest_dir_path}")
     return annotated_plots_combined
 
-def get_didymos_detection(table_filename, width = 1991.0, height = 511.0):
+def get_didymos_detection(table_filename, width=1991.0, height=511.0, object_x=None, object_y=None):
     '''
     Routine that takes a <table_filename> and returns the id of the detection
-    centered on Didymos
+    centered on Didymos. Optionally can pass a [object_x, object_y] for the
+    expected pixel coordinates of the object to be extracted (defaults to
+    center (width/2, height/2) if not specified)
     '''
     didymos_id = None
     if table_filename is None:
         return didymos_id
 
+    if object_x is None:
+        object_x = width/2
+    if object_y is None:
+        object_y = height/2
     # Setting dtype=None, let numpy determine for each column individually
     data = np.genfromtxt(table_filename, dtype=None)
 
     for i in range(len(data)):
-        if data[i][2]<(width/2) and data[i][3]>(width/2) and data[i][4]<(height/2) and data[i][5]>(height/2):
+        if data[i][2]<(object_x) and data[i][3]>(object_x) and data[i][4]<(object_y) and data[i][5]>(object_y):
             didymos_id = data[i][0]
 
     return didymos_id
@@ -3857,7 +3863,7 @@ def convert_fits(filename, dest_dir, out_type='pdf', crop=False, center_RA=0, ce
 
     return pdf_filename, status
 
-def run_make_didymos_chisel_plots(self, chiseled_filename, dest_dir_path, output=True):
+def run_make_didymos_chisel_plots(self, chiseled_filename, dest_dir_path, center_RA, center_DEC, output=True):
     '''Converts passed <chiseled_filename> to PDF, generates FITS and TXT versions
     of the detection catalog from the NoiseChisel image, finds the id in the catalog
     of Didymos (actually the object in the frame center) and produces the contour/mask
@@ -3877,14 +3883,22 @@ def run_make_didymos_chisel_plots(self, chiseled_filename, dest_dir_path, output
     else:
         func = self.stdout.write
 
+    try:
+        header = fits.getheader(chiseled_filename, ext=('DETECTIONS',1))
+        w = WCS(header)
+    except (KeyError, ValueError):
+        if output: func(f"Couldn't extract header from {chiseled_filename}")
+        header = {}
+        w = None
+
     image_width = 1991
     try:
-        image_width = fits.getval(chiseled_filename, 'NAXIS1', ext=('DETECTIONS',1))
+        image_width = header.get('NAXIS1', image_width)
     except (KeyError, ValueError):
         if output: func(f"Couldn't determine image width from {chiseled_filename}; assuming default of {image_width}")
     image_height = 511
     try:
-        image_height = fits.getval(chiseled_filename, 'NAXIS2', ext=('DETECTIONS',1))
+        image_height = header.get('NAXIS2', image_height)
     except (KeyError, ValueError):
         if output: func(f"Couldn't determine image height from {chiseled_filename}; assuming default of {image_height}")
 
@@ -3905,7 +3919,14 @@ def run_make_didymos_chisel_plots(self, chiseled_filename, dest_dir_path, output
     results['status'].append(status)
 
     if output: func("Extracting Didymos detection and converting to PDF")
-    didymos_id = get_didymos_detection(table_filename, width=image_width, height=image_height)
+    # If we have a valid WCS, use it predict X, Y position of Didymos via
+    # ephemeris position and WCS
+    if w:
+        x, y = w.world_to_pixel_values(center_RA, center_DEC)
+    else:
+        x = None
+        y = None
+    didymos_id = get_didymos_detection(table_filename, width=image_width, height=image_height, object_x=x, object_y=y)
     results['didymos_id'] = didymos_id
     status = -3
     if didymos_id is not None:

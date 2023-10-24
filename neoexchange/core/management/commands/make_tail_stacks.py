@@ -161,24 +161,47 @@ class Command(BaseCommand):
                 reset_database_connection()
 
                 #call convert_fits()
+                table = get_ephem(block)
+
                 pdf_filenames_chiseled = []
                 pdf_filenames_combined = []
                 annotated_plots_combined = []
                 catalogs = []
                 didymos_ids = []
                 for chiseled_filename in chiseled_filenames:
-                    results = run_make_didymos_chisel_plots(chiseled_filename, dest_dir_path)
-                    pdf_filenames_chiseled.append(results['pdf_filename_chiseled'])
-                    catalogs.append(results['catalog_filename'])
-                    didymos_ids.append(results['didymos_id'])
+                    if chiseled_filename is not None:
+                        filename_base = os.path.basename(chiseled_filename).replace('-combine-superstack-chisel', '')
+                        # We assume, apparently correctly, that the WCS in the stack
+                        # is inherited from the first frame in the stack. For the
+                        # hyperstack, this is inherited from the first superstack
+                        # and hence first frame of the Block
+                        frame = None
+                        try:
+                            frame = frames.get(filename__startswith=filename_base)
+                        except Frame.DoesNotExist:
+                            if 'hyperstack' in filename_base:
+                                frame = frames.earliest('midpoint')
+                        print(f"Found {frame} for {os.path.basename(chiseled_filename)}")
+                        if frame:
+                            result_RA, result_DEC = ephem_interpolate(frame.midpoint, table)
+                            center_RA = result_RA[0]
+                            center_DEC = result_DEC[0]
+                        else:
+                            center_RA = None
+                            center_DEC = None
+                        results = run_make_didymos_chisel_plots(chiseled_filename, dest_dir_path, center_RA, center_DEC)
+                        pdf_filenames_chiseled.append(results['pdf_filename_chiseled'])
+                        catalogs.append(results['catalog_filename'])
+                        didymos_ids.append(results['didymos_id'])
 
                 for combined_filename in combined_filenames:
                     pdf_filename_combined, status = convert_fits(combined_filename, dest_dir_path, width=width, height=height)
                     pdf_filenames_combined.append(pdf_filename_combined)
                     jpg_filename_combined, status = convert_fits(combined_filename, dest_dir_path, out_type='jpg', width=width, height=height)
                     # Make annotated plots
-                    output_plot = make_annotated_plot(combined_filename, width=width, height=height)
-                    annotated_plots_combined.append(output_plot)
+                    if combined_filename is not None:
+                        output_plot = make_annotated_plot(combined_filename, width=width, height=height)
+                        annotated_plots_combined.append(output_plot)
                 self.stdout.write(f'Chiseled  filename(s): {pdf_filenames_chiseled}')
                 self.stdout.write(f'Combined  filename(s): {pdf_filenames_combined}')
                 self.stdout.write(f'Annotated filename(s): {annotated_plots_combined}')

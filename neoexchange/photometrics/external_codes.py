@@ -29,7 +29,7 @@ from astropy.io import fits
 from astropy.io.votable import parse
 from astropy.wcs import WCS, FITSFixedWarning, InvalidTransformError
 from astropy.wcs.utils import proj_plane_pixel_scales
-from numpy import loadtxt, split, empty, median, absolute, sqrt
+from numpy import loadtxt, split, empty, median, absolute, sqrt, ceil
 
 from core.models import detections_array_dtypes
 from astrometrics.time_subs import timeit
@@ -559,6 +559,11 @@ def normalize(images, swarp_zp_key="L1ZP"):
         return_code = -6
 
     return return_code
+
+def round_up_to_odd(f):
+    """Rounds the passed value <f> up to the nearest odd integer"""
+
+    return int(ceil(f) // 2) * 2 + 1
 
 def determine_astwarp_options(filename, dest_dir, center_RA, center_DEC, width = 1991.0, height = 511.0):
     raw_filename = os.path.basename(filename)
@@ -1689,19 +1694,22 @@ def run_astwarp(filename, dest_dir, center_RA, center_DEC, width = 1991.0, heigh
         logger.error(f"Could not locate {binary} executable in PATH")
         return None, -42
     cmdline = f"{binary} "
-    cropped_filename, options = determine_astwarp_options(filename, dest_dir, center_RA, center_DEC, width, height)
-    if os.path.exists(cropped_filename):
-        return cropped_filename, 1
+
     wcs = WCS(header)
     #print(header['NAXIS1'], header['NAXIS2'])
     x, y = wcs.world_to_pixel_values(center_RA, center_DEC)
     #print(x, y)
+    # Offset by 30% of width to put comet/Didymos at left 20% of crop
+    new_center_RA, new_center_DEC = wcs.pixel_to_world_values(x-0.3*width, y)
     x_max = header['NAXIS1']
     y_max = header['NAXIS2']
     if x<0 or x>x_max or y<0 or y>y_max:
         return None, -3
     if width>x_max or height>y_max:
         return None, -4
+    cropped_filename, options = determine_astwarp_options(filename, dest_dir, new_center_RA, new_center_DEC, width, height)
+    if os.path.exists(cropped_filename):
+        return cropped_filename, 1
     cmdline += options
     cmdline = cmdline.rstrip()
     if dbg:
