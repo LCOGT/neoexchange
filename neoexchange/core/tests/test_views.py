@@ -1088,6 +1088,34 @@ class TestRecordBlock(TestCase):
         self.assertEqual(False, sblocks[0].rapid_response)
         self.assertEqual(blocks[0].tracking_rate, 50)
 
+    def test_imaging_block_notz(self):
+        imaging_params = self.imaging_params.copy()
+        imaging_params['request_windows'] = [[{'end': '2018-03-16T03:30:59',
+                                               'start': '2018-03-15T20:20:01'}]]
+
+        block_resp = record_block(self.imaging_tracknum, imaging_params, self.imaging_form, self.imaging_body, observer=self.bart)
+
+        self.assertTrue(block_resp)
+        sblocks = SuperBlock.objects.all()
+        blocks = Block.objects.all()
+        self.assertEqual(1, sblocks.count())
+        self.assertEqual(1, len(sblocks[0].observers))
+        self.assertEqual(self.bart, sblocks[0].observers[0])
+
+        self.assertEqual(1, blocks.count())
+        self.assertEqual(Block.OPT_IMAGING, blocks[0].obstype)
+        # Check the SuperBlock has the broader time window but the Block(s) have
+        # the (potentially) narrower per-Request windows
+        self.assertEqual(self.imaging_form['start_time'], sblocks[0].block_start)
+        self.assertEqual(self.imaging_form['end_time'], sblocks[0].block_end)
+        self.assertEqual(datetime(2018, 3, 15, 20, 20, 1, ), blocks[0].block_start)
+        self.assertEqual(datetime(2018, 3, 16, 3, 30, 59, 0), blocks[0].block_end)
+        self.assertEqual(self.imaging_tracknum, sblocks[0].tracking_number)
+        self.assertTrue(self.imaging_tracknum != blocks[0].request_number)
+        self.assertEqual(self.imaging_params['block_duration'], sblocks[0].timeused)
+        self.assertEqual(False, sblocks[0].rapid_response)
+        self.assertEqual(blocks[0].tracking_rate, 50)
+
     def test_imaging_block_rr_proposal(self):
         imaging_params = self.imaging_params
         imaging_params['proposal_id'] += 'b'
