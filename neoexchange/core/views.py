@@ -2261,9 +2261,13 @@ def record_block(tracking_number, params, form_data, target):
         sblock_pk = SuperBlock.objects.create(**sblock_kwargs)
         i = 0
         for request, request_type in params.get('request_numbers', {}).items():
-            # cut off json UTC timezone remnant
-            no_timezone_blk_start = params['request_windows'][i][0]['start'][:-1]
-            no_timezone_blk_end = params['request_windows'][i][0]['end'][:-1]
+            # cut off json UTC timezone remnant if present
+            no_timezone_blk_start = params['request_windows'][i][0]['start']
+            no_timezone_blk_end = params['request_windows'][i][0]['end']
+            if no_timezone_blk_start.rstrip().upper().endswith('Z'):
+                no_timezone_blk_start = no_timezone_blk_start[:-1]
+            if no_timezone_blk_end.rstrip().upper().endswith('Z'):
+                no_timezone_blk_end = no_timezone_blk_end[:-1]
             try:
                 dt_notz_blk_start = datetime.strptime(no_timezone_blk_start, '%Y-%m-%dT%H:%M:%S')
             except ValueError:
