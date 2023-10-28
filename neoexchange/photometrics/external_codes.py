@@ -565,6 +565,18 @@ def round_up_to_odd(f):
 
     return int(ceil(f) // 2) * 2 + 1
 
+def determine_astcrop_options(filename, dest_dir, xmin, xmax, ymin, ymax):
+    raw_filename = os.path.basename(filename)
+    output_filename = os.path.join(dest_dir, raw_filename.replace('-chisel', '-chisel-crop'))
+    # FITS files have a 1-based origin but the bounds from NumPy are/could be
+    # zero-based. Ensure we don't try to start the section at 0.
+    xmin = max(xmin, 1)
+    ymin = max(ymin, 1)
+
+    options = f'--mode=img --section={xmin}:{xmax},{ymin}:{ymax} --output={output_filename} {filename}'
+
+    return output_filename, options
+
 def determine_astwarp_options(filename, dest_dir, center_RA, center_DEC, width = 1991.0, height = 511.0):
     raw_filename = os.path.basename(filename)
     output_filename = os.path.join(dest_dir, raw_filename.replace('-chisel', '-crop'))

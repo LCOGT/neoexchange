@@ -1843,9 +1843,36 @@ class TestUnpackTarball(TestCase):
     #     self.assertEqual(expected_num_files,len(files))
     #     self.assertEqual(expected_file_name,files[1])
 
+class TestDetermineAstcropOptions(SimpleTestCase):
+    def setUp(self):
+        self.test_dir = '/tmp/foo' #Doesn't need to be actually valid/existing as only needed for string compares
+        self.test_file = 'tfn1m014-fa20-20221104-0207-e91-chisel.fits'
+
+    def test_fullsize(self):
+        expected_cmdline = f'--mode=img --section=1:1991,1:511 --output={self.test_dir}/tfn1m014-fa20-20221104-0207-e91-chisel-crop.fits tfn1m014-fa20-20221104-0207-e91-chisel.fits'
+
+        output_filename, cmdline = determine_astcrop_options(self.test_file, self.test_dir, 0, 1991, 0, 511)
+
+        self.assertEqual(expected_cmdline, cmdline)
+
+    def test_crop(self):
+        expected_cmdline = f'--mode=img --section=42:1949,42:469 --output={self.test_dir}/tfn1m014-fa20-20221104-0207-e91-chisel-crop.fits tfn1m014-fa20-20221104-0207-e91-chisel.fits'
+
+        output_filename, cmdline = determine_astcrop_options(self.test_file, self.test_dir, 42, 1991-42, 42, 511-42)
+
+        self.assertEqual(expected_cmdline, cmdline)
+
+    def test_negative(self):
+        expected_cmdline = f'--mode=img --section=1:1991,1:511 --output={self.test_dir}/tfn1m014-fa20-20221104-0207-e91-chisel-crop.fits tfn1m014-fa20-20221104-0207-e91-chisel.fits'
+
+        output_filename, cmdline = determine_astcrop_options(self.test_file, self.test_dir, -1, 1991, -42, 511)
+
+        self.assertEqual(expected_cmdline, cmdline)
+
+
 class TestDetermineAstwarpOptions(SimpleTestCase):
     def setUp(self):
-        self.test_dir = '/tmp/foo'
+        self.test_dir = '/tmp/foo' #Doesn't need to be actually valid/existing as only needed for string compares
 
     def test_1(self):
         expected_cmdline = f'-hINPUT-NO-SKY --center=119.2346118,8.39523331 --widthinpix --width=1991.0,511.0 --output={self.test_dir}/tfn1m014-fa20-20221104-0207-e91-crop.fits tfn1m014-fa20-20221104-0207-e91-chisel.fits'
@@ -1887,6 +1914,7 @@ class TestDetermineAstwarpOptions(SimpleTestCase):
         output_filename, cmdline = determine_astwarp_options('banzai_test_frame-chisel.fits', self.test_dir, center.ra.value, center.dec.value, 2000, 550)
 
         self.assertEqual(expected_cmdline, cmdline)
+
 
 class TestDetermineAstarithmeticOptions(SimpleTestCase):
     def setUp(self):
