@@ -35,7 +35,7 @@ from core.models import detections_array_dtypes
 from astrometrics.time_subs import timeit
 from photometrics.catalog_subs import oracdr_catalog_mapping, banzai_catalog_mapping, \
     banzai_ldac_catalog_mapping, fits_ldac_to_header, open_fits_catalog
-from photometrics.image_subs import create_weight_image, create_rms_image, get_saturate
+from photometrics.image_subs import create_weight_image, create_rms_image, get_saturate, get_rot
 
 logger = logging.getLogger(__name__)
 
@@ -1698,9 +1698,13 @@ def run_astwarp(filename, dest_dir, center_RA, center_DEC, width = 1991.0, heigh
     wcs = WCS(header)
     #print(header['NAXIS1'], header['NAXIS2'])
     x, y = wcs.world_to_pixel_values(center_RA, center_DEC)
-    #print(x, y)
+    rot_angle = get_rot(wcs)
+    #print(f"{os.path.basename(input_filename)}: {x:.3f} {y:.3f} PA= {rot_angle:+.2f}")
     # Offset by 30% of width to put comet/Didymos at left 20% of crop
-    new_center_RA, new_center_DEC = wcs.pixel_to_world_values(x-0.3*width, y)
+    shift = -0.3
+    if rot_angle > 0:
+        shift = 0.3
+    new_center_RA, new_center_DEC = wcs.pixel_to_world_values(x+(shift*width), y)
     x_max = header['NAXIS1']
     y_max = header['NAXIS2']
     if x<0 or x>x_max or y<0 or y>y_max:
