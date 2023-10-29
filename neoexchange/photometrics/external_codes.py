@@ -452,7 +452,7 @@ def determine_hotpants_options(ref, sci, source_dir, dest_dir, dbgOptions=False)
     return options
 
 
-def determine_swarp_align_options(ref, sci, dest_dir, outname, back_size=42, nthreads=1):
+def determine_swarp_align_options(ref, sci, dest_dir, outname, back_size=32, nthreads=1):
 
     options = ''
 
@@ -509,7 +509,7 @@ def make_ref_head(ref, sci, dest_dir, outname):
 
     return headpath
 
-def determine_swarp_options(inweight, outname, dest_dir, back_size=42):
+def determine_swarp_options(inweight, outname, dest_dir, back_size=32):
     """
     Takes weight.in filename
     If there are problems with this list, they should already be caught in run_swarp().

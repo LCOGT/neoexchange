@@ -751,7 +751,7 @@ class TestSwarpRunner(ExternalCodeUnitTest):
         inlist = os.path.join(self.test_dir, 'images.in')
         inweight = os.path.join(self.test_dir, 'weight.in')
 
-        expected_cmdline = f"./swarp -c swarp_neox.conf @{inlist} -BACK_SIZE 42 -IMAGEOUT_NAME reference.fits -VMEM_DIR {self.test_dir} -RESAMPLE_DIR {self.test_dir} -WEIGHT_IMAGE @{inweight} -WEIGHTOUT_NAME reference.weight.fits"
+        expected_cmdline = f"./swarp -c swarp_neox.conf @{inlist} -BACK_SIZE 32 -IMAGEOUT_NAME reference.fits -VMEM_DIR {self.test_dir} -RESAMPLE_DIR {self.test_dir} -WEIGHT_IMAGE @{inweight} -WEIGHTOUT_NAME reference.weight.fits"
 
         with fits.open(self.test_banzai_file_COPIED) as hdulist:
             # Add in a 'L1ZP' keyword into the header
@@ -875,7 +875,7 @@ class TestSwarpAlignRunner(ExternalCodeUnitTest):
         weightname = outname.replace('.fits', '.weight.fits')
         headname = outname.replace('.fits', '.head')
 
-        expected_cmdline = f"./swarp -c swarp_neox.conf {self.test_fits_file} -BACK_SIZE 42 -IMAGEOUT_NAME {outname} -NTHREADS 1 -VMEM_DIR {self.test_dir} -RESAMPLE_DIR {self.test_dir} -SUBTRACT_BACK N -WEIGHTOUT_NAME {weightname} -WEIGHT_TYPE NONE -COMBINE_TYPE CLIPPED"
+        expected_cmdline = f"./swarp -c swarp_neox.conf {self.test_fits_file} -BACK_SIZE 32 -IMAGEOUT_NAME {outname} -NTHREADS 1 -VMEM_DIR {self.test_dir} -RESAMPLE_DIR {self.test_dir} -SUBTRACT_BACK N -WEIGHTOUT_NAME {weightname} -WEIGHT_TYPE NONE -COMBINE_TYPE CLIPPED"
         cmdline = run_swarp_align(self.test_fits_file, self.test_fits_file, self.source_dir, self.test_dir, outname, binary='./swarp', dbg=True)
 
         self.maxDiff = None
@@ -941,7 +941,7 @@ class TestHotpantsRunner(ExternalCodeUnitTest):
         aligned_rms = os.path.join(self.test_dir, "banzai_test_frame.rms_aligned_to_banzai_test_frame.rms.fits")
         rms = os.path.join(self.test_dir, "banzai_test_frame.rms.fits")
 
-        expected_cmdline = f"./hotpants -inim {bkgsub} -tmplim {aligned} -outim {subtracted} -tni {aligned_rms} -ini {rms} -oni {subtracted_rms} -hki -n i -c t -v 0 -tu 57959 -iu 57959 -tl 43.892452606201175 -il -343.1130201721191 -nrx 3 -nry 3 -nsx 6.760000000000001 -nsy 6.793333333333333 -r 11.235949458513854 -rss 26.96627870043325 -fin 223.60679774997897"
+        expected_cmdline = f"./hotpants -inim {bkgsub} -tmplim {aligned} -outim {subtracted} -tni {aligned_rms} -ini {rms} -oni {subtracted_rms} -hki -n i -c t -v 0 -tu 57959 -iu 57959 -tl 43.892452606201175 -il -342.03351336669925 -nrx 3 -nry 3 -nsx 6.760000000000001 -nsy 6.793333333333333 -r 11.235949458513854 -rss 26.96627870043325 -fin 223.60679774997897"
         cmdline = run_hotpants(self.test_banzai_file_COPIED, self.test_banzai_file_COPIED, self.source_dir, self.test_dir, binary='./hotpants', dbg=True, dbgOptions=True)
         self.maxDiff=None
         self.assertEqual(expected_cmdline, cmdline)
@@ -966,10 +966,8 @@ class TestHotpantsRunner(ExternalCodeUnitTest):
         self.assertTrue('HOTPanTS', header.get('SOFTNAME', ''))
         self.assertTrue('TEMPLATE', header.get('CONVOL00', ''))
         self.assertTrue('0.9932  ', header.get('KSUM00', ''))
-        assert_allclose(-119.99652, data[400, 400])
-        assert_allclose(20.971985, data[640, 30])
-
-
+        assert_allclose(-194.2074, data[400, 400])
+        assert_allclose(17.313549, data[640, 30])
 
 
 class TestFindOrbRunner(ExternalCodeUnitTest):
@@ -1024,7 +1022,7 @@ class TestDetermineSExtOptions(ExternalCodeUnitTest):
 
     def test_no_checkimages(self):
         # No checkimages
-        expected_options = f'-GAIN 1.4 -PIXEL_SCALE 0.46692 -SATUR_LEVEL 41400 -CATALOG_NAME {self.expected_catalog_name} -BACK_SIZE 42'
+        expected_options = f'-GAIN 1.4 -PIXEL_SCALE 0.46692 -SATUR_LEVEL 41400 -CATALOG_NAME {self.expected_catalog_name} -BACK_SIZE 32'
 
         options = determine_sextractor_options(self.test_fits_file, self.test_dir)
 
@@ -1032,7 +1030,7 @@ class TestDetermineSExtOptions(ExternalCodeUnitTest):
 
     def test_ascii_no_checkimages(self):
         # No checkimages
-        expected_options = f'-GAIN 1.4 -PIXEL_SCALE 0.46692 -SATUR_LEVEL 41400 -CATALOG_NAME {self.expected_ascii_catalog_name} -BACK_SIZE 42'
+        expected_options = f'-GAIN 1.4 -PIXEL_SCALE 0.46692 -SATUR_LEVEL 41400 -CATALOG_NAME {self.expected_ascii_catalog_name} -BACK_SIZE 32'
 
         options = determine_sextractor_options(self.test_fits_file, self.test_dir, catalog_type='ASCII')
 
@@ -1040,7 +1038,7 @@ class TestDetermineSExtOptions(ExternalCodeUnitTest):
 
     def test_asciihead_no_checkimages(self):
         # No checkimages
-        expected_options = f'-GAIN 1.4 -PIXEL_SCALE 0.46692 -SATUR_LEVEL 41400 -CATALOG_NAME {self.expected_ascii_catalog_name} -BACK_SIZE 42'
+        expected_options = f'-GAIN 1.4 -PIXEL_SCALE 0.46692 -SATUR_LEVEL 41400 -CATALOG_NAME {self.expected_ascii_catalog_name} -BACK_SIZE 32'
 
         options = determine_sextractor_options(self.test_fits_file, self.test_dir, catalog_type='ASCII_HEAD')
 
@@ -1048,7 +1046,7 @@ class TestDetermineSExtOptions(ExternalCodeUnitTest):
 
     def test_unknownhead_no_checkimages(self):
         # No checkimages
-        expected_options = f'-GAIN 1.4 -PIXEL_SCALE 0.46692 -SATUR_LEVEL 41400 -CATALOG_NAME {self.expected_catalog_name} -BACK_SIZE 42'
+        expected_options = f'-GAIN 1.4 -PIXEL_SCALE 0.46692 -SATUR_LEVEL 41400 -CATALOG_NAME {self.expected_catalog_name} -BACK_SIZE 32'
 
         options = determine_sextractor_options(self.test_fits_file, self.test_dir, catalog_type='POTATO_HEAD')
 
@@ -1057,7 +1055,7 @@ class TestDetermineSExtOptions(ExternalCodeUnitTest):
     def test_one_checkimage(self):
         # Single checkimage
         checkimage_name = os.path.join(self.test_dir, 'example-sbig-e10.rms.fits')
-        expected_options = f'-GAIN 1.4 -PIXEL_SCALE 0.46692 -SATUR_LEVEL 41400 -CATALOG_NAME {self.expected_catalog_name} -CHECKIMAGE_TYPE BACKGROUND_RMS -CHECKIMAGE_NAME {checkimage_name} -BACK_SIZE 42'
+        expected_options = f'-GAIN 1.4 -PIXEL_SCALE 0.46692 -SATUR_LEVEL 41400 -CATALOG_NAME {self.expected_catalog_name} -CHECKIMAGE_TYPE BACKGROUND_RMS -CHECKIMAGE_NAME {checkimage_name} -BACK_SIZE 32'
 
         options = determine_sextractor_options(self.test_fits_file, self.test_dir, checkimage_type=['BACKGROUND_RMS'])
 
@@ -1067,7 +1065,7 @@ class TestDetermineSExtOptions(ExternalCodeUnitTest):
         # Multiple checkimages
         rms_name = os.path.join(self.test_dir, 'example-sbig-e10.rms.fits')
         bkgsub_name = os.path.join(self.test_dir, 'example-sbig-e10.bkgsub.fits')
-        expected_options = f'-GAIN 1.4 -PIXEL_SCALE 0.46692 -SATUR_LEVEL 41400 -CATALOG_NAME {self.expected_catalog_name} -CHECKIMAGE_TYPE BACKGROUND_RMS,-BACKGROUND -CHECKIMAGE_NAME {rms_name},{bkgsub_name} -BACK_SIZE 42'
+        expected_options = f'-GAIN 1.4 -PIXEL_SCALE 0.46692 -SATUR_LEVEL 41400 -CATALOG_NAME {self.expected_catalog_name} -CHECKIMAGE_TYPE BACKGROUND_RMS,-BACKGROUND -CHECKIMAGE_NAME {rms_name},{bkgsub_name} -BACK_SIZE 32'
 
         options = determine_sextractor_options(self.test_fits_file, self.test_dir, checkimage_type=['BACKGROUND_RMS', '-BACKGROUND'])
 
@@ -1077,7 +1075,7 @@ class TestDetermineSExtOptions(ExternalCodeUnitTest):
         # Multiple checkimages (REVERSED ORDER)
         rms_name = os.path.join(self.test_dir, 'example-sbig-e10.rms.fits')
         bkgsub_name = os.path.join(self.test_dir, 'example-sbig-e10.bkgsub.fits')
-        expected_options = f'-GAIN 1.4 -PIXEL_SCALE 0.46692 -SATUR_LEVEL 41400 -CATALOG_NAME {self.expected_catalog_name} -CHECKIMAGE_TYPE -BACKGROUND,BACKGROUND_RMS -CHECKIMAGE_NAME {bkgsub_name},{rms_name} -BACK_SIZE 42'
+        expected_options = f'-GAIN 1.4 -PIXEL_SCALE 0.46692 -SATUR_LEVEL 41400 -CATALOG_NAME {self.expected_catalog_name} -CHECKIMAGE_TYPE -BACKGROUND,BACKGROUND_RMS -CHECKIMAGE_NAME {bkgsub_name},{rms_name} -BACK_SIZE 32'
 
         options = determine_sextractor_options(self.test_fits_file, self.test_dir, checkimage_type=['-BACKGROUND', 'BACKGROUND_RMS'])
 
@@ -1103,7 +1101,7 @@ class TestDetermineSExtOptions(ExternalCodeUnitTest):
             hdulist.flush()
 
         # No checkimages
-        expected_options = f'-GAIN 1.0 -PIXEL_SCALE 0.38903 -SATUR_LEVEL 120000 -CATALOG_NAME {self.expected_banzai_catalog_name} -BACK_SIZE 42'
+        expected_options = f'-GAIN 1.0 -PIXEL_SCALE 0.38903 -SATUR_LEVEL 120000 -CATALOG_NAME {self.expected_banzai_catalog_name} -BACK_SIZE 32'
 
         options = determine_sextractor_options(self.test_banzai_file_COPIED, self.test_dir)
 
@@ -1122,7 +1120,7 @@ class TestDetermineSExtOptions(ExternalCodeUnitTest):
             hdulist.flush()
 
         # No checkimages
-        expected_options = f'-GAIN 1.0 -PIXEL_SCALE 0.38903 -SATUR_LEVEL 115200 -CATALOG_NAME {self.expected_banzai_catalog_name} -BACK_SIZE 42'
+        expected_options = f'-GAIN 1.0 -PIXEL_SCALE 0.38903 -SATUR_LEVEL 115200 -CATALOG_NAME {self.expected_banzai_catalog_name} -BACK_SIZE 32'
 
         options = determine_sextractor_options(self.test_banzai_file_COPIED, self.test_dir)
 
@@ -1141,7 +1139,7 @@ class TestDetermineSExtOptions(ExternalCodeUnitTest):
             hdulist.flush()
 
         # No SATURATE or maxlin, should be default value
-        expected_options = f'-GAIN 1.0 -PIXEL_SCALE 0.38903 -SATUR_LEVEL 65535 -CATALOG_NAME {self.expected_banzai_catalog_name} -BACK_SIZE 42'
+        expected_options = f'-GAIN 1.0 -PIXEL_SCALE 0.38903 -SATUR_LEVEL 65535 -CATALOG_NAME {self.expected_banzai_catalog_name} -BACK_SIZE 32'
 
         options = determine_sextractor_options(self.test_banzai_file_COPIED, self.test_dir)
 
@@ -1159,8 +1157,7 @@ class TestDetermineSwarpOptions(ExternalCodeUnitTest):
         inweight = os.path.join(self.test_dir, 'weight.in')
         outname = "test_swarp_output.fits"
 
-
-        expected_options = f'-BACK_SIZE 42 -IMAGEOUT_NAME test_swarp_output.fits -VMEM_DIR {self.test_dir} -RESAMPLE_DIR {self.test_dir} -WEIGHT_IMAGE @{inweight} -WEIGHTOUT_NAME test_swarp_output.weight.fits -PROJECTION_TYPE TPV '
+        expected_options = f'-BACK_SIZE 32 -IMAGEOUT_NAME test_swarp_output.fits -VMEM_DIR {self.test_dir} -RESAMPLE_DIR {self.test_dir} -WEIGHT_IMAGE @{inweight} -WEIGHTOUT_NAME test_swarp_output.weight.fits -PROJECTION_TYPE TPV '
 
         options = determine_swarp_options(inweight, outname, self.test_dir)
 
@@ -1170,7 +1167,7 @@ class TestDetermineSwarpOptions(ExternalCodeUnitTest):
         inweight = os.path.join(self.test_dir, 'weight.in')
         outname = "reference_coj_fa99_rp_282.77_-25.31.fits"
 
-        expected_options = f'-BACK_SIZE 42 -IMAGEOUT_NAME {outname} -VMEM_DIR {self.test_dir} -RESAMPLE_DIR {self.test_dir} -WEIGHT_IMAGE @{inweight} -WEIGHTOUT_NAME {outname.replace(".fits","")}.weight.fits -PROJECTION_TYPE TPV '
+        expected_options = f'-BACK_SIZE 32 -IMAGEOUT_NAME {outname} -VMEM_DIR {self.test_dir} -RESAMPLE_DIR {self.test_dir} -WEIGHT_IMAGE @{inweight} -WEIGHTOUT_NAME {outname.replace(".fits","")}.weight.fits -PROJECTION_TYPE TPV '
 
         options = determine_swarp_options(inweight, outname, self.test_dir)
 
@@ -1180,7 +1177,7 @@ class TestDetermineSwarpOptions(ExternalCodeUnitTest):
         inweight = os.path.join(self.test_dir, 'weight.in')
         outname = "reference_ogg_ep04_rp_282.77_+25.31.fits"
 
-        expected_options = f'-BACK_SIZE 42 -IMAGEOUT_NAME {outname} -VMEM_DIR {self.test_dir} -RESAMPLE_DIR {self.test_dir} -WEIGHT_IMAGE @{inweight} -WEIGHTOUT_NAME {outname.replace(".fits","")}.weight.fits -PROJECTION_TYPE TAN '
+        expected_options = f'-BACK_SIZE 32 -IMAGEOUT_NAME {outname} -VMEM_DIR {self.test_dir} -RESAMPLE_DIR {self.test_dir} -WEIGHT_IMAGE @{inweight} -WEIGHTOUT_NAME {outname.replace(".fits","")}.weight.fits -PROJECTION_TYPE TAN '
 
         options = determine_swarp_options(inweight, outname, self.test_dir)
 
@@ -1190,7 +1187,7 @@ class TestDetermineSwarpOptions(ExternalCodeUnitTest):
         inweight = os.path.join(self.test_dir, 'weight.in')
         outname = "reference_coj_ep07_rp_282.77_-25.31.fits"
 
-        expected_options = f'-BACK_SIZE 42 -IMAGEOUT_NAME {outname} -VMEM_DIR {self.test_dir} -RESAMPLE_DIR {self.test_dir} -WEIGHT_IMAGE @{inweight} -WEIGHTOUT_NAME {outname.replace(".fits","")}.weight.fits -PROJECTION_TYPE TAN '
+        expected_options = f'-BACK_SIZE 32 -IMAGEOUT_NAME {outname} -VMEM_DIR {self.test_dir} -RESAMPLE_DIR {self.test_dir} -WEIGHT_IMAGE @{inweight} -WEIGHTOUT_NAME {outname.replace(".fits","")}.weight.fits -PROJECTION_TYPE TAN '
 
         options = determine_swarp_options(inweight, outname, self.test_dir)
 
@@ -1207,7 +1204,7 @@ class TestDetermineSwarpAlignOptions(ExternalCodeUnitTest):
         outname = os.path.join(self.test_dir, "example-sbig-e10_aligned_to_example-sbig-e10.fits")
         weightname = outname.replace('.fits', '.weight.fits')
 
-        expected_options = f'-BACK_SIZE 42 -IMAGEOUT_NAME {outname} -NTHREADS 1 -VMEM_DIR {self.test_dir} -RESAMPLE_DIR {self.test_dir} -SUBTRACT_BACK N -WEIGHTOUT_NAME {weightname} -WEIGHT_TYPE NONE -COMBINE_TYPE CLIPPED -PROJECTION_TYPE TPV '
+        expected_options = f'-BACK_SIZE 32 -IMAGEOUT_NAME {outname} -NTHREADS 1 -VMEM_DIR {self.test_dir} -RESAMPLE_DIR {self.test_dir} -SUBTRACT_BACK N -WEIGHTOUT_NAME {weightname} -WEIGHT_TYPE NONE -COMBINE_TYPE CLIPPED -PROJECTION_TYPE TPV '
 
         options = determine_swarp_align_options(self.test_fits_file, self.test_fits_file, self.test_dir, outname)
 
@@ -1217,7 +1214,7 @@ class TestDetermineSwarpAlignOptions(ExternalCodeUnitTest):
         outname = os.path.join(self.test_dir, "reference_coj_fa99-e92_aligned_to_coj1m042-fa99-e92.fits")
         weightname = outname.replace('.fits', '.weight.fits')
 
-        expected_options = f'-BACK_SIZE 42 -IMAGEOUT_NAME {outname} -NTHREADS 1 -VMEM_DIR {self.test_dir} -RESAMPLE_DIR {self.test_dir} -SUBTRACT_BACK N -WEIGHTOUT_NAME {weightname} -WEIGHT_TYPE NONE -COMBINE_TYPE CLIPPED -PROJECTION_TYPE TPV '
+        expected_options = f'-BACK_SIZE 32 -IMAGEOUT_NAME {outname} -NTHREADS 1 -VMEM_DIR {self.test_dir} -RESAMPLE_DIR {self.test_dir} -SUBTRACT_BACK N -WEIGHTOUT_NAME {weightname} -WEIGHT_TYPE NONE -COMBINE_TYPE CLIPPED -PROJECTION_TYPE TPV '
 
         options = determine_swarp_align_options(self.test_fits_file, self.test_fits_file, self.test_dir, outname)
 
@@ -1227,7 +1224,7 @@ class TestDetermineSwarpAlignOptions(ExternalCodeUnitTest):
         outname = os.path.join(self.test_dir, "reference_coj_ep99-e92_aligned_to_coj2m002-ep99-e92.fits")
         weightname = outname.replace('.fits', '.weight.fits')
 
-        expected_options = f'-BACK_SIZE 42 -IMAGEOUT_NAME {outname} -NTHREADS 1 -VMEM_DIR {self.test_dir} -RESAMPLE_DIR {self.test_dir} -SUBTRACT_BACK N -WEIGHTOUT_NAME {weightname} -WEIGHT_TYPE NONE -COMBINE_TYPE CLIPPED -PROJECTION_TYPE TAN '
+        expected_options = f'-BACK_SIZE 32 -IMAGEOUT_NAME {outname} -NTHREADS 1 -VMEM_DIR {self.test_dir} -RESAMPLE_DIR {self.test_dir} -SUBTRACT_BACK N -WEIGHTOUT_NAME {weightname} -WEIGHT_TYPE NONE -COMBINE_TYPE CLIPPED -PROJECTION_TYPE TAN '
 
         options = determine_swarp_align_options(self.test_fits_file, self.test_fits_file, self.test_dir, outname)
 
@@ -1237,7 +1234,7 @@ class TestDetermineSwarpAlignOptions(ExternalCodeUnitTest):
         outname = os.path.join(self.test_dir, "reference_ogg_ep99-e92_aligned_to_ogg2m001-ep99-e92.fits")
         weightname = outname.replace('.fits', '.weight.fits')
 
-        expected_options = f'-BACK_SIZE 42 -IMAGEOUT_NAME {outname} -NTHREADS 1 -VMEM_DIR {self.test_dir} -RESAMPLE_DIR {self.test_dir} -SUBTRACT_BACK N -WEIGHTOUT_NAME {weightname} -WEIGHT_TYPE NONE -COMBINE_TYPE CLIPPED -PROJECTION_TYPE TAN '
+        expected_options = f'-BACK_SIZE 32 -IMAGEOUT_NAME {outname} -NTHREADS 1 -VMEM_DIR {self.test_dir} -RESAMPLE_DIR {self.test_dir} -SUBTRACT_BACK N -WEIGHTOUT_NAME {weightname} -WEIGHT_TYPE NONE -COMBINE_TYPE CLIPPED -PROJECTION_TYPE TAN '
 
         options = determine_swarp_align_options(self.test_fits_file, self.test_fits_file, self.test_dir, outname)
 
@@ -1267,7 +1264,7 @@ class TestDetermineHotpantsOptions(ExternalCodeUnitTest):
         rms = os.path.join(self.test_dir, "banzai_test_frame.rms.fits")
 
         expected_options = f"-inim {bkgsub} -tmplim {aligned} -outim {subtracted} -tni {aligned_rms} -ini {rms} -oni {subtracted_rms} -hki -n i -c t -v 0 " \
-                           f"-tu 57959 -iu 57959 -tl 43.892452606201175 -il -343.1130201721191 -nrx 3 -nry 3 -nsx 6.760000000000001 -nsy 6.793333333333333 -r 11.235949458513854 -rss 26.96627870043325 -fin 223.60679774997897"
+                           f"-tu 57959 -iu 57959 -tl 43.892452606201175 -il -342.03351336669925 -nrx 3 -nry 3 -nsx 6.760000000000001 -nsy 6.793333333333333 -r 11.235949458513854 -rss 26.96627870043325 -fin 223.60679774997897"
 
         options = determine_hotpants_options(self.test_banzai_file_COPIED, self.test_banzai_file_COPIED, self.source_dir, self.test_dir, dbgOptions=True)
 
