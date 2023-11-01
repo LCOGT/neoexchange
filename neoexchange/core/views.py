@@ -4106,7 +4106,7 @@ def plot_didymos_images(jpg_combined_filename, table, out_type='pdf', dscale=100
         # Decrease arrow_len ?
 
     xz=arrow_len
-    yz=ih-1.5*arrow_len
+    yz=ih-3*arrow_len # was 1.5
     xsun=arrow_len*cos(radians(sun)+radians(90))
     ysun=arrow_len*sin(radians(sun)+radians(90))
     xvel=arrow_len*cos(radians(vel)+radians(90))
@@ -4139,7 +4139,7 @@ def plot_didymos_images(jpg_combined_filename, table, out_type='pdf', dscale=100
 
     #add scale bar
     tickxz=arrow_len
-    tickyz=1.5*arrow_len
+    tickyz=2.5*arrow_len # was 1.5
 
     tickw=dscale/(dist*au)/tan(radians(pix/3600))
     tickh=arrow_len/10
