@@ -79,7 +79,8 @@ from astrometrics.time_subs import extract_mpc_epoch, parse_neocp_date, \
     parse_neocp_decimal_date, get_semester_dates, jd_utc2datetime, datetime2st
 from photometrics.external_codes import run_sextractor, run_swarp, run_hotpants, run_scamp, updateFITSWCS,\
     read_mtds_file, unpack_tarball, run_findorb, run_astwarp, run_astarithmetic, run_astnoisechisel, determine_image_stats,\
-    run_astconvertt, run_astmkcatalog, run_didymos_bordergen, run_asttable, run_didymos_astarithmetic
+    run_astconvertt, run_astmkcatalog, run_didymos_bordergen, run_asttable, run_didymos_astarithmetic,\
+    run_astcrop
 from photometrics.catalog_subs import open_fits_catalog, get_catalog_header, \
     determine_filenames, increment_red_level, funpack_fits_file, update_ldac_catalog_wcs, FITSHdrException, \
     get_reference_catalog, reset_database_connection, sanitize_object_name
@@ -3863,6 +3864,51 @@ def convert_fits(filename, dest_dir, out_type='pdf', crop=False, center_RA=0, ce
 
     return pdf_filename, status
 
+def run_make_crop(self, filename, dest_dir_path, output=True):
+
+    status = 0
+    if self is None:
+        func = print
+    else:
+        func = self.stdout.write
+
+    try:
+        header = fits.getheader(filename, ext=1)
+        w = WCS(header)
+        array = fits.getdata(filename, ext=1)
+    except (KeyError, ValueError):
+        if output: func(f"Couldn't extract header from {filename}")
+        header = {}
+        array = None
+        w = None
+
+    image_width = 1991
+    try:
+        image_width = header.get('NAXIS1', image_width)
+    except (KeyError, ValueError):
+        if output: func(f"Couldn't determine image width from {filename}; assuming default of {image_width}")
+    image_height = 511
+    try:
+        image_height = header.get('NAXIS2', image_height)
+    except (KeyError, ValueError):
+        if output: func(f"Couldn't determine image height from {filename}; assuming default of {image_height}")
+
+    if array is not None:
+        # Determine the x,y limits of the non-NaN region and compare to width, height
+        # Add 1 since FITS is 1-index based, not 0-index based
+        bounds = np.argwhere(~np.isnan(array))
+        xmin, xmax = min(bounds[:, 1])+1, max(bounds[:, 1])+1
+        ymin, ymax = min(bounds[:, 0])+1, max(bounds[:, 0])+1
+        if (xmax-xmin)+1 <= image_width or (ymax-ymin)+1 <= image_height:
+            # do cropping
+            filename, status = run_astcrop(filename, dest_dir_path, xmin, xmax, ymin, ymax)
+            if output: func(f"Cropped to {xmin}:{xmax}, {ymin}:{ymax} ({(xmax-xmin)+1}x{(ymax-ymin)+1}), output to {os.path.basename(filename)} status={status}")
+            # Update image width and height to cropped values
+            image_width = (xmax-xmin)+1
+            image_height = (ymax-ymin)+1
+
+    return filename, status, image_width, image_height
+
 def run_make_didymos_chisel_plots(self, chiseled_filename, dest_dir_path, center_RA, center_DEC, output=True):
     '''Converts passed <chiseled_filename> to PDF, generates FITS and TXT versions
     of the detection catalog from the NoiseChisel image, finds the id in the catalog
@@ -3886,9 +3932,11 @@ def run_make_didymos_chisel_plots(self, chiseled_filename, dest_dir_path, center
     try:
         header = fits.getheader(chiseled_filename, ext=('DETECTIONS',1))
         w = WCS(header)
+        array = fits.getdata(chiseled_filename, ext=('DETECTIONS',1))
     except (KeyError, ValueError):
         if output: func(f"Couldn't extract header from {chiseled_filename}")
         header = {}
+        array = None
         w = None
 
     image_width = 1991
@@ -3901,6 +3949,16 @@ def run_make_didymos_chisel_plots(self, chiseled_filename, dest_dir_path, center
         image_height = header.get('NAXIS2', image_height)
     except (KeyError, ValueError):
         if output: func(f"Couldn't determine image height from {chiseled_filename}; assuming default of {image_height}")
+
+    if array is not None:
+        # Determine the x,y limits of the non-NaN region and compare to width, height
+        bounds = np.argwhere(~np.isnan(array))
+        xmin, xmax = min(bounds[:, 1])+1, max(bounds[:, 1])+1
+        ymin, ymax = min(bounds[:, 0])+1, max(bounds[:, 0])+1
+        if (xmax-xmin)+1 < image_width or (ymax-ymin)+1 < image_height:
+            # do cropping
+            chiseled_filename, status = run_astcrop(chiseled_filename, dest_dir_path, xmin, xmax, ymin, ymax)
+            if output: func(f"Cropped to {xmin}:{xmax}, {ymin}:{ymax} ({(xmax-xmin)+1}x{(ymax-ymin)+1}), output to {os.path.basename(chiseled_filename)}")
 
     # Convert chiseled image to PDF
     if output: func(f"Converting chisel image ({image_width}x{image_height}) to PDF")
@@ -3962,7 +4020,7 @@ def make_annotated_plot(fits_combined_filepath, out_type='pdf', dscale=1000, wid
     output_plot = None
 
     fits_filename = os.path.basename(fits_combined_filepath)
-    fits_filename = fits_filename.replace('-combine', '').replace('-superstack', '').replace('-hyperstack', '')
+    fits_filename = fits_filename.replace('-combine', '').replace('-superstack', '').replace('-hyperstack', '').replace('-trim', '')
     prefix = 'superstack'
     try:
         stack_frame = Frame.objects.get(filename=fits_filename, frametype=Frame.NEOX_RED_FRAMETYPE)
@@ -4095,10 +4153,14 @@ def plot_didymos_images(jpg_combined_filename, table, out_type='pdf', dscale=100
 
     # plot outline of chiseled detection image as mask
     contour_cmap = ListedColormap(["black", colors[2]])
-    mask = matplotlib.image.imread(jpg_combined_filename.replace('superstack.jpg', 'superstack-bd.jpg').replace('hyperstack.jpg', 'hyperstack-bd.jpg'))
+    mask_filename = jpg_combined_filename.replace('-superstack', '-superstack-bd').replace('-hyperstack', '-hyperstack-bd')
+    if os.path.exists(mask_filename):
+        mask = matplotlib.image.imread(mask_filename)
 
-    masked_data = np.ma.masked_where(mask < 240, mask)
-    mask_plot= ax.imshow(masked_data, cmap=contour_cmap, extent=[0, iw, 0, ih], interpolation='none')
+        masked_data = np.ma.masked_where(mask < 240, mask)
+        mask_plot= ax.imshow(masked_data, cmap=contour_cmap, extent=[0, iw, 0, ih], interpolation='none')
+    else:
+        logger.warning(f"Didn't find mask image {mask_filename}")
 
     fig.savefig(output_plot, bbox_inches='tight', pad_inches=0)
     # delete figure to free memory

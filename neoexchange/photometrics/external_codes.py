@@ -566,14 +566,20 @@ def round_up_to_odd(f):
     return int(ceil(f) // 2) * 2 + 1
 
 def determine_astcrop_options(filename, dest_dir, xmin, xmax, ymin, ymax):
+    """Determine the options for running `astcrop`. Since this is designed to
+    be run in a loop over all HDUS, the string returned contains a placeholder
+    '--hdu=<hdu>' that needs to be substitued.
+    """
+
     raw_filename = os.path.basename(filename)
-    output_filename = os.path.join(dest_dir, raw_filename.replace('-chisel', '-chisel-crop'))
+    output_filename = raw_filename.replace('.fits', '-trim.fits')
+    output_filename = os.path.join(dest_dir, output_filename)
     # FITS files have a 1-based origin but the bounds from NumPy are/could be
     # zero-based. Ensure we don't try to start the section at 0.
     xmin = max(xmin, 1)
     ymin = max(ymin, 1)
 
-    options = f'--mode=img --section={xmin}:{xmax},{ymin}:{ymax} --output={output_filename} {filename}'
+    options = f'--mode=img --section={xmin}:{xmax},{ymin}:{ymax} --hdu=<hdu> --append --metaname=<hdu> --output={output_filename} {filename}'
 
     return output_filename, options
 
@@ -1682,6 +1688,52 @@ def run_damit(call_name, cat_input_filename, primary_call, write_out=False, bina
         retcode_or_cmdline = cmd_call.communicate()
 
     return retcode_or_cmdline
+
+def run_astcrop(filename, dest_dir, xmin, xmax, ymin, ymax, binary='astcrop', dbg=False):
+    '''
+    Crops the passed <filename> using astcrop to xmin:xmax,ymin:ymax pixel extent,
+    writing output to <dest_dir>
+    '''
+    if filename is None:
+        return None, -2
+    if os.path.exists(filename) is False:
+        return None, -1
+
+    binary = binary or find_binary(binary)
+    if binary is None:
+        logger.error(f"Could not locate {binary} executable in PATH")
+        return None, -42
+
+#for hdu in $(astfits /apophis/cora/didymos_data/outputs_segstack7/20230223/elp1m006-fa07-20230223-0160-e92-combine-superstack-chisel.fits --listimagehdus); do
+#  astcrop --mode=img  --section=1:1991,1:511 $filename --hdu=$hdu --append --output=$cropped_filename --metaname=$hdu;  done
+
+    cropped_filename, options = determine_astcrop_options(filename, dest_dir, xmin, xmax, ymin, ymax)
+    if os.path.exists(cropped_filename):
+        return cropped_filename, 1
+
+    with fits.open(filename) as hdulist:
+        hdu_names = [hdu.name for hdu in hdulist]
+
+    for hdu in hdu_names:
+        cmdline = f"{binary} "
+        if hdu == '':
+            cmdline += options.replace('--hdu=<hdu>', '').replace('--metaname=<hdu>', '')
+        else:
+            cmdline += options.replace('<hdu>', hdu)
+        cmdline = cmdline.rstrip()
+        if dbg:
+            print(cmdline)
+
+        if dbg is True:
+            retcode_or_cmdline = cmdline
+        else:
+            logger.debug(f"cmdline={cmdline}")
+            cmd_args = cmdline.split()
+            cmd_call = Popen(cmd_args, cwd=dest_dir, stdout=PIPE)
+            (out, errors) = cmd_call.communicate()
+            retcode_or_cmdline = cmd_call.returncode
+
+    return cropped_filename, retcode_or_cmdline
 
 def run_astwarp(filename, dest_dir, center_RA, center_DEC, width = 1991.0, height = 511.0, binary='astwarp', dbg=False):
     '''

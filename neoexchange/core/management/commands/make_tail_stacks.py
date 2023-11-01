@@ -195,13 +195,17 @@ class Command(BaseCommand):
                         didymos_ids.append(results['didymos_id'])
 
                 for combined_filename in combined_filenames:
-                    pdf_filename_combined, status = convert_fits(combined_filename, dest_dir_path, width=width, height=height)
-                    pdf_filenames_combined.append(pdf_filename_combined)
-                    jpg_filename_combined, status = convert_fits(combined_filename, dest_dir_path, out_type='jpg', width=width, height=height)
-                    # Make annotated plots
                     if combined_filename is not None:
-                        output_plot = make_annotated_plot(combined_filename, width=width, height=height)
-                        annotated_plots_combined.append(output_plot)
+                        trim_combined_filename, status, new_width, new_height = run_make_crop(combined_filename, dest_dir_path)
+                        pdf_filename_combined, status = convert_fits(trim_combined_filename, dest_dir_path)
+                        pdf_filenames_combined.append(pdf_filename_combined)
+                        jpg_filename_combined, status = convert_fits(trim_combined_filename, dest_dir_path, out_type='jpg')
+                        # Make annotated plots
+                        if trim_combined_filename is not None:
+                            output_plot = make_annotated_plot(trim_combined_filename, width=new_width, height=new_height)
+                            annotated_plots_combined.append(output_plot)
+                    else:
+                        self.stdout.write("combined_filename is None")
                 self.stdout.write(f'Chiseled  filename(s): {pdf_filenames_chiseled}')
                 self.stdout.write(f'Combined  filename(s): {pdf_filenames_combined}')
                 self.stdout.write(f'Annotated filename(s): {annotated_plots_combined}')

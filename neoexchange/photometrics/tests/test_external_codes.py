@@ -1847,21 +1847,21 @@ class TestDetermineAstcropOptions(SimpleTestCase):
         self.test_file = 'tfn1m014-fa20-20221104-0207-e91-chisel.fits'
 
     def test_fullsize(self):
-        expected_cmdline = f'--mode=img --section=1:1991,1:511 --output={self.test_dir}{os.sep}tfn1m014-fa20-20221104-0207-e91-chisel-crop.fits tfn1m014-fa20-20221104-0207-e91-chisel.fits'
+        expected_cmdline = f'--mode=img --section=1:1991,1:511 --hdu=<hdu> --append --metaname=<hdu> --output={self.test_dir}{os.sep}tfn1m014-fa20-20221104-0207-e91-chisel-trim.fits tfn1m014-fa20-20221104-0207-e91-chisel.fits'
 
         output_filename, cmdline = determine_astcrop_options(self.test_file, self.test_dir, 0, 1991, 0, 511)
 
         self.assertEqual(expected_cmdline, cmdline)
 
     def test_crop(self):
-        expected_cmdline = f'--mode=img --section=42:1949,42:469 --output={self.test_dir}{os.sep}tfn1m014-fa20-20221104-0207-e91-chisel-crop.fits tfn1m014-fa20-20221104-0207-e91-chisel.fits'
+        expected_cmdline = f'--mode=img --section=42:1949,42:469 --hdu=<hdu> --append --metaname=<hdu> --output={self.test_dir}{os.sep}tfn1m014-fa20-20221104-0207-e91-chisel-trim.fits tfn1m014-fa20-20221104-0207-e91-chisel.fits'
 
         output_filename, cmdline = determine_astcrop_options(self.test_file, self.test_dir, 42, 1991-42, 42, 511-42)
 
         self.assertEqual(expected_cmdline, cmdline)
 
     def test_negative(self):
-        expected_cmdline = f'--mode=img --section=1:1991,1:511 --output={self.test_dir}{os.sep}tfn1m014-fa20-20221104-0207-e91-chisel-crop.fits tfn1m014-fa20-20221104-0207-e91-chisel.fits'
+        expected_cmdline = f'--mode=img --section=1:1991,1:511 --hdu=<hdu> --append --metaname=<hdu> --output={self.test_dir}{os.sep}tfn1m014-fa20-20221104-0207-e91-chisel-trim.fits tfn1m014-fa20-20221104-0207-e91-chisel.fits'
 
         output_filename, cmdline = determine_astcrop_options(self.test_file, self.test_dir, -1, 1991, -42, 511)
 
@@ -2207,6 +2207,97 @@ class TestDetermineAsttableOptions(SimpleTestCase):
         output_filename, cmdline = determine_asttable_options(self.test_file, self.test_dir)
 
         self.assertEqual(expected_cmdline, cmdline)
+
+
+class TestRunAstcrop(ExternalCodeUnitTest):
+    def setUp(self):
+        super(TestRunAstcrop, self).setUp()
+
+        # needs to modify the original image when running astwarp
+        shutil.copy(os.path.abspath(self.test_banzai_file), self.test_dir)
+        test_banzai_file_COPIED = os.path.join(self.test_dir, 'banzai_test_frame.fits')
+
+        self.test_file, status = run_astnoisechisel(test_banzai_file_COPIED, self.test_dir, bkgd_only=True)
+
+        self.output_filename = os.path.join(self.test_dir, self.test_file.replace('-chisel', '-chisel-trim'))
+
+        self.center_RA = 272.953000468
+        self.center_DEC = 1.28040205532
+
+        # Disable anything below CRITICAL level
+        logging.disable(logging.CRITICAL)
+
+        self.remove = True
+        self.maxDiff = None
+
+    def return_fits_dims(self, filename, keywords = ['NAXIS1', 'NAXIS2']):
+        dims = {}
+        with fits.open(filename) as hdulist:
+            for hdu in hdulist:
+                header = hdu.header
+                dims[hdu.name] = []
+                for key in keywords:
+                    dims[hdu.name].append(header.get(key, None))
+        return dims
+
+    def touch(self, fname, times=None):
+        with open(fname, 'a'):
+            os.utime(fname, times)
+
+    def test_nofilename(self):
+        expected_filename = None
+        expected_status = -2
+
+        cropped_filename, status = run_astcrop(None, self.test_dir, 0, 1991, 0, 511)
+
+        self.assertEqual(expected_filename, cropped_filename)
+        self.assertEqual(expected_status, status)
+
+    def test_nonexistant_filename(self):
+        expected_filename = None
+        expected_status = -1
+
+        cropped_filename, status = run_astcrop('/foo/bar', self.test_dir, 0, 1991, 0, 511)
+
+        self.assertEqual(expected_filename, cropped_filename)
+        self.assertEqual(expected_status, status)
+
+    def test_zerobased(self):
+        expected_status = 0
+        expected_naxis1 = 1991.0
+        expected_naxis2 = 511.0
+        expected_vals = [expected_naxis1, expected_naxis2, self.center_RA, self.center_DEC]
+
+        hdr_keywords = ['NAXIS1', 'NAXIS2', 'CRVAL1', 'CRVAL2']
+        cropped_filename, status = run_astcrop(self.test_file, self.test_dir, 0, 1991, 0, 511)
+        all_dims = self.return_fits_dims(self.output_filename, keywords= hdr_keywords)
+
+        self.assertEquals(expected_status, status)
+        self.assertTrue(os.path.exists(self.output_filename))
+        self.assertEquals(self.output_filename, cropped_filename)
+        for hduname, dims in all_dims.items():
+            for i, keyword in enumerate(hdr_keywords):
+                if dims[i] is not None:
+                    self.assertEquals(expected_vals[i], dims[i], msg=f"Failure in {hduname} on {keyword}")
+
+    def test_change_center(self):
+        expected_status = 0
+        expected_naxis1 = 1981
+        expected_naxis2 = 492
+        expected_vals = [expected_naxis1, expected_naxis2, self.center_RA, self.center_DEC]
+
+        hdr_keywords = ['NAXIS1', 'NAXIS2', 'CRVAL1', 'CRVAL2']
+        cropped_filename, status = run_astcrop(self.test_file, self.test_dir, 10, 1990, 10, 501)
+        all_dims = self.return_fits_dims(self.output_filename, keywords = hdr_keywords)
+
+        self.assertEquals(expected_status, status)
+        self.assertTrue(os.path.exists(self.output_filename))
+        self.assertEquals(self.output_filename, cropped_filename)
+        for hduname, dims in all_dims.items():
+            for i, keyword in enumerate(hdr_keywords):
+                if dims[i] is not None:
+                    self.assertEquals(expected_vals[i], dims[i], msg=f"Failure in {hduname} on {keyword}")
+
 
 class TestRunAstwarp(ExternalCodeUnitTest):
     def setUp(self):
