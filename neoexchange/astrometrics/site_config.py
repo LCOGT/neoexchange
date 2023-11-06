@@ -11,6 +11,10 @@ tel_field = {   'onem_fov'              : 15.5,
                 'onem_fli_pixscale'     : 0.341,
                 'point4m_pixscale'      : 0.571,        # bin 2, from average kb29 values = 1.139/ 1x1 nominal = 0.58 / 1x1 from average of kb27 = 0.571
                 'point4m_fov'           : 29.1,
+                'point4m_qhy_pixscale'  : 0.7386,       # from ETC config
+                'point4m_qhy_fov'       : 117.9,
+                'point4m_qhy_center_pixscale'  : 0.7386,       # central 30'x30' fov
+                'point4m_qhy_center_fov'       : 29.5,
                 'twom_pixscale'         : 0.304,
                 'twom_fov'              : 10.0,
                 'twom_muscat_pixscale'  : 0.27,
@@ -39,6 +43,8 @@ tel_overhead = { 'onem_setup_overhead'      : 90.0,                  # front pad
 # Per-Instrument overheads (s)
 inst_overhead = {   'onemsbig_exp_overhead'         : 15.5,
                     'point4m_exp_overhead'          : 13.0 + 1.0,       # readout + fixed overhead/exposure
+                    'point4m_qhy_exp_overhead'      : 6,                # readout + fixed overhead/exposure
+                    'point4m_qhy_center_exp_overhead' : 3,              # readout + fixed overhead/exposure
                     'sinistro_exp_overhead'         : 27.0 + 1.0,       # readout + fixed overhead/exposure
                     'sinistro_2x2_exp_overhead'     : 8.0 + 1.0,        # readout + fixed overhead/exposure
                     'twom_exp_overhead'             : 10.5 + 8.5,       # readout + fixed overhead/exposure
@@ -146,5 +152,6 @@ science_cams = [    "1m0-SciCam-Sinistro",
                     "2m0-FLOYDS-SciCam",
                     "2m0-SciCam-Spectral",
                     "2m0-SciCam-MuSCAT",
-                    "0m4-SciCam-SBIG"
+                    "0m4-SciCam-SBIG",
+                    "0m4-SciCam-QHY600"
                 ]

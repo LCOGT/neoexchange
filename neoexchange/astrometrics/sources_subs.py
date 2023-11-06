@@ -2216,8 +2216,12 @@ def configure_defaults(params):
             if params.get('filter', None):
                 del(params['filter'])
             params['spectra_slit'] = 'slit_6.0as'
-    elif params['site_code'] in ['Z17', 'Z21', 'W89', 'W79', 'T03', 'T04', 'Q58', 'Q59', 'V38', 'L09', '0M4']:
+    elif params['site_code'] in ['Z17', 'Z21', 'W89', 'W79', 'T04', 'Q58', '0M4']:
         params['instrument'] = '0M4-SCICAM-SBIG'
+        params['pondtelescope'] = '0m4'
+        params['binning'] = 1
+    elif params['site_code'] in ['T03', 'Q59', 'V38', 'L09']:
+        params['instrument'] = '0M4-SCICAM-QHY600'
         params['pondtelescope'] = '0m4'
         params['binning'] = 1
 # We are not currently doing Aqawan-specific binding for LSC (or TFN or OGG) but
@@ -2412,11 +2416,15 @@ def submit_block_to_scheduler(elements, params):
 def fetch_filter_list(site, spec):
     """Fetches the filter list from the observation portal instruments endpoint"""
 
+    valid_point4m_qhy_codes = ['T03', 'Q59', 'V38', 'L09']
+
     siteid, encid, telid = MPC_site_code_to_domes(site)
     if '1m0' in telid.lower():
         camid = "1m0-SciCam-Sinistro"
     elif '0m4' in telid.lower():
         camid = "0m4-SciCam-SBIG"
+        if site in valid_point4m_qhy_codes:
+            camid = "0m4-SciCam-QHY600"
     elif '2m0' in telid.lower():
         if spec:
             camid = "2m0-FLOYDS-SciCam"
@@ -2742,6 +2750,8 @@ def fetch_list_targets(list_targets):
                         line = str(line).replace(',', '')
                     if '\n' in line:
                         line = str(line).replace('\n', '')
+                    line = line.strip()
+
                     new_target_list.append(line)
             continue
         if '_' in obj_id:

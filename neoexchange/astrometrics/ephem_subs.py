@@ -1950,7 +1950,8 @@ def get_sitecam_params(site, bin_mode=None):
     unrecognized site."""
 
     valid_site_codes = LCOGT_site_codes()
-    valid_point4m_codes = ['Z17', 'Z21', 'W89', 'W79', 'T03', 'T04', 'Q58', 'Q59', 'V38', 'L09', '0M4']
+    valid_point4m_codes = ['Z17', 'Z21', 'W89', 'W79', 'T04', 'Q58', '0M4']
+    valid_point4m_qhy_codes = ['T03', 'Q59', 'V38', 'L09']
 
     site = site.upper()
     if site == '2M0':
@@ -1997,6 +1998,19 @@ def get_sitecam_params(site, bin_mode=None):
         exp_overhead = cfg.inst_overhead['point4m_exp_overhead']
         pixel_scale = cfg.tel_field['point4m_pixscale']
         fov = cfg.tel_field['point4m_fov']
+        max_exp_length = 300.0
+        alt_limit = cfg.tel_alt['point4m_alt_limit']
+    elif site in valid_point4m_qhy_codes:
+        site_code = site
+        setup_overhead = cfg.tel_overhead['point4m_setup_overhead']
+        if bin_mode == 'center_30':
+            exp_overhead = cfg.inst_overhead['point4m_qhy_center_exp_overhead']
+            pixel_scale = cfg.tel_field['point4m_qhy_center_pixscale']
+            fov = cfg.tel_field['point4m_qhy_center_fov']
+        else:
+            exp_overhead = cfg.inst_overhead['point4m_qhy_exp_overhead']
+            pixel_scale = cfg.tel_field['point4m_qhy_pixscale']
+            fov = cfg.tel_field['point4m_qhy_fov']
         max_exp_length = 300.0
         alt_limit = cfg.tel_alt['point4m_alt_limit']
     elif site in valid_site_codes or site == '1M0':
