@@ -118,20 +118,20 @@ def find_frames(block):
     frames and number of neox frames. 
     Returns list of frames and number of banzai and neox frames.
     '''
-    frames = Frame.objects.filter(block = block)
+    frames = Frame.objects.filter(block=block)
     # Determine frame types to search for
     frame_types = [Frame.BANZAI_RED_FRAMETYPE, ]
     try:
         frame_types.append(Frame.MRO_RED_FRAMETYPE)
     except AttributeError:
         pass
-    banzai_frames = frames.filter(frametype__in = frame_types)
-    neox_frames = frames.filter(frametype = Frame.NEOX_RED_FRAMETYPE)
+    banzai_frames = frames.filter(frametype__in=frame_types)
+    neox_frames = frames.filter(frametype=Frame.NEOX_RED_FRAMETYPE) #, rms_of_fit__gte=0.0)
     neox_frames = neox_frames.order_by('midpoint')
     #if len(banzai_frames) != len(neox_frames):
     #    print(f'Block uid: {block.get_blockuid}, Num banzai frames: {len(banzai_frames)}, Num neox frames: {len(neox_frames)}')
 
-    return neox_frames, len(banzai_frames), len(neox_frames)
+    return neox_frames, banzai_frames.count(), neox_frames.count()
 
 def frames_summary(frames):
     '''
