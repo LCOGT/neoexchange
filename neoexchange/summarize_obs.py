@@ -24,7 +24,7 @@ def summarize_observations(target_name='65803', start_date='2022-07-15', proposa
         else:
             blocks = blocks.filter(superblock__proposal__code=proposal)
     if exclude_proposal is not None:
-        if type(proposal) == list:
+        if type(exclude_proposal) == list:
             blocks = blocks.exclude(superblock__proposal__code__in=exclude_proposal)
         else:
             blocks = blocks.exclude(superblock__proposal__code=exclude_proposal)
