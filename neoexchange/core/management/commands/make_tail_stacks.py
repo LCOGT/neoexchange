@@ -151,7 +151,7 @@ class Command(BaseCommand):
                 moon_frac.append(avg_moon_frac)
                 moon_distance.append(avg_moon_dist)
                 V_mags.append(V_mag)
-                block_uid.append(blockuid[0])
+                block_uid.append(",".join(blockuid))
                 input_data_paths.append(input_data_path)
                 output_data_paths.append(output_path)
 

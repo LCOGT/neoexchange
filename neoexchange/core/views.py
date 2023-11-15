@@ -76,7 +76,8 @@ from astrometrics.sources_subs import fetchpage_and_make_soup, packed_to_normal,
     read_mpcorbit_file, fetch_jpl_physparams_altdes, store_jpl_sourcetypes, store_jpl_desigs,\
     store_jpl_physparams
 from astrometrics.time_subs import extract_mpc_epoch, parse_neocp_date, \
-    parse_neocp_decimal_date, get_semester_dates, jd_utc2datetime, datetime2st
+    parse_neocp_decimal_date, get_semester_dates, jd_utc2datetime, datetime2st, \
+    round_datetime
 from photometrics.external_codes import run_sextractor, run_swarp, run_hotpants, run_scamp, updateFITSWCS,\
     read_mtds_file, unpack_tarball, run_findorb, run_astwarp, run_astarithmetic, run_astnoisechisel, determine_image_stats,\
     run_astconvertt, run_astmkcatalog, run_didymos_bordergen, run_asttable, run_didymos_astarithmetic,\
@@ -3590,6 +3591,9 @@ def determine_substack_times(block, exptime=800, split=True):
     [split] is False, then it determines the time span for the whole Block
     '''
     time_strings = []
+    dt_string = "%Y-%m-%d %H:%M"
+    t_string = "%H:%M"
+    round_times = False
 
     frames, banzai, neox = find_frames(block)
     if split:
@@ -3601,7 +3605,13 @@ def determine_substack_times(block, exptime=800, split=True):
         last_frame = subblock[-1]
         sub_start = first_frame.midpoint - timedelta(seconds=(first_frame.exptime/2.0))
         sub_end = last_frame.midpoint + timedelta(seconds=(last_frame.exptime/2.0))
-        time_string = f'{sub_start.strftime("%Y-%m-%d %H:%M:%S")} -- {sub_end.strftime("%H:%M:%S")}'
+        midpoint = sub_start + (sub_end - sub_start)/2
+        if round_times:
+            sub_start = round_datetime(sub_start, 1, False)
+            sub_end = round_datetime(sub_end, 1, True)
+        sub_start_string = sub_start.strftime(dt_string)
+        sub_end_string = sub_end.strftime(dt_string)
+        time_string = f'{sub_start_string} -- {sub_end_string} (Midpoint: {midpoint.strftime(dt_string)})'
         time_strings.append(time_string)
         print(time_string)
 
@@ -3612,6 +3622,9 @@ def write_figure_latex(annotated_plots_combined, time_strings, site):
     of the first entry in annotated_plots_combined'''
 
     directory = os.path.dirname(annotated_plots_combined[0])
+    if site == '':
+        # Put general, not-per-site output into the root directory
+        directory = os.path.abspath(os.path.join(directory, f'..{os.sep}..'))
     dirs = annotated_plots_combined[0].split(os.sep)
     try:
         date_label = dirs[-3]
@@ -3626,28 +3639,44 @@ def write_figure_latex(annotated_plots_combined, time_strings, site):
             date_label = dirs[-2]
             daydir_dt = datetime.strptime(date_label, 'mro_%y%m%d')
     latex_file = os.path.join(directory, f'figure_text_{date_label}_{site}.tex')
+    first_date = datetime.max
+    last_date = datetime.min
+    if site.lower() == 'mro':
+        site_string = 'MRO.'
+    else:
+        site_string = f'the \\LCO {site.upper()} site.'
     with open(latex_file, 'w') as fh:
         print('\\begin{figure}', file=fh)
         i = 0
         for filepath, time_string in zip(annotated_plots_combined, time_strings):
             if filepath is not None:
+                start_date = datetime.strptime(time_string[0:16], "%Y-%m-%d %H:%M")
+                end_date = datetime.strptime(time_string[0:10]+time_string[20:25], "%Y-%m-%d%H:%M")
+                if end_date < start_date:
+                    end_date += timedelta(days=1)
+                first_date = min(first_date, start_date)
+                last_date = max(last_date, end_date)
                 filename = os.path.basename(filepath)
                 prefix = ' '*len('\\gridline{')
                 if i % 3 == 0:
                     prefix = '\\gridline{'
-                print(f'{prefix}\\fig{{morph_plots/{filename}}}{{0.3\\textwidth}}{{({chr(ord("a")+i)}) {time_string}}}', end='', file=fh)
+                print(f'{prefix}\\fig{{morph_plots/{filename}}}{{0.3\\textwidth}}{{({chr(ord("a")+i%9)}) {time_string}}}', end='', file=fh)
                 i += 1
                 if i % 3 == 0 or i >= len(annotated_plots_combined):
                     print('}', file=fh)
                 else:
                     print('', file=fh)
-        date_string = daydir_dt.strftime("%Y-%m-%d")
-        if site.lower() == 'mro':
-            site_string = 'MRO.'
-        else:
-            site_string = f'the \\LCO {site.upper()} site.'
-        # XXX Needs update of date_string for actual date span
-        print(f'\\caption{{Median combined stacked images of Didymos from {date_string} at {site_string}}}\n\\label{{fig:morphology_{date_label}}}\n\\end{{figure}}\n', file=fh)
+                if i % 9 == 0 or i >= len(annotated_plots_combined):
+                    date_string = f'{first_date.strftime("%Y-%m-%d")} to {last_date.strftime("%Y-%m-%d")}'
+                    date_label = first_date.strftime("%Y%m%d")
+                    print(f'\\caption{{Median combined stacked images of Didymos from {date_string} at {site_string}}}\n\\label{{fig:morphology_{date_label}}}\n\\end{{figure}}\n', file=fh)
+                    print('\\begin{figure}', file=fh)
+                    first_date = datetime.max
+                    last_date = datetime.min
+        if first_date != datetime.max:
+            date_string = f'{first_date.strftime("%Y-%m-%d")} to {last_date.strftime("%Y-%m-%d")}'
+            date_label = first_date.strftime("%Y%m%d")
+            print(f'\\caption{{Median combined stacked images of Didymos from {date_string} at {site_string}}}\n\\label{{fig:morphology_{date_label}}}\n\\end{{figure}}\n', file=fh)
 
     print('Wrote to', latex_file)
     return latex_file
