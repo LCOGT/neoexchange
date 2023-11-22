@@ -122,7 +122,25 @@ class Command(BaseCommand):
 
                         # Check for processed frames already
                         images, catalogs = determine_images_and_catalogs(self, dest_dir, red_level='e92')
-                        if images is None and catalogs is None or (len(images) < filtered_frames.count() and len(catalogs) < filtered_frames.count()):
+                        if images is not None:
+                            images_filenames = [os.path.basename(f) for f in images]
+                            red_frames = [x.replace('e91', 'e92') for x in filtered_frames.values_list('filename', flat=True)]
+                            num_images = 0
+                            for red_frame in red_frames:
+                                if red_frame in images_filenames:
+                                    num_images += 1
+                        else:
+                            num_images = 0
+                        if catalogs is not None:
+                            catalogs_filenames = [os.path.basename(f) for f in catalogs]
+                            red_catalogs = [x.replace('e91', 'e92_ldac') for x in filtered_frames.values_list('filename', flat=True)]
+                            num_catalogs = 0
+                            for red_catalog in red_catalogs:
+                                if red_catalog in catalogs_filenames:
+                                    num_catalogs += 1
+                        else:
+                            num_catalogs = 0
+                        if images is None and catalogs is None or (num_images != filtered_frames.count() and num_catalogs != filtered_frames.count()):
                             self.stdout.write(f"Not all products present, running frame reduction pipeline in {dest_dir}")
 
                             year = filtered_frames[0].midpoint.year
