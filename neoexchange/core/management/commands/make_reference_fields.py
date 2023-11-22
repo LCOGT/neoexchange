@@ -83,7 +83,7 @@ class Command(BaseCommand):
                 # Print out Block info and the frames we are combining
                 filter_string = ",".join(obs_filters)
                 num_frames = frames.count()
-                self.stdout.write(f"\nMaking reference field for: {field.name} Block ID: {obs_block.id} Site: {obs_block.site}\n" \
+                self.stdout.write(f"\nMaking reference field for: {field.name} Block ID: {obs_block.id} ReqNum: {obs_block.request_number} Site: {obs_block.site}\n" \
                                   f"Filter(s): {filter_string} Frames: {frames.earliest('midpoint')} -> {frames.latest('midpoint')} Num Frames: {num_frames}")
 
                 ### Combine frames by filter type
@@ -122,8 +122,7 @@ class Command(BaseCommand):
 
                         # Check for processed frames already
                         images, catalogs = determine_images_and_catalogs(self, dest_dir, red_level='e92')
-# Code from pipelines branch needed
-                        if images is None and catalogs is None or (len(images) != filtered_frames.count() and len(catalogs) != filtered_frames.count()):
+                        if images is None and catalogs is None or (len(images) < filtered_frames.count() and len(catalogs) < filtered_frames.count()):
                             self.stdout.write(f"Not all products present, running frame reduction pipeline in {dest_dir}")
 
                             year = filtered_frames[0].midpoint.year
@@ -146,9 +145,12 @@ class Command(BaseCommand):
                         # SWarp the frames, and output to the temporary directory
                         run_swarp_make_reference(dest_dir, configs_dir, dest_dir, match="*e92.fits")
 
-                        #Copy the finished reference image to the reference library.
+                        #Copy the finished reference image and rms image to the reference library.
                         if os.path.exists(os.path.join(dest_dir, "reference.fits")):
                             shutil.copy(os.path.join(dest_dir, "reference.fits"), os.path.join(reference_dir, ref_frame_name))
+                        if os.path.exists(os.path.join(dest_dir, "reference.rms.fits")):
+                            ref_rmsframe_name = ref_frame_name.replace('.fits', '.rms.fits')
+                            shutil.copy(os.path.join(dest_dir, "reference.rms.fits"), os.path.join(reference_dir, ref_rmsframe_name))
                     else:
                         self.stdout.write(f"Reference frame {ref_frame_name} already exists.")
 
