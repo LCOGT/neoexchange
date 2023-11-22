@@ -3534,16 +3534,20 @@ def run_sextractor_make_catalog(configs_dir, dest_dir, fits_file, checkimage_typ
     return sext_status, new_ldac_catalog
 
 
-def run_swarp_make_reference(ref_dir, configs_dir, dest_dir, match='*.fits'):
+def run_swarp_make_reference(ref_dir, configs_dir, dest_dir, ref_files=None, match='*.fits'):
     """ Creates an RMS image and a weight image for each .FITS image in <ref_dir> using SExtractor,
     then coadds all the images into a single reference image using SWarp.
+    If [ref_files] is None, then a search in <ref_dir> using [match] is done to
+    find frames; if [ref_files] is not None, it should be a list of filepaths
+    to make into the reference frame.
     The results and any temporary files are created in <dest_dir>.
     """
 
     if ref_dir[-1] != os.path.sep:
         ref_dir = ref_dir + os.path.sep
 
-    ref_files = glob(ref_dir + match)
+    if ref_files is None:
+        ref_files = glob(ref_dir + match)
 
     if len(ref_files) == 0:
         logger.error(f"There are no .fits files in {ref_dir}.")
@@ -3574,7 +3578,7 @@ def run_hotpants_subtraction(ref, sci_dir, configs_dir, dest_dir):
     if sci_dir[-1] != os.path.sep:
         sci_dir = sci_dir + os.path.sep
 
-    sci_files = glob(sci_dir + '*.fits')
+    sci_files = glob(sci_dir + '*e92.fits')
 
     if len(sci_files) == 0:
         logger.error(f"There are no .fits files in {sci_dir}")
