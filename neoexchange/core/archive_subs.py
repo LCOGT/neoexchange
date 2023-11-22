@@ -322,14 +322,22 @@ def make_data_dir(data_dir, frame):
         day_dir = chunks[offset]
     else:
         chunks = filename.split('-')
-        day_dir = chunks[2]
+        if len(chunks) > 2:
+            day_dir = chunks[2]
+        else:
+            day_dir = ''
 
     try:
         dd = datetime.strptime(day_dir, '%Y%m%d')
     except ValueError:
         try:
             logger.warning("Filename ({}) does not contain day-obs.".format(filename))
-            dd = datetime.strptime(frame['DATE_OBS'], '%Y-%m-%dT%H:%M:%S.%fZ')
+            if 'DATE_OBS' in frame:
+                dd = datetime.strptime(frame['DATE_OBS'], '%Y-%m-%dT%H:%M:%S.%fZ')
+            elif 'midpoint' in frame:
+                dd = frame['midpoint']
+            else:
+                dd = ''
             day_dir = datetime.strftime(dd, '%Y%m%d')
         except ValueError:
             logger.error("{} has improperly formated DATE_OBS in Header!")
