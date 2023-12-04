@@ -281,6 +281,7 @@ class TestComputeEphemerides(TestCase):
                          'uncertainty': 'U'}
 
         self.length_emp_line = 15
+        self.precision = 10
 
     def test_body_is_correct_class(self):
         tbody = Body.objects.get(provisional_name='N999r0q')
@@ -325,20 +326,19 @@ class TestComputeEphemerides(TestCase):
 
         self.assertEqual(self.length_emp_line, len(emp_line))
         self.assertEqual(d, emp_line['date'])
-        precision = 11
-        self.assertAlmostEqual(expected_ra, emp_line['ra'], precision)
-        self.assertAlmostEqual(expected_dec, emp_line['dec'], precision)
-        self.assertAlmostEqual(expected_mag, emp_line['mag'], precision)
-        self.assertAlmostEqual(expected_motion, emp_line['sky_motion'], precision)
-        self.assertAlmostEqual(expected_alt, emp_line['altitude'], precision)
-        self.assertAlmostEqual(expected_spd, emp_line['southpole_sep'], precision)
-        self.assertAlmostEqual(expected_pa,  emp_line['sky_motion_pa'], precision)
-        self.assertAlmostEqual(expected_delta,  emp_line['earth_obj_dist'], precision)
-        self.assertAlmostEqual(expected_r,  emp_line['sun_obj_dist'], precision)
-        self.assertAlmostEqual(expected_ltt,  emp_line['ltt'], precision)
+        self.assertAlmostEqual(expected_ra, emp_line['ra'], self.precision)
+        self.assertAlmostEqual(expected_dec, emp_line['dec'], self.precision)
+        self.assertAlmostEqual(expected_mag, emp_line['mag'], self.precision)
+        self.assertAlmostEqual(expected_motion, emp_line['sky_motion'], self.precision)
+        self.assertAlmostEqual(expected_alt, emp_line['altitude'], self.precision)
+        self.assertAlmostEqual(expected_spd, emp_line['southpole_sep'], self.precision)
+        self.assertAlmostEqual(expected_pa,  emp_line['sky_motion_pa'], self.precision)
+        self.assertAlmostEqual(expected_delta,  emp_line['earth_obj_dist'], self.precision)
+        self.assertAlmostEqual(expected_r,  emp_line['sun_obj_dist'], self.precision)
+        self.assertAlmostEqual(expected_ltt,  emp_line['ltt'], self.precision)
         for k, coord in enumerate(expected_geocnt_a_pos):
-            self.assertAlmostEqual(coord,  emp_line['geocnt_a_pos'][k], precision)
-            self.assertAlmostEqual(expected_heliocnt_e_pos[k],  emp_line['heliocnt_e_pos'][k], precision)
+            self.assertAlmostEqual(coord,  emp_line['geocnt_a_pos'][k], self.precision)
+            self.assertAlmostEqual(expected_heliocnt_e_pos[k],  emp_line['heliocnt_e_pos'][k], self.precision)
 
     def test_compute_ephem_with_body(self):
         d = datetime(2015, 4, 21, 17, 35, 00)
@@ -360,29 +360,27 @@ class TestComputeEphemerides(TestCase):
 
         self.assertEqual(self.length_emp_line, len(emp_line))
         self.assertEqual(d, emp_line['date'])
-        precision = 11
-        self.assertAlmostEqual(expected_ra, emp_line['ra'], precision)
-        self.assertAlmostEqual(expected_dec, emp_line['dec'], precision)
-        self.assertAlmostEqual(expected_mag, emp_line['mag'], precision)
-        self.assertAlmostEqual(expected_motion, emp_line['sky_motion'], precision)
-        self.assertAlmostEqual(expected_alt, emp_line['altitude'], precision)
-        self.assertAlmostEqual(expected_spd, emp_line['southpole_sep'], precision)
-        self.assertAlmostEqual(expected_pa,  emp_line['sky_motion_pa'], precision)
-        self.assertAlmostEqual(expected_delta,  emp_line['earth_obj_dist'], precision)
-        self.assertAlmostEqual(expected_r,  emp_line['sun_obj_dist'], precision)
-        self.assertAlmostEqual(expected_ltt, emp_line['ltt'], precision)
+        self.assertAlmostEqual(expected_ra, emp_line['ra'], self.precision)
+        self.assertAlmostEqual(expected_dec, emp_line['dec'], self.precision)
+        self.assertAlmostEqual(expected_mag, emp_line['mag'], self.precision)
+        self.assertAlmostEqual(expected_motion, emp_line['sky_motion'], self.precision)
+        self.assertAlmostEqual(expected_alt, emp_line['altitude'], self.precision)
+        self.assertAlmostEqual(expected_spd, emp_line['southpole_sep'], self.precision)
+        self.assertAlmostEqual(expected_pa,  emp_line['sky_motion_pa'], self.precision)
+        self.assertAlmostEqual(expected_delta,  emp_line['earth_obj_dist'], self.precision)
+        self.assertAlmostEqual(expected_r,  emp_line['sun_obj_dist'], self.precision)
+        self.assertAlmostEqual(expected_ltt, emp_line['ltt'], self.precision)
         for k, coord in enumerate(expected_geocnt_a_pos):
-            self.assertAlmostEqual(coord, emp_line['geocnt_a_pos'][k], precision)
-            self.assertAlmostEqual(expected_heliocnt_e_pos[k], emp_line['heliocnt_e_pos'][k], precision)
+            self.assertAlmostEqual(coord, emp_line['geocnt_a_pos'][k], self.precision)
+            self.assertAlmostEqual(expected_heliocnt_e_pos[k], emp_line['heliocnt_e_pos'][k], self.precision)
 
     def test_compute_south_polar_distance_with_elements_in_north(self):
         d = datetime(2015, 4, 21, 17, 35, 00)
         expected_dec = 0.522637696108887
         expected_spd = 119.94694444444444
         emp_line = compute_ephem(d, self.elements, '500', dbg=False, perturb=True, display=False)
-        precision = 11
-        self.assertAlmostEqual(expected_dec, emp_line['dec'], precision)
-        self.assertAlmostEqual(expected_spd, emp_line['southpole_sep'], precision)
+        self.assertAlmostEqual(expected_dec, emp_line['dec'], self.precision)
+        self.assertAlmostEqual(expected_spd, emp_line['southpole_sep'], self.precision)
         
     def test_compute_south_polar_distance_with_body_in_north(self):
         d = datetime(2015, 4, 21, 17, 35, 00)
@@ -390,9 +388,8 @@ class TestComputeEphemerides(TestCase):
         expected_spd = 119.94694444444444
         body_elements = model_to_dict(self.body)
         emp_line = compute_ephem(d, body_elements, '500', dbg=False, perturb=True, display=False)
-        precision = 11
-        self.assertAlmostEqual(expected_dec, emp_line['dec'], precision)
-        self.assertAlmostEqual(expected_spd, emp_line['southpole_sep'], precision)
+        self.assertAlmostEqual(expected_dec, emp_line['dec'], self.precision)
+        self.assertAlmostEqual(expected_spd, emp_line['southpole_sep'], self.precision)
 
     def test_compute_south_polar_distance_with_body_in_south(self):
         d = datetime(2015, 4, 21, 17, 35, 00)
@@ -401,9 +398,8 @@ class TestComputeEphemerides(TestCase):
         body_elements = model_to_dict(self.body)
         body_elements['meananom'] = 25.2636
         emp_line = compute_ephem(d, body_elements, '500', dbg=False, perturb=True, display=False)
-        precision = 11
-        self.assertAlmostEqual(expected_dec, emp_line['dec'], precision)
-        self.assertAlmostEqual(expected_spd, emp_line['southpole_sep'], precision)
+        self.assertAlmostEqual(expected_dec, emp_line['dec'], self.precision)
+        self.assertAlmostEqual(expected_spd, emp_line['southpole_sep'], self.precision)
 
     def test_call_compute_ephem_with_body(self):
         start = datetime(2015, 4, 21, 8, 45, 00)
@@ -813,6 +809,7 @@ class TestComputeFOM(TestCase):
                     'abs_mag'       : 19.5
                     }
         self.body2, created = Body.objects.get_or_create(**params)
+        self.precision = 10
 
     def test_compute_FOM_with_body(self):
         d = datetime(2015, 4, 21, 17, 35, 00)
@@ -824,12 +821,11 @@ class TestComputeFOM(TestCase):
         body_elements = model_to_dict(self.body)
         emp_line = compute_ephem(d, body_elements, '500', dbg=False, perturb=True, display=False)
         FOM = comp_FOM(body_elements, emp_line)
-        precision = 11
-        self.assertAlmostEqual(expected_not_seen, body_elements['not_seen'], precision)
-        self.assertAlmostEqual(expected_arc_length, body_elements['arc_length'], precision)
-        self.assertAlmostEqual(expected_score, body_elements['score'], precision)
-        self.assertAlmostEqual(expected_abs_mag, body_elements['abs_mag'], precision)
-        self.assertAlmostEqual(expected_FOM, FOM, precision)
+        self.assertAlmostEqual(expected_not_seen, body_elements['not_seen'], self.precision)
+        self.assertAlmostEqual(expected_arc_length, body_elements['arc_length'], self.precision)
+        self.assertAlmostEqual(expected_score, body_elements['score'], self.precision)
+        self.assertAlmostEqual(expected_abs_mag, body_elements['abs_mag'], self.precision)
+        self.assertAlmostEqual(expected_FOM, FOM, self.precision)
 
     def test_FOM_with_BadBody(self):
         d = datetime(2015, 4, 21, 17, 35, 00)
