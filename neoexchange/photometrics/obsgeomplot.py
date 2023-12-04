@@ -135,6 +135,9 @@ def plot_ra_dec(ephem, title=None, base_dir=''):
     ra_offset = 0
     if last['RA'] <= 40:
         ra_offset = +60
+    # Try and prevent overlap of labels if RA span is small
+    if abs(first['RA'] - last['RA']) <= 40:
+        dec_offset = dec_offset * -1.0
     ax.annotate(last_date.strftime("%Y-%m-%d"), xy=(last['RA'], last['DEC']), xytext=(last['RA'] + ra_offset, last['DEC'] + dec_offset),
                 arrowprops=dict(arrowstyle='->'))
 
