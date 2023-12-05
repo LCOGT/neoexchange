@@ -550,7 +550,7 @@ def update_elements_with_findorb(source_dir, dest_dir, filename, site_code, star
         logger.error("Error running find_orb on the data")
         elements_or_status = status
     else:
-        orbit_file = os.path.join(os.getenv('HOME'), '.find_orb', 'mpc_fmt.txt')
+        orbit_file = os.path.join(os.path.expanduser('~'), '.find_orb', 'mpc_fmt.txt')
         try:
             orbfile_fh = open(orbit_file, 'r')
         except IOError:
@@ -581,7 +581,7 @@ def refit_with_findorb(body_id, site_code, start_time=datetime.utcnow(), dest_di
     Datetime, RA, Dec, magnitude, rate, uncertainty is returned. In the event of
     an issue, None is returned."""
 
-    source_dir = os.path.abspath(os.path.join(os.getenv('HOME'), '.find_orb'))
+    source_dir = os.path.abspath(os.path.join(os.path.expanduser('~'), '.find_orb'))
     dest_dir = dest_dir or tempfile.mkdtemp(prefix='tmp_neox_')
     new_ephem = (None, None)
     comp_time = start_time + timedelta(days=1)

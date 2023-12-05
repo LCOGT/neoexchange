@@ -47,6 +47,7 @@ from astrometrics.sources_subs import parse_mpcorbit, parse_mpcobs, \
     fetch_flux_standards, read_solar_standards
 from photometrics.catalog_subs import open_fits_catalog, get_catalog_header
 from photometrics.gf_movie import make_gif
+from photometrics.external_codes import find_binary
 from core.frames import block_status, create_frame
 from core.models import Body, Proposal, Block, SourceMeasurement, Frame, Candidate,\
     SuperBlock, SpectralInfo, PreviousSpectra, StaticSource
@@ -5703,6 +5704,8 @@ class TestSummariseBlockEfficiency(TestCase):
 class TestCheckCatalogAndRefitNew(TestCase):
 
     def setUp(self):
+        if not find_binary('sex'):
+            self.skipTest("SExtractor binary not available")
         self.temp_dir = tempfile.mkdtemp(prefix='tmp_neox_')
 
 #        self.phot_tests_dir = os.path.abspath(os.path.join('photometrics', 'tests'))
@@ -7654,7 +7657,7 @@ class TestExportMeasurements(TestCase):
 class TestUpdateElementsWithFindOrb(TestCase):
 
     def setUp(self):
-        self.source_dir = os.path.abspath(os.path.join(os.getenv('HOME'), '.find_orb'))
+        self.source_dir = os.path.abspath(os.path.join(os.path.expanduser('~'), '.find_orb'))
         self.dest_dir = tempfile.mkdtemp(prefix='tmp_neox_')
         orig_filename = os.path.abspath(os.path.join('astrometrics', 'tests', 'test_mpcobs_P10pqB2.dat'))
         self.filename = os.path.basename(orig_filename)
@@ -7748,7 +7751,7 @@ class TestRefitWithFindOrb(TestCase):
         source_measures = create_source_measurement(test_obslines)
 
     def setUp(self):
-        self.source_dir = os.path.abspath(os.path.join(os.getenv('HOME'), '.find_orb'))
+        self.source_dir = os.path.abspath(os.path.join(os.path.expanduser('~'), '.find_orb'))
         self.dest_dir = tempfile.mkdtemp(prefix='tmp_neox_')
 
         self.debug_print = False
