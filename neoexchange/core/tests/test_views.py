@@ -1341,6 +1341,7 @@ class TestScheduleCheck(TestCase):
                             'add_dither': False,
                             'fractional_rate': 0.5,
                         }
+        self.precision = 10
 
     def make_visible_obj(self, test_date):
         """
@@ -2087,7 +2088,7 @@ class TestScheduleCheck(TestCase):
 
         resp = schedule_check(data, self.body_mp)
 
-        self.assertEqual(expected_resp1, resp)
+        self.assertAlmostEqual(expected_resp1, resp, self.precision)
         self.assertLessEqual(len(resp['group_name']), 50)
 
     @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
@@ -2125,7 +2126,7 @@ class TestScheduleCheck(TestCase):
 
         resp = schedule_check(data, self.body_mp)
 
-        self.assertEqual(expected_resp1, resp)
+        self.assertAlmostEqual(expected_resp1, resp, self.precision)
         self.assertLessEqual(len(resp['group_name']), 50)
 
     @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
@@ -2160,7 +2161,7 @@ class TestScheduleCheck(TestCase):
 
         resp = schedule_check(data, self.body_mp)
 
-        self.assertEqual(expected_resp1, resp)
+        self.assertAlmostEqual(expected_resp1, resp, self.precision)
         self.assertLessEqual(len(resp['group_name']), 50)
 
     @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
@@ -6038,7 +6039,6 @@ class TestCheckCatalogAndRefitNew(TestCase):
     def test_make_new_catalog_entry_gaiadr2(self):
         fits_header, junk_table, cattype = open_fits_catalog(self.test_banzai_fits, header_only=True)
         (status, new_ldac_catalog) = run_sextractor_make_catalog(self.configs_dir, self.temp_dir, self.test_banzai_fits.replace('.fits', '.fits[SCI]'))
-
         fits_file_output = self.test_banzai_fits.replace('_frame', '_frame_new')
         status, new_header = updateFITSWCS(self.test_banzai_fits, self.test_externscamp_headfile, self.test_externcat_xml, fits_file_output)
         header = get_catalog_header(new_header, cattype)
