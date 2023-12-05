@@ -1341,7 +1341,6 @@ class TestScheduleCheck(TestCase):
                             'add_dither': False,
                             'fractional_rate': 0.5,
                         }
-        self.precision = 8
 
     def make_visible_obj(self, test_date):
         """
@@ -1964,7 +1963,7 @@ class TestScheduleCheck(TestCase):
             if type(value) == float:
                 self.assertAlmostEqual(value, resp[key], self.precision, msg=f'Failure on {key}')
             else:
-                self.assertEqual(value, resp[key])
+                self.assertEqual(value, resp[key], msg=f'Failure on {key}')
         self.assertLessEqual(len(resp['group_name']), 50)
 
     @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
@@ -2049,8 +2048,14 @@ class TestScheduleCheck(TestCase):
         for key, value in expected_resp.items():
             if type(value) == float:
                 self.assertAlmostEqual(value, resp[key], self.precision, msg=f'Failure on {key}')
+            elif type(value) == dict:
+                for subkey, subvalue in value.items():
+                    if type(subvalue) == float:
+                        self.assertAlmostEqual(subvalue, resp[key][subkey], self.precision, msg=f'Failure on {key} -> {subkey}')
+                    else:
+                        self.assertEqual(subvalue, resp[key][subkey], msg=f'Failure on {key} -> {subkey}')
             else:
-                self.assertEqual(value, resp[key])
+                self.assertEqual(value, resp[key], msg=f'Failure on {key}')
         self.assertLessEqual(len(resp['group_name']), 50)
 
     @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
