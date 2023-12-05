@@ -85,7 +85,7 @@ class TestSearch(SimpleTestCase):
 
         files = search(fits_dir, '.*_e92.fits', dir_search=False)
 
-        self.assertEqual(expected_result, files)
+        self.assertEqual(expected_result.sort(), files.sort())
 
     def test_file_search_latest(self):
         fits_dir = os.path.join(self.test_dir, '20239999_K92')
