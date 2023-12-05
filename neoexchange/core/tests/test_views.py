@@ -1962,7 +1962,7 @@ class TestScheduleCheck(TestCase):
 
         for key, value in expected_resp.items():
             if type(value) == float:
-                self.assertAlmostEqual(value, resp[key], self.precision)
+                self.assertAlmostEqual(value, resp[key], self.precision, msg=f'Failure on {key}')
             else:
                 self.assertEqual(value, resp[key])
         self.assertLessEqual(len(resp['group_name']), 50)
@@ -2048,7 +2048,7 @@ class TestScheduleCheck(TestCase):
 
         for key, value in expected_resp.items():
             if type(value) == float:
-                self.assertAlmostEqual(value, resp[key], self.precision)
+                self.assertAlmostEqual(value, resp[key], self.precision, msg=f'Failure on {key}')
             else:
                 self.assertEqual(value, resp[key])
         self.assertLessEqual(len(resp['group_name']), 50)
