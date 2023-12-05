@@ -315,7 +315,7 @@ def add_l1filter(fits_file):
     return
 
 
-@timeit
+#@timeit
 def run_sextractor(source_dir, dest_dir, fits_file, binary=None, catalog_type='ASCII', dbg=False):
     """Run SExtractor (using either the binary specified by [binary] or by
     looking for 'sex' in the PATH) on the passed <fits_file> with the results
