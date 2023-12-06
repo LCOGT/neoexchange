@@ -63,9 +63,9 @@ class ExternalCodeUnitTest(TestCase):
 
         self.test_obs_file = os.path.abspath(os.path.join('astrometrics', 'tests', 'test_mpcobs_WSAE9A6.dat'))
 
-        self.debug_print = True
+        self.debug_print = False
 
-        self.remove = False
+        self.remove = True
 
     def tearDown(self):
         if self.remove:

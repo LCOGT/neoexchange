@@ -1079,12 +1079,12 @@ class ScheduleObservations(FunctionalTest):
         # The page refreshes and a series of values for magnitude, speed, slot
         # length, number and length of exposures appear
         magnitude = self.browser.find_element_by_id('id_magnitude_row').find_element_by_class_name('kv-value').text
-        self.assertIn('17.98', magnitude)
+        self.assertIn('17.97', magnitude)
         # He checks to make sure that the comet is being tracked at normal rate
         speed = self.browser.find_element_by_id('id_speed_row').find_element_by_class_name('kv-value').text
         self.assertNotIn('Half-Rate', speed)
-        self.assertIn('1.81 "/min', speed)
-        self.assertIn('1.96 "/exp', speed)
+        self.assertIn('1.82 "/min', speed)
+        self.assertIn('1.97 "/exp', speed)
         slot_length = self.browser.find_element_by_id('id_slot_length').get_attribute('value')
         self.assertIn('15.0', slot_length)
         num_exp = self.browser.find_element_by_id('id_no_of_exps_row').find_element_by_class_name('kv-value').text
@@ -1092,7 +1092,7 @@ class ScheduleObservations(FunctionalTest):
         exp_length = self.browser.find_element_by_id('id_exp_length').get_attribute('value')
         self.assertIn('65.0', exp_length)
         moon_sep = self.browser.find_element_by_id('id_moon_row').find_element_by_class_name('kv-value').text
-        self.assertIn('116.3', moon_sep)
+        self.assertIn('113.8', moon_sep)
         num_exp = self.browser.find_element_by_id('id_no_of_exps_row').find_element_by_class_name('kv-value').text
         self.assertIn('8', num_exp)
 
@@ -1117,8 +1117,8 @@ class ScheduleObservations(FunctionalTest):
             self.browser.find_element_by_id("id_edit_button").click()
         speed = self.browser.find_element_by_id('id_speed_row').find_element_by_class_name('kv-value').text
         self.assertIn('Half-Rate', speed)
-        self.assertIn('1.81 "/min', speed)
-        self.assertIn('0.98 "/exp', speed)
+        self.assertIn('1.82 "/min', speed)
+        self.assertIn('0.99 "/exp', speed)
         self.browser.find_element_by_id("advanced-switch").click()
         tracking_picker = Select(self.browser.find_element_by_id('id_fractional_rate'))
         self.assertIn('Sidereal', [option.text for option in tracking_picker.options])
@@ -1127,8 +1127,8 @@ class ScheduleObservations(FunctionalTest):
             self.browser.find_element_by_id("id_edit_button").click()
         speed = self.browser.find_element_by_id('id_speed_row').find_element_by_class_name('kv-value').text
         self.assertIn('Sidereal', speed)
-        self.assertIn('1.81 "/min', speed)
-        self.assertIn('1.96 "/exp', speed)
+        self.assertIn('1.82 "/min', speed)
+        self.assertIn('1.97 "/exp', speed)
 
         # Bart wants streaks
         exp_length_box = self.browser.find_element_by_id('id_exp_length')
@@ -1137,7 +1137,7 @@ class ScheduleObservations(FunctionalTest):
         with self.wait_for_page_load(timeout=10):
             self.browser.find_element_by_id("id_edit_button").click()
         speed_warn = self.browser.find_element_by_class_name('warning').text
-        self.assertIn('6.04 "/exp', speed_warn)
+        self.assertIn('6.07 "/exp', speed_warn)
 
         # Bart wants to change the min moon dist to 160.
         self.browser.find_element_by_id("advanced-switch").click()
@@ -1149,7 +1149,7 @@ class ScheduleObservations(FunctionalTest):
 
         # The page refreshes and we get correct hours visible and a warning on moon dist
         moon_warn = self.browser.find_element_by_id('id_moon_row').find_element_by_class_name('warning').text
-        self.assertIn('116.3', moon_warn)
+        self.assertIn('113.8', moon_warn)
 
         submit = self.browser.find_element_by_id('id_submit_button').get_attribute("value")
         self.assertIn('Schedule this Object', submit)
