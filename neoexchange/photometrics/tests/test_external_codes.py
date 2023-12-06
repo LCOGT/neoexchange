@@ -466,6 +466,7 @@ class TestSExtractorRunner(ExternalCodeUnitTest):
     def setUp(self):
         if not find_binary('sex'):
             self.skipTest("SExtractor binary not available")
+        super(TestSExtractorRunner, self).setUp()
 
     def test_setup_sextractor_dir_bad_destdir(self):
 
