@@ -14,6 +14,7 @@ GNU General Public License for more details.
 """
 
 import os
+import platform
 from glob import glob
 import tempfile
 from unittest import skipIf
@@ -35,6 +36,7 @@ class ExternalCodeUnitTest(TestCase):
     def setUp(self):
         self.test_dir = tempfile.mkdtemp(prefix='tmp_neox_')
 
+        self.root = os.path.abspath('.').split(os.path.sep)[0]+os.path.sep
         # Path to the config files
         self.source_dir = os.path.abspath(os.path.join('photometrics', 'configs'))
 
@@ -43,21 +45,21 @@ class ExternalCodeUnitTest(TestCase):
 
         self.test_GAIADR2_catalog = os.path.abspath(os.path.join('photometrics', 'tests', 'GAIA-DR2.cat'))
 
-        self.test_fits_file_set1_1 = os.path.abspath(os.path.join(os.environ['HOME'], 'test_mtdlink', 'cpt1m010-kb70-20160225-0098-e90.fits'))
-        self.test_fits_file_set1_2 = os.path.abspath(os.path.join(os.environ['HOME'], 'test_mtdlink', 'cpt1m010-kb70-20160225-0099-e90.fits'))
-        self.test_fits_file_set1_3 = os.path.abspath(os.path.join(os.environ['HOME'], 'test_mtdlink', 'cpt1m010-kb70-20160225-0100-e90.fits'))
-        self.test_fits_file_set1_4 = os.path.abspath(os.path.join(os.environ['HOME'], 'test_mtdlink', 'cpt1m010-kb70-20160225-0101-e90.fits'))
-        self.test_fits_file_set1_5 = os.path.abspath(os.path.join(os.environ['HOME'], 'test_mtdlink', 'cpt1m010-kb70-20160225-0102-e90.fits'))
-        self.test_fits_file_set1_6 = os.path.abspath(os.path.join(os.environ['HOME'], 'test_mtdlink', 'cpt1m010-kb70-20160225-0103-e90.fits'))
-        self.test_fits_file_set1_7 = os.path.abspath(os.path.join(os.environ['HOME'], 'test_mtdlink', 'cpt1m010-kb70-20160225-0104-e90.fits'))
-        self.test_fits_file_set1_8 = os.path.abspath(os.path.join(os.environ['HOME'], 'test_mtdlink', 'cpt1m010-kb70-20160225-0105-e90.fits'))
+        self.test_fits_file_set1_1 = os.path.abspath(os.path.join(os.path.expanduser('~'), 'test_mtdlink', 'cpt1m010-kb70-20160225-0098-e90.fits'))
+        self.test_fits_file_set1_2 = os.path.abspath(os.path.join(os.path.expanduser('~'), 'test_mtdlink', 'cpt1m010-kb70-20160225-0099-e90.fits'))
+        self.test_fits_file_set1_3 = os.path.abspath(os.path.join(os.path.expanduser('~'), 'test_mtdlink', 'cpt1m010-kb70-20160225-0100-e90.fits'))
+        self.test_fits_file_set1_4 = os.path.abspath(os.path.join(os.path.expanduser('~'), 'test_mtdlink', 'cpt1m010-kb70-20160225-0101-e90.fits'))
+        self.test_fits_file_set1_5 = os.path.abspath(os.path.join(os.path.expanduser('~'), 'test_mtdlink', 'cpt1m010-kb70-20160225-0102-e90.fits'))
+        self.test_fits_file_set1_6 = os.path.abspath(os.path.join(os.path.expanduser('~'), 'test_mtdlink', 'cpt1m010-kb70-20160225-0103-e90.fits'))
+        self.test_fits_file_set1_7 = os.path.abspath(os.path.join(os.path.expanduser('~'), 'test_mtdlink', 'cpt1m010-kb70-20160225-0104-e90.fits'))
+        self.test_fits_file_set1_8 = os.path.abspath(os.path.join(os.path.expanduser('~'), 'test_mtdlink', 'cpt1m010-kb70-20160225-0105-e90.fits'))
 
-        self.test_fits_file_set2_1 = os.path.abspath(os.path.join(os.environ['HOME'], 'test_mtdlink', 'elp1m008-fl05-20160225-0095-e90.fits'))
-        self.test_fits_file_set2_2 = os.path.abspath(os.path.join(os.environ['HOME'], 'test_mtdlink', 'elp1m008-fl05-20160225-0096-e90.fits'))
-        self.test_fits_file_set2_3 = os.path.abspath(os.path.join(os.environ['HOME'], 'test_mtdlink', 'elp1m008-fl05-20160225-0097-e90.fits'))
-        self.test_fits_file_set2_4 = os.path.abspath(os.path.join(os.environ['HOME'], 'test_mtdlink', 'elp1m008-fl05-20160225-0098-e90.fits'))
-        self.test_fits_file_set2_5 = os.path.abspath(os.path.join(os.environ['HOME'], 'test_mtdlink', 'elp1m008-fl05-20160225-0099-e90.fits'))
-        self.test_fits_file_set2_6 = os.path.abspath(os.path.join(os.environ['HOME'], 'test_mtdlink', 'elp1m008-fl05-20160225-0100-e90.fits'))
+        self.test_fits_file_set2_1 = os.path.abspath(os.path.join(os.path.expanduser('~'), 'test_mtdlink', 'elp1m008-fl05-20160225-0095-e90.fits'))
+        self.test_fits_file_set2_2 = os.path.abspath(os.path.join(os.path.expanduser('~'), 'test_mtdlink', 'elp1m008-fl05-20160225-0096-e90.fits'))
+        self.test_fits_file_set2_3 = os.path.abspath(os.path.join(os.path.expanduser('~'), 'test_mtdlink', 'elp1m008-fl05-20160225-0097-e90.fits'))
+        self.test_fits_file_set2_4 = os.path.abspath(os.path.join(os.path.expanduser('~'), 'test_mtdlink', 'elp1m008-fl05-20160225-0098-e90.fits'))
+        self.test_fits_file_set2_5 = os.path.abspath(os.path.join(os.path.expanduser('~'), 'test_mtdlink', 'elp1m008-fl05-20160225-0099-e90.fits'))
+        self.test_fits_file_set2_6 = os.path.abspath(os.path.join(os.path.expanduser('~'), 'test_mtdlink', 'elp1m008-fl05-20160225-0100-e90.fits'))
 
         self.test_obs_file = os.path.abspath(os.path.join('astrometrics', 'tests', 'test_mpcobs_WSAE9A6.dat'))
 
@@ -87,7 +89,14 @@ class TestMTDLINKRunner(ExternalCodeUnitTest):
 
         expected_status = -2
 
-        status = setup_mtdlink_dir(self.source_dir, os.path.join('/usr/share/wibble'))
+        path_component = ''
+        if platform.system() == "Windows":
+            # Need to include an invalid path component on Windows so it
+            # can't actually create the supposedly invalid path if the user
+            # has Administrator privileges
+            path_component = ':'
+        dest_dir = os.path.join(self.root, path_component, 'usr', 'share', 'wibble')
+        status = setup_mtdlink_dir(self.source_dir, dest_dir)
 
         self.assertEqual(expected_status, status)
 
@@ -339,7 +348,14 @@ class TestSCAMPRunner(ExternalCodeUnitTest):
 
         expected_status = -2
 
-        status = setup_scamp_dir(self.source_dir, os.path.join('/usr/share/wibble'))
+        path_component = ''
+        if platform.system() == "Windows":
+            # Need to include an invalid path component on Windows so it
+            # can't actually create the supposedly invalid path if the user
+            # has Administrator privileges
+            path_component = ':'
+        dest_dir = os.path.join(self.root, path_component, 'usr', 'share', 'wibble')
+        status = setup_scamp_dir(self.source_dir, dest_dir)
 
         self.assertEqual(expected_status, status)
 
@@ -446,6 +462,10 @@ class TestSCAMPRunner(ExternalCodeUnitTest):
 
 
 class TestSExtractorRunner(ExternalCodeUnitTest):
+
+    def setUp(self):
+        if not find_binary('sex'):
+            self.skipTest("SExtractor binary not available")
 
     def test_setup_sextractor_dir_bad_destdir(self):
 
