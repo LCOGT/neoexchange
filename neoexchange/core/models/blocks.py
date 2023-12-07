@@ -247,6 +247,15 @@ class Block(models.Model):
             url = urljoin(settings.PORTAL_REQUEST_URL, self.request_number)
         return url
 
+    def get_obsdetails(self):
+        """Returns the number of exposures and exposure length as a string e.g. '6x60.0 secs'"""
+        obs_details_str = ""
+
+        if self.num_exposures and self.exp_length:
+            obs_details_str = "%dx%.1f secs" % (self.num_exposures, self.exp_length)
+
+        return obs_details_str
+
     def num_red_frames(self):
         """Returns the total number of reduced frames (quicklook and fully reduced)"""
         return self.frame_set.filter(frametype__in=[11, 91]).count()

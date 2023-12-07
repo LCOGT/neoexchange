@@ -2,7 +2,16 @@
 
 Portal for scheduling observations of NEOs (and other Solar System objects) using Las Cumbres Observatory.
 
+<a href="https://ascl.net/2311.005"><img src="https://img.shields.io/badge/ascl-2311.005-blue.svg?colorB=262255" alt="ascl:2311.005" /></a>
+
 ## History
+
+### 3.13.4
+* Support for MuSCAT4 at FTS (E10)
+* Fix trimming of trailing Z on datetime when recording Blocks if not present
+
+### 3.13.3.1
+* Add fix for changed link to file of observations when querying MPC body.
 
 ### 3.13.2
 * Allow export of observations from  NEOexchange in LaTeX table or deluxetable format.

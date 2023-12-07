@@ -7,7 +7,7 @@ from astropy.wcs import FITSFixedWarning
 
 from core.models import Block, Body, Frame, SourceMeasurement, DataProduct
 
-def summarize_observations(target_name='65803', start_date='2022-07-15', proposal=None, end_date=None, min_frames=1, return_blocks=False):
+def summarize_observations(target_name='65803', start_date='2022-07-15', proposal=None, exclude_proposal=None, end_date=None, min_frames=1, return_blocks=False):
 
     # Suppress WCS obsfix warnings
     warnings.simplefilter('ignore', FITSFixedWarning)
@@ -23,15 +23,27 @@ def summarize_observations(target_name='65803', start_date='2022-07-15', proposa
             blocks = blocks.filter(superblock__proposal__code__in=proposal)
         else:
             blocks = blocks.filter(superblock__proposal__code=proposal)
+    if exclude_proposal is not None:
+        if type(proposal) == list:
+            blocks = blocks.exclude(superblock__proposal__code__in=exclude_proposal)
+        else:
+            blocks = blocks.exclude(superblock__proposal__code=exclude_proposal)
     if end_date is not None:
         blocks = blocks.filter(block_end__lt=end_date)
     filt_width = 6
     # if blocks.filter(site='ogg', telclass='2m0').count() > 0:
         # # Set wider width for MuSCAT blocks
         # filt_width = 14
-    print(f'#Track# Rquest# Site(MPC)  Block start         Block end       Block length Obs details       Filter #raw #good_zp/#num all frames FWHM     DPs')
+    # Determine frame types to search for
+    frame_types = [Frame.BANZAI_RED_FRAMETYPE, ]
+    try:
+        frame_types.append(Frame.SWOPE_RED_FRAMETYPE)
+    except AttributeError:
+        pass
+    print(f'#Track# Rquest# Site(MPC)  Block start         Block end       Block length Obs details       Filter #raw #good_zp/#num all frames   FWHM   DPs')
     for block in blocks.order_by('block_start'):
-        all_raw_frames = Frame.objects.filter(block=block, frametype__in=(Frame.BANZAI_RED_FRAMETYPE, Frame.SWOPE_RED_FRAMETYPE))
+
+        all_raw_frames = Frame.objects.filter(block=block, frametype__in=frame_types)
         all_frames = Frame.objects.filter(block=block, frametype=Frame.NEOX_RED_FRAMETYPE)
         num_good_zp = all_frames.filter(zeropoint__gte=0).count()
         num_raw_frames = all_raw_frames.count()
@@ -64,8 +76,8 @@ def summarize_observations(target_name='65803', start_date='2022-07-15', proposa
                 num_dp = DataProduct.objects.filter(filetype=DataProduct.DART_TXT, object_id=block.superblock.pk).count()
                 if len(srcs_fwhm) > 0:
                     fwhm = np.mean(srcs_fwhm)
-                print(f'{block.superblock.tracking_number} {block.request_number} {block.site} ({first_frame.sitecode}) {block_start.strftime("%Y-%m-%d %H:%M")} -> {block_end.strftime("%Y-%m-%d %H:%M")} ({block_length_hrs:>4.2f} hrs) {block.superblock.get_obsdetails().replace(" secs", "s"):10s}({exp_length_hms}) {filter_str:{filt_width}s} {num_raw_frames:>3d}(e91)->{num_good_zp:>3d}/{num_all_frames:>3d} SNR= {snr:>6.1f} FWHM= {fwhm:.1f} DPs={num_dp} {block.superblock.proposal.code}')
-#                print(f'{block.superblock.tracking_number} {block.request_number} {block.site} ({first_frame.sitecode}) {block_start.strftime("%Y-%m-%d %H:%M")} -> {block_end.strftime("%Y-%m-%d %H:%M")} ({block_length_hrs:>4.2f} hrs) {block.superblock.get_obsdetails().replace(" secs", "s"):10s}{filter_str:{filt_width}s} {num_raw_frames:>3d}(e91)->{num_good_zp:>3d}/{num_all_frames:>3d} SNR= {snr:>6.1f} FWHM= {fwhm:.1f} {username:.26s}')
+                print(f'{block.superblock.tracking_number} {block.request_number} {block.site} ({first_frame.sitecode}) {block_start.strftime("%Y-%m-%d %H:%M")} -> {block_end.strftime("%Y-%m-%d %H:%M")} ({block_length_hrs:>4.2f} hrs) {block.get_obsdetails().replace(" secs", "s"):10s}({exp_length_hms}) {filter_str:{filt_width}s} {num_raw_frames:>3d}(e91)->{num_good_zp:>3d}/{num_all_frames:>3d} SNR= {snr:>6.1f} {fwhm:>5.1f} DPs={num_dp} {block.superblock.proposal.code}')
+#                print(f'{block.superblock.tracking_number} {block.request_number} {block.site} ({first_frame.sitecode}) {block_start.strftime("%Y-%m-%d %H:%M")} -> {block_end.strftime("%Y-%m-%d %H:%M")} ({block_length_hrs:>4.2f} hrs) {block.get_obsdetails().replace(" secs", "s"):10s}{filter_str:{filt_width}s} {num_raw_frames:>3d}(e91)->{num_good_zp:>3d}/{num_all_frames:>3d} SNR= {snr:>6.1f} {fwhm:>5.1f} {username:.26s}')
     if return_blocks:
         return blocks
 

@@ -598,6 +598,10 @@ def fetch_mpcobs(asteroid, debug=False):
 # the other links. Turn any pluses (which were spaces) into underscores.
     link = [x.get('href') for x in refs if 'tmp/'+asteroid.replace('+', '_').replace('/', '_') in x.get('href')]
 
+    if len(link) == 0:
+        # Try again in case the link is now a `tmp2/`
+        link = [x.get('href') for x in refs if 'tmp2/'+asteroid.replace('+', '_').replace('/', '_') in x.get('href')]
+
     if len(link) == 1:
         # Replace the '..' part with proper URL
 
@@ -1928,10 +1932,10 @@ def make_config(params, filter_list):
                             'exposure_time_i': params['muscat_exp_times']['ip_explength'],
                             'exposure_time_z': params['muscat_exp_times']['zp_explength'],
                             'exposure_mode': exposure_mode}
-            instrument_config['optical_elements'] = {'diffuser_g_position': 'out',
-                                                     'diffuser_r_position': 'out',
-                                                     'diffuser_i_position': 'out',
-                                                     'diffuser_z_position': 'out'}
+            instrument_config['optical_elements'] = {'narrowband_g_position': 'out',
+                                                     'narrowband_r_position': 'out',
+                                                     'narrowband_i_position': 'out',
+                                                     'narrowband_z_position': 'out'}
 
             instrument_config['extra_params'] = extra_params
 
@@ -2200,11 +2204,7 @@ def configure_defaults(params):
     params['instrument'] = '1M0-SCICAM-SINISTRO'
 
     if params['site_code'] in ['F65', 'E10', '2M0']:
-        if 'F65' in params['site_code']:
-            params['instrument'] = '2M0-SCICAM-MUSCAT'
-        else:
-            params['instrument'] = '2M0-SCICAM-SPECTRAL'
-            params['binning'] = 2
+        params['instrument'] = '2M0-SCICAM-MUSCAT'
         params['pondtelescope'] = '2m0'
         if params.get('spectroscopy', False) is True and 'FLOYDS' in params.get('instrument_code', ''):
             params['exp_type'] = 'SPECTRUM'
@@ -2420,10 +2420,8 @@ def fetch_filter_list(site, spec):
     elif '2m0' in telid.lower():
         if spec:
             camid = "2m0-FLOYDS-SciCam"
-        elif "OGG" in siteid.upper():
-            camid = "2M0-SCICAM-MUSCAT"
         else:
-            camid = "2m0-SciCam-Spectral"
+            camid = "2M0-SCICAM-MUSCAT"
     else:
         camid = ''
 

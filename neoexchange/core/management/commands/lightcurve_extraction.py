@@ -171,7 +171,10 @@ class Command(BaseCommand):
         # Build Conditions plot
         fig2, (ax2, ax3) = plt.subplots(nrows=2, sharex=True)
         ax2.plot(alltimes, fwhm, marker='.', color=colors, linestyle=' ')
-        expected_fwhm = self.generate_expected_fwhm(alltimes, air_mass, fwhm_0=fwhm[0], tel_diameter=diameter)
+        fwhm_0_median = fwhm[0]
+        if len(fwhm) > 3:
+            fwhm_0_median = np.median(fwhm[0:3])
+        expected_fwhm = self.generate_expected_fwhm(alltimes, air_mass, fwhm_0=fwhm_0_median, tel_diameter=diameter)
         if (times[-1] - times[0]) < timedelta(hours=12):
             ax2.plot(alltimes, expected_fwhm, color='black', linestyle='--', linewidth=0.75, label="Predicted")
         else:

@@ -1109,6 +1109,34 @@ class TestRecordBlock(TestCase):
         self.assertEqual(False, sblocks[0].rapid_response)
         self.assertEqual(blocks[0].tracking_rate, 50)
 
+    def test_imaging_block_notz(self):
+        imaging_params = self.imaging_params.copy()
+        imaging_params['request_windows'] = [[{'end': '2018-03-16T03:30:59',
+                                               'start': '2018-03-15T20:20:01'}]]
+
+        block_resp = record_block(self.imaging_tracknum, imaging_params, self.imaging_form, self.imaging_body, observer=self.bart)
+
+        self.assertTrue(block_resp)
+        sblocks = SuperBlock.objects.all()
+        blocks = Block.objects.all()
+        self.assertEqual(1, sblocks.count())
+        self.assertEqual(1, len(sblocks[0].observers))
+        self.assertEqual(self.bart, sblocks[0].observers[0])
+
+        self.assertEqual(1, blocks.count())
+        self.assertEqual(Block.OPT_IMAGING, blocks[0].obstype)
+        # Check the SuperBlock has the broader time window but the Block(s) have
+        # the (potentially) narrower per-Request windows
+        self.assertEqual(self.imaging_form['start_time'], sblocks[0].block_start)
+        self.assertEqual(self.imaging_form['end_time'], sblocks[0].block_end)
+        self.assertEqual(datetime(2018, 3, 15, 20, 20, 1, ), blocks[0].block_start)
+        self.assertEqual(datetime(2018, 3, 16, 3, 30, 59, 0), blocks[0].block_end)
+        self.assertEqual(self.imaging_tracknum, sblocks[0].tracking_number)
+        self.assertTrue(self.imaging_tracknum != blocks[0].request_number)
+        self.assertEqual(self.imaging_params['block_duration'], sblocks[0].timeused)
+        self.assertEqual(False, sblocks[0].rapid_response)
+        self.assertEqual(blocks[0].tracking_rate, 50)
+
     def test_imaging_block_rr_proposal(self):
         imaging_params = self.imaging_params
         imaging_params['proposal_id'] += 'b'
@@ -2530,6 +2558,42 @@ class TestScheduleCheck(TestCase):
 
         for key in new_resp:
             self.assertEqual(new_resp[key], resp[key])
+
+
+    @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
+    @patch('core.views.datetime', MockDateTime)
+    def test_fts_muscat_sub(self):
+        MockDateTime.change_datetime(2018, 11, 29, 23, 0, 0)
+
+        data = {'site_code': 'E10',
+                'utc_date': datetime(2018, 12, 1).date(),
+                'proposal_code': self.neo_proposal.code
+                }
+
+        body = self.make_visible_obj(datetime(2018, 11, 30, 23, 0, 0))
+
+        new_resp = {'site_code': 'E10',
+                    'available_filters': 'gp, rp, ip, zp',
+                    'exp_count': 4,
+                    'exp_length': 235.0,
+                    'slot_length': 22.5,
+                    'filter_pattern': 'gp',
+                    'pattern_iterations': 4.0,
+                    'gp_explength': 235.0,
+                    'rp_explength': 235.0,
+                    'ip_explength': 235.0,
+                    'zp_explength': 235.0,
+                    'muscat_sync': False,
+                    'group_name': 'over_there_E10-20181201',
+                    'lco_enc': 'CLMA',
+                    'lco_site': 'COJ',
+                    'lco_tel': '2M0',
+                    }
+
+        resp = schedule_check(data, body)
+
+        for key in new_resp:
+            self.assertEqual(new_resp[key], resp[key], msg=f"failed on {key}")
 
 
 class TestUpdateMPCOrbit(TestCase):
@@ -8665,41 +8729,41 @@ class TestCreateLatexTable(TestCase):
 
                 test_frame = Frame.objects.create(**self.frame_params)
 
-        self.table_hdr = [ '\\begin{table}\n',
-                           '\\caption{Table of observations for 2005 QN173 with LCOGT}\n',
-                           '\\begin{tabular}{cccccccc}\n',
-                           '\\hline \\hline\n',
-                           'Block Start & Block End & Site & Telclass & MPC Site Code & Observation Type & Filters & Num Exposures \\\\\n',
-                           '\\hline\n'
+        self.table_hdr = [ '\\begin{table}' + os.linesep,
+                           '\\caption{Table of observations for 2005 QN173 with LCOGT}' + os.linesep,
+                           '\\begin{tabular}{cccccccc}' + os.linesep,
+                           '\\hline \\hline' + os.linesep,
+                           'Block Start & Block End & Site & Telclass & MPC Site Code & Observation Type & Filters & Num Exposures \\\\' + os.linesep,
+                           '\\hline' + os.linesep
                          ]
 
         self.deluxetable_hdr = [\
-                           '\\begin{deluxetable}{cccccccc}\n',
-                           '\\tablecaption{Table of observations for 2005 QN173 with LCOGT}\n',
-                           r'\tablehead{\colhead{Block Start} & \colhead{Block End} & \colhead{Site} & \colhead{Telclass} & \colhead{MPC Site Code} & \colhead{Observation Type} & \colhead{Filters} & \colhead{Num Exposures}}'+'\n',
-                           '\\startdata\n'
+                           '\\begin{deluxetable}{cccccccc}' + os.linesep,
+                           '\\tablecaption{Table of observations for 2005 QN173 with LCOGT}' + os.linesep,
+                           r'\tablehead{\colhead{Block Start} & \colhead{Block End} & \colhead{Site} & \colhead{Telclass} & \colhead{MPC Site Code} & \colhead{Observation Type} & \colhead{Filters} & \colhead{Num Exposures}}'+ os.linesep,
+                           '\\startdata' + os.linesep
                          ]
 
         self.table_hdr_no_obstype = \
-                         [ '\\begin{table}\n',
-                           '\\caption{Table of observations for 2005 QN173 with LCOGT}\n',
-                           '\\begin{tabular}{ccccccc}\n',
-                           '\\hline \\hline\n',
-                           'Block Start & Block End & Site & Telclass & MPC Site Code & Filters & Num Exposures \\\\\n',
-                           '\\hline\n'
+                         [ '\\begin{table}' + os.linesep,
+                           '\\caption{Table of observations for 2005 QN173 with LCOGT}' + os.linesep,
+                           '\\begin{tabular}{ccccccc}' + os.linesep,
+                           '\\hline \\hline' + os.linesep,
+                           'Block Start & Block End & Site & Telclass & MPC Site Code & Filters & Num Exposures \\\\' + os.linesep,
+                           '\\hline' + os.linesep
                          ]
 
         self.table_ftr = [
-                           '\\hline\n',
-                           '\\end{tabular}\n',
-                           '\n',
-                           '\\end{table}\n'
+                           '\\hline' + os.linesep,
+                           '\\end{tabular}' + os.linesep,
+                           '' + os.linesep,
+                           '\\end{table}' + os.linesep
                          ]
 
         self.deluxetable_ftr = [
-                           '\\enddata\n',
-                           '\n',
-                           '\\end{deluxetable}\n'
+                           '\\enddata' + os.linesep,
+                           '' + os.linesep,
+                           '\\end{deluxetable}' + os.linesep
                          ]
 
         self.expected_colnames = ['Block Start', 'Block End', 'Site', 'Telclass', 'MPC Site Code', 'Observation Type', 'Filters', 'Num Exposures']
@@ -8709,10 +8773,10 @@ class TestCreateLatexTable(TestCase):
     def test_table_by_body(self):
 
         lines = [
-                  "2021-07-04 06:00 & 2021-07-04 07:00 & coj & 2m0 & E10 & Opt. spectra & $30.0\\arcsec\\times6.0\\arcsec$ slit & 0/1 \\\\\n",
-                  "2021-07-07 03:00 & 2021-07-07 03:08 & cpt & 1m0 & K91 & Opt. imaging & g',r' & 4/4 \\\\\n",
-                  "2021-07-14 03:00 & 2021-07-14 03:08 & cpt & 1m0 & K93 & Opt. imaging & g',r' & 4/4 \\\\\n",
-                  "2021-07-21 03:00 & 2021-07-21 03:08 & cpt & 1m0 & K92 & Opt. imaging & g',r' & 4/4 \\\\\n",
+                  "2021-07-04 06:00 & 2021-07-04 07:00 & coj & 2m0 & E10 & Opt. spectra & $30.0\\arcsec\\times6.0\\arcsec$ slit & 0/1 \\\\" + os.linesep,
+                  "2021-07-07 03:00 & 2021-07-07 03:08 & cpt & 1m0 & K91 & Opt. imaging & g',r' & 4/4 \\\\" + os.linesep,
+                  "2021-07-14 03:00 & 2021-07-14 03:08 & cpt & 1m0 & K93 & Opt. imaging & g',r' & 4/4 \\\\" + os.linesep,
+                  "2021-07-21 03:00 & 2021-07-21 03:08 & cpt & 1m0 & K92 & Opt. imaging & g',r' & 4/4 \\\\" + os.linesep,
                 ]
 
         expected_lines = self.table_hdr + lines + self.table_ftr
@@ -8723,7 +8787,7 @@ class TestCreateLatexTable(TestCase):
         self.assertEqual(13, Frame.objects.all().count())
         
         out_buf = create_latex_table(self.test_body, return_table=False)
-        with open(os.path.join('/tmp', 'Didymos_obs_no_obstype.tex'), 'w') as fd:
+        with open(os.path.join(tempfile.mkdtemp(), 'Didymos_obs_no_obstype.tex'), 'w') as fd:
             out_buf.seek(0)
             shutil.copyfileobj(out_buf, fd)
 
@@ -8735,10 +8799,10 @@ class TestCreateLatexTable(TestCase):
     def test_deluxetable_by_body(self):
 
         lines = [
-                  "2021-07-04 06:00 & 2021-07-04 07:00 & coj & 2m0 & E10 & Opt. spectra & $30.0\\arcsec\\times6.0\\arcsec$ slit & 0/1 \\\\\n",
-                  "2021-07-07 03:00 & 2021-07-07 03:08 & cpt & 1m0 & K91 & Opt. imaging & g',r' & 4/4 \\\\\n",
-                  "2021-07-14 03:00 & 2021-07-14 03:08 & cpt & 1m0 & K93 & Opt. imaging & g',r' & 4/4 \\\\\n",
-                  "2021-07-21 03:00 & 2021-07-21 03:08 & cpt & 1m0 & K92 & Opt. imaging & g',r' & 4/4\n",
+                  "2021-07-04 06:00 & 2021-07-04 07:00 & coj & 2m0 & E10 & Opt. spectra & $30.0\\arcsec\\times6.0\\arcsec$ slit & 0/1 \\\\" + os.linesep,
+                  "2021-07-07 03:00 & 2021-07-07 03:08 & cpt & 1m0 & K91 & Opt. imaging & g',r' & 4/4 \\\\" + os.linesep,
+                  "2021-07-14 03:00 & 2021-07-14 03:08 & cpt & 1m0 & K93 & Opt. imaging & g',r' & 4/4 \\\\" + os.linesep,
+                  "2021-07-21 03:00 & 2021-07-21 03:08 & cpt & 1m0 & K92 & Opt. imaging & g',r' & 4/4" + os.linesep,
                 ]
 
         expected_lines = self.deluxetable_hdr + lines + self.deluxetable_ftr
@@ -8761,10 +8825,10 @@ class TestCreateLatexTable(TestCase):
     def test_table_by_name(self):
 
         lines = [
-                  "2021-07-04 06:00 & 2021-07-04 07:00 & coj & 2m0 & E10 & Opt. spectra & $30.0\\arcsec\\times6.0\\arcsec$ slit & 0/1 \\\\\n",
-                  "2021-07-07 03:00 & 2021-07-07 03:08 & cpt & 1m0 & K91 & Opt. imaging & g',r' & 4/4 \\\\\n",
-                  "2021-07-14 03:00 & 2021-07-14 03:08 & cpt & 1m0 & K93 & Opt. imaging & g',r' & 4/4 \\\\\n",
-                  "2021-07-21 03:00 & 2021-07-21 03:08 & cpt & 1m0 & K92 & Opt. imaging & g',r' & 4/4 \\\\\n",
+                  "2021-07-04 06:00 & 2021-07-04 07:00 & coj & 2m0 & E10 & Opt. spectra & $30.0\\arcsec\\times6.0\\arcsec$ slit & 0/1 \\\\" + os.linesep,
+                  "2021-07-07 03:00 & 2021-07-07 03:08 & cpt & 1m0 & K91 & Opt. imaging & g',r' & 4/4 \\\\" + os.linesep,
+                  "2021-07-14 03:00 & 2021-07-14 03:08 & cpt & 1m0 & K93 & Opt. imaging & g',r' & 4/4 \\\\" + os.linesep,
+                  "2021-07-21 03:00 & 2021-07-21 03:08 & cpt & 1m0 & K92 & Opt. imaging & g',r' & 4/4 \\\\" + os.linesep,
                 ]
 
         expected_lines = self.table_hdr + lines + self.table_ftr
@@ -8783,10 +8847,10 @@ class TestCreateLatexTable(TestCase):
     def test_return_table(self):
 
         lines = [
-                  "2021-07-04 06:00 & 2021-07-04 07:00 & coj & 2m0 & E10 & Opt. spectra & $30.0\\arcsec\\times6.0\\arcsec$ slit & 0/1 \\\\\n",
-                  "2021-07-07 03:00 & 2021-07-07 03:08 & cpt & 1m0 & K91 & Opt. imaging & g',r' & 4/4 \\\\\n",
-                  "2021-07-14 03:00 & 2021-07-14 03:08 & cpt & 1m0 & K93 & Opt. imaging & g',r' & 4/4 \\\\\n",
-                  "2021-07-21 03:00 & 2021-07-21 03:08 & cpt & 1m0 & K92 & Opt. imaging & g',r' & 4/4 \\\\\n",
+                  "2021-07-04 06:00 & 2021-07-04 07:00 & coj & 2m0 & E10 & Opt. spectra & $30.0\\arcsec\\times6.0\\arcsec$ slit & 0/1 \\\\" + os.linesep,
+                  "2021-07-07 03:00 & 2021-07-07 03:08 & cpt & 1m0 & K91 & Opt. imaging & g',r' & 4/4 \\\\" + os.linesep,
+                  "2021-07-14 03:00 & 2021-07-14 03:08 & cpt & 1m0 & K93 & Opt. imaging & g',r' & 4/4 \\\\" + os.linesep,
+                  "2021-07-21 03:00 & 2021-07-21 03:08 & cpt & 1m0 & K92 & Opt. imaging & g',r' & 4/4 \\\\" + os.linesep,
                 ]
 
         expected_lines = self.table_hdr + lines + self.table_ftr
@@ -8830,10 +8894,10 @@ class TestCreateLatexTable(TestCase):
             test_frame = Frame.objects.create(**frame_params)
 
         lines = [
-                  "2021-07-07 03:00 & 2021-07-07 03:08 & cpt & 1m0 & K91 & Opt. imaging & g',r' & 4/4 \\\\\n",
-                  "2021-07-14 03:00 & 2021-07-14 03:08 & cpt & 1m0 & K93 & Opt. imaging & g',r' & 4/4 \\\\\n",
-                  "2021-07-21 03:00 & 2021-07-21 03:08 & cpt & 1m0 & K92 & Opt. imaging & g',r' & 4/4 \\\\\n",
-                  "2021-07-22 15:00 & 2021-07-22 15:06 & ogg & 2m0 & F65 & Opt. imaging & g',r',i',$\mathrm{z_{s}}$ & 4/4 \\\\\n",
+                  "2021-07-07 03:00 & 2021-07-07 03:08 & cpt & 1m0 & K91 & Opt. imaging & g',r' & 4/4 \\\\" + os.linesep,
+                  "2021-07-14 03:00 & 2021-07-14 03:08 & cpt & 1m0 & K93 & Opt. imaging & g',r' & 4/4 \\\\" + os.linesep,
+                  "2021-07-21 03:00 & 2021-07-21 03:08 & cpt & 1m0 & K92 & Opt. imaging & g',r' & 4/4 \\\\" + os.linesep,
+                  "2021-07-22 15:00 & 2021-07-22 15:06 & ogg & 2m0 & F65 & Opt. imaging & g',r',i',$\mathrm{z_{s}}$ & 4/4 \\\\" + os.linesep,
                 ]
 
         expected_lines = self.table_hdr + lines + self.table_ftr
@@ -8870,10 +8934,10 @@ class TestCreateLatexTable(TestCase):
             test_frame = Frame.objects.create(**frame_params)
 
         lines = [
-                  "2021-07-07 03:00 & 2021-07-07 03:08 & cpt & 1m0 & K91 & g',r' & 4/4 \\\\\n",
-                  "2021-07-14 03:00 & 2021-07-14 03:08 & cpt & 1m0 & K93 & g',r' & 4/4 \\\\\n",
-                  "2021-07-21 03:00 & 2021-07-21 03:08 & cpt & 1m0 & K92 & g',r' & 4/4 \\\\\n",
-                  "2021-07-22 15:00 & 2021-07-22 15:07 & ogg & 2m0 & F65 & g',r',i',$\mathrm{z_{s}}$ & 4/4 \\\\\n",
+                  "2021-07-07 03:00 & 2021-07-07 03:08 & cpt & 1m0 & K91 & g',r' & 4/4 \\\\" + os.linesep,
+                  "2021-07-14 03:00 & 2021-07-14 03:08 & cpt & 1m0 & K93 & g',r' & 4/4 \\\\" + os.linesep,
+                  "2021-07-21 03:00 & 2021-07-21 03:08 & cpt & 1m0 & K92 & g',r' & 4/4 \\\\" + os.linesep,
+                  "2021-07-22 15:00 & 2021-07-22 15:07 & ogg & 2m0 & F65 & g',r',i',$\mathrm{z_{s}}$ & 4/4 \\\\" + os.linesep,
                 ]
 
         expected_lines = self.table_hdr_no_obstype + lines + self.table_ftr
