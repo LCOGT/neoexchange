@@ -1780,7 +1780,7 @@ class TestDetermineSlotLength(TestCase):
 class TestGetSiteCamParams(TestCase):
 
     twom_setup_overhead = 180.0
-    twom_exp_overhead = 19.0
+    twom_exp_overhead = 10.0 # for MuSCAT, was 19 for Spectral
     twom_fov = 10.0
     twom_muscat_fov = 9.1
     onem_sbig_fov = 15.5
@@ -1817,8 +1817,8 @@ class TestGetSiteCamParams(TestCase):
         ccd_fov = sitecam['fov']
         max_exp_time = sitecam['max_exp_length']
         self.assertEqual(site_code.upper(), chk_site_code)
-        self.assertEqual(0.304, pixel_scale)
-        self.assertEqual(self.twom_fov, ccd_fov)
+        self.assertEqual(0.27, pixel_scale)
+        self.assertEqual(self.twom_muscat_fov, ccd_fov)
         self.assertEqual(self.max_exp, max_exp_time)
         self.assertEqual(self.twom_setup_overhead, setup_overhead)
         self.assertEqual(self.twom_exp_overhead, exp_overhead)
@@ -1837,7 +1837,7 @@ class TestGetSiteCamParams(TestCase):
         self.assertEqual(self.twom_muscat_fov, ccd_fov)
         self.assertEqual(self.max_exp, max_exp_time)
         self.assertEqual(self.twom_setup_overhead, setup_overhead)
-        self.assertEqual(10, exp_overhead)
+        self.assertEqual(self.twom_exp_overhead, exp_overhead)
 
     def test_2m_sitename(self):
         site_code = 'E10'
@@ -1851,8 +1851,8 @@ class TestGetSiteCamParams(TestCase):
         ccd_fov = sitecam['fov']
         max_exp_time = sitecam['max_exp_length']
         self.assertEqual(site_code, chk_site_code)
-        self.assertEqual(0.304, pixel_scale)
-        self.assertEqual(self.twom_fov, ccd_fov)
+        self.assertEqual(0.27, pixel_scale)
+        self.assertEqual(self.twom_muscat_fov, ccd_fov)
         self.assertEqual(self.max_exp, max_exp_time)
         self.assertEqual(self.twom_setup_overhead, setup_overhead)
         self.assertEqual(self.twom_exp_overhead, exp_overhead)
@@ -2234,7 +2234,7 @@ class TestDetermineExpTimeCount(TestCase):
         mag = 17.58
 
         expected_exptime = 1.0
-        expected_expcount = 35
+        expected_expcount = 63
 
         exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len, mag, 'V')
 
