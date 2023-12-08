@@ -29,7 +29,7 @@ MarkupSafe<2.0
 Jinja2>=2.11.0,<3.0
 bokeh==2.3.0
 fits2image
-pillow
+pillow>=6.2.1
 aplpy
 gunicorn[gevent]~=20.1.0
 rollbar
