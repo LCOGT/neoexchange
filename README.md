@@ -6,6 +6,9 @@ Portal for scheduling observations of NEOs (and other Solar System objects) usin
 
 ## History
 
+### 3.14.1
+* Upgraded backend to Django 4.1, tweaks to the test suite to work better on other non-Linux platforms.
+
 ### 3.13.4
 * Support for MuSCAT4 at FTS (E10)
 * Fix trimming of trailing Z on datetime when recording Blocks if not present
