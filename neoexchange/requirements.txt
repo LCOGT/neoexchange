@@ -2,8 +2,8 @@
 --trusted-host buildsba.lco.gtn
 numpy==1.21.4; sys_platform != 'win32'
 numpy==1.22.4+mkl; sys_platform == 'win32'
-Django>=4.1.10,<4.2
-#mysqlclient~=1.4.2
+Django>=4.2.8,<5.0
+#mysqlclient~=1.4.3
 psycopg2-binary
 astropy==4.2.1
 astroquery>=0.4.4.dev7007
@@ -26,10 +26,10 @@ django-storages
 boto3
 matplotlib<3.5.2
 MarkupSafe<2.0
-Jinja2<3.0
+Jinja2>=2.11.0,<3.0
 bokeh==2.3.0
 fits2image
-pillow
+pillow>=6.2.1
 aplpy
 gunicorn[gevent]~=20.1.0
 rollbar
