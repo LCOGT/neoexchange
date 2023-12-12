@@ -1,7 +1,7 @@
 --extra-index-url=http://buildsba.lco.gtn/python/
 --trusted-host buildsba.lco.gtn
 numpy==1.21.4; sys_platform != 'win32'
-numpy==1.22.4+mkl; sys_platform == 'win32'
+numpy==1.22.0; sys_platform == 'win32'
 Django>=4.2.8,<5.0
 #mysqlclient~=1.4.3
 psycopg2-binary
