@@ -17,7 +17,7 @@ from django.utils.translation import gettext_lazy as _
 
 
 class Proposal(models.Model):
-    code = models.CharField(max_length=20)
+    code = models.CharField(max_length=55)
     title = models.CharField(max_length=255)
     pi = models.CharField("PI", max_length=50, default='', help_text='Principal Investigator (PI)')
     tag = models.CharField(max_length=10, default='LCOGT')
