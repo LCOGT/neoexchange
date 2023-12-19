@@ -1,0 +1,45 @@
+name: neoexchange
+channels:
+  - conda-forge
+  - default
+dependencies:
+  - pip
+  - numpy=1.21.4
+  - Django>=4.1.7, <4.2
+  - psycopg2-binary
+  - astropy=4.2.1
+  - astroquery
+  - beautifulsoup4
+  - django-reversion
+  - html5lib
+  - ipython<8.0
+  - nose
+  - pytz
+  - six>=1.10.0
+  - pycparser
+  - selenium>=3.8, <4.0
+  - pytest-django
+  - tblib
+  - mock
+  - django-storages
+  - boto3
+  - matplotlib<3.5.2
+  - MarkupSafe<2.0
+  - Jinja2<3.0
+  - bokeh==2.3.0
+  - pillow
+  - aplpy
+  - rollbar
+  - sty
+  - awscli
+  - lxml
+  - freezegun
+  - tenacity
+  - requests[security]
+  - gunicorn[gevent]~=20.1.0
+  - Cython
+  - pip:
+    - pyslalib
+    - fits2image
+    - numpy==1.21.4; sys_platform != 'win32'
+    - numpy==1.22.4+mkl; sys_platform == 'win32'

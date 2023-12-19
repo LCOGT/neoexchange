@@ -13,13 +13,11 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 """
 from django.conf import settings
-from django.conf.urls import include, url
+from django.urls import path, re_path
 from django.contrib.staticfiles import views
 from django.contrib import admin
 from django.contrib.auth.views import LoginView, LogoutView
-from django.views.generic import ListView, DetailView
-from django.views.generic.base import TemplateView
-from django.urls import reverse_lazy
+from django.views.generic import ListView
 
 from core.models import Body, Block, SourceMeasurement, SuperBlock, StaticSource
 from core.views import BodySearchView, BodyDetailView, BlockDetailView, ScheduleParameters, \
@@ -42,67 +40,69 @@ from analyser.views import BlockFramesView, ProcessCandidates
 admin.autodiscover()
 
 urlpatterns = [
-    url(r'^$', home, name='home'),
-    # url(r'^makeplot/$', make_plot, name='makeplot'),
-    # url(r'^plotframe/$', TemplateView.as_view(template_name='core/frame_plot.html')),
-    url(r'^make-standards-plot/$', make_standards_plot, name='make-standards-plot'),
-    url(r'^make-solar-standards-plot/$', make_solar_standards_plot, name='make-solar-standards-plot'),
-    url(r'^visibility_plot/(?P<pk>\d+)/(?P<plot_type>[a-z]*)/$', make_visibility_plot, name='visibility-plot'),
-    url(r'^visibility_plot/(?P<pk>\d+)/(?P<plot_type>[a-z]*)/(?P<site_code>[A-Z,0-9]{3})/$', make_visibility_plot, name='visibility-plot-site'),
-    url(r'^block/summary/$', BlockTimeSummary.as_view(), name='block-summary'),
-    url(r'^block/list/$', SuperBlockListView.as_view(model=SuperBlock, queryset=SuperBlock.objects.order_by('-block_start'), context_object_name="block_list"), name='blocklist'),
-    url(r'^block/(?P<pk>\d+)/spectra/$', BlockSpec.as_view(), name='blockspec'),
-    url(r'^block/(?P<pk>\d+)/guidemovie/$', GuideMovie.as_view(), name='guidemovie'),
-    url(r'^block/(?P<pk>\d+)/spectra/guidemovie.gif$', display_movie, name='display_movie'),
-    url(r'^block/(?P<pk>\d+)/source/(?P<source>\d+)/report/submit/$', BlockReportMPC.as_view(), name='block-submit-mpc'),
-    url(r'^block/(?P<pk>\d+)/report/$', BlockReport.as_view(), name='report-block'),
-    url(r'^block/(?P<pk>\d+)/upload/$', UploadReport.as_view(), name='upload-report'),
-    url(r'^block/(?P<pk>\d+)/measurements/mpc/$', MeasurementViewBlock.as_view(template='core/mpcreport.html'), name='block-report-mpc'),
-    url(r'^block/(?P<pk>\d+)/measurements/$', MeasurementViewBlock.as_view(), name='block-report'),
-    url(r'^block/(?P<pk>\d+)/analyser/$', BlockFramesView.as_view(), name='block-ast'),
-    url(r'^block/(?P<pk>\d+)/analyser/submit/$', ProcessCandidates.as_view(), name='submit-candidates'),
-    url(r'^block/(?P<pk>\d+)/candidates/$', CandidatesViewBlock.as_view(), name='view-candidates'),
-    url(r'^block/(?P<pk>\d+)/timeline/$', SuperBlockTimeline.as_view(), name='view-timeline'),
-    url(r'^block/(?P<pk>\d+)/cancel/$', BlockCancel.as_view(), name='block-cancel'),
-    url(r'^block/(?P<pk>\d+)/$', SuperBlockDetailView.as_view(model=SuperBlock), name='block-view'),
-    url(r'^summary/spec/$', SpecDataListView.as_view(), name='spec_data_summary'),
-    url(r'^summary/lc/$', LCDataListView.as_view(), name='lc_data_summary'),
-    url(r'^target/$', ListView.as_view(model=Body, queryset=Body.objects.filter(active=True).order_by('-origin', '-ingest'), context_object_name="target_list"), name='targetlist'),
-    url(r'^target/(?P<pk>\d+)/measurements/ades/download/$', MeasurementDownloadADESPSV.as_view(), name='download-ades'),
-    url(r'^target/(?P<pk>\d+)/measurements/mpc/download/$', MeasurementDownloadMPC.as_view(), name='download-mpc'),
-    url(r'^target/(?P<pk>\d+)/measurements/ades/$', MeasurementViewBody.as_view(template='core/adesreport.html'), name='measurement-ades'),
-    url(r'^target/(?P<pk>\d+)/measurements/mpc/$', MeasurementViewBody.as_view(template='core/mpcreport.html'), name='measurement-mpc'),
-    url(r'^target/(?P<pk>\d+)/measurements/$', MeasurementViewBody.as_view(), name='measurement'),
-    url(r'^target/(?P<pk>\d+)/visibility/$', BodyVisibilityView.as_view(model=Body), name='visibility'),
-    url(r'^target/(?P<pk>\d+)/$', BodyDetailView.as_view(model=Body), name='target'),
-    url(r'^target/(?P<pk>\d+)/spectra/$', PlotSpec.as_view(), name='plotspec'),
-    url(r'^target/(?P<pk>\d+)/lc/$', LCPlot.as_view(), name='lc_plot'),
-    url(r'^documents/(?P<pk>\d+).txt$', display_textfile, name='display_textfile'),
-    url(r'^target/add/$', AddTarget.as_view(), name='add_target'),
-    url(r'^search/$', BodySearchView.as_view(context_object_name="target_list"), name='search'),
-    url(r'^ephemeris/$', ephemeris, name='ephemeris'),
-    url(r'^ranking/$', ranking, name='ranking'),
-    url(r'^calibsources/$', StaticSourceView.as_view(), name='calibsource-view'),
-    url(r'^calibsources/best/$', BestStandardsView.as_view(), name='beststandards-view'),
-    url(r'^calibsources/solar/$', StaticSourceView.as_view(queryset=StaticSource.objects.filter(source_type=StaticSource.SOLAR_STANDARD).order_by('ra')), name='solarstandard-view'),
-    url(r'^calibsources/(?P<pk>\d+)/$', StaticSourceDetailView.as_view(model=StaticSource), name='calibsource'),
-    url(r'^characterization/$', characterization, name='characterization'),
-    url(r'^lookproject/$', look_project, name='look_project'),
-    url(r'^feasibility/(?P<pk>\d+)/$', SpectroFeasibility.as_view(), name='feasibility'),
-    url(r'^feasibility/calib/(?P<pk>\d+)/$', CalibSpectroFeasibility.as_view(), name='feasibility-calib'),
-    url(r'^schedule/(?P<pk>\d+)/confirm/$', ScheduleSubmit.as_view(), name='schedule-confirm'),
-    url(r'^schedule/(?P<pk>\d+)/$', ScheduleParameters.as_view(), name='schedule-body'),
-    url(r'^schedule/calib/(?P<pk>\d+)/$', ScheduleCalibParameters.as_view(), name='schedule-calib'),
-    url(r'^schedule/(?P<pk>\d+)/cadence/$', ScheduleParametersCadence.as_view(), name='schedule-body-cadence'),
-    url(r'^schedule/(?P<pk>\d+)/spectra/$', ScheduleParametersSpectra.as_view(), name='schedule-body-spectra'),
-    url(r'^calib-schedule/(?P<instrument_code>[A-Z,0-9,\-]*)/(?P<pk>[-\d]+)/$', ScheduleCalibSpectra.as_view(), name='schedule-calib-spectra'),
-    url(r'^calib-schedule/(?P<pk>\d+)/confirm/$', ScheduleCalibSubmit.as_view(), name='schedule-calib-confirm'),
-    url(r'^accounts/login/$', LoginView.as_view(template_name='core/login.html'), name='auth_login'),
-    url(r'^accounts/logout/$', LogoutView.as_view(template_name='core/logout.html'), name='auth_logout'),
-    url(r'^admin/', admin.site.urls),
+    path('', home, name='home'),
+    # path('makeplot/', make_plot, name='makeplot'),
+    # path('plotframe/', TemplateView.as_view(template_name='core/frame_plot.html')),
+    path('make-standards-plot/', make_standards_plot, name='make-standards-plot'),
+    path('make-solar-standards-plot/', make_solar_standards_plot, name='make-solar-standards-plot'),
+    path('visibility_plot/<int:pk>/<str:plot_type>/', make_visibility_plot, name='visibility-plot'),
+    re_path(r'^visibility_plot/(?P<pk>\d+)/(?P<plot_type>[a-z]*)/(?P<site_code>[A-Z,0-9]{3})/', make_visibility_plot, name='visibility-plot-site'),
+    path('block/summary/', BlockTimeSummary.as_view(), name='block-summary'),
+    path('block/list/', SuperBlockListView.as_view(model=SuperBlock, queryset=SuperBlock.objects.order_by('-block_start'), context_object_name="block_list"), name='blocklist'),
+    path('block/<int:pk>/spectra/', BlockSpec.as_view(), name='blockspec'),
+    path('block/<int:pk>/guidemovie/', GuideMovie.as_view(), name='guidemovie'),
+    path('block/<int:pk>/spectra/guidemovie.gif', display_movie, name='display_movie'),
+    path('block/<int:pk>/source/<int:source>/report/submit/', BlockReportMPC.as_view(), name='block-submit-mpc'),
+    path('block/<int:pk>/report/', BlockReport.as_view(), name='report-block'),
+    path('block/<int:pk>/upload/', UploadReport.as_view(), name='upload-report'),
+    path('block/<int:pk>/measurements/mpc/', MeasurementViewBlock.as_view(template='core/mpcreport.html'), name='block-report-mpc'),
+    path('block/<int:pk>/measurements/', MeasurementViewBlock.as_view(), name='block-report'),
+    path('block/<int:pk>/analyser/', BlockFramesView.as_view(), name='block-ast'),
+    path('block/<int:pk>/analyser/submit/', ProcessCandidates.as_view(), name='submit-candidates'),
+    path('block/<int:pk>/candidates/', CandidatesViewBlock.as_view(), name='view-candidates'),
+    path('block/<int:pk>/timeline/', SuperBlockTimeline.as_view(), name='view-timeline'),
+    path('block/<int:pk>/cancel/', BlockCancel.as_view(), name='block-cancel'),
+    path('block/<int:pk>/', SuperBlockDetailView.as_view(model=SuperBlock), name='block-view'),
+    path('summary/spec/', SpecDataListView.as_view(), name='spec_data_summary'),
+    path('summary/lc/', LCDataListView.as_view(), name='lc_data_summary'),
+    path('target/', ListView.as_view(model=Body, queryset=Body.objects.filter(active=True).order_by('-origin', '-ingest'), context_object_name="target_list"), name='targetlist'),
+    path('target/<int:pk>/measurements/ades/download/', MeasurementDownloadADESPSV.as_view(), name='download-ades'),
+    path('target/<int:pk>/measurements/mpc/download/', MeasurementDownloadMPC.as_view(), name='download-mpc'),
+    path('target/<int:pk>/measurements/ades/', MeasurementViewBody.as_view(template='core/adesreport.html'), name='measurement-ades'),
+    path('target/<int:pk>/measurements/mpc/', MeasurementViewBody.as_view(template='core/mpcreport.html'), name='measurement-mpc'),
+    path('target/<int:pk>/measurements/', MeasurementViewBody.as_view(), name='measurement'),
+    path('target/<int:pk>/visibility/', BodyVisibilityView.as_view(model=Body), name='visibility'),
+    path('target/<int:pk>/', BodyDetailView.as_view(model=Body), name='target'),
+    path('target/<int:pk>/spectra/', PlotSpec.as_view(), name='plotspec'),
+    path('target/<int:pk>/lc/', LCPlot.as_view(), name='lc_plot'),
+    path('documents/<int:pk>.txt', display_textfile, name='display_textfile'),
+    path('target/add/', AddTarget.as_view(), name='add_target'),
+    path('search/', BodySearchView.as_view(context_object_name="target_list"), name='search'),
+    path('ephemeris/', ephemeris, name='ephemeris'),
+    path('ranking/', ranking, name='ranking'),
+    path('calibsources/', StaticSourceView.as_view(), name='calibsource-view'),
+    path('calibsources/best/', BestStandardsView.as_view(), name='beststandards-view'),
+    path('calibsources/solar/', StaticSourceView.as_view(queryset=StaticSource.objects.filter(source_type=StaticSource.SOLAR_STANDARD).order_by('ra')), name='solarstandard-view'),
+    path('calibsources/<int:pk>/', StaticSourceDetailView.as_view(model=StaticSource), name='calibsource'),
+    path('characterization/', characterization, name='characterization'),
+    path('lookproject/', look_project, name='look_project'),
+    path('feasibility/<int:pk>/', SpectroFeasibility.as_view(), name='feasibility'),
+    path('feasibility/calib/<int:pk>/', CalibSpectroFeasibility.as_view(), name='feasibility-calib'),
+    path('schedule/<int:pk>/confirm/', ScheduleSubmit.as_view(), name='schedule-confirm'),
+    path('schedule/<int:pk>/', ScheduleParameters.as_view(), name='schedule-body'),
+    path('schedule/calib/<int:pk>/', ScheduleCalibParameters.as_view(), name='schedule-calib'),
+    path('schedule/<int:pk>/cadence/', ScheduleParametersCadence.as_view(), name='schedule-body-cadence'),
+    path('schedule/<int:pk>/spectra/', ScheduleParametersSpectra.as_view(), name='schedule-body-spectra'),
+    re_path(r'^calib-schedule/(?P<instrument_code>[A-Z,0-9,\-]*)/(?P<pk>[-\d]+)/', ScheduleCalibSpectra.as_view(), name='schedule-calib-spectra'),
+    path('calib-schedule/<int:pk>/confirm/', ScheduleCalibSubmit.as_view(), name='schedule-calib-confirm'),
+    path('accounts/login/', LoginView.as_view(template_name='core/login.html'), name='auth_login'),
+    path('accounts/logout/', LogoutView.as_view(template_name='core/logout.html'), name='auth_logout'),
+    path('admin/', admin.site.urls),
 ]
 
 if settings.DEBUG:
-    urlpatterns += [
-        url(r'^static/(?P<path>.*)$', views.serve),
-    ]
+    from django.conf.urls.static import static
+    from django.contrib.staticfiles.urls import staticfiles_urlpatterns
+
+    # Serve static and media files from development server
+    urlpatterns += staticfiles_urlpatterns()

@@ -55,7 +55,9 @@ class ZeropointUnitTest(TestCase):
         # test_data = __file__.replace('.py', '_UCAC4.dat') #test_data_file captured with cat_table.write('test_ca
         # test_data = '/home/sgreenstreet/git/neoexchange/neoexchange/photometrics/tests/test_catalog_subs_UCAC4.d
         # mock_vizier().query_region().__getitem__.return_value=Table.read(test_data, format='csv')
-        pass
+        self.pos_precision = 6
+        self.mag_precision = 2
+        self.zp_precision = 6
 
     def compare_tables(self, expected_table, table, column, num_to_check=6, precision=6):
 
@@ -100,9 +102,9 @@ class ZeropointUnitTest(TestCase):
 
         rmag_third_source = cat_table['rmag'][2]
 
-        self.assertAlmostEqual(expected_ra_first_source, ra_first_source, 6)
-        self.assertAlmostEqual(expected_dec_first_source, dec_first_source, 6)
-        self.assertAlmostEqual(expected_rmag_third_source, rmag_third_source, 2)
+        self.assertAlmostEqual(expected_ra_first_source, ra_first_source, self.pos_precision)
+        self.assertAlmostEqual(expected_dec_first_source, dec_first_source, self.pos_precision)
+        self.assertAlmostEqual(expected_rmag_third_source, rmag_third_source, self.mag_precision)
         self.assertEqual(expected_len_cat_table, len(cat_table))
 
     # @patch('photometrics.catalog_subs.Vizier')
@@ -125,9 +127,9 @@ class ZeropointUnitTest(TestCase):
 
         rmag_third_source = cat_table['rmag'][2]
 
-        self.assertAlmostEqual(expected_ra_first_source, ra_first_source, 6)
-        self.assertAlmostEqual(expected_dec_first_source, dec_first_source, 6)
-        self.assertAlmostEqual(expected_rmag_third_source, rmag_third_source, 2)
+        self.assertAlmostEqual(expected_ra_first_source, ra_first_source, self.pos_precision)
+        self.assertAlmostEqual(expected_dec_first_source, dec_first_source, self.pos_precision)
+        self.assertAlmostEqual(expected_rmag_third_source, rmag_third_source, self.mag_precision)
         self.assertEqual(expected_len_cat_table, len(cat_table))
 
 #    @patch('photometrics.catalog_subs.Vizier')
@@ -150,9 +152,9 @@ class ZeropointUnitTest(TestCase):
 
         rmag_first_source = cat_table['r2mag'][0]
 
-        self.assertAlmostEqual(expected_ra_first_source, ra_first_source, 8)
-        self.assertAlmostEqual(expected_dec_first_source, dec_first_source, 8)
-        self.assertAlmostEqual(expected_rmag_first_source, rmag_first_source, 3)
+        self.assertAlmostEqual(expected_ra_first_source, ra_first_source, self.pos_precision)
+        self.assertAlmostEqual(expected_dec_first_source, dec_first_source, self.pos_precision)
+        self.assertAlmostEqual(expected_rmag_first_source, rmag_first_source, self.mag_precision)
         self.assertEqual(expected_len_cat_table, len(cat_table))
 
 #    @patch('photometrics.catalog_subs.Vizier')
@@ -175,9 +177,9 @@ class ZeropointUnitTest(TestCase):
 
         rmag_last_source = cat_table['r2mag'][-1]
 
-        self.assertAlmostEqual(expected_ra_last_source, ra_last_source, 8)
-        self.assertAlmostEqual(expected_dec_last_source, dec_last_source, 6)
-        self.assertAlmostEqual(expected_rmag_last_source, rmag_last_source, 1)
+        self.assertAlmostEqual(expected_ra_last_source, ra_last_source, self.pos_precision)
+        self.assertAlmostEqual(expected_dec_last_source, dec_last_source, self.pos_precision)
+        self.assertAlmostEqual(expected_rmag_last_source, rmag_last_source, self.mag_precision)
         self.assertEqual(expected_len_cat_table, len(cat_table))
 
 #    @patch('photometrics.catalog_subs.Vizier')
@@ -200,9 +202,9 @@ class ZeropointUnitTest(TestCase):
 
         rmag_first_source = cat_table['r2mag'][0]
 
-        self.assertAlmostEqual(expected_ra_first_source, ra_first_source, 8)
-        self.assertAlmostEqual(expected_dec_first_source, dec_first_source, 8)
-        self.assertAlmostEqual(expected_rmag_first_source, rmag_first_source, 2)
+        self.assertAlmostEqual(expected_ra_first_source, ra_first_source, self.pos_precision)
+        self.assertAlmostEqual(expected_dec_first_source, dec_first_source, self.pos_precision)
+        self.assertAlmostEqual(expected_rmag_first_source, rmag_first_source, self.mag_precision)
         self.assertEqual(expected_len_cat_table, len(cat_table))
 
 #    @patch('photometrics.catalog_subs.Vizier')
@@ -225,9 +227,9 @@ class ZeropointUnitTest(TestCase):
 
         rmag_3rdlast_source = cat_table['rmag'][-3]
 
-        self.assertAlmostEqual(expected_ra_last_source, ra_last_source, 6)
-        self.assertAlmostEqual(expected_dec_last_source, dec_last_source, 6)
-        self.assertAlmostEqual(expected_rmag_3rdlast_source, rmag_3rdlast_source, 2)
+        self.assertAlmostEqual(expected_ra_last_source, ra_last_source, self.pos_precision)
+        self.assertAlmostEqual(expected_dec_last_source, dec_last_source, self.pos_precision)
+        self.assertAlmostEqual(expected_rmag_3rdlast_source, rmag_3rdlast_source, self.mag_precision)
         self.assertEqual(expected_len_cat_table, len(cat_table))
 
 #    @patch('photometrics.catalog_subs.Vizier')
@@ -250,9 +252,9 @@ class ZeropointUnitTest(TestCase):
 
         rmag_last_source = cat_table['r2mag'][-1]
 
-        self.assertAlmostEqual(expected_ra_last_source, ra_last_source, 8)
-        self.assertAlmostEqual(expected_dec_last_source, dec_last_source, 8)
-        self.assertAlmostEqual(expected_rmag_last_source, rmag_last_source, 2)
+        self.assertAlmostEqual(expected_ra_last_source, ra_last_source, self.pos_precision)
+        self.assertAlmostEqual(expected_dec_last_source, dec_last_source, self.pos_precision)
+        self.assertAlmostEqual(expected_rmag_last_source, rmag_last_source, self.mag_precision)
         self.assertEqual(expected_len_cat_table, len(cat_table))
 
 #    @patch('photometrics.catalog_subs.Vizier')
@@ -276,9 +278,9 @@ class ZeropointUnitTest(TestCase):
 
         rmag_last_source = cat_table['rmag'][-1]  # will replace cat_name with UCAC4 after failing with PPMXL
 
-        self.assertAlmostEqual(expected_ra_last_source, ra_last_source, 8)
-        self.assertAlmostEqual(expected_dec_last_source, dec_last_source, 8)
-        self.assertAlmostEqual(expected_rmag_last_source, rmag_last_source, 2)
+        self.assertAlmostEqual(expected_ra_last_source, ra_last_source, self.pos_precision)
+        self.assertAlmostEqual(expected_dec_last_source, dec_last_source, self.pos_precision)
+        self.assertAlmostEqual(expected_rmag_last_source, rmag_last_source, self.mag_precision)
         self.assertEqual(expected_len_cat_table, len(cat_table))
 
 #    @patch('photometrics.catalog_subs.Vizier')
@@ -302,9 +304,9 @@ class ZeropointUnitTest(TestCase):
 
         rmag_last_source = cat_table['r2mag'][-1]  # will replace cat_name with PPMXL after failing with UCAC4
 
-        self.assertAlmostEqual(expected_ra_last_source, ra_last_source, 8)
-        self.assertAlmostEqual(expected_dec_last_source, dec_last_source, 8)
-        self.assertAlmostEqual(expected_rmag_last_source, rmag_last_source, 2)
+        self.assertAlmostEqual(expected_ra_last_source, ra_last_source, self.pos_precision)
+        self.assertAlmostEqual(expected_dec_last_source, dec_last_source, self.pos_precision)
+        self.assertAlmostEqual(expected_rmag_last_source, rmag_last_source, self.mag_precision)
         self.assertEqual(expected_len_cat_table, len(cat_table))
 
     def test_get_cat_ra_dec_empty_rmag_column_UCAC4(self):
@@ -325,9 +327,9 @@ class ZeropointUnitTest(TestCase):
 
         rmag_last_source = cat_table['r2mag'][-1]  # will replace cat_name with PPMXL after failing with UCAC4
 
-        self.assertAlmostEqual(expected_ra_last_source, ra_last_source, 8)
-        self.assertAlmostEqual(expected_dec_last_source, dec_last_source, 8)
-        self.assertAlmostEqual(expected_rmag_last_source, rmag_last_source, 2)
+        self.assertAlmostEqual(expected_ra_last_source, ra_last_source, self.pos_precision)
+        self.assertAlmostEqual(expected_dec_last_source, dec_last_source, self.pos_precision)
+        self.assertAlmostEqual(expected_rmag_last_source, rmag_last_source, self.mag_precision)
         self.assertEqual(expected_len_cat_table, len(cat_table))
 
     def test_get_cat_ra_dec_GAIA_DR2(self):
@@ -347,10 +349,10 @@ class ZeropointUnitTest(TestCase):
         e_rmag_first_source = cat_table['e_Gmag'][0]
         flags_first_source = cat_table['Dup'][0]
 
-        self.assertAlmostEqual(expected_ra_first_source, ra_first_source, 8)
-        self.assertAlmostEqual(expected_dec_first_source, dec_first_source, 8)
-        self.assertAlmostEqual(expected_rmag_first_source, rmag_first_source, 5)
-        self.assertAlmostEqual(expected_e_rmag_first_source, e_rmag_first_source, 5)
+        self.assertAlmostEqual(expected_ra_first_source, ra_first_source, self.pos_precision)
+        self.assertAlmostEqual(expected_dec_first_source, dec_first_source, self.pos_precision)
+        self.assertAlmostEqual(expected_rmag_first_source, rmag_first_source, self.mag_precision)
+        self.assertAlmostEqual(expected_e_rmag_first_source, e_rmag_first_source, self.mag_precision)
         self.assertEqual(expected_flags_first_source, flags_first_source)
         self.assertEqual(expected_len_cat_table, len(cat_table))
 
@@ -395,10 +397,10 @@ class ZeropointUnitTest(TestCase):
 
         self.compare_tables(expected_cross_match_table, cross_match_table, 'RA Cat 1')
         self.compare_tables(expected_cross_match_table, cross_match_table, 'RA Cat 2')
-        self.compare_tables(expected_cross_match_table, cross_match_table, 'RA diff', precision=9)
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'RA diff', precision=self.pos_precision)
         self.compare_tables(expected_cross_match_table, cross_match_table, 'Dec Cat 1')
         self.compare_tables(expected_cross_match_table, cross_match_table, 'Dec Cat 2')
-        self.compare_tables(expected_cross_match_table, cross_match_table, 'Dec diff', precision=9)
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'Dec diff', precision=self.pos_precision)
         self.compare_tables(expected_cross_match_table, cross_match_table, 'r mag Cat 1', precision=10)
         self.compare_tables(expected_cross_match_table, cross_match_table, 'r mag Cat 2', precision=10)
         self.compare_tables(expected_cross_match_table, cross_match_table, 'r mag err', precision=2)
@@ -449,10 +451,10 @@ class ZeropointUnitTest(TestCase):
 
         self.compare_tables(expected_cross_match_table, cross_match_table, 'RA Cat 1', 7)
         self.compare_tables(expected_cross_match_table, cross_match_table, 'RA Cat 2', 7)
-        self.compare_tables(expected_cross_match_table, cross_match_table, 'RA diff', num_to_check=7, precision=9)
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'RA diff', num_to_check=7, precision=self.pos_precision)
         self.compare_tables(expected_cross_match_table, cross_match_table, 'Dec Cat 1', 7)
         self.compare_tables(expected_cross_match_table, cross_match_table, 'Dec Cat 2', 7)
-        self.compare_tables(expected_cross_match_table, cross_match_table, 'Dec diff', num_to_check=7, precision=9)
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'Dec diff', num_to_check=7, precision=self.pos_precision)
         self.compare_tables(expected_cross_match_table, cross_match_table, 'r mag Cat 1', num_to_check=7, precision=10)
         self.compare_tables(expected_cross_match_table, cross_match_table, 'r mag Cat 2', num_to_check=7, precision=10)
         self.compare_tables(expected_cross_match_table, cross_match_table, 'r mag err', num_to_check=7, precision=2)
@@ -503,10 +505,10 @@ class ZeropointUnitTest(TestCase):
 
         self.compare_tables(expected_cross_match_table, cross_match_table, 'RA Cat 1', 7)
         self.compare_tables(expected_cross_match_table, cross_match_table, 'RA Cat 2', 7)
-        self.compare_tables(expected_cross_match_table, cross_match_table, 'RA diff', num_to_check=7, precision=9)
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'RA diff', num_to_check=7, precision=self.pos_precision)
         self.compare_tables(expected_cross_match_table, cross_match_table, 'Dec Cat 1', 7)
         self.compare_tables(expected_cross_match_table, cross_match_table, 'Dec Cat 2', 7)
-        self.compare_tables(expected_cross_match_table, cross_match_table, 'Dec diff', num_to_check=7, precision=9)
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'Dec diff', num_to_check=7, precision=self.pos_precision)
         self.compare_tables(expected_cross_match_table, cross_match_table, 'r mag Cat 1', num_to_check=7, precision=10)
         self.compare_tables(expected_cross_match_table, cross_match_table, 'r mag Cat 2', num_to_check=7, precision=10)
         self.compare_tables(expected_cross_match_table, cross_match_table, 'r mag err', num_to_check=7, precision=2)
@@ -557,10 +559,10 @@ class ZeropointUnitTest(TestCase):
 
         self.compare_tables(expected_cross_match_table, cross_match_table, 'RA Cat 1', 7)
         self.compare_tables(expected_cross_match_table, cross_match_table, 'RA Cat 2', 7)
-        self.compare_tables(expected_cross_match_table, cross_match_table, 'RA diff', num_to_check=7, precision=9)
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'RA diff', num_to_check=7, precision=self.pos_precision)
         self.compare_tables(expected_cross_match_table, cross_match_table, 'Dec Cat 1', 7)
         self.compare_tables(expected_cross_match_table, cross_match_table, 'Dec Cat 2', 7)
-        self.compare_tables(expected_cross_match_table, cross_match_table, 'Dec diff', num_to_check=7, precision=9)
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'Dec diff', num_to_check=7, precision=self.pos_precision)
         self.compare_tables(expected_cross_match_table, cross_match_table, 'r mag Cat 1', num_to_check=7, precision=10)
         self.compare_tables(expected_cross_match_table, cross_match_table, 'r mag Cat 2', num_to_check=7, precision=10)
         self.compare_tables(expected_cross_match_table, cross_match_table, 'r mag err', num_to_check=7, precision=2)
@@ -611,10 +613,10 @@ class ZeropointUnitTest(TestCase):
 
         self.compare_tables(expected_cross_match_table, cross_match_table, 'RA Cat 1', num_to_check=4)
         self.compare_tables(expected_cross_match_table, cross_match_table, 'RA Cat 2', num_to_check=4)
-        self.compare_tables(expected_cross_match_table, cross_match_table, 'RA diff', num_to_check=4, precision=9)
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'RA diff', num_to_check=4, precision=self.pos_precision)
         self.compare_tables(expected_cross_match_table, cross_match_table, 'Dec Cat 1', 4)
         self.compare_tables(expected_cross_match_table, cross_match_table, 'Dec Cat 2', 4)
-        self.compare_tables(expected_cross_match_table, cross_match_table, 'Dec diff', num_to_check=4, precision=9)
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'Dec diff', num_to_check=4, precision=self.pos_precision)
         self.compare_tables(expected_cross_match_table, cross_match_table, 'r mag Cat 1', num_to_check=4, precision=10)
         self.compare_tables(expected_cross_match_table, cross_match_table, 'r mag Cat 2', num_to_check=4, precision=10)
         self.compare_tables(expected_cross_match_table, cross_match_table, 'r mag diff', 4)
@@ -660,10 +662,10 @@ class ZeropointUnitTest(TestCase):
 
         self.compare_tables(expected_cross_match_table, cross_match_table, 'RA Cat 1')
         self.compare_tables(expected_cross_match_table, cross_match_table, 'RA Cat 2')
-        self.compare_tables(expected_cross_match_table, cross_match_table, 'RA diff', precision=9)
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'RA diff', precision=self.pos_precision)
         self.compare_tables(expected_cross_match_table, cross_match_table, 'Dec Cat 1')
         self.compare_tables(expected_cross_match_table, cross_match_table, 'Dec Cat 2')
-        self.compare_tables(expected_cross_match_table, cross_match_table, 'Dec diff', precision=9)
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'Dec diff', precision=self.pos_precision)
         self.compare_tables(expected_cross_match_table, cross_match_table, 'r mag Cat 1', precision=10)
         self.compare_tables(expected_cross_match_table, cross_match_table, 'r mag Cat 2', precision=10)
         self.compare_tables(expected_cross_match_table, cross_match_table, 'r mag err', precision=2)
@@ -674,7 +676,7 @@ class ZeropointUnitTest(TestCase):
 
         expected_avg_zeropoint = 0.8520
 
-        expected_std_zeropoint = 0.1745
+        expected_std_zeropoint = 0.17446621890343567
 
         expected_count = 3
 
@@ -691,8 +693,8 @@ class ZeropointUnitTest(TestCase):
 
         avg_zeropoint, std_zeropoint, count, num_in_calc = get_zeropoint(cross_match_table, std_zeropoint_tolerance=0.2)
 
-        self.assertAlmostEqual(expected_avg_zeropoint, avg_zeropoint, 4)
-        self.assertAlmostEqual(expected_std_zeropoint, std_zeropoint, 4)
+        self.assertAlmostEqual(expected_avg_zeropoint, avg_zeropoint, self.zp_precision)
+        self.assertAlmostEqual(expected_std_zeropoint, std_zeropoint, self.zp_precision)
         self.assertAlmostEqual(expected_count, count, 1)
         self.assertAlmostEqual(expected_num_in_calc, num_in_calc, 1)
 
@@ -722,8 +724,8 @@ class ZeropointUnitTest(TestCase):
 
         avg_zeropoint, std_zeropoint, count, num_in_calc = get_zeropoint(cross_match_table, std_zeropoint_tolerance=0.1)
 
-        self.assertAlmostEqual(expected_avg_zeropoint, avg_zeropoint, 4)
-        self.assertAlmostEqual(expected_std_zeropoint, std_zeropoint, 4)
+        self.assertAlmostEqual(expected_avg_zeropoint, avg_zeropoint, self.zp_precision)
+        self.assertAlmostEqual(expected_std_zeropoint, std_zeropoint, self.zp_precision)
         self.assertAlmostEqual(expected_count, count, 1)
         self.assertAlmostEqual(expected_num_in_calc, num_in_calc, 1)
 
@@ -746,8 +748,8 @@ class ZeropointUnitTest(TestCase):
 
         avg_zeropoint, std_zeropoint, count, num_in_calc = get_zeropoint(cross_match_table, std_zeropoint_tolerance=0.1)
 
-        self.assertAlmostEqual(expected_avg_zeropoint, avg_zeropoint, 4)
-        self.assertAlmostEqual(expected_std_zeropoint, std_zeropoint, 4)
+        self.assertAlmostEqual(expected_avg_zeropoint, avg_zeropoint, self.zp_precision)
+        self.assertAlmostEqual(expected_std_zeropoint, std_zeropoint, self.zp_precision)
         self.assertAlmostEqual(expected_count, count, 1)
         self.assertAlmostEqual(expected_num_in_calc, num_in_calc, 1)
 
@@ -769,8 +771,8 @@ class ZeropointUnitTest(TestCase):
 
         header, table, cat_table, cross_match_table, avg_zeropoint, std_zeropoint, count, num_in_calc, cat_name = call_cross_match_and_zeropoint(catfile, cat_name="PPMXL")
 
-        self.assertAlmostEqual(expected_avg_zeropoint, avg_zeropoint, 8)
-        self.assertAlmostEqual(expected_std_zeropoint, std_zeropoint, 8)
+        self.assertAlmostEqual(expected_avg_zeropoint, avg_zeropoint, self.zp_precision)
+        self.assertAlmostEqual(expected_std_zeropoint, std_zeropoint, self.zp_precision)
         self.assertAlmostEqual(expected_count, count, 1)
         self.assertAlmostEqual(expected_num_in_calc, num_in_calc, 1)
         self.assertEqual(expected_cat_name, cat_name)
@@ -794,8 +796,8 @@ class ZeropointUnitTest(TestCase):
 
         header, table, cat_table, cross_match_table, avg_zeropoint, std_zeropoint, count, num_in_calc, cat_name = call_cross_match_and_zeropoint(catfile)
 
-        self.assertAlmostEqual(expected_avg_zeropoint, avg_zeropoint, 8)
-        self.assertAlmostEqual(expected_std_zeropoint, std_zeropoint, 8)
+        self.assertAlmostEqual(expected_avg_zeropoint, avg_zeropoint, self.zp_precision)
+        self.assertAlmostEqual(expected_std_zeropoint, std_zeropoint, self.zp_precision)
         self.assertAlmostEqual(expected_count, count, 1)
         self.assertAlmostEqual(expected_num_in_calc, num_in_calc, 1)
         self.assertEqual(expected_cat_name, cat_name)
@@ -819,8 +821,8 @@ class ZeropointUnitTest(TestCase):
 
         header, table, cat_table, cross_match_table, avg_zeropoint, std_zeropoint, count, num_in_calc, cat_name = call_cross_match_and_zeropoint(catfile, cat_name='GAIA-DR2')
 
-        self.assertAlmostEqual(expected_avg_zeropoint, avg_zeropoint, 8)
-        self.assertAlmostEqual(expected_std_zeropoint, std_zeropoint, 8)
+        self.assertAlmostEqual(expected_avg_zeropoint, avg_zeropoint, self.zp_precision)
+        self.assertAlmostEqual(expected_std_zeropoint, std_zeropoint, self.zp_precision)
         self.assertAlmostEqual(expected_count, count, 1)
         self.assertAlmostEqual(expected_num_in_calc, num_in_calc, 1)
         self.assertEqual(expected_cat_name, cat_name)
@@ -849,8 +851,8 @@ class ZeropointUnitTest(TestCase):
 
         header, table, cat_table, cross_match_table, avg_zeropoint, std_zeropoint, count, num_in_calc, cat_name = call_cross_match_and_zeropoint(catfile, cat_name="PPMXL")
 
-        self.assertAlmostEqual(expected_avg_zeropoint, avg_zeropoint, 8)
-        self.assertAlmostEqual(expected_std_zeropoint, std_zeropoint, 8)
+        self.assertAlmostEqual(expected_avg_zeropoint, avg_zeropoint, self.zp_precision)
+        self.assertAlmostEqual(expected_std_zeropoint, std_zeropoint, self.zp_precision)
         self.assertAlmostEqual(expected_count, count, 1)
         self.assertAlmostEqual(expected_num_in_calc, num_in_calc, 1)
         self.assertEqual(expected_cat_name, cat_name)
@@ -875,8 +877,8 @@ class ZeropointUnitTest(TestCase):
 
         header, table, cat_table, cross_match_table, avg_zeropoint, std_zeropoint, count, num_in_calc, cat_name = call_cross_match_and_zeropoint(catfile)
 
-        self.assertAlmostEqual(expected_avg_zeropoint, avg_zeropoint, 8)
-        self.assertAlmostEqual(expected_std_zeropoint, std_zeropoint, 8)
+        self.assertAlmostEqual(expected_avg_zeropoint, avg_zeropoint, self.zp_precision)
+        self.assertAlmostEqual(expected_std_zeropoint, std_zeropoint, self.zp_precision)
         self.assertAlmostEqual(expected_count, count, 1)
         self.assertAlmostEqual(expected_num_in_calc, num_in_calc, 1)
         self.assertEqual(expected_cat_name, cat_name)
@@ -901,8 +903,8 @@ class ZeropointUnitTest(TestCase):
 
         header, table, cat_table, cross_match_table, avg_zeropoint, std_zeropoint, count, num_in_calc, cat_name = call_cross_match_and_zeropoint(catfile, cat_name="PPMXL")
 
-        self.assertAlmostEqual(expected_avg_zeropoint, avg_zeropoint, 8)
-        self.assertAlmostEqual(expected_std_zeropoint, std_zeropoint, 8)
+        self.assertAlmostEqual(expected_avg_zeropoint, avg_zeropoint, self.zp_precision)
+        self.assertAlmostEqual(expected_std_zeropoint, std_zeropoint, self.zp_precision)
         self.assertAlmostEqual(expected_count, count, 1)
         self.assertAlmostEqual(expected_num_in_calc, num_in_calc, 1)
         self.assertEqual(expected_cat_name, cat_name)

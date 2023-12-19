@@ -7,7 +7,7 @@ from django.utils.crypto import get_random_string
 import rollbar
 
 
-VERSION = '3.13.4'
+VERSION = '3.14.1'
 
 
 CURRENT_PATH = os.path.dirname(os.path.realpath(__file__))
@@ -73,6 +73,14 @@ MEDIA_ROOT = '/var/www/html/media/'
 # Examples: "http://media.lawrence.com/media/", "http://example.com/media/"
 MEDIA_URL = '/media/'
 
+STORAGES = {
+    "default": {
+        "BACKEND" : "django.core.files.storage.FileSystemStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+    },
+}
 STATIC_ROOT = '/var/www/html/static/'
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [os.path.join(BASE_DIR, 'core'), ]
@@ -236,6 +244,8 @@ DATABASES = {
     }
 }
 
+DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
+
 # Set MySQL-specific options
 if DATABASES['default']['ENGINE'] =='django.db.backends.mysql':
     DATABASES['default']['OPTIONS'] =  { 'init_command': "SET sql_mode='STRICT_TRANS_TABLES'" }
@@ -311,7 +321,7 @@ if USE_S3:
     # s3 public media settings
     PUBLIC_MEDIA_LOCATION = 'data'
     MEDIA_URL = f'https://s3-{AWS_S3_REGION_NAME}.amazonaws.com/{AWS_STORAGE_BUCKET_NAME}/{PUBLIC_MEDIA_LOCATION}/'
-    DEFAULT_FILE_STORAGE = 'neox.storage_backends.PublicMediaStorage'
+    STORAGES["default"]["BACKEND"] = 'neox.storage_backends.PublicMediaStorage'
     DATA_ROOT = os.getenv('DATA_ROOT', '')  # Set env variable on Apophis to '/apophis/eng/rocks/'
 else:
     # For local use

@@ -110,12 +110,13 @@ RUN yum -y install epel-release glibc-langpack-en\
             gcc \
             gcc-c++ \
             gcc-gfortran \
-            python36 \
-            python36-devel \
+            python39 \
+            python39-devel \
             libffi-devel \
             libjpeg-devel \
             libpng-devel \
             mariadb-devel \
+            freetype-devel \
             make diffutils file
 
 # Copy Python dependencies manifest
@@ -137,9 +138,9 @@ ENV PATH=/root/bin:$PATH
 ENTRYPOINT [ "/init" ]
 
 # Supercronic environment variables
-ENV SUPERCRONIC_URL=https://github.com/aptible/supercronic/releases/download/v0.1.9/supercronic-linux-amd64 \
+ENV SUPERCRONIC_URL=https://github.com/aptible/supercronic/releases/download/v0.1.12/supercronic-linux-amd64 \
     SUPERCRONIC=supercronic-linux-amd64 \
-    SUPERCRONIC_SHA1SUM=5ddf8ea26b56d4a7ff6faecdd8966610d5cb9d85
+    SUPERCRONIC_SHA1SUM=048b95b48b708983effb2e5c935a1ef8483d9e3e
 
 # Supercronic installation
 RUN curl -fsSLO "$SUPERCRONIC_URL" \

@@ -18,7 +18,8 @@ from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import Select
 from mock import patch
-from neox.tests.mocks import MockDateTime, mock_lco_authenticate, mock_fetch_filter_list, mock_fetch_filter_list_no2m,\
+from freezegun import freeze_time
+from neox.tests.mocks import mock_lco_authenticate, mock_fetch_filter_list, mock_fetch_filter_list_no2m,\
     mock_build_visibility_source
 
 from datetime import datetime
@@ -82,8 +83,7 @@ class ScheduleObservations(FunctionalTest):
     @patch('core.plots.build_visibility_source', mock_build_visibility_source)
     @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
     @patch('core.forms.fetch_filter_list', mock_fetch_filter_list)
-    @patch('core.forms.datetime', MockDateTime)
-    @patch('core.views.datetime', MockDateTime)
+    @freeze_time(datetime(2015, 4, 20))
     def test_can_schedule_observations(self):
         self.test_login()
         # Bart has heard about a new website for NEOs. He goes to the
@@ -121,7 +121,6 @@ class ScheduleObservations(FunctionalTest):
 
         site_choices.select_by_visible_text('ELP 1.0m - V37,V39; (McDonald, Texas)')
 
-        MockDateTime.change_date(2015, 4, 20)
         datebox = self.get_item_input_box('id_utc_date')
         datebox.clear()
         datebox.send_keys('2015-04-21')
@@ -169,8 +168,7 @@ class ScheduleObservations(FunctionalTest):
     @patch('core.plots.build_visibility_source', mock_build_visibility_source)
     @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
     @patch('core.forms.fetch_filter_list', mock_fetch_filter_list)
-    @patch('core.forms.datetime', MockDateTime)
-    @patch('core.views.datetime', MockDateTime)
+    @freeze_time(datetime(2015, 4, 20))
     def test_schedule_observations_past(self):
         self.test_login()
         # Bart has heard about a new website for NEOs. He goes to the
@@ -208,7 +206,6 @@ class ScheduleObservations(FunctionalTest):
 
         site_choices.select_by_visible_text('ELP 1.0m - V37,V39; (McDonald, Texas)')
 
-        MockDateTime.change_date(2015, 4, 20)
         datebox = self.get_item_input_box('id_utc_date')
         datebox.clear()
         datebox.send_keys('2015-03-21')
@@ -222,10 +219,8 @@ class ScheduleObservations(FunctionalTest):
     @patch('core.plots.build_visibility_source', mock_build_visibility_source)
     @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
     @patch('core.forms.fetch_filter_list', mock_fetch_filter_list)
-    @patch('core.forms.datetime', MockDateTime)
-    @patch('core.views.datetime', MockDateTime)
+    @freeze_time(datetime(2015, 4, 20))
     def test_schedule_page_edit_block(self):
-        MockDateTime.change_date(2015, 4, 20)
         self.test_login()
 
         # Bart has heard about a new website for NEOs. He goes to the
@@ -259,7 +254,6 @@ class ScheduleObservations(FunctionalTest):
 
         site_choices.select_by_visible_text('ELP 1.0m - V37,V39; (McDonald, Texas)')
 
-        MockDateTime.change_date(2015, 4, 20)
         datebox = self.get_item_input_box('id_utc_date')
         datebox.clear()
         datebox.send_keys('2015-04-21')
@@ -294,10 +288,8 @@ class ScheduleObservations(FunctionalTest):
     @patch('core.plots.build_visibility_source', mock_build_visibility_source)
     @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
     @patch('core.forms.fetch_filter_list', mock_fetch_filter_list)
-    @patch('core.forms.datetime', MockDateTime)
-    @patch('core.views.datetime', MockDateTime)
+    @freeze_time(datetime(2015, 4, 20))
     def test_schedule_page_short_block(self):
-        MockDateTime.change_date(2015, 4, 20)
         self.test_login()
 
         # Bart has heard about a new website for NEOs. He goes to the
@@ -331,7 +323,6 @@ class ScheduleObservations(FunctionalTest):
 
         site_choices.select_by_visible_text('ELP 1.0m - V37,V39; (McDonald, Texas)')
 
-        MockDateTime.change_date(2015, 4, 20)
         datebox = self.get_item_input_box('id_utc_date')
         datebox.clear()
         datebox.send_keys('2015-04-21')
@@ -367,10 +358,8 @@ class ScheduleObservations(FunctionalTest):
     @patch('core.plots.build_visibility_source', mock_build_visibility_source)
     @patch('core.views.fetch_filter_list', mock_fetch_filter_list_no2m)
     @patch('core.forms.fetch_filter_list', mock_fetch_filter_list_no2m)
-    @patch('core.forms.datetime', MockDateTime)
-    @patch('core.views.datetime', MockDateTime)
+    @freeze_time(datetime(2015, 4, 20))
     def test_schedule_missing_telescope(self):
-        MockDateTime.change_date(2015, 4, 20)
         self.test_login()
 
         # Bart has heard about a new website for NEOs. He goes to the
@@ -405,7 +394,6 @@ class ScheduleObservations(FunctionalTest):
         # He tries to use a telescope and site group that are currently unavailable
         site_choices.select_by_visible_text('TFN 0.4m - Z17,Z21; (Tenerife, Spain)')
 
-        MockDateTime.change_date(2015, 4, 20)
         datebox = self.get_item_input_box('id_utc_date')
         datebox.clear()
         datebox.send_keys('2015-04-21')
@@ -418,10 +406,8 @@ class ScheduleObservations(FunctionalTest):
     @patch('core.plots.build_visibility_source', mock_build_visibility_source)
     @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
     @patch('core.forms.fetch_filter_list', mock_fetch_filter_list)
-    @patch('core.forms.datetime', MockDateTime)
-    @patch('core.views.datetime', MockDateTime)
+    @freeze_time(datetime(2015, 4, 20))
     def test_schedule_spectroscopy(self):
-        MockDateTime.change_date(2015, 4, 20)
         self.test_login()
 
         # Bart has heard about a new website for NEOs. He goes to the
@@ -458,7 +444,6 @@ class ScheduleObservations(FunctionalTest):
 
         site_choices.select_by_visible_text('Siding Spring, Aust. (FTS - E10)')
 
-        MockDateTime.change_date(2015, 4, 20)
         datebox = self.get_item_input_box('id_utc_date')
         datebox.clear()
         datebox.send_keys('2016-01-21')
@@ -487,10 +472,8 @@ class ScheduleObservations(FunctionalTest):
     @patch('core.plots.build_visibility_source', mock_build_visibility_source)
     @patch('core.views.fetch_filter_list', mock_fetch_filter_list_no2m)
     @patch('core.forms.fetch_filter_list', mock_fetch_filter_list_no2m)
-    @patch('core.forms.datetime', MockDateTime)
-    @patch('core.views.datetime', MockDateTime)
+    @freeze_time(datetime(2015, 4, 20))
     def test_schedule_spectroscopy_missing_telescope(self):
-        MockDateTime.change_date(2015, 4, 20)
         self.test_login()
 
         # Bart has heard about a new website for NEOs. He goes to the
@@ -531,7 +514,6 @@ class ScheduleObservations(FunctionalTest):
         sa_box = self.browser.find_element_by_id('id_solar_analog')
         sa_box.click()
 
-        MockDateTime.change_date(2015, 4, 20)
         datebox = self.get_item_input_box('id_utc_date')
         datebox.clear()
         datebox.send_keys('2016-04-21')
@@ -545,10 +527,8 @@ class ScheduleObservations(FunctionalTest):
     @patch('core.plots.build_visibility_source', mock_build_visibility_source)
     @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
     @patch('core.forms.fetch_filter_list', mock_fetch_filter_list)
-    @patch('core.forms.datetime', MockDateTime)
-    @patch('core.views.datetime', MockDateTime)
+    @freeze_time(datetime(2015, 4, 20))
     def test_schedule_spectroscopy_no_sa(self):
-        MockDateTime.change_date(2015, 4, 20)
         self.test_login()
 
         # Bart has heard about a new website for NEOs. He goes to the
@@ -585,7 +565,6 @@ class ScheduleObservations(FunctionalTest):
 
         site_choices.select_by_visible_text('Maui, Hawaii (FTN - F65)')
 
-        MockDateTime.change_date(2015, 4, 20)
         datebox = self.get_item_input_box('id_utc_date')
         datebox.clear()
         datebox.send_keys('2015-04-21')
@@ -601,10 +580,8 @@ class ScheduleObservations(FunctionalTest):
     @patch('core.plots.build_visibility_source', mock_build_visibility_source)
     @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
     @patch('core.forms.fetch_filter_list', mock_fetch_filter_list)
-    @patch('core.forms.datetime', MockDateTime)
-    @patch('core.views.datetime', MockDateTime)
+    @freeze_time(datetime(2015, 4, 20))
     def test_schedule_spectroscopy_multiple_exps(self):
-        MockDateTime.change_date(2015, 4, 20)
         self.test_login()
 
         # Bart has heard about a new website for NEOs. He goes to the
@@ -642,7 +619,6 @@ class ScheduleObservations(FunctionalTest):
         site_choices.select_by_visible_text('Maui, Hawaii (FTN - F65)')
 
         # He decides he wants to do many short exposures
-        MockDateTime.change_date(2015, 4, 20)
         datebox = self.get_item_input_box('id_utc_date')
         datebox.clear()
         datebox.send_keys('2015-04-21')
@@ -665,10 +641,8 @@ class ScheduleObservations(FunctionalTest):
     @patch('core.plots.build_visibility_source', mock_build_visibility_source)
     @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
     @patch('core.forms.fetch_filter_list', mock_fetch_filter_list)
-    @patch('core.forms.datetime', MockDateTime)
-    @patch('core.views.datetime', MockDateTime)
+    @freeze_time(datetime(2015, 4, 20))
     def test_schedule_page_advanced_options(self):
-        MockDateTime.change_date(2015, 4, 20)
         self.test_login()
 
         # Bart has heard about a new website for NEOs. He goes to the
@@ -702,7 +676,6 @@ class ScheduleObservations(FunctionalTest):
 
         site_choices.select_by_visible_text('ELP 1.0m - V37,V39; (McDonald, Texas)')
 
-        MockDateTime.change_date(2015, 4, 20)
         datebox = self.get_item_input_box('id_utc_date')
         datebox.clear()
         datebox.send_keys('2015-04-21')
@@ -855,10 +828,8 @@ class ScheduleObservations(FunctionalTest):
     @patch('core.plots.build_visibility_source', mock_build_visibility_source)
     @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
     @patch('core.forms.fetch_filter_list', mock_fetch_filter_list)
-    @patch('core.forms.datetime', MockDateTime)
-    @patch('core.views.datetime', MockDateTime)
+    @freeze_time(datetime(2015, 2, 20))
     def test_schedule_page_edit_windows(self):
-        MockDateTime.change_date(2015, 2, 20)
         self.test_login()
 
         # Bart has heard about a new website for NEOs. He goes to the
@@ -894,7 +865,6 @@ class ScheduleObservations(FunctionalTest):
         # site_choices.select_by_visible_text('ELP 1.0m - V37,V39; (McDonald, Texas)')
         site_choices.select_by_visible_text('CPT 1.0m - K91-93; (Sutherland, S. Africa)')
 
-        MockDateTime.change_date(2015, 2, 20)
         datebox = self.get_item_input_box('id_utc_date')
         datebox.clear()
         datebox.send_keys('2015-02-21')
@@ -959,10 +929,8 @@ class ScheduleObservations(FunctionalTest):
     @patch('core.plots.build_visibility_source', mock_build_visibility_source)
     @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
     @patch('core.forms.fetch_filter_list', mock_fetch_filter_list)
-    @patch('core.forms.datetime', MockDateTime)
-    @patch('core.views.datetime', MockDateTime)
+    @freeze_time(datetime(2015, 4, 20))
     def test_schedule_page_generic_1m(self):
-        MockDateTime.change_date(2015, 4, 20)
         self.test_login()
 
         # Bart has heard about a new website for NEOs. He goes to the
@@ -996,7 +964,6 @@ class ScheduleObservations(FunctionalTest):
 
         site_choices.select_by_visible_text('------------ Any 1.0m ------------')
 
-        MockDateTime.change_date(2015, 4, 20)
         datebox = self.get_item_input_box('id_utc_date')
         datebox.clear()
         datebox.send_keys('2015-04-21')
@@ -1067,10 +1034,8 @@ class ScheduleObservations(FunctionalTest):
     @patch('core.plots.build_visibility_source', mock_build_visibility_source)
     @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
     @patch('core.forms.fetch_filter_list', mock_fetch_filter_list)
-    @patch('core.forms.datetime', MockDateTime)
-    @patch('core.views.datetime', MockDateTime)
+    @freeze_time(datetime(2019, 3, 2))
     def test_schedule_page_generic_1m_comet(self):
-        MockDateTime.change_date(2019, 3, 2)
         self.test_login()
         self.insert_test_comet()
 
@@ -1105,7 +1070,6 @@ class ScheduleObservations(FunctionalTest):
 
         site_choices.select_by_visible_text('------------ Any 1.0m ------------')
 
-        MockDateTime.change_date(2019, 3, 2)
         datebox = self.get_item_input_box('id_utc_date')
         datebox.clear()
         datebox.send_keys('2019-03-02')
@@ -1115,12 +1079,12 @@ class ScheduleObservations(FunctionalTest):
         # The page refreshes and a series of values for magnitude, speed, slot
         # length, number and length of exposures appear
         magnitude = self.browser.find_element_by_id('id_magnitude_row').find_element_by_class_name('kv-value').text
-        self.assertIn('17.98', magnitude)
+        self.assertIn('17.97', magnitude)
         # He checks to make sure that the comet is being tracked at normal rate
         speed = self.browser.find_element_by_id('id_speed_row').find_element_by_class_name('kv-value').text
         self.assertNotIn('Half-Rate', speed)
-        self.assertIn('1.81 "/min', speed)
-        self.assertIn('1.96 "/exp', speed)
+        self.assertIn('1.82 "/min', speed)
+        self.assertIn('1.97 "/exp', speed)
         slot_length = self.browser.find_element_by_id('id_slot_length').get_attribute('value')
         self.assertIn('15.0', slot_length)
         num_exp = self.browser.find_element_by_id('id_no_of_exps_row').find_element_by_class_name('kv-value').text
@@ -1128,7 +1092,7 @@ class ScheduleObservations(FunctionalTest):
         exp_length = self.browser.find_element_by_id('id_exp_length').get_attribute('value')
         self.assertIn('65.0', exp_length)
         moon_sep = self.browser.find_element_by_id('id_moon_row').find_element_by_class_name('kv-value').text
-        self.assertIn('116.3', moon_sep)
+        self.assertIn('113.8', moon_sep)
         num_exp = self.browser.find_element_by_id('id_no_of_exps_row').find_element_by_class_name('kv-value').text
         self.assertIn('8', num_exp)
 
@@ -1153,8 +1117,8 @@ class ScheduleObservations(FunctionalTest):
             self.browser.find_element_by_id("id_edit_button").click()
         speed = self.browser.find_element_by_id('id_speed_row').find_element_by_class_name('kv-value').text
         self.assertIn('Half-Rate', speed)
-        self.assertIn('1.81 "/min', speed)
-        self.assertIn('0.98 "/exp', speed)
+        self.assertIn('1.82 "/min', speed)
+        self.assertIn('0.99 "/exp', speed)
         self.browser.find_element_by_id("advanced-switch").click()
         tracking_picker = Select(self.browser.find_element_by_id('id_fractional_rate'))
         self.assertIn('Sidereal', [option.text for option in tracking_picker.options])
@@ -1163,8 +1127,8 @@ class ScheduleObservations(FunctionalTest):
             self.browser.find_element_by_id("id_edit_button").click()
         speed = self.browser.find_element_by_id('id_speed_row').find_element_by_class_name('kv-value').text
         self.assertIn('Sidereal', speed)
-        self.assertIn('1.81 "/min', speed)
-        self.assertIn('1.96 "/exp', speed)
+        self.assertIn('1.82 "/min', speed)
+        self.assertIn('1.97 "/exp', speed)
 
         # Bart wants streaks
         exp_length_box = self.browser.find_element_by_id('id_exp_length')
@@ -1173,7 +1137,7 @@ class ScheduleObservations(FunctionalTest):
         with self.wait_for_page_load(timeout=10):
             self.browser.find_element_by_id("id_edit_button").click()
         speed_warn = self.browser.find_element_by_class_name('warning').text
-        self.assertIn('6.04 "/exp', speed_warn)
+        self.assertIn('6.07 "/exp', speed_warn)
 
         # Bart wants to change the min moon dist to 160.
         self.browser.find_element_by_id("advanced-switch").click()
@@ -1185,7 +1149,7 @@ class ScheduleObservations(FunctionalTest):
 
         # The page refreshes and we get correct hours visible and a warning on moon dist
         moon_warn = self.browser.find_element_by_id('id_moon_row').find_element_by_class_name('warning').text
-        self.assertIn('116.3', moon_warn)
+        self.assertIn('113.8', moon_warn)
 
         submit = self.browser.find_element_by_id('id_submit_button').get_attribute("value")
         self.assertIn('Schedule this Object', submit)
@@ -1284,10 +1248,8 @@ class ScheduleObservations(FunctionalTest):
     @patch('core.plots.build_visibility_source', mock_build_visibility_source)
     @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
     @patch('core.forms.fetch_filter_list', mock_fetch_filter_list)
-    @patch('core.forms.datetime', MockDateTime)
-    @patch('core.views.datetime', MockDateTime)
+    @freeze_time(datetime(2015, 4, 20))
     def test_schedule_page_muscat_2m(self):
-        MockDateTime.change_date(2015, 4, 20)
         self.test_login()
 
         # make sure works for very bright targets too.
@@ -1325,7 +1287,6 @@ class ScheduleObservations(FunctionalTest):
 
         site_choices.select_by_visible_text('FTN 2.0m - F65; (Maui, Hawaii ) [MuSCAT3]')
 
-        MockDateTime.change_date(2015, 4, 20)
         datebox = self.get_item_input_box('id_utc_date')
         datebox.clear()
         datebox.send_keys('2015-04-21')
@@ -1386,10 +1347,8 @@ class ScheduleObservations(FunctionalTest):
     @patch('core.plots.build_visibility_source', mock_build_visibility_source)
     @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
     @patch('core.forms.fetch_filter_list', mock_fetch_filter_list)
-    @patch('core.forms.datetime', MockDateTime)
-    @patch('core.views.datetime', MockDateTime)
+    @freeze_time(datetime(2015, 4, 20))
     def test_schedule_page_generic_0m4(self):
-        MockDateTime.change_date(2015, 4, 20)
         self.test_login()
 
         # Bart has heard about a new website for NEOs. He goes to the
@@ -1423,7 +1382,6 @@ class ScheduleObservations(FunctionalTest):
 
         site_choices.select_by_visible_text('------------ Any 0.4m ------------')
 
-        MockDateTime.change_date(2015, 4, 20)
         datebox = self.get_item_input_box('id_utc_date')
         datebox.clear()
         datebox.send_keys('2015-04-21')
@@ -1475,10 +1433,8 @@ class ScheduleObservations(FunctionalTest):
     @patch('core.plots.build_visibility_source', mock_build_visibility_source)
     @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
     @patch('core.forms.fetch_filter_list', mock_fetch_filter_list)
-    @patch('core.forms.datetime', MockDateTime)
-    @patch('core.views.datetime', MockDateTime)
+    @freeze_time(datetime(2015, 4, 20))
     def test_schedule_page_generic_1m_tootc(self):
-        MockDateTime.change_date(2015, 4, 20)
         self.test_login()
 
         # Set the proposal to have Time Critical time available (only technically
@@ -1523,7 +1479,6 @@ class ScheduleObservations(FunctionalTest):
         tc_box = self.browser.find_element_by_id('id_too_mode')
         tc_box.click()
 
-        MockDateTime.change_date(2015, 4, 20)
         datebox = self.get_item_input_box('id_utc_date')
         datebox.clear()
         datebox.send_keys('2015-04-21')

@@ -18,7 +18,8 @@ from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import Select
 from mock import patch
-from neox.tests.mocks import MockDateTime, mock_lco_authenticate, mock_fetch_filter_list, mock_build_visibility_source
+from freezegun import freeze_time
+from neox.tests.mocks import mock_lco_authenticate, mock_fetch_filter_list, mock_build_visibility_source
 
 from datetime import datetime
 from django.test.client import Client
@@ -81,8 +82,7 @@ class ScheduleCadence(FunctionalTest):
     # TAL: Need to patch the datetime in views also otherwise we will get the wrong
     # semester and window bounds.
     @patch('core.plots.build_visibility_source', mock_build_visibility_source)
-    @patch('core.forms.datetime', MockDateTime)
-    @patch('core.views.datetime', MockDateTime)
+    @freeze_time(datetime(2015, 4, 20, 1, 30, 00))
     def test_can_schedule_cadence(self):
         self.test_login()
 
@@ -134,12 +134,10 @@ class ScheduleCadence(FunctionalTest):
         site_choices.select_by_visible_text('ELP 1.0m - V37,V39; (McDonald, Texas)')
 
         # Submits with a typo in the start date box
-        MockDateTime.change_datetime(2015, 4, 20, 1, 30, 00)
         datebox = self.get_item_input_box('id_start_time')
         datebox.clear()
         datebox.send_keys('2005-04-21 01:30:00')
 
-        MockDateTime.change_datetime(2015, 4, 20, 1, 30, 00)
         datebox = self.get_item_input_box('id_end_time')
         datebox.clear()
         datebox.send_keys('2015-04-21 07:30:00')
@@ -204,9 +202,8 @@ class ScheduleCadence(FunctionalTest):
         target_url = '/login/'
         self.assertIn(target_url, actual_url)
 
+    @freeze_time(datetime(2015, 4, 20, 1, 30, 00))
     @patch('core.plots.build_visibility_source', mock_build_visibility_source)
-    @patch('core.forms.datetime', MockDateTime)
-    @patch('core.views.datetime', MockDateTime)
     def test_schedule_page_edit_block(self):
         self.test_login()
 
@@ -255,12 +252,10 @@ class ScheduleCadence(FunctionalTest):
 
         site_choices.select_by_visible_text('ELP 1.0m - V37,V39; (McDonald, Texas)')
 
-        MockDateTime.change_datetime(2015, 4, 20, 1, 30, 00)
         datebox = self.get_item_input_box('id_start_time')
         datebox.clear()
         datebox.send_keys('2015-04-21 01:30:00')
 
-        MockDateTime.change_datetime(2015, 4, 20, 7, 30, 00)
         datebox = self.get_item_input_box('id_end_time')
         datebox.clear()
         datebox.send_keys('2015-04-21 07:30:00')
@@ -334,8 +329,7 @@ class ScheduleCadence(FunctionalTest):
         self.assertIn('Schedule this Object', submit)
 
     @patch('core.plots.build_visibility_source', mock_build_visibility_source)
-    @patch('core.forms.datetime', MockDateTime)
-    @patch('core.views.datetime', MockDateTime)
+    @freeze_time(datetime(2015, 4, 20, 1, 30, 00))
     def test_schedule_page_short_block(self):
         self.test_login()
 
@@ -383,12 +377,10 @@ class ScheduleCadence(FunctionalTest):
 
         site_choices.select_by_visible_text('ELP 1.0m - V37,V39; (McDonald, Texas)')
 
-        MockDateTime.change_datetime(2015, 4, 20, 1, 30, 00)
         datebox = self.get_item_input_box('id_start_time')
         datebox.clear()
         datebox.send_keys('2015-04-21 01:30:00')
 
-        MockDateTime.change_datetime(2015, 4, 20, 7, 30, 00)
         datebox = self.get_item_input_box('id_end_time')
         datebox.clear()
         datebox.send_keys('2015-04-21 07:30:00')

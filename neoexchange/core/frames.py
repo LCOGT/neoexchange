@@ -13,8 +13,7 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 """
 from datetime import datetime, timedelta
-from math import ceil
-import sys
+
 import warnings
 
 from django.conf import settings
@@ -25,10 +24,9 @@ from urllib.parse import urljoin
 from core.models import Block, Frame, Candidate, SourceMeasurement, Body
 from astrometrics.ephem_subs import LCOGT_domes_to_site_codes, LCOGT_site_codes
 from astrometrics.time_subs import jd_utc2datetime
-from core.urlsubs import get_lcogt_headers
 from core.archive_subs import archive_login, check_for_archive_images, lco_api_call
 import logging
-import requests
+
 
 logger = logging.getLogger('core')
 
@@ -59,8 +57,8 @@ def find_images_for_block(blockid):
     img_list = []
     if not frames:
         return False
-    x_size = frames[0].wcs._naxis1
-    y_size = frames[0].wcs._naxis2
+    x_size = frames[0].wcs.pixel_shape[0]
+    y_size = frames[0].wcs.pixel_shape[1]
     if not frames[0].frameid:
         return False
     frames_list = [{'img': str(f.frameid)} for f in frames]

@@ -2,7 +2,12 @@
 
 Portal for scheduling observations of NEOs (and other Solar System objects) using Las Cumbres Observatory.
 
+<a href="https://ascl.net/2311.005"><img src="https://img.shields.io/badge/ascl-2311.005-blue.svg?colorB=262255" alt="ascl:2311.005" /></a>
+
 ## History
+
+### 3.14.1
+* Upgraded backend to Django 4.1, tweaks to the test suite to work better on other non-Linux platforms.
 
 ### 3.13.4
 * Support for MuSCAT4 at FTS (E10)

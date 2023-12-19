@@ -42,7 +42,8 @@ class AnalyserTest(FunctionalTest):
         self.marge.is_active = 1
         self.marge.save()
 
-        null_wcs = WCS()
+        null_wcs = WCS(naxis=2)
+        null_wcs.pixel_shape = (4096,4096)
         params = {  'sitecode'      : 'K93',
                     'instrument'    : 'kb75',
                     'filter'        : 'w',

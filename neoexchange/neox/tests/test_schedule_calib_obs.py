@@ -24,7 +24,9 @@ from datetime import datetime
 from django.test.client import Client
 from django.urls import reverse
 from django.contrib.auth.models import User
+from django.conf import settings
 from core.models import Body, Proposal
+import shutil
 import time
 import os
 from bs4 import BeautifulSoup
@@ -37,6 +39,15 @@ from neox.auth_backend import update_proposal_permissions
 class ScheduleObservations(FunctionalTest):
 
     def setUp(self):
+        settings.MEDIA_ROOT = os.path.abspath(os.path.join('photometrics', 'tests', 'test_spectra'))
+        self.flux_filepath = os.path.join(settings.MEDIA_ROOT, 'cdbs', 'ctiostan')
+        orig_flux_file = os.path.join(self.flux_filepath, 'fsun.dat')
+        self.new_flux_file = os.path.join(self.flux_filepath, 'fhd30455.dat')
+        shutil.copy(orig_flux_file, self.new_flux_file)
+        orig_flux_file = os.path.join(self.flux_filepath, 'fhr9087.dat')
+        self.new_flux_file2 = os.path.join(self.flux_filepath, 'fcd_34d241.dat')
+        shutil.copy(orig_flux_file, self.new_flux_file2)
+
         # Create a user to test login
         self.insert_test_proposals()
         self.username = 'bart'
@@ -53,6 +64,10 @@ class ScheduleObservations(FunctionalTest):
 
     def tearDown(self):
         self.bart.delete()
+        if os.path.exists(self.new_flux_file):
+            os.remove(self.new_flux_file)
+        if os.path.exists(self.new_flux_file2):
+            os.remove(self.new_flux_file2)
         super(ScheduleObservations, self).tearDown()
 
     @patch('neox.auth_backend.lco_authenticate', mock_lco_authenticate)

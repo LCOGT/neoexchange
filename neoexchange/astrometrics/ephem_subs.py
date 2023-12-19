@@ -1082,7 +1082,7 @@ def dark_and_object_up(emp, dark_start, dark_end, slot_length, alt_limit=30.0, d
                 emp_time = x['date']
                 current_alt = x['altitude']
             try:
-                if (dark_start <= emp_time <= dark_end - timedelta(minutes=slot_length)) and current_alt >= float(alt_limit):
+                if (dark_start <= emp_time <= dark_end - timedelta(minutes=slot_length)) and current_alt >= round(float(alt_limit),2):
                     visible = True
                     dark_up_emp.append(x)
             except ValueError:

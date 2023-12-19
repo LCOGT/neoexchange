@@ -550,7 +550,7 @@ def update_elements_with_findorb(source_dir, dest_dir, filename, site_code, star
         logger.error("Error running find_orb on the data")
         elements_or_status = status
     else:
-        orbit_file = os.path.join(os.getenv('HOME'), '.find_orb', 'mpc_fmt.txt')
+        orbit_file = os.path.join(os.path.expanduser('~'), '.find_orb', 'mpc_fmt.txt')
         try:
             orbfile_fh = open(orbit_file, 'r')
         except IOError:
@@ -581,7 +581,7 @@ def refit_with_findorb(body_id, site_code, start_time=datetime.utcnow(), dest_di
     Datetime, RA, Dec, magnitude, rate, uncertainty is returned. In the event of
     an issue, None is returned."""
 
-    source_dir = os.path.abspath(os.path.join(os.getenv('HOME'), '.find_orb'))
+    source_dir = os.path.abspath(os.path.join(os.path.expanduser('~'), '.find_orb'))
     dest_dir = dest_dir or tempfile.mkdtemp(prefix='tmp_neox_')
     new_ephem = (None, None)
     comp_time = start_time + timedelta(days=1)
@@ -674,13 +674,14 @@ class StaticSourceView(ListView):
 
     def get_context_data(self, **kwargs):
         context = super(StaticSourceView, self).get_context_data(**kwargs)
-        sun_ra, sun_dec = accurate_astro_darkness('500', datetime.utcnow(), solar_pos=True)
+        utctime_now = datetime.utcnow()
+        sun_ra, sun_dec = accurate_astro_darkness('500', utctime_now, solar_pos=True)
         night_ra = degrees(sun_ra - pi)
         if night_ra < 0:
             night_ra += 360
         night_ra = degreestohms(night_ra, ':')
         night_dec = degreestodms(degrees(-sun_dec), ':')
-        context['night'] = {'ra': night_ra, 'dec': night_dec}
+        context['night'] = {'ra': night_ra, 'dec': night_dec, 'time_now' : utctime_now}
         return context
 
 
@@ -2218,7 +2219,6 @@ def check_for_block(form_data, params, new_body):
                                      proposal=Proposal.objects.get(code=form_data['proposal_code']),
                                      active=True
                                      )
-#                                         site=site_list[params['site_code']])
     except SuperBlock.MultipleObjectsReturned:
         logger.debug("Multiple superblocks found")
         return 2

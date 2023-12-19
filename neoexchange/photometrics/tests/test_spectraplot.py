@@ -44,8 +44,9 @@ class TestReadSpectra(TestCase):
         self.asciifile = 'test_ascii.ascii'
         self.txtfile = 'a001981.4.txt'
         self.datfile = 'ctiostan.fhr9087.dat'
+        datfilepath = os.path.join(self.spectradir, 'cdbs', 'ctiostan', 'fhr9087.dat')
 
-        files_to_copy = [self.fitsfile, self.asciifile, self.txtfile, self.datfile, 'aaareadme.ctio']
+        files_to_copy = [self.fitsfile, self.asciifile, self.txtfile, datfilepath, 'aaareadme.ctio']
 
         self.tolerance = 1
 
@@ -58,6 +59,8 @@ class TestReadSpectra(TestCase):
         self.asciifile = os.path.join(self.test_dir, self.asciifile)
         self.txtfile = os.path.join(self.test_dir, self.txtfile)
         self.datfile = os.path.join(self.test_dir, self.datfile)
+        # Rename original file to include the 'ctiostan' so flux scaling is correct
+        shutil.move(os.path.join(self.test_dir, os.path.basename(datfilepath)), self.datfile)
 
         self.remove = True
         self.debug_print = False
@@ -250,8 +253,8 @@ class TestBuildSpectra(TestCase):
         self.assertEqual(expected_label, label)
         self.assertGreater(wav_range[1], max(wavelength))
         self.assertLess(wav_range[0], min(wavelength))
-        self.assertAlmostEqual(np.mean(flux), expected_flux_mean, self.precision)
-        self.assertAlmostEqual(np.mean(error).value, expected_error_mean, self.precision)
+        assert_quantity_allclose(np.mean(flux), expected_flux_mean, rtol=f'1e-{self.precision}')
+        assert_quantity_allclose(np.mean(error).value, expected_error_mean, rtol=f'1e-{self.precision}')
 
     def test_reflectance_plot(self):
         expected_label = '455432 -- HD 196164 -- 20190727'
@@ -265,7 +268,7 @@ class TestBuildSpectra(TestCase):
         self.assertEqual(expected_label, label)
         self.assertGreater(wav_range[1], max(wavelength))
         self.assertLess(wav_range[0], min(wavelength))
-        self.assertAlmostEqual(np.mean(flux), expected_flux_mean, self.precision)
+        assert_quantity_allclose(np.mean(flux), expected_flux_mean, rtol=f'1e-{self.precision}')
         assert_quantity_allclose(np.mean(error), expected_error_mean, rtol=f'1e-{self.precision}')
 
 

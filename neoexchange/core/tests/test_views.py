@@ -47,6 +47,7 @@ from astrometrics.sources_subs import parse_mpcorbit, parse_mpcobs, \
     fetch_flux_standards, read_solar_standards
 from photometrics.catalog_subs import open_fits_catalog, get_catalog_header
 from photometrics.gf_movie import make_gif
+from photometrics.external_codes import find_binary
 from core.frames import block_status, create_frame
 from core.models import Body, Proposal, Block, SourceMeasurement, Frame, Candidate,\
     SuperBlock, SpectralInfo, PreviousSpectra, StaticSource
@@ -607,7 +608,7 @@ class TestCheckForBlock(TestCase):
                          'block_start' : '2015-04-20 03:00:00',
                          'block_end'   : '2015-04-20 13:00:00',
                          'tracking_number' : '00043',
-                         'active'   : False,
+                         'active'   : True,
                        }
         self.test_sblock2 = SuperBlock.objects.create(**sblock_params2)
         block_params2 = { 'telclass' : '1m0',
@@ -800,6 +801,23 @@ class TestCheckForBlock(TestCase):
                       'group_name' : self.body_with_provname.current_name() + '_CPT-20150420'
                     }
         expected_state = 2
+
+        block_state = check_for_block(form_data, params, new_body)
+
+        self.assertEqual(expected_state, block_state)
+
+    def test_body_with_provname_two_blocks_one_active(self):
+        # Set 2nd SuperBlock back to inactive
+        self.test_sblock2.active = False
+        self.test_sblock2.save()
+
+        new_body = self.body_with_provname
+        params = { 'site_code' : 'K92'
+                 }
+        form_data = { 'proposal_code' : self.neo_proposal.code,
+                      'group_name' : self.body_with_provname.current_name() + '_CPT-20150420'
+                    }
+        expected_state = 1
 
         block_state = check_for_block(form_data, params, new_body)
 
@@ -1294,6 +1312,7 @@ class TestScheduleCheck(TestCase):
                      }
         self.solar_analog, created = StaticSource.objects.get_or_create(pk=1, **src_params)
         self.maxDiff = None
+        self.precision = 6
 
         self.expected_resp = {
                             'target_name': self.body_mp.current_name(),
@@ -1934,7 +1953,7 @@ class TestScheduleCheck(TestCase):
                         'bin_mode': None,
                         'instrument_code': 'E10-FLOYDS',
                         'saturated': False,
-                        'snr': 4.961338560320349,
+                        'snr': 4.961338507636532,
                         'calibs': 'both',
                         'spectroscopy': True,
                         'too_mode': False,
@@ -1969,7 +1988,11 @@ class TestScheduleCheck(TestCase):
 
         resp = schedule_check(data, self.body_mp)
 
-        self.assertEqual(expected_resp, resp)
+        for key, value in expected_resp.items():
+            if type(value) == float:
+                self.assertAlmostEqual(value, resp[key], self.precision, msg=f'Failure on {key}')
+            else:
+                self.assertEqual(value, resp[key], msg=f'Failure on {key}')
         self.assertLessEqual(len(resp['group_name']), 50)
 
     @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
@@ -2016,7 +2039,7 @@ class TestScheduleCheck(TestCase):
                         'jitter': None,
                         'instrument_code': 'E10-FLOYDS',
                         'saturated': False,
-                        'snr': 4.961338560320349,
+                        'snr': 4.961338507636532,
                         'calibs': 'both',
                         'spectroscopy': True,
                         'too_mode': False,
@@ -2051,7 +2074,17 @@ class TestScheduleCheck(TestCase):
 
         resp = schedule_check(data, self.body_mp)
 
-        self.assertEqual(expected_resp, resp)
+        for key, value in expected_resp.items():
+            if type(value) == float:
+                self.assertAlmostEqual(value, resp[key], self.precision, msg=f'Failure on {key}')
+            elif type(value) == dict:
+                for subkey, subvalue in value.items():
+                    if type(subvalue) == float:
+                        self.assertAlmostEqual(subvalue, resp[key][subkey], self.precision, msg=f'Failure on {key} -> {subkey}')
+                    else:
+                        self.assertEqual(subvalue, resp[key][subkey], msg=f'Failure on {key} -> {subkey}')
+            else:
+                self.assertEqual(value, resp[key], msg=f'Failure on {key}')
         self.assertLessEqual(len(resp['group_name']), 50)
 
     @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
@@ -2089,7 +2122,11 @@ class TestScheduleCheck(TestCase):
 
         resp = schedule_check(data, self.body_mp)
 
-        self.assertEqual(expected_resp1, resp)
+        for key, value in expected_resp1.items():
+            if type(value) == float:
+                self.assertAlmostEqual(value, resp[key], self.precision, msg=f'Failure on {key}')
+            else:
+                self.assertEqual(value, resp[key])
         self.assertLessEqual(len(resp['group_name']), 50)
 
     @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
@@ -2127,7 +2164,11 @@ class TestScheduleCheck(TestCase):
 
         resp = schedule_check(data, self.body_mp)
 
-        self.assertEqual(expected_resp1, resp)
+        for key, value in expected_resp1.items():
+            if type(value) == float:
+                self.assertAlmostEqual(value, resp[key], self.precision, msg=f'Failure on {key}')
+            else:
+                self.assertEqual(value, resp[key])
         self.assertLessEqual(len(resp['group_name']), 50)
 
     @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
@@ -2162,7 +2203,11 @@ class TestScheduleCheck(TestCase):
 
         resp = schedule_check(data, self.body_mp)
 
-        self.assertEqual(expected_resp1, resp)
+        for key, value in expected_resp1.items():
+            if type(value) == float:
+                self.assertAlmostEqual(value, resp[key], self.precision, msg=f'Failure on {key}')
+            else:
+                self.assertEqual(value, resp[key])
         self.assertLessEqual(len(resp['group_name']), 50)
 
     @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
@@ -5723,6 +5768,8 @@ class TestSummariseBlockEfficiency(TestCase):
 class TestCheckCatalogAndRefitNew(TestCase):
 
     def setUp(self):
+        if not find_binary('sex'):
+            self.skipTest("SExtractor binary not available")
         self.temp_dir = tempfile.mkdtemp(prefix='tmp_neox_')
 
 #        self.phot_tests_dir = os.path.abspath(os.path.join('photometrics', 'tests'))
@@ -6076,7 +6123,6 @@ class TestCheckCatalogAndRefitNew(TestCase):
     def test_make_new_catalog_entry_gaiadr2(self):
         fits_header, junk_table, cattype = open_fits_catalog(self.test_banzai_fits, header_only=True)
         (status, new_ldac_catalog) = run_sextractor_make_catalog(self.configs_dir, self.temp_dir, self.test_banzai_fits.replace('.fits', '.fits[SCI]'))
-
         fits_file_output = self.test_banzai_fits.replace('_frame', '_frame_new')
         status, new_header = updateFITSWCS(self.test_banzai_fits, self.test_externscamp_headfile, self.test_externcat_xml, fits_file_output)
         header = get_catalog_header(new_header, cattype)

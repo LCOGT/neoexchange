@@ -14,7 +14,9 @@ GNU General Public License for more details.
 """
 
 import os
+import shutil
 from math import radians
+from datetime import datetime
 
 from .base import FunctionalTest
 from django.urls import reverse
@@ -23,6 +25,7 @@ from django.conf import settings
 from bs4 import BeautifulSoup
 # from selenium import webdriver
 from mock import patch
+from freezegun import freeze_time
 from selenium.common.exceptions import NoSuchElementException
 
 from neox.tests.mocks import MockDateTime, mock_lco_authenticate, \
@@ -40,6 +43,10 @@ class TestCalibrationSources(FunctionalTest):
 
     def setUp(self):
         settings.MEDIA_ROOT = os.path.abspath(os.path.join('photometrics', 'tests', 'test_spectra'))
+        self.flux_filepath = os.path.join(settings.MEDIA_ROOT, 'cdbs', 'ctiostan')
+        orig_flux_file = os.path.join(self.flux_filepath, 'fhr9087.dat')
+        self.new_flux_file = os.path.join(self.flux_filepath, 'flandoltsa98_978.dat')
+        shutil.copy(orig_flux_file, self.new_flux_file)
 
         # Create a user to test login
         self.insert_test_proposals()
@@ -55,6 +62,10 @@ class TestCalibrationSources(FunctionalTest):
         update_proposal_permissions(self.bart, [{'code': self.neo_proposal.code}])
 
         super(TestCalibrationSources, self).setUp()
+
+    def tearDown(self):
+        if os.path.exists(self.new_flux_file):
+            os.remove(self.new_flux_file)
 
     def add_new_calib_sources(self):
         test_fh = open(os.path.join('astrometrics', 'tests', 'flux_standards_lis.html'), 'r')
@@ -94,10 +105,9 @@ class TestCalibrationSources(FunctionalTest):
         # Wait until response is recieved
         self.wait_for_element_with_id('page')
 
-    @patch('core.views.datetime', MockDateTime)
+    @freeze_time(datetime(2018, 5, 22, 5, 0, 0))
     def test_can_view_calibsources(self):
         self.add_new_calib_sources()
-        MockDateTime.change_datetime(2018, 5, 22, 5, 0, 0)
 
         # A new user, Daniel, goes to a hidden calibration page on the site
         target_url = "{0}{1}".format(self.live_server_url, reverse('calibsource-view'))
@@ -132,13 +142,11 @@ class TestCalibrationSources(FunctionalTest):
         # Satisfied that there are many potential calibration sources to choose
         # from, he goes for a beer.
 
-    @patch('core.views.datetime', MockDateTime)
-    @patch('core.forms.datetime', MockDateTime)
+    @freeze_time(datetime(2018, 9, 21, 5, 0, 0))
     @patch('core.views.submit_block_to_scheduler', mock_submit_to_scheduler)
     def test_can_schedule_calibsource(self):
         self.add_new_calib_sources()
         self.test_login()
-        MockDateTime.change_datetime(2018, 9, 21, 5, 0, 0)
 
         # A new user, Daniel, goes to a hidden calibration page on the site
         target_url = "{0}{1}".format(self.live_server_url, reverse('calibsource-view'))
@@ -201,13 +209,11 @@ class TestCalibrationSources(FunctionalTest):
 
         # Satisfied, he goes to find a currywurst
 
-    @patch('core.views.datetime', MockDateTime)
-    @patch('core.forms.datetime', MockDateTime)
+    @freeze_time(datetime(2018, 9, 21, 5, 0, 0))
     @patch('core.views.submit_block_to_scheduler', mock_submit_to_scheduler)
     def test_can_schedule_calibsource_fts(self):
         self.add_new_calib_sources()
         self.test_login()
-        MockDateTime.change_datetime(2018, 9, 21, 5, 0, 0)
 
         # A new user, Daniel, goes to a hidden calibration page on the site
         target_url = "{0}{1}".format(self.live_server_url, reverse('calibsource-view'))
@@ -381,7 +387,6 @@ class TestCalibrationSources(FunctionalTest):
 
     @patch('core.views.datetime', MockDateTime)
     def test_can_view_calibsource_spectra(self):
-        settings.MEDIA_ROOT = os.path.abspath('data')
         self.add_new_calib_sources()
         MockDateTime.change_datetime(2018, 5, 22, 5, 0, 0)
 

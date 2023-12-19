@@ -238,7 +238,7 @@ class LOOKProjectPageTest(FunctionalTest):
         newtarget_button.click()
 
         # The page refreshes and the new target appears as an active target
-        testlines = [u'191P Comet Jupiter Family 21 24 28.42 -23 49 36.4 18.6 0.78 2.4 Nothing scheduled [-----]',
+        testlines = [u'191P Comet Jupiter Family 21 24 28.42 -23 49 36.4 18.8 0.78 2.4 Nothing scheduled [-----]',
                      ]
 
         self.check_for_row_in_table('active_targets', testlines[0])

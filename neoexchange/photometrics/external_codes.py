@@ -315,7 +315,7 @@ def add_l1filter(fits_file):
     return
 
 
-@timeit
+#@timeit
 def run_sextractor(source_dir, dest_dir, fits_file, binary=None, catalog_type='ASCII', dbg=False):
     """Run SExtractor (using either the binary specified by [binary] or by
     looking for 'sex' in the PATH) on the passed <fits_file> with the results
@@ -880,7 +880,22 @@ def unpack_tarball(tar_path, unpack_dir):
 
     return files
 
-def convert_file_to_crlf(file_to_convert, binary=None, dbg=False):
+def convert_lf_to_crlf(file_to_convert):
+    """Converts the passed <file_to_convert> to DOS/CRLF
+    line endings without using external binaries"""
+    windows_line_ending = b'\r\n'
+    linux_line_ending = b'\n'
+    mac_line_ending = b'\r'
+    with open(file_to_convert, 'rb') as f:
+        content = f.read()
+        content = content.replace(windows_line_ending, linux_line_ending).replace(mac_line_ending,linux_line_ending)
+        content = content.replace(linux_line_ending, windows_line_ending)
+
+    with open(file_to_convert, 'wb') as f:
+        f.write(content)
+    return 0
+
+def convert_file_to_crlf_with_unix2dos(file_to_convert, binary=None, dbg=False):
     """Converts the passed <file_to_convert> to DOS/CRLF line endings by running
     'unix2dos' on it."""
 
@@ -903,6 +918,16 @@ def convert_file_to_crlf(file_to_convert, binary=None, dbg=False):
         retcode_or_cmdline = call(args, cwd=dest_dir)
 
     return retcode_or_cmdline
+
+def convert_file_to_crlf(file_to_convert, binary=None, dbg=False):
+    """Converts the passed <file_to_convert> to DOS/CRLF line endings. This used to be
+    done by running 'unix2dos' on it, but now calls convert_lf_to_crlf to do the same
+    thing without using external binaries"""
+    if True:
+        status = convert_lf_to_crlf(file_to_convert)
+    else:
+        status = convert_file_to_crlf_with_unix2dos(file_to_convert, binary, dbg)
+    return status
 
 def funpack_file(fpack_file, binary=None, dbg=False):
     """Calls 'funpack' on the passed <fpack_file> to uncompress it. A status
