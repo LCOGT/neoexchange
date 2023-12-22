@@ -4343,7 +4343,7 @@ class TestConfigureDefaults(TestCase):
         test_params = self.obs_params
         test_params['site_code'] = 'Z21'
 
-        expected_params = { 'instrument':  '0M4-SCICAM-SBIG',
+        expected_params = { 'instrument':  '0M4-SCICAM-QHY600',
                             'pondtelescope': '0m4',
                             'observatory': '',
                             'site': 'TFN',
@@ -4358,7 +4358,7 @@ class TestConfigureDefaults(TestCase):
         test_params = self.obs_params
         test_params['site_code'] = 'T04'
 
-        expected_params = { 'instrument':  '0M4-SCICAM-SBIG',
+        expected_params = { 'instrument':  '0M4-SCICAM-QHY600',
                             'pondtelescope': '0m4',
                             'observatory': '',
                             'site': 'OGG',
@@ -4373,7 +4373,7 @@ class TestConfigureDefaults(TestCase):
         test_params = self.obs_params
         test_params['site_code'] = 'Q59'
 
-        expected_params = { 'instrument':  '0M4-SCICAM-SBIG',
+        expected_params = { 'instrument':  '0M4-SCICAM-QHY600',
                             'pondtelescope': '0m4',
                             'observatory': '',
                             'site': 'COJ',
@@ -4388,7 +4388,7 @@ class TestConfigureDefaults(TestCase):
         test_params = self.obs_params
         test_params['site_code'] = 'L09'
 
-        expected_params = { 'instrument':  '0M4-SCICAM-SBIG',
+        expected_params = { 'instrument':  '0M4-SCICAM-QHY600',
                             'pondtelescope': '0m4',
                             'observatory': '',
                             'site': 'CPT',
@@ -4403,7 +4403,7 @@ class TestConfigureDefaults(TestCase):
         test_params = self.obs_params
         test_params['site_code'] = 'V38'
 
-        expected_params = { 'instrument':  '0M4-SCICAM-SBIG',
+        expected_params = { 'instrument':  '0M4-SCICAM-QHY600',
                             'pondtelescope': '0m4',
                             'observatory': 'aqwa',
                             'site': 'ELP',
@@ -5021,7 +5021,7 @@ class TestMakeconfiguration(TestCase):
 
         expected_configuration = {
                               'type': 'EXPOSE',
-                              'instrument_type': '0M4-SCICAM-SBIG',
+                              'instrument_type': '0M4-SCICAM-QHY600',
                               'target': {
                                 'type': 'ICRS',
                                 'name': 'SA107-684',
