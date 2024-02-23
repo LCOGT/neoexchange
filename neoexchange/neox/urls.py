@@ -32,7 +32,8 @@ from core.views import BodySearchView, BodyDetailView, BlockDetailView, Schedule
     BestStandardsView, PlotSpec, BodyVisibilityView, SuperBlockTimeline, BlockCancel, \
     look_project, AddTarget, display_textfile
 from core.plots import make_visibility_plot, \
-    make_standards_plot, make_solar_standards_plot
+    make_standards_plot, make_solar_standards_plot, \
+    make_spectrophotometric_standards_plot
 
 from analyser.views import BlockFramesView, ProcessCandidates
 
@@ -45,6 +46,7 @@ urlpatterns = [
     # path('plotframe/', TemplateView.as_view(template_name='core/frame_plot.html')),
     path('make-standards-plot/', make_standards_plot, name='make-standards-plot'),
     path('make-solar-standards-plot/', make_solar_standards_plot, name='make-solar-standards-plot'),
+    path('make-spectrophotometric-standards-plot/', make_spectrophotometric_standards_plot, name='make-spectrophotometric-standards-plot'),
     path('visibility_plot/<int:pk>/<str:plot_type>/', make_visibility_plot, name='visibility-plot'),
     re_path(r'^visibility_plot/(?P<pk>\d+)/(?P<plot_type>[a-z]*)/(?P<site_code>[A-Z,0-9]{3})/', make_visibility_plot, name='visibility-plot-site'),
     path('block/summary/', BlockTimeSummary.as_view(), name='block-summary'),

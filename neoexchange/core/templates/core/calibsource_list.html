@@ -91,6 +91,8 @@
             <div class="row">
                 {% if "solar" in request.get_full_path %}
                     <img src="{% url 'make-solar-standards-plot' %}" class="pic_center">
+                {% elif "spectrophotometric" in request.get_full_path %}
+                    <img src="{% url 'make-spectrophotometric-standards-plot' %}" class="pic_center">
                 {% else %}
                     <img src="{% url 'make-standards-plot' %}" class="pic_center">
                 {% endif %}
