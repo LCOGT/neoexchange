@@ -6,6 +6,9 @@ Portal for scheduling observations of NEOs (and other Solar System objects) usin
 
 ## History
 
+### 3.14.3
+* Add ability to filter Calibration Sources to only show spectrophotometric standards.
+
 ### 3.14.1
 * Upgraded backend to Django 4.1, tweaks to the test suite to work better on other non-Linux platforms.
 
