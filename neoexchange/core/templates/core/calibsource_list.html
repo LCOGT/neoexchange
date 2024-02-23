@@ -1,13 +1,27 @@
 {% extends 'base.html' %}
 {% load static basic_tags %}
-{% block header %}Calibration Sources{% endblock %}
+{% block header %}
+    {% if "solar" in request.get_full_path %}
+        Solar Spectrum Calibration Sources
+    {% elif "spectrophotometric" in request.get_full_path %}
+        Spectrophotometric Calibration Sources
+    {% else %}
+        Calibration Sources
+    {% endif %}
+{% endblock %}
 
 {% block bodyclass %}page{% endblock %}
 
 
 {% block extramenu %}
     <div class="headingleft">
-        <h1>Calibration Sources</h1>
+        {% if "solar" in request.get_full_path %}
+            <h1>Solar Spectrum Calibration Sources</h1>
+        {% elif "spectrophotometric" in request.get_full_path %}
+            <h1>Spectrophotometric Calibration Sources</h1>
+        {% else %}
+            <h1>Calibration Sources</h1>
+        {% endif %}
     </div>
 {% endblock%}
 
@@ -15,7 +29,7 @@
     <div id="main" class="fill-height">
         <div class="container">
             <div class="row">
-                {% if "solar" in request.get_full_path %}
+                {% if "solar" in request.get_full_path or "spectrophotometric" in request.get_full_path %}
                     <a class="button button-primary" href="{% url 'schedule-calib-spectra' 'F65-FLOYDS' '-' %}" id="schedule-solar-ftn-obs">Schedule FTN Calib Observations</a>
                     <a class="button button-primary" href="{% url 'schedule-calib-spectra' 'E10-FLOYDS' '-' %}" id="schedule-solar-fts-obs">Schedule FTS Calib Observations</a>
                     <a class="button button-primary" href="{% url 'calibsource-view' %}" id="show-all-calibsources">Show all Calibration Sources</a>
@@ -24,6 +38,7 @@
                     <a class="button button-primary" href="{% url 'schedule-calib-spectra' 'F65-FLOYDS' '-' %}" id="schedule-calib-ftn-obs">Schedule FTN Calib Observations</a>
                     <a class="button button-primary" href="{% url 'schedule-calib-spectra' 'E10-FLOYDS' '-' %}" id="schedule-calib-fts-obs">Schedule FTS Calib Observations</a>
                     <a class="button button-primary" href="{% url 'solarstandard-view' %}" id="show-solar-standards">Show only Solar Analogs</a>
+                    <a class="button button-primary" href="{% url 'spectrophotstandard-view' %}" id="show-spectrophot-standards">Show only Spectrophotometrics</a>
                     <a class="button button-primary" href="{% url 'beststandards-view' %}" id="show-best-standards">Show best standards</a>
                 {% endif %}
             </div>

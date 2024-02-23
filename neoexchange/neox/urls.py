@@ -83,6 +83,7 @@ urlpatterns = [
     path('calibsources/', StaticSourceView.as_view(), name='calibsource-view'),
     path('calibsources/best/', BestStandardsView.as_view(), name='beststandards-view'),
     path('calibsources/solar/', StaticSourceView.as_view(queryset=StaticSource.objects.filter(source_type=StaticSource.SOLAR_STANDARD).order_by('ra')), name='solarstandard-view'),
+    path('calibsources/spectrophotometric/', StaticSourceView.as_view(queryset=StaticSource.objects.filter(source_type=StaticSource.FLUX_STANDARD).order_by('ra')), name='spectrophotstandard-view'),
     path('calibsources/<int:pk>/', StaticSourceDetailView.as_view(model=StaticSource), name='calibsource'),
     path('characterization/', characterization, name='characterization'),
     path('lookproject/', look_project, name='look_project'),
