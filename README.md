@@ -6,7 +6,7 @@ Portal for scheduling observations of NEOs (and other Solar System objects) usin
 
 ## History
 
-### 3.14.3
+### 3.14.2
 * Add ability to filter Calibration Sources to only show spectrophotometric standards.
 
 ### 3.14.1
