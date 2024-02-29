@@ -865,6 +865,52 @@ def read_findorb_ephem(empfile):
     return ephem_info, emp
 
 
+def read_findorb_elements(elements_json_file):
+    """Routine to read a Find Orb-produced elements file and map it to a NEOx Body
+    dictionary of kwargs"""
+
+    mapping_dict = { 'epoch_iso' : 'epochofel',
+                 'M' : 'meananom',
+                 'a' : 'meandist',
+                 'e' : 'eccentricity',
+                 'q' : 'perihdist',
+                 'i' : 'orbinc',
+                 'arg_per' : 'argofperih',
+                 'asc_node' : 'longascnode',
+                 'Tp_iso' : 'epochofperih',
+                 'H' : 'abs_mag',
+                 'G' : 'slope',
+                 'rms_residual' : 'orbit_rms',
+                 'observations::used' : 'num_obs',
+                 'observations::earliest_used_iso' : 'earliest_used',
+                 'observations::latest_used_iso' : 'latest_used'
+                 }
+
+    with open(elements_json_file, 'r') as fh:
+        elements = json.load(fh)
+
+    obj_id = elements['ids'][0]
+    findorb_elements = elements['objects'][obj_id]['elements']
+    findorb_obs = elements['objects'][obj_id]['observations']
+
+    body_kwargs = {}
+    for fo_key, neox_key in mapping_dict.items():
+        print(fo_key, neox_key)
+        if 'observations::' in fo_key:
+            new_key = fo_key.split('::')[1]
+            value = findorb_obs[new_key]
+        else:
+            value = findorb_elements[fo_key]
+
+        if 'T' in value and 'Z' in value:
+            try:
+                value = datetime.strptime(value, "%Y-%m-%dT%H:%M:%SZ")
+            except ValueError:
+                value = datetime.strptime(value, "%Y-%m-%dT%H:%M:%S.%fZ")
+        body_kwargs[neox_key] = value
+
+    return body_kwargs
+
 def make_unit_vector(angle):
     """Make a unit vector from the passed angle (in degrees).
     The result is returned in a numpy array"""
