@@ -172,31 +172,57 @@ def get_ephem(block):
 
     return table
 
-def ephem_interpolate(times, table):
+def ephem_interpolate(times, table, extra_quantity=None):
     '''
     Returns a list of interpolated values for both RA and DEC given a
     horizons_ephem <table> and a list of times(TimeJD or datetime)
     '''
-    arr1 = table['datetime_jd']
-    arr2 = table['RA']
-    arr3 = table['DEC']
+
+    try:
+        arr1 = table['datetime_jd']
+        arr2 = table['RA']
+        arr3 = table['DEC']
+        if extra_quantity is not None:
+            arr4 = table[extra_quantity]
+    except KeyError:
+        # sbpy Ephem object ?  let's try...
+        arr1 = table['epoch'].jd
+        arr2 = table['RA'].value
+        arr3 = table['DEC'].value
+        if extra_quantity is not None:
+            extra_arrays = {}
+            for column in extra_quantity:
+                extra_arrays[column] = table[column].value
 
     start_time = arr1[0]
     end_time = arr1[-1]
+    if isinstance(start_time, Time):
+        start_time = start_time.jd
+    if isinstance(end_time, Time):
+        end_time = end_time.jd
 
     if isinstance(times, list) is False:
         times = [times,]
 
     if isinstance(times[0], datetime):
         times = Time(times).jd
+    elif isinstance(times[0], Time):
+        times = np.array([t.jd for t in times])
 
     if min(times) < start_time or max(times) > end_time:
         return [],[]
 
     result_RA = np.interp(times, arr1, arr2)
     result_DEC = np.interp(times, arr1, arr3)
+    if extra_quantity is not None:
+        extra_results = {}
+        for key, arr4 in extra_arrays.items():
+            extra_results[key] = np.interp(times, arr1, arr4)
 
-    return result_RA, result_DEC
+    to_return = (result_RA, result_DEC)
+    if extra_quantity is not None:
+        to_return = result_RA, result_DEC, extra_results
+    return to_return
 
 def get_centroid_difference(filename, orig_sci_dir):
     '''
