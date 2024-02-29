@@ -17,9 +17,12 @@ GNU General Public License for more details.
 import os
 import logging
 from glob import glob
+from math import pi, degrees, atan2
+from datetime import datetime, timedelta
 
 import numpy as np
 import astropy.units as u
+from astropy.constants import L_sun, c, au
 from astropy.io import fits
 from astropy.wcs import WCS
 
@@ -346,3 +349,14 @@ def find_reference_images(ref_dir, match):
 
     ref_frames = glob(pattern)
     return ref_frames
+
+@u.quantity_input(solar_distance=u.au, object_distance=u.au, density=u.kg/u.m**3, dust_diam=u.micron)
+def compute_srp_distance(solar_distance, object_distance, t, t_0=datetime(2022,9,26,23,14,24, int(1e6*0.183)), density=3000*u.kg/u.m**3, dust_diam=1*u.micron):
+    accel = 3 * L_sun / (16.0 * pi * c * solar_distance.to(u.m)**2 * density.to(u.kg/u.m**3) * dust_diam.to(u.m))
+
+    dt = t-t_0
+    distance = 0.5 * accel.decompose()*(dt.total_seconds()*u.s)**2
+    distance = distance.to(u.km)
+    km_in_arcsec = degrees(atan2(1.0, object_distance.to(u.km).value)) * 3600.0 * (u.arcsec/u.km)
+
+    return distance, distance*km_in_arcsec
