@@ -3878,6 +3878,7 @@ def convert_fits(filename, dest_dir, out_type='pdf', crop=False, center_RA=0, ce
     if crop:
         filename, status = run_astwarp(filename, dest_dir, center_RA, center_DEC, width, height, dbg=dbg)
         hdu = 'ALIGNED'
+    hdu = 0
     if '-crop' in filename:
         hdu = 'ALIGNED'
     elif '-combine' in filename or '-didymos' in filename:
@@ -3928,6 +3929,9 @@ def run_make_crop(self, filename, dest_dir_path, output=True):
         bounds = np.argwhere(~np.isnan(array))
         xmin, xmax = min(bounds[:, 1])+1, max(bounds[:, 1])+1
         ymin, ymax = min(bounds[:, 0])+1, max(bounds[:, 0])+1
+        if 'cpt1m012-fa06-20220929-0037-e92-combine' in filename:
+            print("Hacking bounds for cpt1m012-fa06-20220929-0037-e92-combine")
+            xmax = 3042
         if (xmax-xmin)+1 <= image_width or (ymax-ymin)+1 <= image_height:
             # do cropping
             filename, status = run_astcrop(filename, dest_dir_path, xmin, xmax, ymin, ymax)
@@ -3984,6 +3988,9 @@ def run_make_didymos_chisel_plots(self, chiseled_filename, dest_dir_path, center
         bounds = np.argwhere(~np.isnan(array))
         xmin, xmax = min(bounds[:, 1])+1, max(bounds[:, 1])+1
         ymin, ymax = min(bounds[:, 0])+1, max(bounds[:, 0])+1
+        if 'cpt1m012-fa06-20220929-0037-e92-combine' in chiseled_filename:
+            print("Hacking bounds for cpt1m012-fa06-20220929-0037-e92-combine")
+            xmax = 3042
         if (xmax-xmin)+1 < image_width or (ymax-ymin)+1 < image_height:
             # do cropping
             chiseled_filename, status = run_astcrop(chiseled_filename, dest_dir_path, xmin, xmax, ymin, ymax)
@@ -4057,7 +4064,8 @@ def make_annotated_plot(fits_combined_filepath, out_type='pdf', dscale=1000, wid
         stack_frame = None
         index = fits_filename.rfind('-')
         if index > 0:
-            stack_frames = Frame.objects.filter(filename__startswith=fits_filename[0:index], frametype=Frame.NEOX_RED_FRAMETYPE).order_by('midpoint')
+            didymos = Body.objects.get(name='65803') # XXX Fix this hack
+            stack_frames = Frame.objects.filter(block__body=didymos, filename__startswith=fits_filename[0:index], frametype=Frame.NEOX_RED_FRAMETYPE).order_by('midpoint')
             midpoint_index = int(stack_frames.count() / 2)
             stack_frame = stack_frames[midpoint_index]
             prefix = 'hyperstack'
@@ -4133,7 +4141,11 @@ def plot_didymos_images(jpg_combined_filename, table, out_type='pdf', dscale=100
         pix=0.5214399        # MRO median pixel scale ("/pixel)
         barlen=1.5
         # Decrease arrow_len ?
+    elif 'coj2m002-fs' in jpg_combined_filename:
+        pix=0.30118764
+        barlen=1.5
 
+    #print(f"pixelscale={pix}")
     xz=arrow_len
     yz=ih-3*arrow_len # was 1.5
     xsun=arrow_len*cos(radians(sun)+radians(90))
@@ -4171,6 +4183,7 @@ def plot_didymos_images(jpg_combined_filename, table, out_type='pdf', dscale=100
     tickyz=2.5*arrow_len # was 1.5
 
     tickw=dscale/(dist*au)/tan(radians(pix/3600))
+    print("tickw etc", tickw, dscale, dist, pix)
     tickh=arrow_len/10
     nticks=1
 

@@ -646,7 +646,7 @@ def determine_astnoisechisel_options(filename, dest_dir, hdu = 0, bkg_only=False
         # options = f'-h{hdu} --tilesize={tilesize} --erode={erode} --detgrowquant={detgrowquant} --detgrowmaxholesize={maxholesize} --output={output_filename} {filename}'
     #values from Agata Rozek configuration/Makefile
     tilesize = ''
-    if 'fm2' in filename:
+    if 'fm2' in filename or 'coj1m011-fa12-202211' in filename:
         tilesize='--tilesize=15,15'
     if bkg_only:
         options = f'-h{hdu} --quiet {tilesize} --oneelempertile --interpnumngb=8 --minnumfalse=50 --output={output_filename} {filename}'
@@ -673,13 +673,17 @@ def determine_stack_astconvertt_options(filename, dest_dir, mean, std, out_type=
     low = mean + sigrem * std
     high = mean + sigadd * std
     #print(low,high)
-    options = f'{filename} -L {low} -H {high} -h{hdu} --colormap=sls-inverse --output={output_filename}'
+    #cmap = 'sls-inverse'
+    cmap = 'gray' # --invert'
+
+    options = f'{filename} -L {low} -H {high} -h{hdu} --colormap={cmap} --output={output_filename}'
     return output_filename, options
 
 def determine_astconvertt_options(filename, dest_dir, out_type='pdf', hdu='SCI'):
     raw_filename = os.path.basename(filename)
     output_filename = os.path.join(dest_dir, raw_filename.replace(".fits", f".{out_type}"))
-    cmap = '--colormap=sls-inverse'
+    #cmap = '--colormap=sls-inverse'
+    cmap = '--colormap=gray --invert'
     if '-bd' in filename:
         # Need to disable the colormap when making border images or you will
         # get identical looking images but the masking won't work properly.
@@ -1769,6 +1773,7 @@ def run_astwarp(filename, dest_dir, center_RA, center_DEC, width = 1991.0, heigh
     if rot_angle > 0:
         shift = 0.3
     new_center_RA, new_center_DEC = wcs.pixel_to_world_values(x+(shift*width), y)
+    #print(f"{center_RA}->{new_center_RA}, {center_DEC}->{new_center_DEC} {shift} {x+(shift*width)}, {y}")
     x_max = header['NAXIS1']
     y_max = header['NAXIS2']
     if x<0 or x>x_max or y<0 or y>y_max:
