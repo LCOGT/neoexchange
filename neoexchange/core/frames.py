@@ -116,7 +116,7 @@ def create_frame(params, block=None, frameid=None):
             frame = frame_list[0]
             frame_created = False
         else:
-            msg = "Duplicate frames with frameid: " + frameid
+            msg = "Duplicate frames with frameid: " + str(frameid)
             logger.error(msg)
             for frame in frame_list:
                 logger.error(frame.id)
