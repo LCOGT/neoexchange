@@ -4047,11 +4047,13 @@ def run_make_didymos_chisel_plots(self, chiseled_filename, dest_dir_path, center
 
     return results
 
-def make_annotated_plot(fits_combined_filepath, out_type='pdf', dscale=1000, width=1991.0, height=911.0, line_width=1.5, font_size=14):
+def make_annotated_plot(fits_combined_filepath, out_type='pdf', dscale=1000, width=1991.0, height=911.0, line_width=1.5, font_size=14, annotate_didymos=False):
     '''
     Wrapper to generate final annotated image using plot_didymos_images(). The
     pre-generation of the needed intermediate images with run_make_didymos_chisel_plots
     is assumed.
+    annotate_didymos [default: False]: Set to True to include a big arrow pointing
+        to Didymos
     Returns the output plot filename (or None if there is an issue)
     '''
 
@@ -4079,10 +4081,27 @@ def make_annotated_plot(fits_combined_filepath, out_type='pdf', dscale=1000, wid
         index = np.argmin(abs(ephem['datetime'].datetime-midpoint))
         table = ephem[index:index+1]
 
+        x = None
+        y = None
+        if annotate_didymos:
+            try:
+                header = fits.getheader(fits_combined_filepath, ext=('CROP',1))
+                w = WCS(header)
+                if w:
+                    x, y = w.world_to_pixel_values(table['RA'], table['DEC'])
+                else:
+                    x = None
+                    y = None
+            except (KeyError, ValueError):
+                logger.error(f"Couldn't extract header from {fits_combined_filepath}")
+                header = {}
+                x = None
+                y = None
+        print("Didymos at (x, y) = ", x, y)
         jpg_combined_filename = fits_combined_filepath.replace('.fits', '.jpg')
         border_filename = jpg_combined_filename.replace(prefix+'.jpg', prefix+'-bd.jpg')
         if os.path.exists(jpg_combined_filename) and os.path.exists(border_filename):
-            output_plot = plot_didymos_images(jpg_combined_filename, table, out_type, dscale, width, height, line_width, font_size)
+            output_plot = plot_didymos_images(jpg_combined_filename, table, out_type, dscale, width, height, line_width, font_size, x-15, y)
         else:
             logger.error(f"Combined filename {os.path.basename(jpg_combined_filename)} or {os.path.basename(border_filename)} missing")
     else:
@@ -4090,13 +4109,15 @@ def make_annotated_plot(fits_combined_filepath, out_type='pdf', dscale=1000, wid
 
     return output_plot
 
-def plot_didymos_images(jpg_combined_filename, table, out_type='pdf', dscale=1000, iw=1991.0, ih=911.0, line_width=3, font_size=16):
+def plot_didymos_images(jpg_combined_filename, table, out_type='pdf', dscale=1000, iw=1991.0, ih=911.0, line_width=3, font_size=16, x=None, y=None):
     '''
     Plots a <jpg_combined_filename>. Adds directional arrows for velocity
     and sun position as well as a scale bar showing [dscale] km (defaults to 1000 km).
     Optional parameters are [line_width] (defaults to 3, which is double the
     matplotlib's default 1.5, to match the gnuplot 'lw 2') and [font_size] (defaults
     to 16)
+    [x] and [y] are the X,Y position of Didymos; if not None, then a large
+    annotation arrow is drawn pointing to (just vertically above) this position.
     '''
     from cycler import cycler
     import matplotlib
@@ -4205,6 +4226,14 @@ def plot_didymos_images(jpg_combined_filename, table, out_type='pdf', dscale=100
         mask_plot= ax.imshow(masked_data, cmap=contour_cmap, extent=[0, iw, 0, ih], interpolation='none')
     else:
         logger.warning(f"Didn't find mask image {mask_filename}")
+
+    if x is not None and y is not None:
+        # Produce big pointy arrow...
+        ax.annotate('Didymos', xy=(x, y+(0.02*y)), xycoords='data', xytext=(-10, 55),\
+            textcoords='offset points', arrowprops=dict(facecolor='black', shrink=0.05),\
+            horizontalalignment='center', verticalalignment='bottom', \
+            fontfamily='Arial', fontsize=font_size)
+        output_plot = output_plot.replace('-trim', '-trim-anno')
 
     fig.savefig(output_plot, bbox_inches='tight', pad_inches=0)
     # delete figure to free memory
