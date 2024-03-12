@@ -83,12 +83,14 @@ class Command(BaseCommand):
 
         # Ensure trailing slash is present
         dataroot = os.path.join(dataroot, '')
-        fits_files, fits_catalogs = determine_images_and_catalogs(self, dataroot, red_level='') # red_level must be null to pickup Swope/MRO data
+        fits_files, fits_catalogs = determine_images_and_catalogs(self, dataroot, red_level='e91') # red_level must be null to pickup Swope/MRO data
 
         if fits_files is None or len(fits_files) == 0:
+            # XXX maybe do a new call to determine_images_and_catalogs() with red_level=''
+            # to pick up non-LCO data before rechecking ?
             raise CommandError(f"No FITS files found in {dataroot}")
 
-        catalog_type = 'FITS_LDAC'
+        catalog_type = 'FITS_LDAC' # 'FITS_LDAC_MULTIAPER'
         if '-ef' in fits_files[0]:
             catalog_type = 'FITS_LDAC_MULTIAPER'
 
