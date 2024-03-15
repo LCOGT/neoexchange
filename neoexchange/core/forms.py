@@ -61,7 +61,8 @@ MOON = (('G', 'Grey',),
         ('D', 'Dark'))
 
 BIN_MODES = (('full_chip', 'Full Chip, 1x1'),
-             ('2k_2x2', 'Central 2k, 2x2'))
+             ('2k_2x2', 'Central 2k, 2x2'),
+             ('central30_1x1', "Central 30'x30', 1x1"))
 
 ANALOG_OPTIONS = (('1', '1'),
                   ('2', '2'),

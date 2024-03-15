@@ -1497,7 +1497,7 @@ def schedule_check(data, body, ok_to_schedule=True):
         name_date = datetime.strftime(utc_date, '-%Y%m%d')
 
     # Define possible tags that can be added on confirmation page
-    possible_tags = ['_spectra', '_ToO', '_bin2x2', '_dither']
+    possible_tags = ['_spectra', '_ToO', '_bin2x2', '_dither', '_central30']
     # Build defualt group name
     base_group_name = body.current_name() + '_' + data['site_code'].upper()
     default_group_name = base_group_name + name_date
@@ -1523,6 +1523,8 @@ def schedule_check(data, body, ok_to_schedule=True):
     if group_name == default_group_name:
         if bin_mode == '2k_2x2':
             group_name += possible_tags[2]
+        elif bin_mode == 'central30_1x1':
+            group_name += possible_tags[4]
         if data.get('add_dither', False):
             group_name += possible_tags[3]
 
