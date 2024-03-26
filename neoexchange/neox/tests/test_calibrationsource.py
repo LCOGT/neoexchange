@@ -476,3 +476,45 @@ class TestCalibrationSources(FunctionalTest):
             self.check_for_row_in_table('id_fts_calibsources', test_line)
 
         # Satisified, he cycles off into the sunset
+
+    @patch('core.views.datetime', MockDateTime)
+    def test_can_view_spectrophotometric_calibsources(self):
+        self.add_new_calib_sources()
+        MockDateTime.change_datetime(2019, 10, 5, 22, 0, 0)
+
+        # A new user, Emily, goes to a calibration page on the site
+        target_url = "{0}{1}".format(self.live_server_url, reverse('calibsource-view'))
+        self.browser.get(target_url)
+        actual_url = self.browser.current_url
+        self.assertEqual(actual_url, target_url)
+
+        # She notices the page title has the name of the site and the header
+        # mentions calibrations
+        self.assertIn('Calibration Sources | LCO NEOx', self.browser.title)
+        header_text = self.browser.find_element_by_class_name('headingleft').text
+        self.assertIn('Calibration Sources', header_text)
+
+        self.browser.implicitly_wait(10)
+        # She decides she would like to find a spectrophotometic standard to schedule
+        # She sees a Show Spectrophotometric Standards button
+        link = self.browser.find_element_by_id('show-spectrophot-standards')
+        target_url = "{0}{1}".format(self.live_server_url, reverse('spectrophotstandard-view'))
+        actual_url = link.get_attribute('href')
+        self.assertEqual(actual_url, target_url)
+
+        with self.wait_for_page_load(timeout=10):
+            link.click()
+
+        # She notices the page title has best suggested calibraions and the header
+        # mentions calibrations for the current date
+        self.assertIn('Spectrophotometric Calibration Sources | LCO NEOx', self.browser.title)
+
+        # She checks there are some suitable targets and no non-spectrophotometric standards
+        test_lines = ['HR9087 00:01:49.42 -03:01:39.0 5.12 B7III Spectrophotometric standard',
+                      'CD-34d241 00:41:46.92 -33:39:08.5 11.23 F Spectrophotometric standard']
+        for test_line in test_lines:
+            self.check_for_row_in_table('id_calibsources', test_line)
+        for src_type in ['Solar spectrum', 'Unknown']:
+            self.check_for_row_not_in_table('id_calibsources', src_type)
+
+        # Satisified, she drives off into the sunset

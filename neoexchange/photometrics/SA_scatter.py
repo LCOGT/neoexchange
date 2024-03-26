@@ -92,6 +92,8 @@ def plotScatter(ax,coords,style='b.'):
 def plotFormat(ax,solar=0):
     """Formats plot, plots reference ecliptic and galactic plane
        inputs: <ax> plot axis
+       Set solar=0 to plot both solar and flux standards, 1 for just solar
+       standards and 2 for just flux standards
     """
     ax.plot(24*np.arange(0,1,.01),23.4*np.sin(np.arange(0,2*np.pi,2*np.pi/100)),'r-') #ecliptic (approx)
     ax.plot(genGalPlane().ra.hour,genGalPlane().dec,'y-') #galactic plane (exact)
@@ -103,14 +105,17 @@ def plotFormat(ax,solar=0):
     plt.yticks(np.arange(-90,90,15))
     if not solar:
         leg = ax.legend(loc='best',
-        handles=[mpatches.Patch(color='blue',label='Solar Standard'),
-        mpatches.Patch(color='green',label='Flux Standard')])
+            handles=[mpatches.Patch(color='blue',label='Solar Standard'),
+            mpatches.Patch(color='green',label='Flux Standard')])
+    elif solar == 2:
+         leg = ax.legend(loc='best',
+            handles=[mpatches.Patch(color='green',label='Flux Standard'),])
     else:
         leg = ax.legend(loc='best',
-        handles=[mpatches.Patch(color='blue',label='Solar Standard')])
+            handles=[mpatches.Patch(color='blue',label='Solar Standard')])
     leg.get_frame().set_alpha(.5)
-    plt.text(24,68,'Galactic Plane',fontsize=7,rotation=-25,color='#938200')
-    plt.text(9.5,14,'Ecliptic',fontsize=7,rotation=25,color='r')
+    plt.text(24,55,'Galactic Plane',fontsize=7,rotation=-25,color='#938200')
+    plt.text(9.5,16,'Ecliptic',fontsize=7,rotation=25,color='r')
     plt.title("Stellar Standards Distribution")
 
     plt.grid(True)

@@ -269,6 +269,20 @@ def make_solar_standards_plot(request):
     return HttpResponse(buffer.getvalue(), content_type="Image/png")
 
 
+def make_spectrophotometric_standards_plot(request):
+    """creates spectrophotometric standards plot to be added to page"""
+
+    scoords = readSources('Flux')
+    ax = plt.figure().gca()
+    plotScatter(ax, scoords, 'g*')
+    plotFormat(ax, 2)
+    buffer = io.BytesIO()
+    plt.savefig(buffer, format='png')
+    plt.close()
+
+    return HttpResponse(buffer.getvalue(), content_type="Image/png")
+
+
 def spec_plot(data_spec, analog_data, reflec=False):
     """Builds the actual Bokeh Plots for various spectra
         INPUTS:
