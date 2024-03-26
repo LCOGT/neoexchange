@@ -2218,11 +2218,7 @@ def configure_defaults(params):
             if params.get('filter', None):
                 del(params['filter'])
             params['spectra_slit'] = 'slit_6.0as'
-    elif params['site_code'] in ['W89', 'W79', '0M4']:
-        params['instrument'] = '0M4-SCICAM-SBIG'
-        params['pondtelescope'] = '0m4'
-        params['binning'] = 1
-    elif params['site_code'] in ['Z17', 'Z21', 'T04', 'T03', 'Q58', 'Q59', 'V38', 'L09']:
+    elif params['site_code'] in ['Z17', 'Z21', 'T04', 'T03', 'Q58', 'Q59', 'V38', 'L09', 'W89', 'W79', '0M4']:
         params['instrument'] = '0M4-SCICAM-QHY600'
         params['pondtelescope'] = '0m4'
         params['binning'] = 1
