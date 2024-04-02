@@ -6,7 +6,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('core', '0067_merge_20230524_2317'),
+        ('core', '0066_exportedblock'),
     ]
 
     operations = [
