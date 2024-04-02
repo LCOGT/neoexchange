@@ -452,6 +452,10 @@ def determine_swarp_align_options(ref, sci, dest_dir, outname, back_size=32, nth
     else:
         combtype = 'CLIPPED'
 
+    proj_type = 'TPV'
+    if '2m0' in outname or '2m0' in sci:
+        proj_type = 'TAN'
+
     options = f'-BACK_SIZE {back_size} ' \
               f'-IMAGEOUT_NAME {outname} ' \
               f'-NTHREADS {nthreads} ' \
@@ -460,7 +464,8 @@ def determine_swarp_align_options(ref, sci, dest_dir, outname, back_size=32, nth
               f'-SUBTRACT_BACK N ' \
               f'-WEIGHTOUT_NAME {weightname} ' \
               f'-WEIGHT_TYPE NONE ' \
-              f'-COMBINE_TYPE {combtype} '
+              f'-COMBINE_TYPE {combtype} ' \
+              f'-PROJECTION_TYPE {proj_type} '
 
     return options
 
@@ -503,12 +508,19 @@ def determine_swarp_options(inweight, outname, dest_dir, back_size=32):
 
     wgtout = outname.replace('.fits', '.weight.fits')
 
+    proj_type = 'TPV'
+    if '2m0' in outname or '2m0' in inweight or \
+        'coj_ep' in outname or 'coj_ep' in inweight or \
+        'ogg_ep' in outname or 'ogg_ep' in inweight:
+        proj_type = 'TAN'
+
     options = f'-BACK_SIZE {back_size} ' \
               f'-IMAGEOUT_NAME {outname} ' \
               f'-VMEM_DIR {dest_dir} ' \
               f'-RESAMPLE_DIR {dest_dir} ' \
               f'-WEIGHT_IMAGE @{inweight} ' \
-              f'-WEIGHTOUT_NAME {wgtout} '
+              f'-WEIGHTOUT_NAME {wgtout} ' \
+              f'-PROJECTION_TYPE {proj_type} '
     return options
 
 
