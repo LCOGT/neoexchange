@@ -2414,15 +2414,11 @@ def submit_block_to_scheduler(elements, params):
 def fetch_filter_list(site, spec):
     """Fetches the filter list from the observation portal instruments endpoint"""
 
-    valid_point4m_qhy_codes = ['Z17', 'Z21', 'T04', 'T03', 'Q58', 'Q59', 'V38', 'L09']
-
     siteid, encid, telid = MPC_site_code_to_domes(site)
     if '1m0' in telid.lower():
         camid = "1m0-SciCam-Sinistro"
     elif '0m4' in telid.lower():
-        camid = "0m4-SciCam-SBIG"
-        if site in valid_point4m_qhy_codes:
-            camid = "0m4-SciCam-QHY600"
+        camid = "0m4-SciCam-QHY600"
     elif '2m0' in telid.lower():
         if spec:
             camid = "2m0-FLOYDS-SciCam"

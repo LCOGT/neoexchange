@@ -49,7 +49,8 @@ SITE_CHOICES = (
                     ('tfn', 'Tenerife'),
                     ('sbg', 'SBIG cameras'),
                     ('sin', 'Sinistro cameras'),
-                    ('spc', 'Spectral cameras')
+                    ('spc', 'Spectral cameras'),
+                    ('qhy', 'QHY cameras')
     )
 
 
