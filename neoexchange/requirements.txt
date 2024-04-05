@@ -31,7 +31,6 @@ Jinja2<3.0
 bokeh==2.3.0
 fits2image
 pillow
-aplpy
 gunicorn[gevent]~=20.1.0
 rollbar
 sty
