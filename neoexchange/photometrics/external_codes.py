@@ -685,8 +685,8 @@ def determine_stack_astconvertt_options(filename, dest_dir, mean, std, out_type=
     low = mean + sigrem * std
     high = mean + sigadd * std
     #print(low,high)
-    #cmap = 'sls-inverse'
-    cmap = 'gray' # --invert'
+    cmap = 'sls-inverse'
+    #cmap = 'gray' # --invert'
 
     options = f'{filename} -L {low} -H {high} -h{hdu} --colormap={cmap} --output={output_filename}'
     return output_filename, options
@@ -694,8 +694,8 @@ def determine_stack_astconvertt_options(filename, dest_dir, mean, std, out_type=
 def determine_astconvertt_options(filename, dest_dir, out_type='pdf', hdu='SCI'):
     raw_filename = os.path.basename(filename)
     output_filename = os.path.join(dest_dir, raw_filename.replace(".fits", f".{out_type}"))
-    #cmap = '--colormap=sls-inverse'
-    cmap = '--colormap=gray --invert'
+    cmap = '--colormap=sls-inverse'
+    #cmap = '--colormap=gray --invert'
     if '-bd' in filename:
         # Need to disable the colormap when making border images or you will
         # get identical looking images but the masking won't work properly.
