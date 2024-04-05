@@ -1,6 +1,6 @@
 """
 NEO exchange: NEO observing portal for Las Cumbres Observatory
-Copyright (C) 2017-2019 LCO
+Copyright (C) 2017-2024 LCO
 
 photometry_subs.py -- Code for photometric transformations.
 
@@ -18,7 +18,12 @@ GNU General Public License for more details.
 from math import sqrt, log10, sin, cos, exp, acos, radians, degrees, erf, log
 import logging
 
+import numpy as np
 from astropy import units as u
+from astropy.io import fits
+from astropy.table import vstack
+from astropy.wcs import WCS
+from astropy.wcs.utils import proj_plane_pixel_scales
 from astropy.constants import c, h
 from astropy.coordinates import SkyCoord
 
@@ -764,3 +769,101 @@ def optimize_spectro_exp_time(mag, exptime, tic_params, dbg=False):
         if dbg:
             print("New Exposure time:{}s, Saturation is {}".format(exptime, saturated))
     return exptime
+
+def raw_aperture_photometry(sci_path, rms_path, mask_path, ra, dec,
+                            aperture_radius=3*u.pixel, apply_calibration=False):
+    """Perform raw (uncalibrated) aperture photometry on an image (along with its
+    associated rms and mask images) at the locations specified by a set of positions
+    given by <ra>, <dec>. Adapted from the zuds_pipeline, uses photutils.
+
+    Parameters
+    ----------
+    sci_path : str
+        Filepath for the science image to be photometered
+    rms_path : str
+        Filepath for the rms/weight image to be photometered
+    mask_path : str
+        Filepath for the mask image to be photometered. If not present or it
+        can't be opened, an array of 1's of the same size as the science
+        image is generated.
+    ra : list or array-like of floats
+        Right ascension of the sources to be measured (in degrees)
+    dec : list or array-like of floats
+        Declination of the sources to be measured (in degrees)
+    aperture_radius : `astropy.units.Quantity` or `float`, optional
+        Size of aperture radius in pixels (converted to arcsec using mean
+        pixelscale from header WCS)
+
+    Returns
+    -------
+    phot_table : `astropy.table.QTable` Table of photometric results from
+        photutils augmented by additional columns:
+        'id' : running number for each source (int)
+        'xcenter' : x coordinate of the aperture center (pixels)
+        'ycenter' : y coordinate of the apertur center (pixels)
+        'sky_center' : RA, Dec of original input aperture coordinates (SkyCoord)
+        'flux' : The sum of the values within the aperture (renamed from `aperture_sum`)
+        'fluxerr' : The corresponding uncertainty in the 'flux' values (renamed from `aperture_sum_err`)
+        'flags' : Flags
+        'zp' : Zeropoint (extracted from the `L1ZP` value in the FITS header or 25.0 assumed)
+        'obsmjd' : MJD of observation
+        'filtercode' : Filter used
+    """
+
+    import photutils.aperture as aperture
+
+    ra = np.atleast_1d(ra)
+    dec = np.atleast_1d(dec)
+    coord = SkyCoord(ra, dec, unit='deg')
+    to_memmap = True # Originally False for ZTF but should be fine for LCO
+
+    with fits.open(sci_path, memmap=to_memmap) as shdu:
+        header = shdu[0].header
+        swcs = WCS(header)
+        scipix = shdu[0].data
+
+        units = swcs.world_axis_units
+        u1 = getattr(u, units[0])
+        u2 = getattr(u, units[1])
+        scales = proj_plane_pixel_scales(swcs)
+        ps1 = (scales[0] * u1).to('arcsec').value
+        ps2 = (scales[1] * u2).to('arcsec').value
+        pixel_scale = np.mean(np.asarray([ps1, ps2])) * u.arcsec / u.pixel
+
+    with fits.open(rms_path, memmap=to_memmap) as rhdu:
+        rmspix = rhdu[0].data
+
+    try:
+        with fits.open(mask_path, memmap=to_memmap) as mhdu:
+            maskpix = mhdu[0].data
+    except FileNotFoundError:
+        maskpix = np.ones_like(scipix)
+
+    apertures = aperture.SkyCircularAperture(coord, r=aperture_radius*pixel_scale)
+    phot_table = aperture.aperture_photometry(scipix, apertures,
+                                               error=rmspix,
+                                               wcs=swcs)
+
+
+    pixap = apertures.to_pixel(swcs)
+    annulus_masks = pixap.to_mask(method='center')
+    maskpix = [annulus_mask.cutout(maskpix) for annulus_mask in annulus_masks]
+
+
+    magzp = header.get('L1ZP', 25)
+    apcor = header.get('APER_KEY', 0.0)
+
+    # check for invalid photometry on masked pixels
+    phot_table['flags'] = [np.bitwise_or.reduce(m.astype(int), axis=(0, 1)) for
+                           m in maskpix]
+
+    phot_table['zp'] = magzp + apcor
+    phot_table['obsmjd'] = header['MJD-OBS']
+    phot_table['filtercode'] = 'z' + header['L1FILTER'][-1]
+
+
+    # rename some columns
+    phot_table.rename_column('aperture_sum', 'flux')
+    phot_table.rename_column('aperture_sum_err', 'fluxerr')
+
+    return phot_table
