@@ -1950,8 +1950,7 @@ def get_sitecam_params(site, bin_mode=None):
     unrecognized site."""
 
     valid_site_codes = LCOGT_site_codes()
-    valid_point4m_codes = ['W89', 'W79', '0M4']
-    valid_point4m_qhy_codes = ['Z17', 'Z21', 'T04', 'T03', 'Q58', 'Q59', 'V38', 'L09']
+    valid_point4m_codes = ['W89', 'W79', '0M4', 'Z17', 'Z21', 'T04', 'T03', 'Q58', 'Q59', 'V38', 'L09']
 
     site = site.upper()
     if site == '2M0':
@@ -1993,14 +1992,6 @@ def get_sitecam_params(site, bin_mode=None):
                           'calib_exposure_time': cfg.inst_overhead['floyds_calib_exp_time']
                          }
     elif site in valid_point4m_codes:
-        site_code = site
-        setup_overhead = cfg.tel_overhead['point4m_setup_overhead']
-        exp_overhead = cfg.inst_overhead['point4m_exp_overhead']
-        pixel_scale = cfg.tel_field['point4m_pixscale']
-        fov = cfg.tel_field['point4m_fov']
-        max_exp_length = 300.0
-        alt_limit = cfg.tel_alt['point4m_alt_limit']
-    elif site in valid_point4m_qhy_codes:
         site_code = site
         setup_overhead = cfg.tel_overhead['point4m_setup_overhead']
         if bin_mode == 'central_30_1x1':
