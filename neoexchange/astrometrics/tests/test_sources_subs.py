@@ -1403,7 +1403,8 @@ class TestSubmitBlockToScheduler(TestCase):
         user_request = make_requestgroup(self.body_elements, params)
 
         instrument_configs = user_request['requests'][0]['configurations'][0]['instrument_configs'][0]
-
+        
+        self.assertEqual(user_request['requests'][0]['configurations'][0]['instrument_type'], '0M4-SCICAM-QHY600')
         self.assertEqual(user_request['submitter'], 'bsimpson')
         self.assertNotIn('mode', instrument_configs.keys())
 

@@ -27,7 +27,6 @@ from django.conf import settings
 from django.http import Http404
 from bs4 import BeautifulSoup
 from mock import patch
-from astropy.io import fits
 from astropy.wcs import WCS
 from numpy.testing import assert_allclose
 
@@ -35,14 +34,13 @@ from neox.tests.mocks import MockDateTime, mock_check_request_status, mock_check
     mock_check_request_status_null, mock_check_request_status_notfound, \
     mock_check_for_images_no_millisecs, \
     mock_check_for_images_bad_date, mock_ingest_frames, mock_archive_frame_header, \
-    mock_archive_spectra_header, \
-    mock_odin_login, mock_run_sextractor_make_catalog, mock_fetch_filter_list, \
+    mock_archive_spectra_header, mock_run_sextractor_make_catalog, mock_fetch_filter_list, \
     mock_update_elements_with_findorb, mock_update_elements_with_findorb_badrms, \
-    mock_update_elements_with_findorb_badepoch, mock_get_vizier_catalog_table, mock_lco_api_fail
+    mock_update_elements_with_findorb_badepoch, mock_lco_api_fail
 
 from neox.tests.base import assertDeepAlmostEqual
 
-from astrometrics.ephem_subs import compute_ephem, determine_darkness_times
+from astrometrics.ephem_subs import compute_ephem
 from astrometrics.sources_subs import parse_mpcorbit, parse_mpcobs, \
     fetch_flux_standards, read_solar_standards
 from photometrics.catalog_subs import open_fits_catalog, get_catalog_header
@@ -51,7 +49,6 @@ from photometrics.external_codes import find_binary
 from core.frames import block_status, create_frame
 from core.models import Body, Proposal, Block, SourceMeasurement, Frame, Candidate,\
     SuperBlock, SpectralInfo, PreviousSpectra, StaticSource
-from core.forms import EphemQuery
 from core.utils import save_dataproduct, save_to_default
 # Import modules to test
 from core.views import *
