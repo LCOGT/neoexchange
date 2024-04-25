@@ -26,7 +26,10 @@ try:
 except:
     pass
 from astropy.wcs import FITSFixedWarning
-from astropy.stats import LombScargle
+try:
+    from astropy.stats import LombScargle
+except ImportError:
+    from astropy.timeseries import LombScargle
 from astropy.time import Time
 from django.conf import settings
 from django.core.files.storage import default_storage

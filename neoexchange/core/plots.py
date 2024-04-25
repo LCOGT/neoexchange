@@ -218,7 +218,10 @@ def make_visibility_plot(request, pk, plot_type, start_date=None, site_code='-1'
 
 
 # def make_plot(request):
+#
 #     import aplpy
+#
+#
 #     fits_file = 'cpt1m010-kb70-20160428-0148-e91.fits'
 #     fits_filepath = os.path.join('/tmp', 'tmp_neox_9nahRl', fits_file)
 #
