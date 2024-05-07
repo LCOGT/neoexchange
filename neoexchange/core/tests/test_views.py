@@ -4078,6 +4078,58 @@ class TestCleanMPCOrbit(TestCase):
         self.assertEqual(self.expected_mulepoch_Mar18_params, params)
 
 
+class TestCountUsefulObs(SimpleTestCase):
+
+    def setUp(self):
+        # Read in MPC 80 column format observations lines from a static file
+        # for testing purposes
+        test_fh = open(os.path.join('astrometrics', 'tests', 'test_mpcobs_WSAE9A6.dat'), 'r')
+        self.test_obslines = test_fh.readlines()
+        test_fh.close()
+
+    def test_all_valid(self):
+        expected_num = 6
+
+        num = count_useful_obs(self.test_obslines)
+
+        self.assertEqual(expected_num, num)
+
+    def test_satellite_observations(self):
+        expected_num = 7
+
+        # Generate fake satellite lines
+        sat_line1 = self.test_obslines[0].replace('C2015', 'S2015')
+        sat_line2 = self.test_obslines[0].replace('C2015', 's2015').replace('21 41 07.88 -10 51 09.0          21.8', '1 + 4205.7630 + 1369.0490 + 4299.9020')
+        self.test_obslines += [sat_line1, sat_line2]
+
+        num = count_useful_obs(self.test_obslines)
+
+        self.assertEqual(expected_num, num)
+
+    def test_converted_B1950_observations(self):
+        expected_num = 7
+
+        # Generate fake observations which have been converted to the J2000.0
+        # system by rotating B1950.0 coordinates, denoted by 'A',  lines
+        old_line1 = self.test_obslines[0].replace('C2015', 'A1975')
+        self.test_obslines += [old_line1, ]
+
+        num = count_useful_obs(self.test_obslines)
+
+        self.assertEqual(expected_num, num)
+
+    def test_CMOS_observations(self):
+        expected_num = 7
+
+        # Generate fake CMOS lines
+        cmos_line1 = self.test_obslines[0].replace('C2015', 'B2024')
+        self.test_obslines += [cmos_line1, ]
+
+        num = count_useful_obs(self.test_obslines)
+
+        self.assertEqual(expected_num, num)
+
+
 class TestCreate_sourcemeasurement(TestCase):
 
     def setUp(self):
