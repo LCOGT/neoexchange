@@ -2205,6 +2205,22 @@ class TestSourceMeasurement(TestCase):
         mpc_line = measure.format_mpc_line()
         self.assertEqual(expected_mpcline, mpc_line)
 
+    def test_mpc_packed_Kflag_CMOS(self):
+        self.test_frame_stack.extrainfo = 'B'
+        self.test_frame_stack.save()
+        measure_params = {  'body' : self.body2,
+                            'frame' : self.test_frame_stack,
+                            'obs_ra' : 346.01716666666667,
+                            'obs_dec' : -3.8430833333333333,
+                            'obs_mag' : 21.6,
+                            'flags' : 'K'
+                         }
+
+        measure = SourceMeasurement.objects.create(**measure_params)
+        expected_mpcline = '     K15X54S KB2015 12 05.04918923 04 04.12 -03 50 35.1          21.6 R      W86'
+        mpc_line = measure.format_mpc_line()
+        self.assertEqual(expected_mpcline, mpc_line)
+
     def test_mpc_nomag(self):
         measure_params = {  'body': self.body2,
                             'aperture_size': None,
