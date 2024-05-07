@@ -782,7 +782,7 @@ def parse_mpcobs(line):
         else:
             flag = '*,' + flag
 
-    if obs_type == 'C' or obs_type == 'S' or obs_type == 'A':
+    if obs_type == 'B' or obs_type == 'C' or obs_type == 'S' or obs_type == 'A':
         # Regular CCD observations, first line of satellite observations or
         # observations that have been rotated from B1950 to J2000 ('A')
         # print("Date=",line[15:32])
