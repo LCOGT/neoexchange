@@ -3263,7 +3263,7 @@ def count_useful_obs(obs_lines):
     """Function to determine max number of obs_lines will be read """
     i = 0
     for obs_line in obs_lines:
-        if len(obs_line) > 15 and obs_line[14] in ['C', 'S', 'A']:
+        if len(obs_line) > 15 and obs_line[14] in ['B', 'C', 'S', 'A']:
             i += 1
     return i
 
