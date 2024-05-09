@@ -31,7 +31,7 @@ from photometrics.image_subs import get_reference_name, find_reference_images
 from photometrics.catalog_subs import funpack_fits_file
 
 class Command(BaseCommand):
-    help = "Make a reference field"
+    help = "Make a reference field. Created reference fields are copied to <datadir>/reference_library/"
 
     def add_arguments(self, parser):
         parser.add_argument('site', type=str, nargs='?', default=None, help='Site to run for. Default is all sites.')
@@ -50,7 +50,9 @@ class Command(BaseCommand):
         ref_fields = StaticSource.objects.filter(source_type=StaticSource.REFERENCE_FIELD)
         self.stdout.write(f"Number of reference fields before filtering: {ref_fields.count()}")
         if options['site'] is not None:
-            site = options['site'].upper()
+            site = options['site']
+            if len(site) == 3:
+                site = options['site'].upper()
             ref_fields = ref_fields.filter(name__contains=site)
 
         self.stdout.write(f"Number of reference fields after filtering: {ref_fields.count()}\n")
