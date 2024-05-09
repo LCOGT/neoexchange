@@ -3290,10 +3290,11 @@ def create_source_measurement(obs_lines, block=None):
                         unpacked_name = str(int(param['body']))
                     except ValueError:
                         unpacked_name = 'ZZZZZZ'
-                obs_body = Body.objects.get(Q(provisional_name__startswith=param['body']) |
+                obs_body = Body.objects.get((Q(provisional_name__startswith=param['body']) |
                                             Q(name=param['body']) |
                                             Q(name=unpacked_name) |
-                                            Q(provisional_name=unpacked_name)
+                                            Q(provisional_name=unpacked_name)) &
+                                            ~Q(source_type__in=['W', 'X']) # Exclude 'Was not interesting' and 'Did not eXist' objects
                                            )
             except Body.DoesNotExist:
                 logger.debug("Body %s does not exist" % param['body'])
