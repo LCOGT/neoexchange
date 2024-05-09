@@ -3,6 +3,7 @@ from datetime import datetime
 from math import degrees, radians, pi, sqrt
 
 from astropy import units as u
+from astropy.constants import R_earth
 import astropy.coordinates as coord
 import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle, Circle
@@ -10,7 +11,7 @@ from matplotlib.ticker import MultipleLocator
 import numpy as np
 import pyslalib.slalib as S
 
-from ephem_subs import compute_local_st, get_sitepos, datetime2mjd_tdb, moon_ra_dec, moon_alt_az, moonphase
+from .ephem_subs import get_sitepos, datetime2mjd_tdb, moon_ra_dec, moon_alt_az, moonphase # compute_local_st, 
 
 def read_observables(filename):
 
@@ -537,3 +538,45 @@ def filter_by_area(asteroids, footprint, alt_limit=30.0, dbg=False):
                 if dbg: print("In box", ra, dec)
                 detected_asts.append(asteroid)
     return detected_asts
+
+def neo_absmag_frequency_distribution(H):
+    """Returns log10 N( < H), the number of near-Earth objects with absolute magnitude
+    smaller than H. N( < H) is tabulated in Harris & Chodas (2021, Appendix B)
+    and has been approximated with a polynomial fit 
+    (Farnocchia & Chodas, 2021, RNAAS, 5, 11)"""
+
+    try:
+        H = H.to_value()
+    except AttributeError:
+        pass
+
+    Hbar = (H-20.250) / 6.278
+
+    log10_N = 0.156*Hbar**7 - 0.036*Hbar**6 - 0.989*Hbar**5 + 0.270*Hbar**4 + \
+        1.974*Hbar**3 - 0.160*Hbar**2 + 1.584*Hbar + 3.788
+
+    return log10_N
+
+def neo_close_approach_frequency(r, H):
+    """Calculates and returns the frequency, f, of a NEO close approach within
+     a distance <r> and a maximum absolute magnitude <H>.
+      can be obtained from that of an impact:
+    According to the 2017 Report of the Near-Earth Object Science 
+    Definition Team, 1 the per-object impact frequency is 1.66 × 10−9 yr−1 
+    and therefore f( < r⊕; < H) = 1.66 × 10−9 yr−1 × N( < H), where N( < H) 
+    is the number of near-Earth objects with absolute magnitude smaller 
+    than H"""
+
+    # Obtain log10 of the number of NEOs brighter than a specific H and use
+    # to scale impact frequency
+    log10_N = neo_absmag_frequency_distribution(H)
+    N_H = 10**log10_N
+    impact_freq = 1.66e-9/u.yr * N_H
+
+    # Calculate hyperbola function of r (scale from 1 (r=R_earth; grazing 
+    # impact) to ~0.73 at large distance)
+    eta = 2400*u.km
+    phi = (1.0 + (eta/r.to(u.km))) / (1.0 + (eta/R_earth.to(u.km)))
+    impact_freq * (r.to(u.km) / R_earth.to(u.km))**2 * phi
+
+    return impact_freq
