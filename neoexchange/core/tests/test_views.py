@@ -4078,6 +4078,58 @@ class TestCleanMPCOrbit(TestCase):
         self.assertEqual(self.expected_mulepoch_Mar18_params, params)
 
 
+class TestCountUsefulObs(SimpleTestCase):
+
+    def setUp(self):
+        # Read in MPC 80 column format observations lines from a static file
+        # for testing purposes
+        test_fh = open(os.path.join('astrometrics', 'tests', 'test_mpcobs_WSAE9A6.dat'), 'r')
+        self.test_obslines = test_fh.readlines()
+        test_fh.close()
+
+    def test_all_valid(self):
+        expected_num = 6
+
+        num = count_useful_obs(self.test_obslines)
+
+        self.assertEqual(expected_num, num)
+
+    def test_satellite_observations(self):
+        expected_num = 7
+
+        # Generate fake satellite lines
+        sat_line1 = self.test_obslines[0].replace('C2015', 'S2015')
+        sat_line2 = self.test_obslines[0].replace('C2015', 's2015').replace('21 41 07.88 -10 51 09.0          21.8', '1 + 4205.7630 + 1369.0490 + 4299.9020')
+        self.test_obslines += [sat_line1, sat_line2]
+
+        num = count_useful_obs(self.test_obslines)
+
+        self.assertEqual(expected_num, num)
+
+    def test_converted_B1950_observations(self):
+        expected_num = 7
+
+        # Generate fake observations which have been converted to the J2000.0
+        # system by rotating B1950.0 coordinates, denoted by 'A',  lines
+        old_line1 = self.test_obslines[0].replace('C2015', 'A1975')
+        self.test_obslines += [old_line1, ]
+
+        num = count_useful_obs(self.test_obslines)
+
+        self.assertEqual(expected_num, num)
+
+    def test_CMOS_observations(self):
+        expected_num = 7
+
+        # Generate fake CMOS lines
+        cmos_line1 = self.test_obslines[0].replace('C2015', 'B2024')
+        self.test_obslines += [cmos_line1, ]
+
+        num = count_useful_obs(self.test_obslines)
+
+        self.assertEqual(expected_num, num)
+
+
 class TestCreate_sourcemeasurement(TestCase):
 
     def setUp(self):
@@ -4354,6 +4406,39 @@ class TestCreate_sourcemeasurement(TestCase):
         self.assertEqual(expected_params['body'], source_measure.body.current_name())
         self.assertEqual(expected_params['filter'], source_measure.frame.filter)
         self.assertEqual(Frame.SINGLE_FRAMETYPE, source_measure.frame.frametype)
+        self.assertEqual(expected_params['obs_date'], source_measure.frame.midpoint)
+        self.assertEqual(expected_params['site_code'], source_measure.frame.sitecode)
+        self.assertAlmostEqual(expected_params['obs_ra'], source_measure.obs_ra, 7)
+        self.assertAlmostEqual(expected_params['obs_dec'], source_measure.obs_dec, 7)
+        self.assertEqual(expected_params['obs_mag'], source_measure.obs_mag)
+        self.assertEqual(expected_params['flags'], source_measure.flags)
+        self.assertEqual(None, source_measure.err_obs_ra)
+        self.assertEqual(None, source_measure.err_obs_dec)
+        self.assertEqual(None, source_measure.err_obs_mag)
+
+    def test_create_LCO_flagK_CMOS(self):
+        expected_params = { 'body'  : 'WSAE9A6',
+                            'flags' : 'K',
+                            'obs_type'  : 'B',
+                            'obs_date'  : datetime(2015, 9, 20, 23, 24, 46, int(0.4832*1e6)),
+                            'obs_ra'    : 325.540625,
+                            'obs_dec'   : -11.536666666666667,
+                            'obs_mag'   : 21.4,
+                            'filter'    : 'R',
+                            'astrometric_catalog' : '',
+                            'site_code' : 'K93'
+                          }
+
+        test_obsline = self.test_obslines[5].replace('6 KC', '6 KB')
+        source_measures = create_source_measurement(test_obsline)
+        source_measure = source_measures[0]
+
+        self.assertEqual(SourceMeasurement, type(source_measure))
+        self.assertEqual(Body, type(source_measure.body))
+        self.assertEqual(expected_params['body'], source_measure.body.current_name())
+        self.assertEqual(expected_params['filter'], source_measure.frame.filter)
+        self.assertEqual(Frame.STACK_FRAMETYPE, source_measure.frame.frametype)
+        self.assertEqual(expected_params['obs_type'], source_measure.frame.extrainfo)
         self.assertEqual(expected_params['obs_date'], source_measure.frame.midpoint)
         self.assertEqual(expected_params['site_code'], source_measure.frame.sitecode)
         self.assertAlmostEqual(expected_params['obs_ra'], source_measure.obs_ra, 7)

@@ -3186,6 +3186,9 @@ class TestParseMPCObsFormat(TestCase):
         <char2> is the observation code or program code,
         <char3> is the observation type:
             C: CCD observations,
+            B: CMOS observations,
+            A: observations which have been converted to the J2000.0 system by rotating B1950.0 coordinates,
+            M: Micrometer observations,
             R/r: radar observation,
             S/s: satellite observation
             x: replaced discovery observation
@@ -3216,6 +3219,7 @@ class TestParseMPCObsFormat(TestCase):
                             'np_4X_l' : u'24554PLS2608*4X1960 09 24.46184 00 42 27.17 +00 55 44.5          18.1  Kb6053675',
                             'p_* C_l' : u'     K15TE5B* C2015 10 19.36445 04 16 45.66 -02 06 29.9          18.7 RqEU023H45',
                             'p_*KC_l' : u'     K15TE5B*KC2015 10 18.42125 04 16 20.07 -02 07 27.5          19.2 Vq     Q63',
+                            'p_ B_h'  : u'     K14W06F KB2024 05 05.91784 15 34 35.710-29 14 17.34         18.0 GXEJ099L87',
                             't_* C_l' : u'     LSCTLZZ* C2018 10 19.36445 04 16 45.66 -02 06 29.9          18.7 Rq     W85',
                             't_*KC_l' : u'     LSCTLZZ*KC2018 10 18.42125 04 16 20.07 -02 07 27.5          19.2 Vq     W86',
                             't_*IC_l' : u'     CPTTLAZ*IC2018 10 18.92125 04 16 20.07 -02 07 27.5          19.2 rV     L09',
@@ -3958,6 +3962,25 @@ class TestParseMPCObsFormat(TestCase):
                           }
 
         params = parse_mpcobs(self.test_lines['t_*IC_l'])
+
+        self.compare_dict(expected_params, params)
+
+    def test_p_space_KB_l(self):
+        expected_params = { 'body'  : 'K14W06F',
+                            'flags' : 'K',
+                            'obs_type'  : 'B',
+                            'obs_date'  : datetime(2024, 5, 5, 22, 1, 41, int(0.376*1e6)),
+                            'obs_ra'    : 233.64879167,
+                            'obs_dec'   : -29.23815,
+                            'obs_mag'   : 18.0,
+                            'filter'    : 'G',
+                            'astrometric_catalog' : 'GAIA-EDR3',
+                            'site_code' : 'L87',
+                            'discovery' : False,
+                            'lco_discovery' : False
+                          }
+
+        params = parse_mpcobs(self.test_lines['p_ B_h'])
 
         self.compare_dict(expected_params, params)
 
