@@ -28,7 +28,7 @@ from astropy.wcs import FITSFixedWarning
 from core.models import StaticSource, Block, Frame
 from core.views import run_swarp_make_reference, determine_images_and_catalogs
 from photometrics.image_subs import get_reference_name, find_reference_images
-from photometrics.catalog_subs import funpack_fits_file
+from photometrics.catalog_subs import funpack_fits_file, make_object_directory
 
 class Command(BaseCommand):
     help = "Make a reference field. Created reference fields are copied to <datadir>/reference_library/"
@@ -59,14 +59,14 @@ class Command(BaseCommand):
 
         ### Loop over reference fields and make a list of the observed fields
         obs_fields=[]
-        for field in ref_fields:
+        for field in ref_fields.order_by('id'):
             blocks = Block.objects.filter(calibsource=field)
             obs_blocks = blocks.filter(num_observed__gte=1)
             if obs_blocks.count() > 0:
                 obs_fields.append(field)
 
             # Print out relative info for each of the reference fields
-            self.stdout.write(f"{field.name}: {field.ra: 9.5f} {field.dec:+9.5f}  Num blocks: {blocks.count()}  Num observed blocks: {obs_blocks.count()}")
+            self.stdout.write(f"{field.name}: {field.ra: 9.5f} {field.dec:+9.5f}  Num blocks: {blocks.count():>2d}  Num observed blocks: {obs_blocks.count():>1d}")
 
         # Loop over all observed fields
         for field in obs_fields:
@@ -113,6 +113,12 @@ class Command(BaseCommand):
                         else:
                             dest_dir = options['datadir']
                         dest_dir = os.path.join(dest_dir, "")
+                        # Assemble path to reduced data
+                        dayobs = obs_block.get_blockdayobs
+                        blockuid = obs_block.get_blockuid
+                        dest_dir = os.path.join(dest_dir, dayobs, '')
+                        dest_dir = make_object_directory(dest_dir, obs_block.current_name(), blockuid[0])
+                        dest_dir = os.path.join(dest_dir, 'Temp_cvc')
 
                         # Check for processed frames already
                         images, catalogs = determine_images_and_catalogs(self, dest_dir, red_level='e92')
@@ -134,7 +140,8 @@ class Command(BaseCommand):
                                     num_catalogs += 1
                         else:
                             num_catalogs = 0
-                        if images is None and catalogs is None or (num_images != filtered_frames.count() and num_catalogs != filtered_frames.count()):
+                        print(f"Pipeline: #num_images={num_images} #filtered_frames={filtered_frames.count()} #goodZP={num_good_zp}  {num_images != filtered_frames.count()}")
+                        if images is None and catalogs is None or (len(images) != filtered_frames.count() and len(catalogs) != filtered_frames.count()):
                             self.stdout.write(f"Not all products present, running frame reduction pipeline in {dest_dir}")
 
                             year = filtered_frames[0].midpoint.year
