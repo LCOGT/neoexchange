@@ -220,7 +220,7 @@
                             </td>
                         {% endif %}
                     </tr>
-                    {% if '1M0' in data.lco_tel or '1M0' in data.site_code %}
+                    {% if '1M0' in data.lco_tel or '1M0' in data.site_code or '0M4' in data.lco_tel or '0m4' in data.site_code %}
                     <tr id="id_bin_mode_row">
                         <td class="kv-key">Binning</td>
                         <td class="kv-value">{{ form.bin_mode }}</td>

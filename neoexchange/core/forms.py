@@ -60,9 +60,15 @@ MOON = (('G', 'Grey',),
         ('B', 'Bright'),
         ('D', 'Dark'))
 
-BIN_MODES = (('full_chip', 'Full Chip, 1x1'),
-             ('2k_2x2', 'Central 2k, 2x2'),
-             ('central30_1x1', "Central 30'x30', 1x1"))
+SITES_1M0 = ('W86', 'V37', 'Q63', 'K92', 'Z24', '1M0')
+SITES_0M4 = ('W89', 'V38', 'T04', 'Q58', 'L09', 'Z21', '0M4')
+
+BIN_MODES = {'0M4' : 
+             (('central30_1x1', "Central 30'x30', 1x1"),
+             ('full_chip', 'Full Chip, 1x1')),
+             '1M0' : (('full_chip', 'Full Chip, 1x1'),
+                ('2k_2x2', 'Central 2k, 2x2'))
+            }
 
 ANALOG_OPTIONS = (('1', '1'),
                   ('2', '2'),
@@ -218,7 +224,7 @@ class ScheduleBlockForm(forms.Form):
     utc_date = forms.DateField(input_formats=['%Y-%m-%d', ], widget=forms.HiddenInput(), required=False)
     jitter = forms.FloatField(widget=forms.NumberInput(attrs={'size': '5'}), required=False)
     period = forms.FloatField(widget=forms.NumberInput(attrs={'size': '5'}), required=False)
-    bin_mode = forms.ChoiceField(required=False, choices=BIN_MODES)
+    bin_mode = forms.ChoiceField(required=False)
     spectroscopy = forms.BooleanField(required=False, widget=forms.HiddenInput())
     too_mode = forms.BooleanField(required=False, widget=forms.HiddenInput())
     calibs = forms.ChoiceField(required=False, widget=forms.HiddenInput(), choices=CALIBS)
@@ -379,10 +385,14 @@ class ScheduleBlockForm(forms.Form):
         return cleaned_data
 
     def __init__(self, *args, **kwargs):
+        site_code = args[0]['site_code']
         self.calibsource_list = kwargs.pop('calibsource_list', None)
         super(ScheduleBlockForm, self).__init__(*args, **kwargs)
         self.fields['calibsource_list'].choices = ANALOG_OPTIONS
-
+        if site_code in SITES_0M4:
+            self.fields['bin_mode'].choices = BIN_MODES['0M4']
+        elif site_code in SITES_1M0:
+            self.fields['bin_mode'].choices = BIN_MODES['1M0']
 
 class ScheduleSpectraForm(forms.Form):
     proposal_code = forms.ChoiceField(required=True)
