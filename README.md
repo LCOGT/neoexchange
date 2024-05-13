@@ -9,6 +9,12 @@ Portal for scheduling observations of NEOs (and other Solar System objects) usin
 ### 3.15.0
 * Add QHY support as Issue [#630](https://github.com/LCOGT/neoexchange/issues/630)
 
+### 3.14.3
+* Fix issue for ignoring 'B'/CMOS observations from the MPC (Issue #640)
+* Add short random delay of 2...5 secs to update_neocp_data
+* Increase max length of proposal field to 55 characters.
+* Merge feature/close_passes branch with routines for estimating NEO close approach frequency and a H vs frequency distribution from Farnocchia & Chodas, 2021, RNAAS, 5, 11.
+
 ### 3.14.2
 * Add ability to filter Calibration Sources to only show spectrophotometric standards.
 

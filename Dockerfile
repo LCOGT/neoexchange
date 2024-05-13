@@ -117,7 +117,7 @@ RUN yum -y install epel-release glibc-langpack-en\
             libpng-devel \
             mariadb-devel \
             freetype-devel \
-            make diffutils file
+            make diffutils file traceroute
 
 # Copy Python dependencies manifest
 COPY neoexchange/requirements.txt .

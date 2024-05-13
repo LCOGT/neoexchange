@@ -3265,7 +3265,7 @@ def count_useful_obs(obs_lines):
     """Function to determine max number of obs_lines will be read """
     i = 0
     for obs_line in obs_lines:
-        if len(obs_line) > 15 and obs_line[14] in ['C', 'S', 'A']:
+        if len(obs_line) > 15 and obs_line[14] in ['B', 'C', 'S', 'A']:
             i += 1
     return i
 
@@ -3292,10 +3292,11 @@ def create_source_measurement(obs_lines, block=None):
                         unpacked_name = str(int(param['body']))
                     except ValueError:
                         unpacked_name = 'ZZZZZZ'
-                obs_body = Body.objects.get(Q(provisional_name__startswith=param['body']) |
+                obs_body = Body.objects.get((Q(provisional_name__startswith=param['body']) |
                                             Q(name=param['body']) |
                                             Q(name=unpacked_name) |
-                                            Q(provisional_name=unpacked_name)
+                                            Q(provisional_name=unpacked_name)) &
+                                            ~Q(source_type__in=['W', 'X']) # Exclude 'Was not interesting' and 'Did not eXist' objects
                                            )
             except Body.DoesNotExist:
                 logger.debug("Body %s does not exist" % param['body'])

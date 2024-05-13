@@ -31,7 +31,7 @@ bokeh==2.3.0
 fits2image
 pillow>=6.2.1
 aplpy
-gunicorn[gevent]~=20.1.0
+gunicorn[gevent]~=22.0.0
 rollbar
 sty
 awscli

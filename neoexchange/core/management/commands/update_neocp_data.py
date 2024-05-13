@@ -13,7 +13,7 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 """
 
-from astrometrics.sources_subs import fetch_NEOCP, parse_NEOCP_extra_params
+from astrometrics.sources_subs import fetch_NEOCP, parse_NEOCP_extra_params, random_delay
 from core.views import update_NEOCP_orbit, update_NEOCP_observations
 
 from django.core.management.base import BaseCommand, CommandError
@@ -40,5 +40,6 @@ class Command(BaseCommand):
                 resp = update_NEOCP_observations(str(obj_name), obj_extra_params)
                 if resp:
                     self.stdout.write(resp)
+                random_delay(2, 5)
         else:
             self.stdout.write("==== Could not find NEOCP or PCCP pages ====")
