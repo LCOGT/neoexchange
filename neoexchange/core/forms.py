@@ -65,7 +65,7 @@ SITES_0M4 = ('W89', 'V38', 'T04', 'Q58', 'L09', 'Z21', '0M4')
 
 BIN_MODES = {'0M4' : 
              (('central30_1x1', "Central 30'x30', 1x1"),
-             ('full_chip', 'Full Chip, 1x1')),
+             ('full_chip', 'Full Frame, 1x1')),
              '1M0' : (('full_chip', 'Full Chip, 1x1'),
                 ('2k_2x2', 'Central 2k, 2x2'))
             }
