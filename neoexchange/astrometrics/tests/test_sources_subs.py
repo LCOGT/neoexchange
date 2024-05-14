@@ -4898,6 +4898,7 @@ class TestMakeconfiguration(TestCase):
         self.params_0m4_imaging = configure_defaults({'site_code': 'Z21',
                                                       'exp_time': 90.0,
                                                       'exp_count': 10,
+                                                      'bin_mode': 'full_chip',
                                                       'filter_pattern': 'w',
                                                       'target': self.target,
                                                       'add_dither': False,
@@ -5011,6 +5012,7 @@ class TestMakeconfiguration(TestCase):
                               'instrument_configs': [{
                                 'exposure_count': 10,
                                 'exposure_time': 90.0,
+                                'mode': 'full_frame',
                                 'extra_params': {},
                                 'optical_elements': {
                                   'filter': 'w'

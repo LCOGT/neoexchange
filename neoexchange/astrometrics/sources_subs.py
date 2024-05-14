@@ -1923,6 +1923,8 @@ def make_config(params, filter_list):
             instrument_config['mode'] = 'central_2k_2x2'
         if params.get('bin_mode', None) == 'central30_1x1' and params['pondtelescope'] == '0m4':
             instrument_config['mode'] = 'central30x30'
+        if params.get('bin_mode', None) == 'full_chip' and params['pondtelescope'] == '0m4':
+            instrument_config['mode'] = 'full_frame'
 
         if params['instrument'] == '2M0-SCICAM-MUSCAT':
             if params.get('muscat_sync', False):
