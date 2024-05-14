@@ -4447,7 +4447,7 @@ class TestConfigureDefaults(TestCase):
         test_params = self.obs_params
         test_params['site_code'] = 'W89'
 
-        expected_params = { 'instrument':  '0M4-SCICAM-SBIG',
+        expected_params = { 'instrument':  '0M4-SCICAM-QHY600',
                             'pondtelescope': '0m4',
                             'observatory': '',
                             'site': 'LSC',
@@ -4462,7 +4462,7 @@ class TestConfigureDefaults(TestCase):
         test_params = self.obs_params
         test_params['site_code'] = 'W79'
 
-        expected_params = { 'instrument':  '0M4-SCICAM-SBIG',
+        expected_params = { 'instrument':  '0M4-SCICAM-QHY600',
                             'pondtelescope': '0m4',
                             'observatory': '',
                             'site': 'LSC',
