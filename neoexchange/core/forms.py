@@ -385,7 +385,10 @@ class ScheduleBlockForm(forms.Form):
         return cleaned_data
 
     def __init__(self, *args, **kwargs):
-        site_code = args[0]['site_code']
+        try:
+            site_code = args[0]['site_code']
+        except IndexError:
+            site_code = kwargs['data']['site_code']
         self.calibsource_list = kwargs.pop('calibsource_list', None)
         super(ScheduleBlockForm, self).__init__(*args, **kwargs)
         self.fields['calibsource_list'].choices = ANALOG_OPTIONS
