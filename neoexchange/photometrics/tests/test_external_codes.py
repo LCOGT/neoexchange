@@ -389,7 +389,7 @@ class TestSCAMPRunner(ExternalCodeUnitTest):
 
     def test_scamp_options_2m0_no_distortion(self):
 
-        expected_options = '-ASTREF_CATALOG FILE -ASTREFCAT_NAME GAIA-DR2.cat -XML_NAME foo_2m0.xml'
+        expected_options = '-ASTREF_CATALOG FILE -ASTREFCAT_NAME GAIA-DR2.cat -POSANGLE_MAXERR 1 -MATCH_FLIPPED N -XML_NAME foo_2m0.xml'
 
         options = determine_scamp_options('foo_2m0.ldac')
 
