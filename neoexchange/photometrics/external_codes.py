@@ -616,7 +616,9 @@ def determine_scamp_options(fits_catalog, external_cat_name='GAIA-DR2.cat', dist
     else:
         distort_degrees = 1
     if distort_degrees != 1 and distort_degrees <= 7:
-            options += " -DISTORT_DEGREES {} -PROJECTION_TYPE TPV".format(distort_degrees)
+        options += " -DISTORT_DEGREES {} -PROJECTION_TYPE TPV".format(distort_degrees)
+    if '2m0' in fits_catalog:
+        options += " -POSANGLE_MAXERR 1 -MATCH_FLIPPED N"
     # Add unique filename-based name for the XML output file rather than 'scamp.xml'
     # which is problematic when several versions are running in parallel.
     xml_file = os.path.splitext(os.path.basename(fits_catalog))[0] + '.xml'
