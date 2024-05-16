@@ -1160,7 +1160,7 @@ class TestDetermineSwarpOptions(ExternalCodeUnitTest):
         outname = "test_swarp_output.fits"
 
 
-        expected_options = f'-BACK_SIZE 32 -IMAGEOUT_NAME test_swarp_output.fits -VMEM_DIR {self.test_dir} -RESAMPLE_DIR {self.test_dir} -WEIGHT_IMAGE @{inweight} -WEIGHTOUT_NAME test_swarp_output.weight.fits -PROJECTION_TYPE TPV '
+        expected_options = f'-BACK_SIZE 42 -IMAGEOUT_NAME test_swarp_output.fits -VMEM_DIR {self.test_dir} -RESAMPLE_DIR {self.test_dir} -WEIGHT_IMAGE @{inweight} -WEIGHTOUT_NAME test_swarp_output.weight.fits -PROJECTION_TYPE TPV '
 
         options = determine_swarp_options(inweight, outname, self.test_dir)
 
@@ -1170,7 +1170,7 @@ class TestDetermineSwarpOptions(ExternalCodeUnitTest):
         inweight = os.path.join(self.test_dir, 'weight.in')
         outname = "reference_coj_fa99_rp_282.77_-25.31.fits"
 
-        expected_options = f'-BACK_SIZE 32 -IMAGEOUT_NAME {outname} -VMEM_DIR {self.test_dir} -RESAMPLE_DIR {self.test_dir} -WEIGHT_IMAGE @{inweight} -WEIGHTOUT_NAME {outname.replace(".fits","")}.weight.fits -PROJECTION_TYPE TPV '
+        expected_options = f'-BACK_SIZE 42 -IMAGEOUT_NAME {outname} -VMEM_DIR {self.test_dir} -RESAMPLE_DIR {self.test_dir} -WEIGHT_IMAGE @{inweight} -WEIGHTOUT_NAME {outname.replace(".fits","")}.weight.fits -PROJECTION_TYPE TPV '
 
         options = determine_swarp_options(inweight, outname, self.test_dir)
 
@@ -1180,7 +1180,7 @@ class TestDetermineSwarpOptions(ExternalCodeUnitTest):
         inweight = os.path.join(self.test_dir, 'weight.in')
         outname = "reference_ogg_ep04_rp_282.77_+25.31.fits"
 
-        expected_options = f'-BACK_SIZE 32 -IMAGEOUT_NAME {outname} -VMEM_DIR {self.test_dir} -RESAMPLE_DIR {self.test_dir} -WEIGHT_IMAGE @{inweight} -WEIGHTOUT_NAME {outname.replace(".fits","")}.weight.fits -PROJECTION_TYPE TAN '
+        expected_options = f'-BACK_SIZE 42 -IMAGEOUT_NAME {outname} -VMEM_DIR {self.test_dir} -RESAMPLE_DIR {self.test_dir} -WEIGHT_IMAGE @{inweight} -WEIGHTOUT_NAME {outname.replace(".fits","")}.weight.fits -PROJECTION_TYPE TAN '
 
         options = determine_swarp_options(inweight, outname, self.test_dir)
 
@@ -1190,7 +1190,7 @@ class TestDetermineSwarpOptions(ExternalCodeUnitTest):
         inweight = os.path.join(self.test_dir, 'weight.in')
         outname = "reference_coj_ep07_rp_282.77_-25.31.fits"
 
-        expected_options = f'-BACK_SIZE 32 -IMAGEOUT_NAME {outname} -VMEM_DIR {self.test_dir} -RESAMPLE_DIR {self.test_dir} -WEIGHT_IMAGE @{inweight} -WEIGHTOUT_NAME {outname.replace(".fits","")}.weight.fits -PROJECTION_TYPE TAN '
+        expected_options = f'-BACK_SIZE 42 -IMAGEOUT_NAME {outname} -VMEM_DIR {self.test_dir} -RESAMPLE_DIR {self.test_dir} -WEIGHT_IMAGE @{inweight} -WEIGHTOUT_NAME {outname.replace(".fits","")}.weight.fits -PROJECTION_TYPE TAN '
 
         options = determine_swarp_options(inweight, outname, self.test_dir)
 
@@ -1207,11 +1207,7 @@ class TestDetermineSwarpAlignOptions(ExternalCodeUnitTest):
         outname = os.path.join(self.test_dir, "example-sbig-e10_aligned_to_example-sbig-e10.fits")
         weightname = outname.replace('.fits', '.weight.fits')
 
-<<<<<<< HEAD
-        expected_options = f'-BACK_SIZE 42 -IMAGEOUT_NAME {outname} -NTHREADS 1 -VMEM_DIR {self.test_dir} -RESAMPLE_DIR {self.test_dir} -SUBTRACT_BACK N -WEIGHTOUT_NAME {weightname} -WEIGHT_TYPE NONE -COMBINE_TYPE CLIPPED '
-=======
-        expected_options = f'-BACK_SIZE 32 -IMAGEOUT_NAME {outname} -NTHREADS 1 -VMEM_DIR {self.test_dir} -RESAMPLE_DIR {self.test_dir} -SUBTRACT_BACK N -WEIGHTOUT_NAME {weightname} -WEIGHT_TYPE NONE -COMBINE_TYPE CLIPPED -PROJECTION_TYPE TPV '
->>>>>>> 3cfa0dff... Set SWarp PROJECTION_TYPE to TAN for 2m0 data
+        expected_options = f'-BACK_SIZE 42 -IMAGEOUT_NAME {outname} -NTHREADS 1 -VMEM_DIR {self.test_dir} -RESAMPLE_DIR {self.test_dir} -SUBTRACT_BACK N -WEIGHTOUT_NAME {weightname} -WEIGHT_TYPE NONE -COMBINE_TYPE CLIPPED -PROJECTION_TYPE TPV '
 
         options = determine_swarp_align_options(self.test_fits_file, self.test_fits_file, self.test_dir, outname)
 
@@ -1221,7 +1217,7 @@ class TestDetermineSwarpAlignOptions(ExternalCodeUnitTest):
         outname = os.path.join(self.test_dir, "reference_coj_fa99-e92_aligned_to_coj1m042-fa99-e92.fits")
         weightname = outname.replace('.fits', '.weight.fits')
 
-        expected_options = f'-BACK_SIZE 32 -IMAGEOUT_NAME {outname} -NTHREADS 1 -VMEM_DIR {self.test_dir} -RESAMPLE_DIR {self.test_dir} -SUBTRACT_BACK N -WEIGHTOUT_NAME {weightname} -WEIGHT_TYPE NONE -COMBINE_TYPE CLIPPED -PROJECTION_TYPE TPV '
+        expected_options = f'-BACK_SIZE 42 -IMAGEOUT_NAME {outname} -NTHREADS 1 -VMEM_DIR {self.test_dir} -RESAMPLE_DIR {self.test_dir} -SUBTRACT_BACK N -WEIGHTOUT_NAME {weightname} -WEIGHT_TYPE NONE -COMBINE_TYPE CLIPPED -PROJECTION_TYPE TPV '
 
         options = determine_swarp_align_options(self.test_fits_file, self.test_fits_file, self.test_dir, outname)
 
@@ -1231,7 +1227,7 @@ class TestDetermineSwarpAlignOptions(ExternalCodeUnitTest):
         outname = os.path.join(self.test_dir, "reference_coj_ep99-e92_aligned_to_coj2m002-ep99-e92.fits")
         weightname = outname.replace('.fits', '.weight.fits')
 
-        expected_options = f'-BACK_SIZE 32 -IMAGEOUT_NAME {outname} -NTHREADS 1 -VMEM_DIR {self.test_dir} -RESAMPLE_DIR {self.test_dir} -SUBTRACT_BACK N -WEIGHTOUT_NAME {weightname} -WEIGHT_TYPE NONE -COMBINE_TYPE CLIPPED -PROJECTION_TYPE TAN '
+        expected_options = f'-BACK_SIZE 42 -IMAGEOUT_NAME {outname} -NTHREADS 1 -VMEM_DIR {self.test_dir} -RESAMPLE_DIR {self.test_dir} -SUBTRACT_BACK N -WEIGHTOUT_NAME {weightname} -WEIGHT_TYPE NONE -COMBINE_TYPE CLIPPED -PROJECTION_TYPE TAN '
 
         options = determine_swarp_align_options(self.test_fits_file, self.test_fits_file, self.test_dir, outname)
 
@@ -1241,7 +1237,7 @@ class TestDetermineSwarpAlignOptions(ExternalCodeUnitTest):
         outname = os.path.join(self.test_dir, "reference_ogg_ep99-e92_aligned_to_ogg2m001-ep99-e92.fits")
         weightname = outname.replace('.fits', '.weight.fits')
 
-        expected_options = f'-BACK_SIZE 32 -IMAGEOUT_NAME {outname} -NTHREADS 1 -VMEM_DIR {self.test_dir} -RESAMPLE_DIR {self.test_dir} -SUBTRACT_BACK N -WEIGHTOUT_NAME {weightname} -WEIGHT_TYPE NONE -COMBINE_TYPE CLIPPED -PROJECTION_TYPE TAN '
+        expected_options = f'-BACK_SIZE 42 -IMAGEOUT_NAME {outname} -NTHREADS 1 -VMEM_DIR {self.test_dir} -RESAMPLE_DIR {self.test_dir} -SUBTRACT_BACK N -WEIGHTOUT_NAME {weightname} -WEIGHT_TYPE NONE -COMBINE_TYPE CLIPPED -PROJECTION_TYPE TAN '
 
         options = determine_swarp_align_options(self.test_fits_file, self.test_fits_file, self.test_dir, outname)
 
