@@ -42,9 +42,14 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         warnings.simplefilter("ignore", FITSFixedWarning)
         configs_dir = os.path.join("photometrics", "configs")
+        reference_dir = os.path.join(settings.DATA_ROOT, "reference_library")
+        if os.path.exists(reference_dir) is False:
+            os.makedirs(reference_dir)
 
         ### Filtering fields by site name
-
+        now = datetime.utcnow()
+        now_string = now.strftime('%Y-%m-%d %H:%M')
+        self.stdout.write(f"==== Making reference frames {now_string} ====")
         self.stdout.write(f"Sites to run for: {options['site']}")
 
         ref_fields = StaticSource.objects.filter(source_type=StaticSource.REFERENCE_FIELD)
@@ -96,9 +101,6 @@ class Command(BaseCommand):
                     self.stdout.write(msg)
 
                     # Find all existing reference frames
-                    reference_dir = os.path.join(settings.DATA_ROOT, "reference_library")
-                    if os.path.exists(reference_dir) is False:
-                        os.makedirs(reference_dir)
                     ref_frames = find_reference_images(reference_dir, "reference*.fits")
 
                     # Check if existing reference frame exists
@@ -114,11 +116,13 @@ class Command(BaseCommand):
                             dest_dir = options['datadir']
                         dest_dir = os.path.join(dest_dir, "")
                         # Assemble path to reduced data
-                        dayobs = obs_block.get_blockdayobs
-                        blockuid = obs_block.get_blockuid
-                        dest_dir = os.path.join(dest_dir, dayobs, '')
-                        dest_dir = make_object_directory(dest_dir, obs_block.current_name(), blockuid[0])
-                        dest_dir = os.path.join(dest_dir, 'Temp_cvc')
+                        # (Can't actually use these as standard
+                        # pipeline-processed data doesn't have all the HDUs)
+                        # dayobs = obs_block.get_blockdayobs
+                        # blockuid = obs_block.get_blockuid
+                        # dest_dir = os.path.join(dest_dir, dayobs, '')
+                        # dest_dir = make_object_directory(dest_dir, obs_block.current_name(), blockuid[0])
+                        # dest_dir = os.path.join(dest_dir, 'Temp_cvc')
 
                         # Check for processed frames already
                         images, catalogs = determine_images_and_catalogs(self, dest_dir, red_level='e92')
@@ -129,8 +133,10 @@ class Command(BaseCommand):
                             for red_frame in red_frames:
                                 if red_frame in images_filenames:
                                     num_images += 1
+                            num_good_zp = Frame.objects.filter(filename__in=red_frames, frametype=Frame.NEOX_RED_FRAMETYPE, zeropoint__gte=0).count()
                         else:
                             num_images = 0
+                            num_good_zp = 0
                         if catalogs is not None:
                             catalogs_filenames = [os.path.basename(f) for f in catalogs]
                             red_catalogs = [x.replace('e91', 'e92_ldac') for x in filtered_frames.values_list('filename', flat=True)]
@@ -140,7 +146,8 @@ class Command(BaseCommand):
                                     num_catalogs += 1
                         else:
                             num_catalogs = 0
-                        if images is None and catalogs is None or (num_images != filtered_frames.count() and num_catalogs != filtered_frames.count()):
+                        print(f"Pipeline: #num_images={num_images} #filtered_frames={filtered_frames.count()} #goodZP={num_good_zp}  {num_images != filtered_frames.count()}")
+                        if (images is None and catalogs is None) or (num_images != filtered_frames.count() or num_catalogs != filtered_frames.count() or num_images != num_good_zp):
                             self.stdout.write(f"Not all products present, running frame reduction pipeline in {dest_dir}")
 
                             year = filtered_frames[0].midpoint.year
@@ -148,7 +155,7 @@ class Command(BaseCommand):
                                 year = ""
                             day_obs = filtered_frames[0].filename.split("-")[2]
                             source_dir = os.path.join(settings.DATA_ROOT, str(year), day_obs)
-
+                            self.stdout.write(f"Copying from {source_dir} --> {dest_dir}")
                             # Copy each frame to a temporary directory
                             for frame_filename in filtered_frames.values_list("filename", flat=True):
                                 fz_frame = frame_filename.replace(".fits", ".fits.fz")
@@ -158,21 +165,39 @@ class Command(BaseCommand):
                                     funpack_fits_file(fz_frame_copied, all_hdus=True)
 
                             # Run frame reduction pipeline
+                            self.stdout.write("Running run_pipeline")
                             call_command('run_pipeline', '--datadir', dest_dir, '--tempdir', dest_dir, '--refcat', 'PS1')
+                            # Re-check if all products are present
+                            images, catalogs = determine_images_and_catalogs(self, dest_dir, red_level='e92', output=False)
 
                         # SWarp the frames, and output to the temporary directory
-                        run_swarp_make_reference(dest_dir, configs_dir, dest_dir, match="*e92.fits")
+                        ref_images = []
+                        if images is not None:
+                            images_filenames = [os.path.basename(f) for f in images]
+                            red_frames = [x.replace('e91', 'e92') for x in filtered_frames.values_list('filename', flat=True)]
+                            num_images = 0
+                            for red_frame in red_frames:
+                                if red_frame in images_filenames:
+                                    ref_images.append(os.path.join(dest_dir, red_frame))
+                        # Check if we found all expected frames
+                        print(f"Reference: #ref_images={len(ref_images)} #filtered_frames={filtered_frames.count()} {len(ref_images) == filtered_frames.count()}")
+                        if len(ref_images) == filtered_frames.count():
+                            self.stdout.write("Running run_swarp_make_reference")
+                            run_swarp_make_reference(dest_dir, configs_dir, dest_dir, ref_files=ref_images)
+                            #Move the finished reference image and rms image to the reference library.
+                            if os.path.exists(os.path.join(dest_dir, "reference.fits")):
+                                shutil.move(os.path.join(dest_dir, "reference.fits"), os.path.join(reference_dir, ref_frame_name))
+                            if os.path.exists(os.path.join(dest_dir, "reference.rms.fits")):
+                                ref_rmsframe_name = ref_frame_name.replace('.fits', '.rms.fits')
+                                shutil.move(os.path.join(dest_dir, "reference.rms.fits"), os.path.join(reference_dir, ref_rmsframe_name))
 
-                        #Copy the finished reference image and rms image to the reference library.
-                        if os.path.exists(os.path.join(dest_dir, "reference.fits")):
-                            shutil.copy(os.path.join(dest_dir, "reference.fits"), os.path.join(reference_dir, ref_frame_name))
-                        if os.path.exists(os.path.join(dest_dir, "reference.rms.fits")):
-                            ref_rmsframe_name = ref_frame_name.replace('.fits', '.rms.fits')
-                            shutil.copy(os.path.join(dest_dir, "reference.rms.fits"), os.path.join(reference_dir, ref_rmsframe_name))
+                        else:
+                            self.stdout.write(f"Not all reduced products found for this field & filter (Found {len(ref_images)}, expected {filtered_frames.count()})")
+
                     else:
                         self.stdout.write(f"Reference frame {ref_frame_name} already exists.")
 
                 self.stdout.write("")
-            self.stdout.write("")
+#            self.stdout.write("")
 
 
