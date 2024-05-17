@@ -199,19 +199,37 @@ def create_rms_image(fits_file):
 
     return rms_file
 
-def get_reference_name(field_ra, field_dec, site, instrument, obs_filter):
+def get_reference_name(field_ra, field_dec, site, instrument, obs_filter, obs_date=None):
     """ Create a name for a co-added reference image based on
-    the site, instrument, filter, RA and Dec. """
+    the site, instrument, filter, RA and Dec. Also optionally [obs_date]
+    can be passed (as either a str or a datetime) and it will be included
+    in the filename after the coordinates"""
 
     if not isinstance(field_ra, float) or not isinstance(field_dec, float):
         logger.error("Passed RA or Dec is not a floating point.")
         return -1
 
     try:
-        outname = f"reference_{site.lower()}_{instrument.lower()}_{obs_filter}_{field_ra:06.2f}_{field_dec:+06.2f}.fits"
+        site_str = site.lower()
     except AttributeError:
         logger.error("Passed Site is not a string.")
         return -99
+    try:
+        instrument_str = instrument.lower()
+    except AttributeError:
+        logger.error("Passed Instrument is not a string.")
+        return -99
+    date_str = ''
+    if obs_date:
+        try:
+            date_str = '_' + obs_date.strftime("%Y%m%d")
+        except AttributeError:
+            try:
+                date_str = '+' + obs_date.replace('-', '').replace('/', '')[0:8]
+            except (TypeError, AttributeError):
+                logger.error("Couldn't parse obs_date")
+                return -98
+    outname = f"reference_{site_str}_{instrument_str}_{obs_filter}_{field_ra:06.2f}_{field_dec:+06.2f}{date_str}.fits"
 
     return outname
 
