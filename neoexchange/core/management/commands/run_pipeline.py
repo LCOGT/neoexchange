@@ -43,11 +43,13 @@ class Command(BaseCommand):
     def file_mapping(self, origin='LCO'):
         mapping = {'LCO' : { 'proc-astromfit' : ('e91.fits', 'e91_ldac.fits'),
                              'proc-extract' : ('e91.fits', 'e92.fits'),
-                             'proc-zeropoint' : ('e91.fits', 'e92_ldac.fits')
+                             'proc-zeropoint' : ('e91.fits', 'e92_ldac.fits'),
+                             'final_catalog_type' : 'BANZAI_LDAC'
                            },
                    'SWOPE' : { 'proc-astromfit' : ('.fits', '_ldac.fits'),
                              'proc-extract' : ('.fits', '-e72.fits'),
-                             'proc-zeropoint' : ('.fits', '-e72_ldac.fits')
+                             'proc-zeropoint' : ('.fits', '-e72_ldac.fits'),
+                             'final_catalog_type' : 'SWOPE_LDAC'
                            }
                   }
         return mapping[origin]
