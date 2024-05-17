@@ -105,7 +105,7 @@ class Command(BaseCommand):
 
                     # Check if existing reference frame exists
                     # If not, make one
-                    ref_frame_name = get_reference_name(field.ra, field.dec, obs_block.site, filtered_frames[0].instrument, obs_filter)
+                    ref_frame_name = get_reference_name(field.ra, field.dec, obs_block.site, filtered_frames[0].instrument, obs_filter, filtered_frames[0].midpoint)
                     match_ref_frames = [frame for frame in ref_frames if os.path.basename(frame)==ref_frame_name]
 
                     if len(match_ref_frames) == 0:
