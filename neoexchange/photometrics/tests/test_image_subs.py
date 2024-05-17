@@ -15,6 +15,7 @@ GNU General Public License for more details.
 
 import os
 from glob import glob
+from datetime import datetime, date
 import tempfile
 from unittest import skipIf
 import warnings
@@ -402,6 +403,27 @@ class TestGetReferenceName(ExternalCodeUnitTest):
         expected_status = "reference_lsc_fa15_w_111.11_-84.44.fits"
 
         status = get_reference_name(111.111, -84.444,  "lsc", "fa15", "w")
+
+        self.assertEqual(expected_status, status)
+
+    def test_obs_date_datetime(self):
+        expected_status = "reference_coj_ep06_gp_111.11_-84.44_20240511.fits"
+
+        status = get_reference_name(111.111, -84.444,  "coj", "ep06", "gp", datetime(2024,5,11))
+
+        self.assertEqual(expected_status, status)
+
+    def test_obs_date_full_datetime(self):
+        expected_status = "reference_coj_ep06_gp_111.11_-84.44_20240511.fits"
+
+        status = get_reference_name(111.111, -84.444,  "coj", "ep06", "gp", datetime(2024,5,11,23,59,59))
+
+        self.assertEqual(expected_status, status)
+
+    def test_bad_obs_date(self):
+        expected_status = -98
+
+        status = get_reference_name(111.111, -84.444,  "coj", "ep06", "gp", 2024511)
 
         self.assertEqual(expected_status, status)
 
