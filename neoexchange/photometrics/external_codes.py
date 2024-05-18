@@ -787,6 +787,7 @@ def run_swarp(source_dir, dest_dir, images, outname='reference.fits', binary=Non
     # Symlink images and weights to dest_dir and create lists of these links
     linked_images = []
     linked_weights = []
+    fwhms = []
     for image in images:
         if os.path.exists(image):
             image_filename = os.path.basename(image)
@@ -794,6 +795,12 @@ def run_swarp(source_dir, dest_dir, images, outname='reference.fits', binary=Non
             if os.path.exists(image_newfilepath) is False:
                 os.symlink(image, image_newfilepath)
             linked_images.append(image_filename + '[SCI]')
+            try:
+                fwhm = fits.getval(image_newfilepath, 'L1FWHM')
+            except KeyError:
+                fwhm = None
+            if fwhm and fwhm > 0:
+                fwhms.append(fwhm)
         else:
             logger.error(f'Could not find {image}')
             return -3
@@ -819,7 +826,16 @@ def run_swarp(source_dir, dest_dir, images, outname='reference.fits', binary=Non
 
     inlist = make_file_list(linked_images, os.path.join(dest_dir, 'images.in'))
     inweight = make_file_list(linked_weights, os.path.join(dest_dir, 'weight.in'))
-
+    # Compute min, max and median FWHM
+    min_fwhm = max_fwhm = median_fwhm = -99
+    if len(fwhms) >= 1:
+        min_fwhm = min(fwhms)
+        max_fwhm = max(fwhms)
+        median_fwhm = median(fwhms)
+    keyword_mapping = { 'FWHMMIN'  : (min_fwhm, 'Minimum FWHM in the stack'),
+                        'FWHMMAX'  : (max_fwhm, 'Maximum FWHM in the stack'),
+                        'FWHMMDIN' : (median_fwhm, 'Median FWHM in the stack')
+                      }
     normalize_status = normalize(images, swarp_zp_key)
     if normalize_status != 0:
         return normalize_status
@@ -838,6 +854,17 @@ def run_swarp(source_dir, dest_dir, images, outname='reference.fits', binary=Non
         logger.debug("cmdline=%s" % cmdline)
         args = cmdline.split()
         retcode_or_cmdline = call(args, cwd=dest_dir)
+        if retcode_or_cmdline == 0:
+            out_filepath = os.path.join(dest_dir, outname)
+            with fits.open(out_filepath, mode='update') as hdul:
+                header = hdul[0].header
+                prior_keyword = 'COMBINET'
+                for keyword, values in keyword_mapping.items():
+                    header.remove(keyword, ignore_missing=True, remove_all=False)
+                    header.insert(prior_keyword, (keyword, values[0], values[1]), after=True)
+                    prior_keyword = keyword
+
+                hdul.flush()
 
     #convert output weight to rms
     if not dbg:
@@ -846,6 +873,16 @@ def run_swarp(source_dir, dest_dir, images, outname='reference.fits', binary=Non
         if type(rms_status) != str:
             logger.error("Error occured in create_rms_image()")
             return rms_status
+        else:
+            with fits.open(rms_status, mode='update') as hdul:
+                header = hdul[0].header
+                prior_keyword = 'COMBINET'
+                for keyword, values in keyword_mapping.items():
+                    header.remove(keyword, ignore_missing=True, remove_all=False)
+                    header.insert(prior_keyword, (keyword, values[0], values[1]), after=True)
+                    prior_keyword = keyword
+
+                hdul.flush()
 
     return retcode_or_cmdline
 
