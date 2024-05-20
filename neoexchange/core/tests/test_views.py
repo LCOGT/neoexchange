@@ -1161,11 +1161,9 @@ class TestRecordBlock(TestCase):
         self.assertEqual(False, sblocks[0].rapid_response)
 
 
-    def test_imaging_block_rr_proposal_qhy(self):
+    def test_imaging_block_qhy(self):
         imaging_params = self.imaging_params
-        imaging_params['proposal_id'] += 'b'
         imaging_form = self.imaging_form
-        imaging_form['proposal_code'] += 'b'
         imaging_params.pop('site')
         imaging_params['instrument'] = '0M4-SCICAM-QHY600'
         imaging_params['site_code'] = '0M4'
@@ -1189,7 +1187,7 @@ class TestRecordBlock(TestCase):
         self.assertEqual(self.imaging_tracknum, sblocks[0].tracking_number)
         self.assertTrue(self.imaging_tracknum != blocks[0].request_number)
         self.assertEqual(self.imaging_params['block_duration'], sblocks[0].timeused)
-        self.assertEqual(self.proposal_tc, sblocks[0].proposal)
+        self.assertEqual(self.proposal, sblocks[0].proposal)
         self.assertEqual(False, sblocks[0].rapid_response)
         self.assertEqual('qhy', blocks[0].site)
 
