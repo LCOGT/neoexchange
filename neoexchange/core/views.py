@@ -2303,6 +2303,8 @@ def record_block(tracking_number, params, form_data, target, observer):
                         site = 'spc'
                     elif chunks[-1] == 'SINISTRO':
                         site = 'sin'
+                    elif chunks[-1] == 'QHY600':
+                        site = 'qhy'
 
             block_kwargs = {'superblock': sblock_pk,
                             'telclass': params['pondtelescope'].lower(),
