@@ -7239,3 +7239,30 @@ class TestBoxSpiral(TestCase):
             if k == 25:
                 self.assertEqual((1, 0), b_next)
                 break
+
+
+class TestFetchBrightComets(SimpleTestCase):
+
+    def setUp(self):
+        test_fh = open(os.path.join('astrometrics', 'tests', 'test_brightcomets_page.html'), 'r')
+        self.test_comet_page = BeautifulSoup(test_fh, "html.parser")
+        test_fh.close()
+
+        self.maxDiff = None
+
+    def test_page(self):
+        expected_comets = [ '12P',
+                            '13P',
+                            'C/2023 A3',
+                            '479P',
+                            'C/2021 S3',
+                            '32P',
+                            '473P',
+                            'C/2022 QE78',
+                            'C/2014 UN271'
+                          ]
+
+        comets = fetch_bright_comets(self.test_comet_page)
+
+        self.assertEqual(len(expected_comets), len(comets))
+        self.assertEqual(expected_comets, comets)

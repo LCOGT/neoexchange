@@ -3126,4 +3126,31 @@ def store_jpl_sourcetypes(code, obj, body):
     body.save()
 
 
+def fetch_bright_comets(page=None):
+    """Fetch the list of "bright" comets from Seiichi Yoshida's aerith.net site"
+    Returns a list of comet ids.
+    """
+    bright_comets = []
+    if type(page) != BeautifulSoup:
+        bc_url = 'http://aerith.net/comet/weekly/current.html'
+        page = fetchpage_and_make_soup(bc_url)
+
+    if type(page) == BeautifulSoup:
+        regex = compile("catalog/(\d*\S*)/")
+        comet_headers = page.find_all('h2')
+        for comet in comet_headers:
+            link = comet.find('a')
+            if link:
+                matches = regex.findall(link['href'])
+                if len(matches) == 1:
+                    body = matches[0]
+                    body = body.rstrip()
+                    # Strip leading zeros off comets
+                    if body[-1] == 'P' and body[:-1].isdigit():
+                        body = body.lstrip('0')
+                    elif body[0:4].isdigit():
+                        # Split back up and add prefix
+                        body = 'C/' + body[0:4] + ' ' + body[4:]
+                    bright_comets.append(body)
+    return bright_comets
 
