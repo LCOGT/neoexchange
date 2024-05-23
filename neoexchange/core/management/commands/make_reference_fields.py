@@ -115,6 +115,8 @@ class Command(BaseCommand):
                         else:
                             dest_dir = options['datadir']
                         dest_dir = os.path.join(dest_dir, "")
+                        if os.path.exists(dest_dir) is False:
+                            os.makedirs(dest_dir)
                         # Assemble path to reduced data
                         # (Can't actually use these as standard
                         # pipeline-processed data doesn't have all the HDUs)
@@ -166,7 +168,7 @@ class Command(BaseCommand):
 
                             # Run frame reduction pipeline
                             self.stdout.write("Running run_pipeline")
-                            call_command('run_pipeline', '--datadir', dest_dir, '--tempdir', dest_dir, '--refcat', 'PS1')
+                            call_command('run_pipeline', '--datadir', dest_dir, '--tempdir', dest_dir, '--refcat', 'PS1', '--solar', 'False')
                             # Re-check if all products are present
                             images, catalogs = determine_images_and_catalogs(self, dest_dir, red_level='e92', output=False)
 
