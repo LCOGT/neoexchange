@@ -436,7 +436,10 @@ class Command(BaseCommand):
                             if len(eph) > 0:
                                 ra = eph['RA'].to(u.rad).value
                                 dec = eph['DEC'].to(u.rad).value
-                                mag_estimate = eph['V']
+                                try:
+                                    mag_estimate = eph['V']
+                                except KeyError:
+                                    mag_estimate = eph['Tmag']
                         else:
                             emp_line = compute_ephem(frame.midpoint, elements, frame.sitecode)
                             ra = emp_line['ra']
