@@ -47,7 +47,8 @@ from astrometrics.time_subs import datetime2mjd_utc
 from core.archive_subs import make_data_dir
 from core.models import Block, Frame, SuperBlock, SourceMeasurement, CatalogSources, DataProduct
 from core.utils import save_dataproduct
-from photometrics.catalog_subs import search_box, sanitize_object_name, open_fits_catalog, make_object_directory
+from photometrics.catalog_subs import search_box, sanitize_object_name, \
+    open_fits_catalog, make_object_directory, increment_red_level
 from photometrics.gf_movie import make_gif
 from photometrics.photometry_subs import compute_fwhm, map_filter_to_wavelength
 
@@ -549,11 +550,20 @@ class Command(BaseCommand):
                         frames_list = []
                         for red_path,f in zip(red_paths, frames_all_zp):
                             # Try directories in preferred order, stop when we find a match
+                            # Try and find a e92 file (which has an updated WCS) first - actually
+                            # this turns out to be a bad idea as no CatalogSources show up XXX
+                            # fix better later.
                             for data_subdir in ['Temp_cvc', 'Temp_cvc_multiap', 'Temp']:
+                                #fits_filepath = os.path.join(red_path, data_subdir, increment_red_level(f.filename))
                                 fits_filepath = os.path.join(red_path, data_subdir, f.filename)
                                 if os.path.exists(fits_filepath):
                                     frames_list.append(fits_filepath)
                                     break
+                                # else:
+                                    # fits_filepath = os.path.join(red_path, data_subdir, f.filename)
+                                    # if os.path.exists(fits_filepath):
+                                        # frames_list.append(fits_filepath)
+                                        # break
 
                         movie_file = make_gif(frames_list, options['title'], sort=False, init_fr=100, center=3, out_path=data_path, plot_source=True,
                                               target_data=frame_data, show_reticle=True, progress=True)
