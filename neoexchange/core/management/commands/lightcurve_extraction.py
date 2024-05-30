@@ -531,6 +531,30 @@ class Command(BaseCommand):
                     #    data_subdir = 'Temp_cvc_multiap'
                     frames_list = [os.path.join(red_path, data_subdir, f.filename) for red_path,f in zip(red_paths, frames_all_zp)]
                     if not options['nogif']:
+                        data_path = make_data_dir(out_path, model_to_dict(frames_all_zp[0]))
+                        red_paths = []
+                        for f in frames_all_zp:
+                            # This code predates the addition of Block.get_blockuid() which is why it needs
+                            # to look in the original e91 files
+                            fits_filepath = os.path.join(data_path, f.filename.replace('e92', 'e91').replace('-e72', ''))
+                            fits_header, fits_table, cattype = open_fits_catalog(fits_filepath, header_only=True)
+                            object_name = fits_header.get('OBJECT', None)
+                            block_id = fits_header.get('BLKUID', '').replace('/', '')
+                            object_directory = ''
+                            if object_name:
+                                object_directory = make_object_directory(fits_filepath, object_name, block_id)
+                            red_paths.append(object_directory)
+                        # Now loop over the per-object & blockuid directories and look for
+                        # the pipeline products in the variety of potential product directories.
+                        frames_list = []
+                        for red_path,f in zip(red_paths, frames_all_zp):
+                            # Try directories in preferred order, stop when we find a match
+                            for data_subdir in ['Temp_cvc', 'Temp_cvc_multiap', 'Temp']:
+                                fits_filepath = os.path.join(red_path, data_subdir, f.filename)
+                                if os.path.exists(fits_filepath):
+                                    frames_list.append(fits_filepath)
+                                    break
+
                         movie_file = make_gif(frames_list, options['title'], sort=False, init_fr=100, center=3, out_path=data_path, plot_source=True,
                                               target_data=frame_data, show_reticle=True, progress=True)
                         if "WARNING" not in movie_file:
