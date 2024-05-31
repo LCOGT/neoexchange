@@ -259,14 +259,7 @@ class Block(models.Model):
                     blockdayobs = headers.get('DAY_OBS', None)
                     if blockdayobs is not None:
                         blockdayobs = str(blockdayobs).replace('-','')
-        else:
-            # Maybe it's MRO data?
-            frames_qs = Frame.objects.filter(block=self, frametype=Frame.MRO_RED_FRAMETYPE, sitecode='H01')
-            if frames_qs.count() > 1:
-                frame = frames_qs.first()
-                if frame is not None:
-                    if frame.midpoint is not None:
-                        blockdayobs = 'mro_' + frame.midpoint.strftime("%y%m%d")
+
         return blockdayobs
 
     def current_name(self):
