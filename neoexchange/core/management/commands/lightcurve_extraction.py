@@ -483,8 +483,14 @@ class Command(BaseCommand):
 
                         # We append these even if we don't have a matching source or zeropoint
                         # so we can plot conditions for all frames
-                        zps.append(frame.zeropoint)
-                        zp_errs.append(frame.zeropoint_err)
+                        zp = frame.zeropoint
+                        if zp is None:
+                            zp = -99.0
+                        zps.append(zp)
+                        zp_err = frame.zeropoint_err
+                        if zp_err is None:
+                            zp_err = -99.0
+                        zp_errs.append(zp_err)
                         frame_data.append({'ra': ra,
                                            'dec': dec,
                                            'mag': mag_estimate,
