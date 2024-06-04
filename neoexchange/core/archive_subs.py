@@ -302,9 +302,16 @@ def download_files(frames, data_path, verbose=False, dbg=False):
             output_path = make_data_dir(data_path, frame)
             filename = os.path.join(output_path, frame['filename'])
             archive_md5 = frame['version_set'][-1]['md5']
+            to_download = True
             if check_for_existing_file(filename, archive_md5, dbg, verbose) or check_for_bad_file(filename):
                 logger.info("Skipping existing file {}".format(frame['filename']))
-            else:
+                to_download = False
+            elif frame.get('proposal_id', '') == 'LCOEngineering':
+                target_name = frame.get('target_name', None)
+                if target_name and (target_name.startswith('TPT') or target_name.startswith('auto_focus')):
+                    logger.info(f"Skipping unneeded LCOEngineering frame with target_name= {target_name}")
+                    to_download = False
+            if to_download is True:
                 logger.info("Writing file to {}".format(filename))
                 downloaded_frames.append(filename)
                 with open(filename, 'wb') as f:
