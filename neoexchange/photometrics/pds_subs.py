@@ -1977,15 +1977,15 @@ def export_block_to_pds(input_dirs, output_dir, blocks, schema_root, docs_root=N
         else:
             lc_files += [os.path.basename(dart_lc_file),]
 
-            # Reset phot_match to new product names
-            if '.fits' in phot_match:
-                phot_match = '*photometry.fits'
-            else:
-                phot_match = '*photometry.tab'
-            # Create PDS labels for ddp data
-            if verbose: print("Creating ddp PDS labels")
-            xml_labels = create_pds_labels(paths['ddp_data'], schema_root, match=phot_match)
-            xml_files += xml_labels
+        # Reset phot_match to new product names
+        if '.fits' in phot_match:
+            phot_match = '*photometry.fits'
+        else:
+            phot_match = '*photometry.tab'
+        # Create PDS labels for ddp data
+        if verbose: print("Creating ddp PDS labels")
+        xml_labels = create_pds_labels(paths['ddp_data'], schema_root, match=phot_match)
+        xml_files += xml_labels
 
         # Record that Block was exported
         exportedblock_params = { 'block': block,
