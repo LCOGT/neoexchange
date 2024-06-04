@@ -39,6 +39,7 @@ class Command(BaseCommand):
         parser.add_argument('--overwrite', default=False, action='store_true', help='Whether to ignore existing files/DB entries and overwrite')
         parser.add_argument('--color_const', default=False, type=self.str2bool, nargs='?', const=True, help='Whether to assume a constant color or fit for color term %(default)s')
         parser.add_argument('--solar', default=True, type=self.str2bool, nargs='?', const=True, help='Whether to only include stars of near-solar (+/-0.2 mag) color %(default)s')
+        parser.add_argument('--dia', default=False, type=self.str2bool, nargs='?', const=True, help='Whether to process for DIA and produce extra imagetypes %(default)s')
 
     def file_mapping(self, origin='LCO'):
         mapping = {'LCO' : { 'proc-astromfit' : ('e91.fits', 'e91_ldac.fits'),
@@ -115,7 +116,8 @@ class Command(BaseCommand):
                         'inputs' : {'fits_file':fits_filepath,
                                    'datadir': os.path.join(dataroot, options['tempdir']),
                                    'overwrite' : options['overwrite'],
-                                   'catalog_type' : catalog_type}
+                                   'catalog_type' : catalog_type,
+                                   'dia' : options['dia']}
                     },
                     {
                         'name'   : 'proc-astromfit',
@@ -129,7 +131,8 @@ class Command(BaseCommand):
                         'inputs' : {'fits_file': os.path.join(dataroot, options['tempdir'], fits_file.replace(mapping['proc-extract'][0], mapping['proc-extract'][1])),
                                    'datadir': os.path.join(dataroot, options['tempdir']),
                                    'overwrite' : options['overwrite'],
-                                   'catalog_type' : catalog_type}
+                                   'catalog_type' : catalog_type,
+                                   'dia' : options['dia']}
                     },
                     {
                         'name'   : 'proc-zeropoint',

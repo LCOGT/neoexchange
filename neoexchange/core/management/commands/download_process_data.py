@@ -73,9 +73,10 @@ class Command(BaseCommand):
                     spectraonly=options['spectraonly'],
                     dlengimaging=options['dlengimaging'],
                     numdays=options['numdays'])
+        sys.stdout.write('Sorting objects\n')
         pipe.sort_objects()
         if options['downloadonly']:
-            sys.stdout.write('Download complete')
+            sys.stdout.write('Download complete\n')
             sys.exit(0)
         pipe.process(objectid=options['object'])
         pipe.create_movies()

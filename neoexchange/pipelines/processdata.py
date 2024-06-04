@@ -106,6 +106,10 @@ class SExtractorProcessPipeline(PipelineProcess):
         'catalog_type' : {
             'default' : 'FITS_LDAC',
             'long_name' : 'Type of output catalog to produce'
+        },
+        'dia' : {
+            'default' : False,
+            'long_name' : 'Whether to produce extra output products for DIA'
         }
     }
 
@@ -122,12 +126,13 @@ class SExtractorProcessPipeline(PipelineProcess):
         desired_catalog = inputs.get('desired_catalog')
         overwrite = inputs.get('overwrite', False)
         catalog_type = inputs.get('catalog_type', 'FITS_LDAC')
+        dia = inputs.get('dia', False)
 
         try:
             filepath_or_status = self.setup(fits_file, desired_catalog, out_path, overwrite)
-            print(f'filepath_or_status= {filepath_or_status}')
+            print(f'filepath_or_status= {filepath_or_status} DIA? {dia}')
             if type(filepath_or_status) != int:
-                filepath_or_status = self.process(filepath_or_status, configs_dir, out_path, catalog_type)
+                filepath_or_status = self.process(filepath_or_status, configs_dir, out_path, catalog_type, dia)
                 print(f'filepath_or_status2= {filepath_or_status}')
                 if type(filepath_or_status) != int:
                     # # Find Block for original frame
@@ -197,13 +202,14 @@ class SExtractorProcessPipeline(PipelineProcess):
 
         return fits_filepath
 
-    def process(self, fits_file, configs_dir, dest_dir, catalog_type='FITS_LDAC'):
+    def process(self, fits_file, configs_dir, dest_dir, catalog_type='FITS_LDAC', dia=False):
 
         # Make a new FITS_LDAC catalog from the frame
         self.log(f"Processing {fits_file:} with SExtractor")
-        # Options needed for image subtraction
-        #checkimage_types = ['BACKGROUND_RMS', "-BACKGROUND", "BACKGROUND", "APERTURES"]
         checkimage_types = []
+        if dia is True:
+            # Options needed for image subtraction
+            checkimage_types = ['BACKGROUND_RMS', "-BACKGROUND", "BACKGROUND", "APERTURES"]
         if '-e91' in fits_file or '-ef' in fits_file:
             # No need to make rms or background images until we have a new
             # astrometric fit and -e92 files
