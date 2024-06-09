@@ -41,7 +41,7 @@ from photometrics.external_codes import unpack_tarball
 from photometrics.catalog_subs import funpack_fits_file
 from core.models import Block, Frame, CatalogSources
 from core.utils import NeoException
-from astrometrics.ephem_subs import horizons_ephem
+from astrometrics.ephem_subs import horizons_ephem, LCOGT_domes_to_site_codes
 from astrometrics.time_subs import timeit
 from photometrics.catalog_subs import sanitize_object_name
 
@@ -124,7 +124,9 @@ def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=True,
     <init_fr> = frame rate for first 5 frames in ms/frame [default = 1000 ms/frame or 1fps]
     <show_reticle> = Bool to determine if reticle present for all guide frames.
     <center> = Display only Central region of frame with this many arcmin/side.
-    output = savefile (path of gif)
+    <plot_source> = [optional, default: False] plot the detected CatalogSources.
+    <target_data> =[optional, default: None]
+    <horizons_comp>= [optional, default: False] include predicted position from Horions.
     """
 
     if sort is True:
@@ -158,8 +160,7 @@ def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=True,
     if frame_query:
         frame_obj = frame_query[0]
         end_frame = frame_query.last()
-        start = frame_obj.midpoint - timedelta(minutes=5)
-        end = end_frame.midpoint + timedelta(minutes=5)
+        midpoint = frame_obj.midpoint
         sitecode = frame_obj.sitecode
         try:
             obj_name = frame_obj.block.body.name
@@ -168,6 +169,8 @@ def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=True,
         rn = frame_obj.block.request_number
         if frame_obj.block.obstype == Block.OPT_IMAGING:
             frame_type = 'frame'
+        elif frame_obj.frametype == Frame.NEOX_SUB_FRAMETYPE:
+            frame_type = 'sub'
         else:
             frame_type = 'guide'
     else:
@@ -181,18 +184,32 @@ def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=True,
                     header = hdul[0].header
         obj_name = header['OBJECT']
         rn = header['REQNUM']
-        sitecode = header['SITE']
+        sitecode = LCOGT_domes_to_site_codes(header.get('SITEID', ''), header.get('ENCID', ''), header.get('TELID', ''))
         if header['OBSTYPE'] == 'GUIDE':
             frame_type = 'guide'
+        elif 'sub' in good_fits_files[0]:
+            frame_type = 'sub'
         else:
             frame_type = 'frame'
-
+        # pull Date from Header
+        try:
+            date_obs = header['DATE-OBS']
+        except KeyError:
+            date_obs = header['DATE_OBS']
+        try:
+            date = datetime.strptime(date_obs, '%Y-%m-%dT%H:%M:%S.%f')
+        except ValueError:
+            date = datetime.strptime(date_obs, '%Y-%m-%dT%H:%M:%S')
+        exptime = float(header['EXPTIME'])
+        midpoint = date + timedelta(seconds=exptime / 2.0)
+    start = midpoint - timedelta(minutes=5)
+    end = midpoint + timedelta(minutes=5)
     if horizons_comp:
         # Get predicted JPL position of target in first frame
 
         try:
             ephem = horizons_ephem(obj_name, start, end, sitecode, ephem_step_size='1m')
-            date_array = np.array([calendar.timegm(d.timetuple()) for d in ephem['datetime']])
+            date_array = np.array([calendar.timegm(d.datetime.timetuple()) for d in ephem['datetime']])
         except TypeError:
             date_array = []
 
