@@ -3557,8 +3557,12 @@ def run_swarp_make_reference(ref_dir, configs_dir, dest_dir, ref_files=None, mat
 
     return swarp_status
 
-def run_hotpants_subtraction(ref, sci_dir, configs_dir, dest_dir):
+def run_hotpants_subtraction(ref, sci_dir, configs_dir, dest_dir, sci_files=None):
     """ Subtracts the provided <ref> image from each of the .FITS images in <sci_dir>.
+    If [sci_files] is None, then a search for '*e92.fits' files will be done in
+    <sci_dir>. If it is desired to run the subtraction on a specific list of frames
+    e.g. in a multi-filter/field case, then the list of frame filepaths should
+    be passed in a list to [sci_files].
     The results and any temporary files are created in <dest_dir>.
 
     <ref> must be a file in <dest_dir> and must have an accompanying RMS image in the same folder.
@@ -3567,7 +3571,8 @@ def run_hotpants_subtraction(ref, sci_dir, configs_dir, dest_dir):
     if sci_dir[-1] != os.path.sep:
         sci_dir = sci_dir + os.path.sep
 
-    sci_files = glob(sci_dir + '*e92.fits')
+    if sci_files is None:
+        sci_files = glob(sci_dir + '*e92.fits')
 
     if len(sci_files) == 0:
         logger.error(f"There are no .fits files in {sci_dir}")
