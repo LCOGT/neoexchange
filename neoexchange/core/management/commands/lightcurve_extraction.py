@@ -317,7 +317,7 @@ class Command(BaseCommand):
         try:
             start_super_block = SuperBlock.objects.get(tracking_number=options['supblock'])
         except SuperBlock.DoesNotExist:
-            self.stdout.write("Cannot find SuperBlock with Tracking Number %d" % options['supblock'])
+            self.stdout.write("Cannot find SuperBlock with Tracking Number %s" % options['supblock'])
             exit(-1)
         start_blocks = Block.objects.filter(superblock=start_super_block.id)
         start_block = start_blocks[0]
