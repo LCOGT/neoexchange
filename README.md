@@ -6,6 +6,9 @@ Portal for scheduling observations of NEOs (and other Solar System objects) usin
 
 ## History
 
+### 3.15.1
+* Bugfix for QHY support and objects leaving the CCD when using the central 30'x30' region and half-rate tracking. (Issue #644)
+
 ### 3.15.0
 * Add QHY support as Issue [#630](https://github.com/LCOGT/neoexchange/issues/630)
 
