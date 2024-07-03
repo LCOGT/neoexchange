@@ -2054,7 +2054,7 @@ class TestGetSiteCamParams(TestCase):
 
     def test_point4m_site9_central_fov(self):
         site_code = 'L09'
-        sitecam = get_sitecam_params(site_code, 'central_30_1x1')
+        sitecam = get_sitecam_params(site_code, 'central30_1x1')
         chk_site_code = sitecam['site_code']
         setup_overhead = sitecam['setup_overhead']
         exp_overhead = sitecam['exp_overhead']

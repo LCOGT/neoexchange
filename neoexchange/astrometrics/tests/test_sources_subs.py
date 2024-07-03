@@ -5307,6 +5307,21 @@ class TestGetExposureBins(TestCase):
         self.body_elements['current_name'] = self.body.current_name()
         self.body_elements['v_mag'] = 16.6777676
 
+        self.params_0m4_imaging = configure_defaults({ 'site_code': '0M4',
+                                                       'exp_time': 15.0,
+                                                       'exp_count': 852,
+                                                       'slot_length': 18000,
+                                                       'filter_pattern': 'w',
+                                                       'bin_mode': 'central30_1x1',
+                                                       'binning': 1,
+                                                       'target': make_moving_target(self.body_elements, 0.5),
+                                                       'add_dither': False,
+                                                       'speed': 14,
+                                                       'constraints': {
+                                                         'max_airmass': 1.74,
+                                                         'min_lunar_distance': 30.0
+                                                       }})
+
         self.params_1m0_imaging = configure_defaults({ 'site_code': 'K92',
                                                        'exp_time': 60.0,
                                                        'exp_count': 10,
@@ -5404,6 +5419,27 @@ class TestGetExposureBins(TestCase):
         params['speed'] = 25
 
         expected_exp_list = [9, 8, 8]
+
+        exp_count_list = get_exposure_bins(params)
+
+        self.assertEqual(expected_exp_list, exp_count_list)
+
+    def test_exposure_bin_0m4_central(self):
+        params = self.params_0m4_imaging
+
+        expected_exp_list = [171, 171, 170, 170, 170]
+        self.assertEqual(sum(expected_exp_list), params['exp_count'])
+
+        exp_count_list = get_exposure_bins(params)
+
+        self.assertEqual(expected_exp_list, exp_count_list)
+
+    def test_exposure_bin_0m4_full(self):
+        params = self.params_0m4_imaging
+        params['bin_mode'] = 'full_chip'
+
+        expected_exp_list = [426, 426]
+        self.assertEqual(sum(expected_exp_list), params['exp_count'])
 
         exp_count_list = get_exposure_bins(params)
 
