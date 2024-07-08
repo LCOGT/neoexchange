@@ -1,13 +1,13 @@
 --extra-index-url=http://buildsba.lco.gtn/python/
 --trusted-host buildsba.lco.gtn
 numpy==1.23.5; sys_platform != 'win32'
-numpy==1.22.4+mkl; sys_platform == 'win32'
+numpy==1.23.5+mkl; sys_platform == 'win32' # From https://github.com/cgohlke/numpy-mkl-wheels/releases/tag/v2023.1.4
 Django>=3.1.13,<3.2
 #mysqlclient~=1.4.2
 psycopg2-binary
 astropy<6.0
 astroquery>=0.4.4.dev7007
-photutils>=1.11.0
+photutils==1.11.0
 pyslalib
 beautifulsoup4
 django-reversion
