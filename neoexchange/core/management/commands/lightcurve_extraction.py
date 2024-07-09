@@ -101,7 +101,7 @@ class Command(BaseCommand):
 
         return expected_fwhm
 
-    def plot_timeseries(self, times, alltimes, mags, mag_errs, zps, zp_errs, fwhm, air_mass, colors='r', title='', sub_title='', datadir='./', filename='tmp_', diameter=0.4*u.m):
+    def plot_timeseries(self, times, alltimes, mags, mag_errs, zps, zp_errs, fwhm, air_mass, cloud, colors='r,gray', title='', sub_title='', datadir='./', filename='tmp_', diameter=0.4*u.m):
         """Uses matplotlib to create and save a quick LC plot png as well as a sky conditions plot png.
 
         Parameters
@@ -122,8 +122,12 @@ class Command(BaseCommand):
             Total list of mean fwhm for all frames (Same Length as `alltimes`)
         air_mass : [Float]
             Total list of airmass for all frames (Same Length as `alltimes`)
+        cloud : [Float]
+            Total list of wmscloud (Boltwood sky temp) for all frames (Same Length as `alltimes`)
         colors : str
-            text representing color recognizable to matplotlib --> changes default color of all plots.
+            comma seperated text representing color recognizable to matplotlib. The
+            first entry changes default color of all plots, the second entry is used
+            for the cloud plot. (Default is 'r,gray' for red and gray)
         title : str
             text of plot titles
         sub_title : str
@@ -135,22 +139,28 @@ class Command(BaseCommand):
         diameter : Float * Units.length
             Telescope diameter
         """
+
+        if type(colors) == str:
+            colors = colors.split(',')
         # Build Figure
         fig, (ax0, ax1) = plt.subplots(nrows=2, sharex=True, gridspec_kw={'height_ratios': [15, 4]})
         # Plot LC
-        ax0.errorbar(times, mags, yerr=mag_errs, marker='.', color=colors, linestyle=' ')
+        ax0.errorbar(times, mags, yerr=mag_errs, marker='.', color=colors[0], linestyle=' ')
         # Sort out/Plot good Zero Points
         zp_times = [alltimes[i] for i, zp in enumerate(zps) if zp > 0 and zp_errs[i] > 0]
         zps_good = [zp for i, zp in enumerate(zps) if zp > 0 and zp_errs[i] > 0]
         zp_errs_good = [zp_errs[i] for i, zp in enumerate(zps) if zp > 0 and zp_errs[i] > 0]
-        ax1.errorbar(zp_times, zps_good, yerr=zp_errs_good, marker='.', color=colors, linestyle=' ')
+        ax1.errorbar(zp_times, zps_good, yerr=zp_errs_good, marker='.', color=colors[0], linestyle=' ')
         ylims = ax1.get_ylim()
         # Sort out/Plot bad Zero Points
         zp_times = [alltimes[i] for i, zp in enumerate(zps) if zp <= 0 or zp_errs[i] <= 0]
         zps_bad = [zp for i, zp in enumerate(zps) if zp <= 0 or zp_errs[i] <= 0]
         zp_errs_bad = [zp_errs[i]-ylims[0] for i, zp in enumerate(zps) if zp <= 0 or zp_errs[i] <= 0]
-        ax1.errorbar(zp_times, zps_bad, yerr=zp_errs_bad, uplims=True, marker='d', color=colors, linestyle='--')
+        ax1.errorbar(zp_times, zps_bad, yerr=zp_errs_bad, uplims=True, marker='d', color=colors[0], linestyle='--')
         ax1.set_ylim(ylims[0]-0.1, ylims[1])
+        # Make copy of ax1 ZP Axis sharing the same x axis for plotting cloud
+        ax2 = ax1.twinx()
+        ax2.plot(alltimes, cloud, color=colors[1], marker='.', alpha=0.5)
         # Set up Axes/Titles
         ax0.invert_yaxis()
         #ax1.invert_yaxis()
@@ -162,6 +172,7 @@ class Command(BaseCommand):
         ax1.set_title('Zero Point', size='medium')
         ax0.minorticks_on()
         ax1.minorticks_on()
+        ax2.minorticks_on()
 
         date_string = self.format_date(times)
         ax0.xaxis.set_major_formatter(DateFormatter(date_string))
@@ -174,7 +185,7 @@ class Command(BaseCommand):
 
         # Build Conditions plot
         fig2, (ax2, ax3) = plt.subplots(nrows=2, sharex=True)
-        ax2.plot(alltimes, fwhm, marker='.', color=colors, linestyle=' ')
+        ax2.plot(alltimes, fwhm, marker='.', color=colors[0], linestyle=' ')
         expected_fwhm = self.generate_expected_fwhm(alltimes, air_mass, fwhm_0=fwhm[0], tel_diameter=diameter)
         if (times[-1] - times[0]) < timedelta(hours=12):
             ax2.plot(alltimes, expected_fwhm, color='black', linestyle='--', linewidth=0.75, label="Predicted")
@@ -186,7 +197,7 @@ class Command(BaseCommand):
         # ax2.set_title('FWHM')
         fig2.suptitle('Conditions for obs: '+title)
         ax2.set_title(sub_title)
-        ax3.plot(alltimes, air_mass, marker='.', color=colors, linestyle=' ')
+        ax3.plot(alltimes, air_mass, marker='.', color=colors[0], linestyle=' ')
         ax3.set_xlabel('Time')
         ax3.set_ylabel('Airmass')
         # ax3.set_title('Airmass')
@@ -524,10 +535,13 @@ class Command(BaseCommand):
                     # Create gif of fits files used for LC extraction
                     data_path = make_data_dir(out_path, model_to_dict(frames_all_zp[0]))
                     red_paths = []
+                    cloud = []
                     for f in frames_all_zp:
                         fits_filepath = os.path.join(data_path, f.filename.replace('e92', 'e91').replace('-e72', ''))
                         fits_header, fits_table, cattype = open_fits_catalog(fits_filepath, header_only=True)
                         object_name = fits_header.get('OBJECT', None)
+                        wmscloud = fits_header.get('WMSCLOUD', -99.0)
+                        cloud.append(wmscloud)
                         block_id = fits_header.get('BLKUID', '').replace('/', '')
                         object_directory = ''
                         if object_name:
@@ -667,7 +681,9 @@ class Command(BaseCommand):
 
                 # Make plots
                 if not settings.USE_S3:
-                    self.plot_timeseries(times, alltimes, mags, mag_errs, zps, zp_errs, fwhm, air_mass, title=plot_title, sub_title=subtitle, datadir=datadir, filename=base_name, diameter=tel_diameter)
+                    self.plot_timeseries(times, alltimes, mags, mag_errs, zps, zp_errs, fwhm, air_mass, \
+                        cloud, title=plot_title, sub_title=subtitle, datadir=datadir, filename=base_name, \
+                        diameter=tel_diameter)
                     output_file_list.append('{},{}'.format(os.path.join(datadir, base_name + 'lightcurve_cond.png'), datadir.lstrip(out_path)))
                     output_file_list.append('{},{}'.format(os.path.join(datadir, base_name + 'lightcurve.png'), datadir.lstrip(out_path)))
                     try:
