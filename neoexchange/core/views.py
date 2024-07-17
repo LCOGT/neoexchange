@@ -19,6 +19,7 @@ from operator import itemgetter
 from datetime import datetime, timedelta, date
 from math import floor, ceil, degrees, radians, pi, acos, pow, cos
 from astropy import units as u
+from astropy.table import Table
 from astropy.coordinates import SkyCoord
 import json
 import logging
@@ -73,7 +74,7 @@ from astrometrics.sources_subs import fetchpage_and_make_soup, packed_to_normal,
 from astrometrics.time_subs import extract_mpc_epoch, parse_neocp_date, \
     parse_neocp_decimal_date, get_semester_dates, jd_utc2datetime, datetime2st
 from photometrics.external_codes import run_sextractor, run_swarp, run_hotpants, run_scamp, updateFITSWCS,\
-    read_mtds_file, unpack_tarball, run_findorb
+    read_mtds_file, unpack_tarball, run_findorb, get_scamp_xml_info
 from photometrics.catalog_subs import open_fits_catalog, get_header, get_catalog_header, \
     determine_filenames, increment_red_level, funpack_fits_file, update_ldac_catalog_wcs, FITSHdrException, \
     get_reference_catalog, reset_database_connection, sanitize_object_name
@@ -4888,3 +4889,67 @@ def create_latex_table(body_or_name, return_table=False, deluxetable=False, dbg=
         return buf, table
 
     return buf
+
+def summarize_block_quality(dataroot, blocks):
+    """Printout a summary of the <blocks> quality. The zeropoint and associated
+    error, the FWHM and RMS of the astrometric fit are printed for each Frame
+    of NEOX_RED_FRAMETYPE (e92) frame type. If the associated e91_ldac.xml can
+    be found for the frame in <dataroot>, then additional information from the
+    SCAMP astrometric fit for the number of reference and fitted stars and the
+    XY and AS contrast values are also printed.
+    """
+
+    try:
+        num_blocks = len(blocks)
+    except TypeError:
+        blocks = [blocks, ]
+
+    filenames = []
+    times = []
+    frame_filters = []
+    zps = []
+    zp_errs = []
+    fwhms = []
+    fit_rmses = []
+    num_fit_stars = []
+    num_ref_stars = []
+    xy_contrasts = []
+    as_contrasts = []
+    for block_count, block in enumerate(blocks):
+        print(f'{block.id}: {block.request_number} {",".join(block.get_blockuid)}')
+        frames_all_filters = Frame.objects.filter(block=block, frametype=Frame.NEOX_RED_FRAMETYPE)
+        filters = ['gp', 'rp', 'ip', 'zs'] # frames_all_filters.values_list('filter',flat=True).distinct()
+        for obs_filter in filters:
+            frames = frames_all_filters.filter(filter=obs_filter)
+            for frame in frames.order_by('midpoint', 'frametype'):
+                filenames.append(frame.filename)
+                zp = frame.zeropoint or -99
+                zp_err = frame.zeropoint_err or -99
+                times.append(frame.midpoint)
+                frame_filters.append(frame.filter)
+                zps.append(zp)
+                zp_errs.append(zp_err)
+                fwhm = frame.fwhm or -99
+                fwhms.append(fwhm)
+                rms_of_fit = frame.rms_of_fit or -99
+                fit_rmses.append(rms_of_fit)
+                nfit_stars = frame.nstars_in_fit or -99
+                nfit_stars = int(nfit_stars)
+                num_fit_stars.append(nfit_stars)
+                scamp_xml_file = os.path.join(dataroot, frame.filename.replace('e92.fits', 'e91_ldac.xml'))
+                if os.path.exists(scamp_xml_file) and 'xml' in scamp_xml_file:
+                    scamp_info = get_scamp_xml_info(scamp_xml_file)
+                else:
+                    scamp_info = {'xy_contrast' : -99, 'as_contrast' : -99, 'num_refstars' : -99}
+                xy_contrasts.append(scamp_info['xy_contrast'])
+                as_contrasts.append(scamp_info['as_contrast'])
+                num_ref_stars.append(scamp_info['num_refstars'])
+#                num_srcs = CatalogSources.objects.filter(frame=frame).count()
+#                num_meas = SourceMeasurement.objects.filter(frame=frame).count()
+                print(f"{frame.id}  {frame.filename:>42s}: {frame.midpoint.strftime('%Y-%m-%dT%H:%M:%S')} {obs_filter} {frame.frametype:02d} {zp:>8.4f} +/- {zp_err:>8.4f} FWHM={fwhm:>.3f} RMS={rms_of_fit:>6.2f} (#fit stars={nfit_stars:>4d} xy_c={scamp_info['xy_contrast']:.2f} as_c={scamp_info['as_contrast']:.2f} #refstars={scamp_info['num_refstars']})")
+
+    # Make and return an AstroPy Table of results
+    block_qc_table = Table([filenames, times, frame_filters, zps, zp_errs, fwhms, fit_rmses, num_fit_stars, xy_contrasts, as_contrasts, num_ref_stars],
+        names=('frame filename', 'midpoint', 'filter', 'ZP', 'ZP err', 'FWHM', 'Fit RMS', 'num fit stars', 'XY contrast', 'AS contrast', 'num ref stars')
+        )
+    return block_qc_table
