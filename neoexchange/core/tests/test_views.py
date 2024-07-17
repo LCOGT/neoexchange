@@ -5407,7 +5407,7 @@ class TestCleanCrossid(TestCase):
 
 
 
-class TestSummariseBlockEfficiency(TestCase):
+class TestSummarizeBlockEfficiency(TestCase):
 
     def setUp(self):
         # Initialise with a test body, three test proposals and several blocks.
@@ -5491,7 +5491,7 @@ class TestSummariseBlockEfficiency(TestCase):
                               'proposal': u'LCO2015A-009'}
                            ]
 
-        summary = summarise_block_efficiency()
+        summary = summarize_block_efficiency()
 
         self.assertEqual(expected_summary, summary)
 
@@ -5530,7 +5530,7 @@ class TestSummariseBlockEfficiency(TestCase):
                               'proposal': u'LCO2015B-005'}
                            ]
 
-        summary = summarise_block_efficiency()
+        summary = summarize_block_efficiency()
 
         self.assertEqual(expected_summary, summary)
 
@@ -5628,7 +5628,7 @@ class TestSummariseBlockEfficiency(TestCase):
 
                            ]
 
-        summary = summarise_block_efficiency()
+        summary = summarize_block_efficiency()
 
         self.assertEqual(expected_summary, summary)
 
@@ -5640,14 +5640,14 @@ class TestSummariseBlockEfficiency(TestCase):
 
         expected_summary = []
 
-        summary = summarise_block_efficiency()
+        summary = summarize_block_efficiency()
 
         self.assertEqual(expected_summary, summary)
 
     def test_no_proposals(self):
         expected_summary = []
 
-        summary = summarise_block_efficiency()
+        summary = summarize_block_efficiency()
 
         self.assertEqual(expected_summary, summary)
 

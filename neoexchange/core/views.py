@@ -191,11 +191,11 @@ class AddTarget(LoginRequiredMixin, FormView):
 class BlockTimeSummary(LoginRequiredMixin, View):
 
     def get(self, request, *args, **kwargs):
-        block_summary = summarise_block_efficiency(block_filter=10)
+        block_summary = summarize_block_efficiency(block_filter=10)
         return render(request, 'core/block_time_summary.html', {'summary': json.dumps(block_summary)})
 
 
-def summarise_block_efficiency(block_filter=0):
+def summarize_block_efficiency(block_filter=0):
     summary = []
     proposals = Proposal.objects.all()
     for proposal in proposals:
