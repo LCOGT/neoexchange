@@ -13,6 +13,7 @@ GNU General Public License for more details.
 from collections import Counter, OrderedDict
 from datetime import datetime
 import warnings
+import logging
 
 from django.conf import settings
 from django.forms.models import model_to_dict
@@ -22,7 +23,7 @@ from django.utils.translation import gettext_lazy as _
 from django.utils.functional import cached_property
 from django.contrib.contenttypes.fields import GenericRelation
 from requests.compat import urljoin
-from numpy import frombuffer
+from numpy import frombuffer, mean
 from astropy.wcs import FITSFixedWarning
 
 from astrometrics.ephem_subs import compute_ephem, comp_sep
@@ -32,6 +33,7 @@ from core.models.body import Body
 from core.models.frame import Frame
 from core.models.proposal import Proposal
 from core.models.dataproducts import DataProduct
+from core.models.sources import StaticSource
 
 TELESCOPE_CHOICES = (
                         ('1m0', '1-meter'),
@@ -55,6 +57,9 @@ SITE_CHOICES = (
     )
 
 NONLCO_SITES = ['lco', 'mro']
+
+logger = logging.getLogger(__name__)
+
 
 class SuperBlock(models.Model):
 
@@ -425,3 +430,39 @@ def detections_array_dtypes():
              }
 
     return dtypes
+
+def obs_details_retriever(ref_fields):
+    try:
+        num_ref_fields = len(ref_fields)
+    except TypeError:
+        ref_fields = [ref_fields, ]
+    ref_count = 0
+    lines = []
+    for ref in ref_fields:
+        ref_count +=1
+        blocks = Block.objects.filter(superblock__calibsource=ref)
+        obs_blocks = blocks.filter(num_observed__gte=1)
+        for block in obs_blocks:
+            lines.append(f"#Track# Rquest# Site(MPC) Obs details Filter #raw #good_zp/#num all frames FWHM \n {block.current_name()}# \n")
+            all_frames = Frame.objects.filter(block__superblock__calibsource= ref)
+            filterset = all_frames.values_list('filter', flat = True).distinct()
+            lines.append(block.make_obsblock_link() + "\n")
+            for obs_filter in filterset:
+                fwhms = []
+                neoxreds = 0
+                raw = 0
+                frame_count = 0
+                good_zp = 0
+                frames = all_frames.filter(filter=obs_filter)
+                for frame in frames:
+                    frame_count +=1
+                    fwhms.append(frame.fwhm)
+                    if frame.frametype == 91:
+                        raw +=1
+                    if frame.frametype == 92:
+                        neoxreds +=1
+                    if frame.frametype == 92 and frame.zeropoint > 0:
+                        good_zp +=1
+                mean_fwhm = mean(fwhms)
+                lines.append(f"{block.superblock.tracking_number} {block.request_number} {block.site} {block.superblock.get_obsdetails()}, {obs_filter} {raw} --> {good_zp}/{neoxreds} --> fwhm: {mean_fwhm:.3f} \n")
+    return lines

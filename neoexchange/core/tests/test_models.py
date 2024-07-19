@@ -25,11 +25,14 @@ from astropy.wcs.utils import proj_plane_pixel_scales
 from unittest import skipIf
 from mock import patch
 from neox.tests.mocks import MockDateTime
+from collections import Counter, OrderedDict
 
 # Import module to test
 from core.models import Body, Proposal, SuperBlock, Block, Frame, \
     SourceMeasurement, CatalogSources, Candidate, WCSField, PreviousSpectra,\
     StaticSource
+
+from core.models.blocks import obs_details_retriever
 
 
 class TestBody(TestCase):
@@ -1347,6 +1350,88 @@ class TestBlock(TestCase):
                            }
         cls.staticsrc = StaticSource.objects.create(**staticsrc_params)
 
+        ref_fields_params = {
+                             'name': 'Didymos COJ 2024 Field v2 #34',
+                             'ra': 260.722915,
+                             'dec': -28.64188,
+                             'vmag': 9.0,
+                             'spectral_type': '',
+                             'source_type': 16,
+                           }
+        cls.ref_fields = StaticSource.objects.create(**ref_fields_params)
+
+        ref_proposal = Proposal.objects.create(code = 'LCOEngineering')
+
+        ref_sblock_params = {   'cadence': False,
+                                'rapid_response': False,
+                                'body':None ,
+                                'calibsource': cls.ref_fields,
+                                'proposal': ref_proposal,
+                                'block_start': datetime(2024, 7, 16, 0, 0, 0),
+                                'block_end': datetime(2024, 7, 16, 23, 59, 59),
+                                'groupid': 'Didymos COJ 2024 Field v2 #34 try6',
+                                'tracking_number': '2006179' ,
+                                'period': None,
+                                'jitter': None,
+                                'timeused': 804.0,
+                                'active': False}
+        cls.ref_sblock = SuperBlock.objects.create(**ref_sblock_params)
+
+        params_ref_block = {
+                    'telclass' : '2m0',
+                    'site' : 'coj',
+                    'body' : None,
+                    'calibsource' : cls.ref_fields,
+                    'superblock' : cls.ref_sblock,
+                    'obstype' : 0,
+                    'block_start' : datetime(2024, 7, 12, 0, 0, 0),
+                    'block_end' : datetime(2024, 7, 12, 23, 59, 59),
+                    'request_number' : '3586212',
+                    'num_exposures' : 9,
+                    'exp_length' : 60.0,
+                    'num_observed': 1,
+                    'when_observed': datetime(2024, 7, 12, 11, 36, 43),
+                    'active':False ,
+                    'reported': False,
+                    'when_reported': None,
+                    'tracking_rate': 0}
+
+        cls.ref_block = Block.objects.create(**params_ref_block)
+
+        ref_frame = {
+                        'sitecode': 'E10',
+                        'instrument': 'ep08',
+                        'filter': 'ip',
+                        'filename': 'coj2m002-ep08-20240712-0051-e92_ldac.fits',
+                        'exptime': 60.0,
+                        'midpoint': datetime(2024, 7, 12, 11, 30, 53, 187000),
+                        'block': cls.ref_block,
+                        'quality': ' ',
+                        'zeropoint': -99.0, 'zeropoint_err': -99.0,
+                        'zeropoint_src': 'BANZAI',
+                        'color_used': '',
+                        'color': -99.0,
+                        'color_err': -99.0,
+                        'fwhm': 3.26,
+                        'frametype': 91,
+                        'extrainfo': None,
+                        'rms_of_fit': 0.09994,
+                        'nstars_in_fit': 168.0,
+                        'time_uncertainty': None,
+                        'frameid': None,
+                        'astrometric_catalog': 'GAIA-DR2',
+                        'photometric_catalog': ' '
+                        }
+        for obs_filter in ['gp', 'rp', 'ip', 'zs']:
+            ref_frame['frametype'] = 91
+            ref_frame['filter'] = obs_filter
+            Frame.objects.create(**ref_frame)
+            ref_frame['frametype'] = 92
+            Frame.objects.create(**ref_frame)
+        ref_frame['zeropoint'] = 25
+        ref_frame['zeropoint_err'] = 0.03
+        Frame.objects.create(**ref_frame)
+
         cls.params_spectro = { 'telclass' : '2m0',
                     'site' : 'coj',
                     'body' : cls.body,
@@ -1397,6 +1482,7 @@ class TestBlock(TestCase):
                     'num_exposures' : 1,
                     'exp_length' : 300.0
                   }
+        cls.maxDiff = None
 
     def test_spectro_block(self):
 
@@ -1436,6 +1522,29 @@ class TestBlock(TestCase):
                 obs_string = block.where_observed()
                 self.assertNotEqual('', obs_string)
                 self.assertNotIn('Unknown LCO site', obs_string)
+
+    def test_obs_details_retriever(self):
+
+        expected_lines = ['#Track# Rquest# Site(MPC) Obs details Filter #raw #good_zp/#num all frames FWHM \n Didymos COJ 2024 Field v2 #34# \n',
+                            'https://observe.lco.global/requests/3586212\n',
+                            '2006179 3586212 coj 9x60.0 secs, gp 1 --> 0/1 --> fwhm: 3.260 \n',
+                            '2006179 3586212 coj 9x60.0 secs, rp 1 --> 0/1 --> fwhm: 3.260 \n',
+                            '2006179 3586212 coj 9x60.0 secs, ip 1 --> 0/1 --> fwhm: 3.260 \n',
+                            '2006179 3586212 coj 9x60.0 secs, zs 1 --> 1/2 --> fwhm: 3.260 \n']
+        num_frames = Frame.objects.filter(block = self.ref_block).count()
+        self.assertEquals(9, num_frames)
+
+        num_sblocks = SuperBlock.objects.filter(calibsource= self.ref_fields).count()
+        self.assertEquals(1, num_sblocks)
+
+        num_ref_fields = StaticSource.objects.filter(name__contains='COJ 2024 Field v2').count()
+        self.assertEquals(1, num_ref_fields)
+
+        lines = obs_details_retriever(self.ref_fields)
+
+        print("LINES =", lines)
+
+        self.assertEqual(expected_lines, lines)
 
 
 class TestFrame(TestCase):
