@@ -1317,6 +1317,7 @@ class FITSUnitTest(TestCase):
         self.test_hotpantsfilename = os.path.join('photometrics', 'tests', 'hotpants_test_frame.fits')
         hdulist = fits.open(self.test_hotpantsfilename)
         self.test_hotpantsheader = hdulist[0].header
+        self.test_hotpants_convkernel_table = hdulist[1].data
         hdulist.close()
 
         column_types = [('ccd_x', '>f4'), 
@@ -1733,10 +1734,24 @@ class TestOpenFITSCatalog(FITSUnitTest):
         self.assertEqual(str, type(hdr['AIRMASS']))
         self.assertEqual(expected_hdr_value2, hdr['AIRMASS'])
 
-    def test_hotpants_header(self):
+    def test_hotpants_header_only(self):
         outpath = os.path.join("photometrics", "tests")
         expected_header = fits.Header.fromfile(os.path.join(outpath, "hotpants_test_header"), sep='\n', endcard=False, padding=False)
         expected_tbl = {}
+        expected_cattype = 'HOTPANTS'
+
+        hdr, tbl, cattype = open_fits_catalog(self.test_hotpantsfilename, header_only=True)
+
+        self.assertEqual(expected_cattype, cattype)
+        self.assertEqual(expected_tbl, tbl)
+        for key in expected_header:
+            self.assertEqual(expected_header[key], hdr[key],
+                msg="Failure on %s (%s != %s)" % (key, expected_header[key], hdr[key]))
+
+    def test_hotpants_header_convkernel(self):
+        outpath = os.path.join("photometrics", "tests")
+        expected_header = fits.Header.fromfile(os.path.join(outpath, "hotpants_test_header"), sep='\n', endcard=False, padding=False)
+        expected_tbl = self.test_hotpants_convkernel_table
         expected_cattype = 'HOTPANTS'
 
         hdr, tbl, cattype = open_fits_catalog(self.test_hotpantsfilename)
