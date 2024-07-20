@@ -27,8 +27,9 @@ from django.test import TestCase, SimpleTestCase
 from django.forms.models import model_to_dict
 from astropy.io import fits
 from astropy.wcs import WCS
+from astropy.tests.helper import assert_quantity_allclose
 from astropy.wcs.utils import proj_plane_pixel_scales
-from astropy.table import Table
+from astropy.table import Table, QTable
 from astropy.coordinates import Angle
 import astropy.units as u
 from numpy import where, array
@@ -1317,6 +1318,7 @@ class FITSUnitTest(TestCase):
         self.test_hotpantsfilename = os.path.join('photometrics', 'tests', 'hotpants_test_frame.fits')
         hdulist = fits.open(self.test_hotpantsfilename)
         self.test_hotpantsheader = hdulist[0].header
+        self.test_hotpants_wcs = WCS(self.test_hotpantsheader)
         self.test_hotpants_convkernel_table = hdulist[1].data
         hdulist.close()
 
@@ -1346,11 +1348,9 @@ class FITSUnitTest(TestCase):
 
     def compare_tables(self, expected_catalog, catalog, precision=4):
         for column in expected_catalog.colnames:
-            expected_column_value = float(expected_catalog[column].quantity)
-            catalog_column_value = float(catalog[column].quantity)
-            self.assertAlmostEqual(expected_column_value, catalog_column_value, precision,
-                msg="Failure on %s (%.*f != %.*f)" % (column, precision, expected_column_value,
-                    precision, catalog_column_value))
+            expected_column_value = expected_catalog[column].quantity
+            catalog_column_value = catalog[column].quantity
+            assert_quantity_allclose(expected_column_value, catalog_column_value, precision)
 
     def compare_headers(self, expected_params, frame_header, rtol=1e-8):
         self.assertEqual(len(expected_params), len(frame_header))
@@ -1751,13 +1751,13 @@ class TestOpenFITSCatalog(FITSUnitTest):
     def test_hotpants_header_convkernel(self):
         outpath = os.path.join("photometrics", "tests")
         expected_header = fits.Header.fromfile(os.path.join(outpath, "hotpants_test_header"), sep='\n', endcard=False, padding=False)
-        expected_tbl = self.test_hotpants_convkernel_table
+        expected_tbl = QTable(self.test_hotpants_convkernel_table)
         expected_cattype = 'HOTPANTS'
 
         hdr, tbl, cattype = open_fits_catalog(self.test_hotpantsfilename)
 
         self.assertEqual(expected_cattype, cattype)
-        self.assertEqual(expected_tbl, tbl)
+        self.compare_tables(expected_tbl, QTable(tbl))
         for key in expected_header:
             self.assertEqual(expected_header[key], hdr[key],
                 msg="Failure on %s (%s != %s)" % (key, expected_header[key], hdr[key]))
@@ -2624,6 +2624,53 @@ class FITSReadHeader(FITSUnitTest):
 
         self.compare_headers(expected_params, frame_header)
 
+    def test_hotpants_header(self):
+        obs_date = datetime.strptime('2024-06-10T11:39:15.759', '%Y-%m-%dT%H:%M:%S.%f')
+        expected_params = { 'site_code'  : 'E10',
+                            'site_id'    : 'coj',
+                            'enc_id'     : 'clma',
+                            'tel_id'     : '2m0a',
+                            'instrument' : 'ep07',
+                            'filter'     : 'rp',
+                            'framename'  : 'coj2m002-ep07-20240610-0100-e00.fits',
+                            'exptime'    : 170.0,
+                            'num_exposures' : 2147483647,
+                            'obs_date'      : obs_date,
+                            'obs_midpoint'  : obs_date + timedelta(seconds=170.0 / 2.0),
+                            'object_name'   : '65803',
+                            'proposal'      : 'LCO2024A-003',
+                            'block_start' : datetime(2024, 6, 10, 11, 15, 0),
+                            'block_end' : datetime(2024, 6, 10, 18, 44, 43),
+                            'groupid' : '65803_E10-20240610',
+                            'request_number' : '3560538',
+                            'tracking_number' : '1981246',
+                            'trackrate_frac'  : 0.0,
+                            'field_center_ra'  : Angle('18:54:18.681', unit=u.hour).deg,
+                            'field_center_dec' : Angle('-25:03:11.91', unit=u.deg).deg,
+                            'field_width'   : '0.4457m',
+                            'field_height'  : '0.4457m',
+                            'pixel_scale'   : 0.26743,
+                            'wcs' : self.test_hotpants_wcs,
+                            'fwhm'          : 2.3214206,
+                            'astrometric_fit_status' : 0,
+                            'astrometric_catalog'    : 'GAIA-DR2',
+                            'astrometric_fit_rms'    : 0.11085,
+                            'astrometric_fit_nstars' : 1148,
+                            'zeropoint'     : -99,
+                            'zeropoint_err' : -99,
+                            'zeropoint_src' : 'BANZAI',
+                            'reduction_level' : 92,
+                            'gain'          : 1.0,
+                            'saturation'    : 117760.0
+                          }
+        expected_cattype = "HOTPANTS"
+
+        header, table, cattype = open_fits_catalog(self.test_hotpantsfilename)
+        self.assertEqual(expected_cattype, cattype)
+        frame_header = get_catalog_header(header, cattype)
+
+        self.compare_headers(expected_params, frame_header)
+
 
 class FITSLDACToHeader(SimpleTestCase):
 
@@ -3058,6 +3105,58 @@ class TestExtractCatalog(FITSUnitTest):
         self.compare_headers(expected_hdr, header)
 
         self.assertEqual(651, len(table))
+
+    def test_hotpants(self):
+
+        obs_date = datetime.strptime('2024-06-10T11:39:15.759', '%Y-%m-%dT%H:%M:%S.%f')
+        expected_hdr = { 'site_code'  : 'E10',
+                         'site_id'    : 'coj',
+                         'enc_id'     : 'clma',
+                         'tel_id'     : '2m0a',
+                         'instrument' : 'ep07',
+                         'filter'     : 'rp',
+                         'framename'  : 'coj2m002-ep07-20240610-0100-e00.fits',
+                         'exptime'    : 170.0,
+                         'num_exposures' : 2147483647,
+                         'obs_date'      : obs_date,
+                         'obs_midpoint'  : obs_date + timedelta(seconds=170.0 / 2.0),
+                         'object_name'   : '65803',
+                         'proposal'      : 'LCO2024A-003',
+                         'block_start' : datetime(2024, 6, 10, 11, 15, 0),
+                         'block_end' : datetime(2024, 6, 10, 18, 44, 43),
+                         'groupid' : '65803_E10-20240610',
+                         'request_number' : '3560538',
+                         'tracking_number' : '1981246',
+                         'trackrate_frac'  : 0.0,
+                         'field_center_ra'  : Angle('18:54:18.681', unit=u.hour).deg,
+                         'field_center_dec' : Angle('-25:03:11.91', unit=u.deg).deg,
+                         'field_width'   : '0.4457m',
+                         'field_height'  : '0.4457m',
+                         'pixel_scale'   : 0.26743,
+                         'wcs' : self.test_hotpants_wcs,
+                         'fwhm'          : 2.3214206,
+                         'astrometric_fit_status' : 0,
+                         'astrometric_catalog'    : 'GAIA-DR2',
+                         'astrometric_fit_rms'    : 0.11085,
+                         'astrometric_fit_nstars' : 1148,
+                         'zeropoint'     : -99,
+                         'zeropoint_err' : -99,
+                         'zeropoint_src' : 'BANZAI',
+                         'reduction_level' : 92,
+                         'gain'          : 1.0,
+                         'saturation'    : 117760.0
+                        }
+        expected_tbl_colnames = [f'region{d}' for d in range(0, 9)]
+
+        test_hotpantsfilename = shutil.copy(os.path.abspath(self.test_hotpantsfilename), self.temp_dir)
+        header, table = extract_catalog(test_hotpantsfilename)
+
+        self.assertTrue(os.path.exists(test_hotpantsfilename))
+        self.compare_headers(expected_hdr, header)
+
+        self.assertEqual(298, len(table))
+        self.assertEqual(expected_tbl_colnames, table.colnames)
+        self.assertAlmostEqual(1.483158076784361, table['region0'][1])
 
 
 class TestRemoveCorruptCatalog(FITSUnitTest):
