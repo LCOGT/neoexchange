@@ -1118,6 +1118,8 @@ def open_fits_catalog(catfile, header_only=False):
     if len(hdulist) == 2:
         header = hdulist[0].header
         cattype = 'LCOGT'
+        if hdulist[1].header.get('EXTNAME', None) == 'Convolution Kernel Information':
+            cattype = 'HOTPANTS'
         if header_only is False:
             table = hdulist[1].data
     elif len(hdulist) == 3 and hdulist[1].header.get('EXTNAME', None) == 'LDAC_IMHEAD':
