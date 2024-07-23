@@ -1,0 +1,30 @@
+# %ECSV 1.0
+# ---
+# datatype:
+# - {name: frame filename, datatype: string}
+# - {name: midpoint, datatype: string}
+# - {name: filter, datatype: string}
+# - {name: ZP, datatype: float64}
+# - {name: ZP err, datatype: float64}
+# - {name: FWHM, datatype: float64}
+# - {name: Fit RMS, datatype: float64}
+# - {name: num fit stars, datatype: int64}
+# - {name: XY contrast, datatype: int64}
+# - {name: AS contrast, datatype: int64}
+# - {name: num ref stars, datatype: int64}
+# meta: !!omap
+# - __serialized_columns__:
+#     midpoint:
+#       __class__: astropy.time.core.Time
+#       format: datetime
+#       in_subfmt: '*'
+#       out_subfmt: '*'
+#       precision: 3
+#       scale: utc
+#       value: !astropy.table.SerializedColumn {name: midpoint}
+# schema: astropy-2.0
+"frame filename" midpoint filter ZP "ZP err" FWHM "Fit RMS" "num fit stars" "XY contrast" "AS contrast" "num ref stars"
+coj2m002-ep06-20240712-0056-e92.fits 2024-07-12T11:36:20 gp 24.4 0.03 4.25 0.15 24 -99 -99 -99
+coj2m002-ep07-20240712-0056-e92.fits 2024-07-12T11:36:20 rp 24.3 0.03 4.25 0.15 28 -99 -99 -99
+coj2m002-ep08-20240712-0056-e92.fits 2024-07-12T11:36:20 ip 24.2 0.03 4.25 0.15 32 -99 -99 -99
+coj2m002-ep09-20240712-0056-e92.fits 2024-07-12T11:36:20 zs 24.1 0.03 4.25 0.15 36 -99 -99 -99

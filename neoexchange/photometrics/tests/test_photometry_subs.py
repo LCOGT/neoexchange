@@ -1752,7 +1752,7 @@ class TestMapFilterToCalFilter(SimpleTestCase):
         self.assertEqual(expected_filter, cal_filter)
 
     def test_V(self):
-        expected_filter = None
+        expected_filter = 'g'
 
         cal_filter = map_filter_to_calfilter('V')
 

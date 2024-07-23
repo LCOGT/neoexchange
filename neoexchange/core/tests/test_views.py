@@ -8998,3 +8998,135 @@ class TestRunSExtractorMakeCatalog(ExternalCodeUnitTest):
         self.assertTrue(os.path.exists(new_ldac_catalog))
         self.assertEqual(expected_ldac_catalog, new_ldac_catalog)
 
+class TestSummarizeBlockQuality(TestCase):
+
+    def setUp(self):
+        self.test_dir = tempfile.mkdtemp(prefix='tmp_neox_')
+        self.dataroot = self.test_dir
+
+        staticsrc_params = {
+                             'name': 'Didymos COJ 2024 Field v2 #34',
+                             'ra': 260.722915,
+                             'dec': -28.64188,
+                             'vmag': 9.0,
+                             'spectral_type': '',
+                             'source_type': 16,
+                           }
+        self.ref_field1 = StaticSource.objects.create(**staticsrc_params)
+
+        proposal_params = { 'code' : 'LCOEngineering', }
+        self.proposal = Proposal.objects.create(**proposal_params)
+
+        sblock_params = {
+                         'cadence': False,
+                         'rapid_response': False,
+                         'body': None,
+                         'calibsource': self.ref_field1,
+                         'proposal': self.proposal,
+                         'block_start': datetime(2024, 7, 12, 0, 0),
+                         'block_end': datetime(2024, 7, 12, 23, 59, 59),
+                         'groupid': 'Didymos COJ 2024 Field v2 #34 try2',
+                         'tracking_number': '2003076',
+                         'period': None,
+                         'jitter': None,
+                         'timeused': 804.0,
+                         'active': False}
+        self.sblock = SuperBlock.objects.create(**sblock_params)
+
+        block_params = {
+                         'telclass': '2m0',
+                         'site': 'coj',
+                         'body': None,
+                         'calibsource': self.ref_field1,
+                         'superblock': self.sblock,
+                         'obstype': 0,
+                         'block_start': datetime(2024, 7, 12, 0, 0),
+                         'block_end': datetime(2024, 7, 12, 23, 59, 59),
+                         'request_number': '3586212',
+                         'num_exposures': 9,
+                         'exp_length': 60.0,
+                         'num_observed': 1,
+                         'when_observed': datetime(2024, 7, 12, 11, 36, 43),
+                         'active': False,
+                         'reported': False,
+                         'when_reported': None,
+                         'tracking_rate': 0}
+        self.block = Block.objects.create(**block_params)
+
+        frame_params = {
+                         'sitecode': 'E10',
+                         'instrument': 'ep06',
+                         'filter': 'gp',
+                         'filename': 'coj2m002-ep06-20240712-0056-e92.fits',
+                         'exptime': 60.0,
+                         'midpoint': datetime(2024, 7, 12, 11, 36, 20),
+                         'block': self.block,
+                         'quality': ' ',
+                         'zeropoint': -99.0,
+                         'zeropoint_err': 0.03,
+                         'zeropoint_src': 'BANZAI',
+                         'fwhm': 4.25,
+                         'frametype': 92,
+                         'rms_of_fit': 0.15,
+                         'nstars_in_fit': 18.0,
+                         'astrometric_catalog': 'GAIA-DR2',
+                         'photometric_catalog': ' '}
+        self.test_frames = []
+        for camera, obs_filter in zip(['ep06', 'ep07', 'ep08', 'ep09'], ['gp', 'rp', 'ip', 'zs']):
+            frame_params['instrument'] = camera
+            frame_params['filter'] = obs_filter
+            frame_params['filename'] = f'coj2m002-{camera}-20240712-0056-e92.fits'
+            camera_num = int(camera[-1])
+            frame_params['nstars_in_fit'] = camera_num * 4
+            frame_params['zeropoint'] = 24.0 + 1.0-camera_num / 10.0
+            self.test_frames.append(Frame.objects.create(**frame_params))
+
+        self.test_qc_table = Table.read(os.path.join('core', 'tests', 'data', 'test_block_summary_table.ecsv'), format='ascii.ecsv')
+
+        self.remove = True
+        self.debug_print = False
+
+        self.maxDiff = None
+
+    def tearDown(self):
+        if self.remove:
+            try:
+                files_to_remove = glob(os.path.join(self.test_dir, '*'))
+                for file_to_rm in files_to_remove:
+                    os.remove(file_to_rm)
+            except OSError:
+                print("Error removing files in temporary test directory", self.test_dir)
+            try:
+                os.rmdir(self.test_dir)
+                if self.debug_print:
+                    print("Removed", self.test_dir)
+            except OSError:
+                print("Error removing temporary test directory", self.test_dir)
+        else:
+            print("Not removing. Temporary test directory=", self.test_dir)
+
+    def compare_tables(self, expected_table, table, column=None, num_to_check=None, precision=6):
+
+        columns = [column,]
+        if column is None:
+            columns = expected_table.colnames
+
+        if num_to_check is None:
+            num_to_check = len(expected_table)-1
+
+        for i in range(0, num_to_check+1):
+            for column in columns:
+                self.assertAlmostEqual(expected_table[column][i], table[column][i], precision)
+
+    def test_no_obs_blocks(self):
+
+        qc_table = summarize_block_quality(self.dataroot, [])
+
+        self.assertEqual(None, qc_table)
+
+    def test_obs_blocks(self):
+
+        qc_table = summarize_block_quality(self.dataroot, self.block)
+
+        self.assertEqual(len(self.test_qc_table), len(qc_table))
+        self.compare_tables(self.test_qc_table, qc_table)

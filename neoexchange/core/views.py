@@ -19,6 +19,7 @@ from operator import itemgetter
 from datetime import datetime, timedelta, date
 from math import floor, ceil, degrees, radians, pi, acos, pow, cos
 from astropy import units as u
+from astropy.time import Time
 from astropy.table import Table
 from astropy.coordinates import SkyCoord
 import json
@@ -4949,7 +4950,10 @@ def summarize_block_quality(dataroot, blocks):
                 print(f"{frame.id}  {frame.filename:>42s}: {frame.midpoint.strftime('%Y-%m-%dT%H:%M:%S')} {obs_filter} {frame.frametype:02d} {zp:>8.4f} +/- {zp_err:>8.4f} FWHM={fwhm:>.3f} RMS={rms_of_fit:>6.2f} (#fit stars={nfit_stars:>4d} xy_c={scamp_info['xy_contrast']:.2f} as_c={scamp_info['as_contrast']:.2f} #refstars={scamp_info['num_refstars']})")
 
     # Make and return an AstroPy Table of results
-    block_qc_table = Table([filenames, times, frame_filters, zps, zp_errs, fwhms, fit_rmses, num_fit_stars, xy_contrasts, as_contrasts, num_ref_stars],
-        names=('frame filename', 'midpoint', 'filter', 'ZP', 'ZP err', 'FWHM', 'Fit RMS', 'num fit stars', 'XY contrast', 'AS contrast', 'num ref stars')
-        )
+    block_qc_table = None
+    if len(times) > 0:
+        ap_times = Time(times, scale='utc')
+        block_qc_table = Table([filenames, ap_times, frame_filters, zps, zp_errs, fwhms, fit_rmses, num_fit_stars, xy_contrasts, as_contrasts, num_ref_stars],
+            names=('frame filename', 'midpoint', 'filter', 'ZP', 'ZP err', 'FWHM', 'Fit RMS', 'num fit stars', 'XY contrast', 'AS contrast', 'num ref stars')
+            )
     return block_qc_table

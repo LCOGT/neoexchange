@@ -1022,6 +1022,67 @@ def mro_ldac_catalog_mapping(fixed_values_map={}):
     return header_dict, table_dict, fixed_values_map
 
 
+def hotpants_catalog_mapping():
+    """Returns two dictionaries of the mapping between the FITS header and table
+    items and CatalogItem quantities for HOTPANTS format image & convolution kernel
+    files. Items in angle brackets (<FOO>) need to be derived (pixel scale)
+    or assumed as they are missing from the headers."""
+
+    header_dict = { 'site_id'    : 'SITEID',
+                    'enc_id'     : 'ENCID',
+                    'tel_id'     : 'TELID',
+#                    'telclass'   : 'TELID#0_3',
+                    'instrument' : 'INSTRUME',
+                    'filter'     : 'FILTER',
+                    'framename'  : 'ORIGNAME',
+                    'exptime'    : 'EXPTIME',
+                    'obs_date'   : 'DATE-OBS',
+                    'block_start': 'BLKSDATE',
+                    'block_end'  : 'BLKEDATE',
+                    'groupid'    : 'GROUPID',
+                    'request_number' : 'REQNUM',
+                    'tracking_number' : 'TRACKNUM',
+                    'object_name' : 'OBJECT',
+                    'num_exposures' : 'FRMTOTAL',
+                    'proposal' : 'PROPID',
+                    'trackrate_frac' : '<TRACFRAC>',
+                    'field_center_ra' : 'RA',
+                    'field_center_dec' : 'DEC',
+                    'field_width' : 'NAXIS1',
+                    'field_height' : 'NAXIS2',
+                    'pixel_scale' : '<WCS>',
+                    'zeropoint'     : '<L1ZP>',
+                    'zeropoint_err' : '<L1ZPERR>',
+                    'zeropoint_src' : '<L1ZPSRC>',
+                    'color_used'    : '<L1COLORU>',
+                    'color'         : '<L1COLOR>',
+                    'color_err'     : '<L1COLERR>',
+                    'fwhm'          : '<L1FWHM>',
+                    'astrometric_fit_rms'    : '<WCSRDRES>',
+                    'astrometric_fit_status' : 'WCSERR',
+                    'astrometric_fit_nstars' : '<WCSMATCH>',
+                    'astrometric_catalog'    : '<WCCATTYP>',
+                    'photometric_catalog'    : '<L1PHTCAT>',
+                    'reduction_level'        : 'RLEVEL',
+                    'gain'          : 'GAIN',
+                    'saturation'    : '<MAXLIN>'
+                  }
+
+    table_dict = OrderedDict([
+                    ('region0', 'Region0'),
+                    ('region1', 'Region1'),
+                    ('region2', 'Region2'),
+                    ('region3', 'Region3'),
+                    ('region4', 'Region4'),
+                    ('region5', 'Region5'),
+                    ('region6', 'Region6'),
+                    ('region7', 'Region7'),
+                    ('region8', 'Region8')
+                 ])
+
+    return header_dict, table_dict
+
+
 def convert_to_string_value(value):
     left_end = value.find("'")
     right_end = value.rfind("'")
@@ -1118,6 +1179,8 @@ def open_fits_catalog(catfile, header_only=False):
     if len(hdulist) == 2:
         header = hdulist[0].header
         cattype = 'LCOGT'
+        if hdulist[1].header.get('EXTNAME', None) == 'Convolution Kernel Information':
+            cattype = 'HOTPANTS'
         if header_only is False:
             table = hdulist[1].data
     elif len(hdulist) == 3 and hdulist[1].header.get('EXTNAME', None) == 'LDAC_IMHEAD':
@@ -1358,6 +1421,8 @@ def get_catalog_header(catalog_header, catalog_type='LCOGT', debug=False):
         hdr_mapping, tbl_mapping, fixed_values_map = swope_ldac_catalog_mapping(fixed_values_map)
     elif catalog_type.startswith('MRO'):
         hdr_mapping, tbl_mapping, fixed_values_map = mro_ldac_catalog_mapping(fixed_values_map)
+    elif catalog_type == 'HOTPANTS':
+        hdr_mapping, tbl_mapping = hotpants_catalog_mapping()
     else:
         logger.error("Unsupported catalog mapping: %s", catalog_type)
         return header_items
@@ -1612,6 +1677,8 @@ def get_catalog_items_new(header_items, table, catalog_type='LCOGT', flag_filter
         hdr_mapping, tbl_mapping, fixed_map = swope_ldac_catalog_mapping()
     elif catalog_type.startswith('MRO'):
         hdr_mapping, tbl_mapping, fixed_map = mro_ldac_catalog_mapping()
+    elif catalog_type == 'HOTPANTS':
+        hdr_mapping, tbl_mapping = hotpants_catalog_mapping()
     else:
         logger.error("Unsupported catalog mapping: %s", catalog_type)
         return None
@@ -1634,7 +1701,7 @@ def get_catalog_items_new(header_items, table, catalog_type='LCOGT', flag_filter
         logger.debug("Filtered table. Number of sources {}->{}".format(size_before, size_after))
 
     # Filter out -ve fluxes
-    if neg_flux_mask:
+    if neg_flux_mask and 'obs_mag' in new_table.colnames:
         good_flux_mask = new_table['obs_mag'] > 0.0
         if len(good_flux_mask.shape) == 2:
             good_flux_mask = good_flux_mask.any(axis=1)
@@ -1643,14 +1710,15 @@ def get_catalog_items_new(header_items, table, catalog_type='LCOGT', flag_filter
     if 'obs_ra_err' in tbl_mapping.keys() and 'obs_dec_err' in tbl_mapping.keys():
         new_table['obs_ra_err'] = np.sqrt(new_table['obs_ra_err'])
         new_table['obs_dec_err'] = np.sqrt(new_table['obs_dec_err'])
-    FLUX2MAG = 2.5/log(10)
-    new_table['obs_mag_err'] = FLUX2MAG * (new_table['obs_mag_err'] / new_table['obs_mag'])
-    warnings.simplefilter("ignore", RuntimeWarning)
-    new_table['obs_mag'] = -2.5 * np.log10(new_table['obs_mag'] / header_items['exptime'])
+    if 'obs_mag' in new_table.colnames and 'obs_mag_err' in new_table.colnames:
+        FLUX2MAG = 2.5/log(10)
+        new_table['obs_mag_err'] = FLUX2MAG * (new_table['obs_mag_err'] / new_table['obs_mag'])
+        warnings.simplefilter("ignore", RuntimeWarning)
+        new_table['obs_mag'] = -2.5 * np.log10(new_table['obs_mag'] / header_items['exptime'])
     if 'threshold' in tbl_mapping.keys() and 'MU_' in tbl_mapping['threshold'].upper():
         scale = header_items['pixel_scale'] * header_items['pixel_scale']
         new_table['threshold'] = np.power(10, (new_table['threshold']/-2.5)) * scale
-    if header_items.get('zeropoint', -99) != -99:
+    if header_items.get('zeropoint', -99) != -99 and 'obs_mag' in new_table.colnames:
         print(f"Applying zeropoint of {header_items['zeropoint']}")
         new_table['obs_mag'] += header_items['zeropoint']
 
