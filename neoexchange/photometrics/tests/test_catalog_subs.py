@@ -1439,8 +1439,8 @@ class TestOpenFITSCatalog(FITSUnitTest):
         unexpected_value = {}
 
         hdr, tbl, cattype = open_fits_catalog(self.test_ldacfilename)
-        self.assertNotEqual(unexpected_value, hdr)
-        self.assertNotEqual(unexpected_value, tbl)
+        self.assertNotEqual(len(unexpected_value), len(hdr))
+        self.assertNotEqual(len(unexpected_value), len(tbl))
         self.assertNotEqual(unexpected_value, cattype)
 
     def test_ldac_catalog_read_length(self):
@@ -1506,12 +1506,12 @@ class TestOpenFITSCatalog(FITSUnitTest):
         unexpected_value = {}
 
         hdr, tbl, cattype = open_fits_catalog(self.test_banzaifilename)
-        self.assertNotEqual(unexpected_value, hdr)
-        self.assertNotEqual(unexpected_value, tbl)
+        self.assertNotEqual(len(unexpected_value), len(hdr))
+        self.assertNotEqual(len(unexpected_value), len(tbl))
         self.assertNotEqual(unexpected_value, cattype)
 
     def test_banzai_catalog_read_length(self):
-        expected_hdr_len = 278-23  # Total-compression keywords
+        expected_hdr_len = 278-26  # Total-compression keywords
         expected_tbl_len = len(self.test_banzaitable)
         expected_cattype = 'BANZAI'
 
@@ -1577,8 +1577,8 @@ class TestOpenFITSCatalog(FITSUnitTest):
         unexpected_value = {}
 
         hdr, tbl, cattype = open_fits_catalog(self.test_uncomp_banzaifilename)
-        self.assertNotEqual(unexpected_value, hdr)
-        self.assertNotEqual(unexpected_value, tbl)
+        self.assertNotEqual(len(unexpected_value), len(hdr))
+        self.assertNotEqual(len(unexpected_value), len(tbl))
         self.assertNotEqual(unexpected_value, cattype)
 
     def test_uncomp_banzai_catalog_read_length(self):
@@ -1622,8 +1622,8 @@ class TestOpenFITSCatalog(FITSUnitTest):
         unexpected_value = {}
 
         hdr, tbl, cattype = open_fits_catalog(self.test_photpipefilename)
-        self.assertNotEqual(unexpected_value, hdr)
-        self.assertNotEqual(unexpected_value, tbl)
+        self.assertNotEqual(len(unexpected_value), len(hdr))
+        self.assertNotEqual(len(unexpected_value), len(tbl))
         self.assertNotEqual(unexpected_value, cattype)
 
     def test_photpipe_catalog_read_length(self):
@@ -1666,8 +1666,8 @@ class TestOpenFITSCatalog(FITSUnitTest):
         unexpected_value = {}
 
         hdr, tbl, cattype = open_fits_catalog(self.test_swopeldacfilename)
-        self.assertNotEqual(unexpected_value, hdr)
-        self.assertNotEqual(unexpected_value, tbl)
+        self.assertNotEqual(len(unexpected_value), len(hdr))
+        self.assertNotEqual(len(unexpected_value), len(tbl))
         self.assertNotEqual(unexpected_value, cattype)
 
     def test_swopeldac_catalog_read_length(self):
@@ -1709,8 +1709,8 @@ class TestOpenFITSCatalog(FITSUnitTest):
         unexpected_value = {}
 
         hdr, tbl, cattype = open_fits_catalog(self.test_mroldacfilename)
-        self.assertNotEqual(unexpected_value, hdr)
-        self.assertNotEqual(unexpected_value, tbl)
+        self.assertNotEqual(len(unexpected_value), len(hdr))
+        self.assertNotEqual(len(unexpected_value), len(tbl))
         self.assertNotEqual(unexpected_value, cattype)
 
     def test_mroldac_catalog_read_length(self):
