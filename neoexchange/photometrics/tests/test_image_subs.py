@@ -477,7 +477,7 @@ class TestFindReferenceImage(ExternalCodeUnitTest):
 
         self.assertEqual(expected_output, output)
 
-class TestDetermineReferenceFieldForBlock(TestCase):
+class ReferenceFieldUnitTest(TestCase):
     def setUp(self):
         body_params = {
                          'provisional_name': None,
@@ -608,6 +608,22 @@ class TestDetermineReferenceFieldForBlock(TestCase):
         self.assertEqual(expected_num_blocks, Block.objects.all().count())
         self.assertEqual(expected_num_frames, Frame.objects.all().count())
 
+class TestDetermineReferenceFieldForBlock(ReferenceFieldUnitTest):
+    def setUp(self):
+        super(TestDetermineReferenceFieldForBlock, self).setUp()
+
+    def test_basics(self):
+        expected_num_body = 1
+        expected_num_statsrc = 2
+        expected_num_blocks = 3
+        expected_num_frames = 3 * 3
+
+        self.assertEqual(expected_num_body, Body.objects.all().count())
+        self.assertEqual(expected_num_statsrc, StaticSource.objects.all().count())
+        self.assertEqual(expected_num_statsrc, StaticSource.objects.filter(source_type=StaticSource.REFERENCE_FIELD).count())
+        self.assertEqual(expected_num_blocks, Block.objects.all().count())
+        self.assertEqual(expected_num_frames, Frame.objects.all().count())
+
     def test_calibsrc_only(self):
         expected_field = self.test_ref_fields[0]
 
@@ -632,6 +648,8 @@ class TestDetermineReferenceFieldForBlock(TestCase):
 
         field = determine_reffield_for_block(self.test_block_body_only)
 
+        self.assertEqual(self.test_block_body_only.calibsource, None)
+        self.assertNotEqual(self.test_block_body_only.body, None)
         self.assertEqual(expected_field, field)
 
     def test_both(self):
@@ -642,9 +660,12 @@ class TestDetermineReferenceFieldForBlock(TestCase):
         self.assertEqual(expected_field, field)
 
 
-class TestDetermineReferenceFrameForBlock(ExternalCodeUnitTest):
+class TestDetermineReferenceFrameForBlock(ReferenceFieldUnitTest):
+
     def setUp(self):
         super(TestDetermineReferenceFrameForBlock, self).setUp()
+        self.test_dir = tempfile.mkdtemp(prefix='tmp_neox_')
+
         self.test_refframes = {'field1' : { 'gp' : 'reference_coj_ep06_gp_264.62_-28.37_20240721.fits',
                                             'rp' : 'reference_coj_ep07_rp_264.62_-28.37_20240721.fits'
                                            },
@@ -656,10 +677,23 @@ class TestDetermineReferenceFrameForBlock(ExternalCodeUnitTest):
             newfile1 = os.path.join(self.test_dir, filename)
             Path(newfile1).touch()
 
-        self.test_block = None
-
         self.debug_print = True
         self.remove = False
+
+    def tearDown(self):
+        if self.remove:
+            try:
+                files_to_remove = glob(os.path.join(self.test_dir, '*'))
+                for file_to_rm in files_to_remove:
+                    os.remove(file_to_rm)
+            except OSError:
+                print("Error removing files in temporary test directory", self.test_dir)
+            try:
+                os.rmdir(self.test_dir)
+                if self.debug_print:
+                    print("Removed", self.test_dir)
+            except OSError:
+                print("Error removing temporary test directory", self.test_dir)
 
     def all_vals(self, obj):
         if isinstance(obj, dict):
@@ -671,7 +705,7 @@ class TestDetermineReferenceFrameForBlock(ExternalCodeUnitTest):
     def test_field1_gp(self):
         expected_name = self.test_refframes['field1']['gp']
 
-        ref_name = determine_reference_frame_for_block(self.test_block, 'gp', self.test_dir)
+        ref_name = determine_reference_frame_for_block(self.test_block_both, 'gp', self.test_dir)
 
         self.assertEqual(expected_name, ref_name)
 
