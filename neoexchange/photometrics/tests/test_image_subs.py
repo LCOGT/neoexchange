@@ -693,6 +693,8 @@ class TestDetermineReferenceFrameForBlock(ReferenceFieldUnitTest):
     def setUp(self):
         super(TestDetermineReferenceFrameForBlock, self).setUp()
         self.test_dir = tempfile.mkdtemp(prefix='tmp_neox_')
+        #self.test_dir = '/tmp/tmp_neox_wibble/'
+        #os.makedirs(self.test_dir, exist_ok=True)
 
         self.test_refframes = {'field1' : { 'gp' : 'reference_coj_ep06_gp_264.62_-28.37_20240721.fits',
                                             'rp' : 'reference_coj_ep07_rp_264.62_-28.37_20240721.fits'
@@ -705,8 +707,8 @@ class TestDetermineReferenceFrameForBlock(ReferenceFieldUnitTest):
             newfile1 = os.path.join(self.test_dir, filename)
             Path(newfile1).touch()
 
-        self.debug_print = True
-        self.remove = False
+        self.debug_print = False
+        self.remove = True
 
     def tearDown(self):
         if self.remove:
@@ -724,16 +726,25 @@ class TestDetermineReferenceFrameForBlock(ReferenceFieldUnitTest):
                 print("Error removing temporary test directory", self.test_dir)
 
     def all_vals(self, obj):
+        """Return all values for nested dictionaries"""
+
         if isinstance(obj, dict):
             for v in obj.values():
                 yield from self.all_vals(v)
         else:
             yield obj
         
-    def test_field1_gp(self):
-        expected_name = self.test_refframes['field1']['gp']
+    def test_field1_rp(self):
+        expected_name = os.path.join(self.test_dir, self.test_refframes['field1']['rp'])
 
-        ref_name = determine_reference_frame_for_block(self.test_block_both, 'gp', self.test_dir)
+        ref_name = determine_reference_frame_for_block(self.test_block_both, self.test_dir, 'rp')
+
+        self.assertEqual(expected_name, ref_name)
+
+    def test_field1_rp_nofilter(self):
+        expected_name = os.path.join(self.test_dir, self.test_refframes['field1']['rp'])
+
+        ref_name = determine_reference_frame_for_block(self.test_block_both, self.test_dir, dbg=True)
 
         self.assertEqual(expected_name, ref_name)
 

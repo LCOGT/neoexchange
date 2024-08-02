@@ -280,17 +280,31 @@ def determine_reference_frame_for_block(obs_block, reference_dir, obs_filter=Non
     ref_name = None
     
     field = determine_reffield_for_block(obs_block)
+    if dbg: print(field)
     if field is not None:
         frames = Frame.objects.filter(block=obs_block, frametype=Frame.NEOX_RED_FRAMETYPE, rms_of_fit__gte=0)
+        if dbg: print(f"# of unfiltered frames= {frames.count()}")
         if obs_filter is not None:
             filtered_frames = frames.filter(filter=obs_filter)
         else:
             filtered_frames = frames
+            obs_filters = frames.order_by('filter').values_list("filter", flat=True).distinct()
+            if obs_filters.count() > 1:
+                obs_filter = '[' + ",".join(obs_filters) + ']'
+            obs_filter = obs_filters[0]
+
+        if dbg: print(f"# of   filtered frames= {filtered_frames.count()}")
         if filtered_frames.count() > 0:
             # Find all existing reference frames
             ref_frames = find_reference_images(reference_dir, "reference*.fits")
             print(ref_frames)
             # Check if existing reference frame exists
             ref_frame_name = get_reference_name(field.ra, field.dec, obs_block.site, filtered_frames[0].instrument, obs_filter, '*')
-            match_ref_frames = [frame for frame in ref_frames if os.path.basename(frame)==ref_frame_name]
+            if dbg: print(ref_frame_name)
+            #match_ref_frames = [frame for frame in ref_frames if os.path.basename(frame)==ref_frame_name]
+            ref_names = find_reference_images(reference_dir, ref_frame_name)
+            if len(ref_names) >= 1:
+                ref_name = ref_names[0]
+        else:
+            print("No matching frames found")
     return ref_name
