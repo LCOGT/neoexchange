@@ -273,15 +273,24 @@ def determine_reffield_for_block(obs_block, dbg=False):
             if dbg: print("Best field", field)
     return field
 
-def determine_reference_frame_for_block(obs_block, reference_dir, obs_filter=None):
+def determine_reference_frame_for_block(obs_block, reference_dir, obs_filter=None, dbg=False):
+    """Find the reference frame in <reference_dir> for <obs_block> with optional [obs_filter]
+    Returns the filepath to the reference frame (or None if not found).
+    """
     ref_name = None
     
     field = determine_reffield_for_block(obs_block)
     if field is not None:
-        # Find all existing reference frames
-        ref_frames = find_reference_images(reference_dir, "reference*.fits")
-
-        # Check if existing reference frame exists
-        ref_frame_name = get_reference_name(field.ra, field.dec, obs_block.site, filtered_frames[0].instrument, obs_filter, filtered_frames[0].midpoint)
-        match_ref_frames = [frame for frame in ref_frames if os.path.basename(frame)==ref_frame_name]
+        frames = Frame.objects.filter(block=obs_block, frametype=Frame.NEOX_RED_FRAMETYPE, rms_of_fit__gte=0)
+        if obs_filter is not None:
+            filtered_frames = frames.filter(filter=obs_filter)
+        else:
+            filtered_frames = frames
+        if filtered_frames.count() > 0:
+            # Find all existing reference frames
+            ref_frames = find_reference_images(reference_dir, "reference*.fits")
+            print(ref_frames)
+            # Check if existing reference frame exists
+            ref_frame_name = get_reference_name(field.ra, field.dec, obs_block.site, filtered_frames[0].instrument, obs_filter, '*')
+            match_ref_frames = [frame for frame in ref_frames if os.path.basename(frame)==ref_frame_name]
     return ref_name
