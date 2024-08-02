@@ -20,6 +20,9 @@ from glob import glob
 
 import numpy as np
 from astropy.io import fits
+from astropy.wcs import WCS
+from astropy import units as u
+from astropy.coordinates import SkyCoord
 
 from core.models import StaticSource, Block, Frame
 
@@ -243,30 +246,31 @@ def find_reference_images(ref_dir, match):
     ref_frames = glob(pattern)
     return ref_frames
 
-def determine_reffield_for_block(obs_block):
+def determine_reffield_for_block(obs_block, dbg=False):
     """Determines the reference field for the passed <obs_block>"""
     field = None
     if obs_block.calibsource is not None and obs_block.calibsource.source_type == StaticSource.REFERENCE_FIELD:
         field = obs_block.calibsource
     else:
-        print("Finding nearest reference field")
+        if dbg: print("Finding nearest reference field")
         frames = Frame.objects.filter(block=obs_block, frametype=Frame.NEOX_RED_FRAMETYPE, rms_of_fit__gt=0).order_by('midpoint')
         num_frames = frames.count()
         if num_frames > 0:
             midframe_index = int(num_frames / 2)
             frame = frames[midframe_index]
+            if dbg: print(frame, frame.wcs)
             ra,dec = frame.wcs.all_pix2world(frame.get_x_size() / 2, frame.get_y_size() / 2, 0)
             obspos_start = SkyCoord(ra, dec,unit='deg')
             ref_fields = StaticSource.objects.filter(source_type=StaticSource.REFERENCE_FIELD, quality__gte=0)
             min_sep = 180*u.deg
             for ref_field in ref_fields.order_by('id'):
-                pos = SkyCoord(field.ra, field.dec, unit='deg')
+                pos = SkyCoord(ref_field.ra, ref_field.dec, unit='deg')
                 sep = obspos_start.separation(pos)
                 if sep < min_sep:
                     min_sep = sep
                     field = ref_field
-                    print(f"{field.name}: Sep= {sep.to(u.arcmin):.2f}")
-            print("Best field", field)
+                if dbg: print(f"{ref_field.name}: {pos.ra.deg:.3f} {pos.dec.deg:+.3f}  Sep= {sep.to(u.arcmin):.2f}")
+            if dbg: print("Best field", field)
     return field
 
 def determine_reference_frame_for_block(obs_block, reference_dir, obs_filter=None):

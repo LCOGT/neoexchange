@@ -23,6 +23,7 @@ import shutil
 from pathlib import Path
 
 from astropy.io import fits
+from astropy.wcs import WCS
 from numpy import array, arange
 from numpy.testing import assert_allclose
 
@@ -557,6 +558,15 @@ class TestDetermineReferenceFieldForBlock(TestCase):
         block_params['calibsource'] = None
         self.test_block_body_only, created = Block.objects.get_or_create(**block_params)
 
+        # Hand-rolled WCS for testing
+        naxis_header = {'NAXIS1' : 2048, 'NAXIS2' : 2048, 'NAXIS' : 2,
+                        'CTYPE1' : 'RA---TAN', 'CTYPE2' : 'DEC--TAN',
+                        'CRPIX1' : 1024.0, 'CRPIX2' : 1024.0,
+                        'CRVAL1' : 264.626, 'CRVAL2' : -28.36854
+                        }
+        self.test_wcs = WCS(naxis_header)
+        pixscale = 0.2666/3600.0
+        self.test_wcs.wcs.cd = np.array([[-pixscale, 0],[0, pixscale]])
         orig_params = { 
                          'sitecode': 'E10',
                          'instrument': 'ep07',
@@ -574,7 +584,8 @@ class TestDetermineReferenceFieldForBlock(TestCase):
                          'rms_of_fit': 0.167375,
                          'nstars_in_fit': 1627.0,
                          'astrometric_catalog': 'GAIA-DR2',
-                         'photometric_catalog': 'PS1'
+                         'photometric_catalog': 'PS1',
+                         'wcs' : self.test_wcs
                        }
         for frame_num in range(100, 103):
             frame_params = orig_params.copy()
@@ -593,6 +604,7 @@ class TestDetermineReferenceFieldForBlock(TestCase):
 
         self.assertEqual(expected_num_body, Body.objects.all().count())
         self.assertEqual(expected_num_statsrc, StaticSource.objects.all().count())
+        self.assertEqual(expected_num_statsrc, StaticSource.objects.filter(source_type=StaticSource.REFERENCE_FIELD).count())
         self.assertEqual(expected_num_blocks, Block.objects.all().count())
         self.assertEqual(expected_num_frames, Frame.objects.all().count())
 
@@ -609,7 +621,7 @@ class TestDetermineReferenceFieldForBlock(TestCase):
         self.test_block_calibsrc_only.calibsource.name = 'HZ 44'
         self.test_block_calibsrc_only.save()
         
-        expected_field = None
+        expected_field = self.test_ref_fields[0]
 
         field = determine_reffield_for_block(self.test_block_calibsrc_only)
 
