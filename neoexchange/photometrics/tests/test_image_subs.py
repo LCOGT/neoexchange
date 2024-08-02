@@ -15,7 +15,7 @@ GNU General Public License for more details.
 
 import os
 from glob import glob
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 import tempfile
 from unittest import skipIf
 import warnings
@@ -29,6 +29,7 @@ from numpy.testing import assert_allclose
 from django.test import TestCase
 from django.forms.models import model_to_dict
 
+from core.models import Body, StaticSource, Block, Frame
 from photometrics.tests.test_external_codes import ExternalCodeUnitTest
 # Import module to test
 from photometrics.image_subs import *
@@ -474,3 +475,191 @@ class TestFindReferenceImage(ExternalCodeUnitTest):
         output = find_reference_images(self.test_dir, "reference*cpt*.fits")
 
         self.assertEqual(expected_output, output)
+
+class TestDetermineReferenceFieldForBlock(TestCase):
+    def setUp(self):
+        body_params = {
+                         'provisional_name': None,
+                         'provisional_packed': None,
+                         'name': '65803',
+                         'origin': 'N',
+                         'source_type': 'N',
+                         'source_subtype_1': 'N3',
+                         'source_subtype_2': 'PH',
+                         'elements_type': 'MPC_MINOR_PLANET',
+                         'active': True,
+                         'fast_moving': False,
+                         'urgency': None,
+                         'epochofel': datetime(2024, 3, 31, 0, 0),
+                         'orbit_rms': 0.71,
+                         'orbinc': 3.41422,
+                         'longascnode': 72.98677,
+                         'argofperih': 319.59164,
+                         'eccentricity': 0.3832302,
+                         'meandist': 1.6426815,
+                         'meananom': 246.30743,
+                         'perihdist': None,
+                         'epochofperih': None,
+                         'abs_mag': 18.11,
+                         'slope': 0.15,
+                         'score': None,
+                         'discovery_date': datetime(1996, 4, 11, 0, 0),
+                         'num_obs': 5304,
+                         'arc_length': 9923.0,
+                         'not_seen': 359.8285771261227,
+                         'updated': True,
+                         'ingest': datetime(2018, 8, 14, 17, 45, 42),
+                         'update_time': datetime(2024, 7, 29, 19, 54, 13, 688594),
+                         'analysis_status': 0,
+                         'as_updated': None}
+        self.test_body, created = Body.objects.get_or_create(**body_params)
+        statsrc_params = {
+                            'name' : '',
+                            'ra' : None,
+                            'dec' : None,
+                            'vmag': 9.0,
+                            'spectral_type': '',
+                            'source_type': StaticSource.REFERENCE_FIELD,
+                            'notes': '',
+                            'quality': 0,
+                            'reference': ''}
+        field_names = ['Didymos COJ 2024 Field v2 #20', 'Didymos COJ 2024 Field v2 #26']
+        field_coords = [(264.624525, -28.36852), (262.5789150, -28.514)]
+        self.test_ref_fields = []
+        for name, coords in zip(field_names, field_coords):
+            statsrc_params['name'] = name
+            statsrc_params['ra'] = coords[0]
+            statsrc_params['dec'] = coords[1]
+            ref_field, created = StaticSource.objects.get_or_create(**statsrc_params)
+            self.test_ref_fields.append(ref_field)
+
+        block_params = {
+                         'telclass': '2m0',
+                         'site': 'coj',
+                         'body': self.test_body,
+                         'calibsource': self.test_ref_fields[0],
+                         'obstype': Block.OPT_IMAGING,
+                         'block_start': datetime(2024, 7, 30, 0, 0),
+                         'block_end': datetime(2024, 7, 30, 23, 59, 59),
+                         'request_number': '3602880',
+                         'num_exposures': 125,
+                         'exp_length': 170.0,
+                         'num_observed': 1,
+                         'when_observed': datetime(2024, 7, 30, 15, 32, 9),
+                         'active': False,
+                         'reported': False,
+                         'when_reported': None,
+                         'tracking_rate': 0}
+        self.test_block_both, created = Block.objects.get_or_create(**block_params)
+        block_params['body'] = None
+        self.test_block_calibsrc_only, created = Block.objects.get_or_create(**block_params)
+        block_params['body'] = self.test_body
+        block_params['calibsource'] = None
+        self.test_block_body_only, created = Block.objects.get_or_create(**block_params)
+
+        orig_params = { 
+                         'sitecode': 'E10',
+                         'instrument': 'ep07',
+                         'filter': 'rp',
+                         'filename': 'coj2m002-ep07-20240729-0100-e92.fits',
+                         'exptime': 170.0,
+                         'midpoint': datetime(2024, 7, 29, 11, 25, 52),
+                         'block': self.test_block_both,
+                         'quality': ' ',
+                         'zeropoint': 23.5,
+                         'zeropoint_err': 0.04,
+                         'zeropoint_src': 'py_zp_cvc-V0.2.1',
+                         'fwhm': 2.14,
+                         'frametype': 92,
+                         'rms_of_fit': 0.167375,
+                         'nstars_in_fit': 1627.0,
+                         'astrometric_catalog': 'GAIA-DR2',
+                         'photometric_catalog': 'PS1'
+                       }
+        for frame_num in range(100, 103):
+            frame_params = orig_params.copy()
+            frame_params['filename'] = f'coj2m002-ep07-20240729-{frame_num:04d}-e92.fits'
+            inc_frames = frame_num-100
+            frame_params['midpoint'] = frame_params['midpoint'] + timedelta(seconds=inc_frames*(frame_params['exptime'] + 10))
+            for block in [self.test_block_both,  self.test_block_calibsrc_only, self.test_block_body_only]:
+                frame_params['block'] = block
+                frame, created = Frame.objects.get_or_create(**frame_params)
+
+    def test_basics(self):
+        expected_num_body = 1
+        expected_num_statsrc = 2
+        expected_num_blocks = 3
+        expected_num_frames = 3 * 3
+
+        self.assertEqual(expected_num_body, Body.objects.all().count())
+        self.assertEqual(expected_num_statsrc, StaticSource.objects.all().count())
+        self.assertEqual(expected_num_blocks, Block.objects.all().count())
+        self.assertEqual(expected_num_frames, Frame.objects.all().count())
+
+    def test_calibsrc_only(self):
+        expected_field = self.test_ref_fields[0]
+
+        field = determine_reffield_for_block(self.test_block_calibsrc_only)
+
+        self.assertEqual(expected_field, field)
+
+    def test_bad_calibsrc(self):
+        # Invalidate StaticSource type
+        self.test_block_calibsrc_only.calibsource.source_type = StaticSource.FLUX_STANDARD
+        self.test_block_calibsrc_only.calibsource.name = 'HZ 44'
+        self.test_block_calibsrc_only.save()
+        
+        expected_field = None
+
+        field = determine_reffield_for_block(self.test_block_calibsrc_only)
+
+        self.assertEqual(expected_field, field)
+
+    def test_body_only(self):
+        expected_field = self.test_ref_fields[0]
+
+        field = determine_reffield_for_block(self.test_block_body_only)
+
+        self.assertEqual(expected_field, field)
+
+    def test_both(self):
+        expected_field = self.test_ref_fields[0]
+
+        field = determine_reffield_for_block(self.test_block_both)
+
+        self.assertEqual(expected_field, field)
+
+
+class TestDetermineReferenceFrameForBlock(ExternalCodeUnitTest):
+    def setUp(self):
+        super(TestDetermineReferenceFrameForBlock, self).setUp()
+        self.test_refframes = {'field1' : { 'gp' : 'reference_coj_ep06_gp_264.62_-28.37_20240721.fits',
+                                            'rp' : 'reference_coj_ep07_rp_264.62_-28.37_20240721.fits'
+                                           },
+                               'field2' : { 'gp' : 'reference_coj_ep06_gp_262.58_-28.51_20240722.fits',
+                                            'rp' : 'reference_coj_ep07_rp_262.58_-28.51_20240722.fits'
+                                           }
+                              }
+        for filename in list(self.all_vals(self.test_refframes)):
+            newfile1 = os.path.join(self.test_dir, filename)
+            Path(newfile1).touch()
+
+        self.test_block = None
+
+        self.debug_print = True
+        self.remove = False
+
+    def all_vals(self, obj):
+        if isinstance(obj, dict):
+            for v in obj.values():
+                yield from self.all_vals(v)
+        else:
+            yield obj
+        
+    def test_field1_gp(self):
+        expected_name = self.test_refframes['field1']['gp']
+
+        ref_name = determine_reference_frame_for_block(self.test_block, 'gp', self.test_dir)
+
+        self.assertEqual(expected_name, ref_name)
+
