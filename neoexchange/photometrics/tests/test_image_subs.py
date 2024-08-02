@@ -419,6 +419,34 @@ class TestGetReferenceName(ExternalCodeUnitTest):
 
         self.assertEqual(expected_status, status)
 
+    def test_obs_date_date_string(self):
+        expected_status = "reference_coj_ep06_gp_111.11_-84.44_20240511.fits"
+
+        status = get_reference_name(111.111, -84.444,  "coj", "ep06", "gp", '20240511')
+
+        self.assertEqual(expected_status, status)
+
+    def test_obs_date_date_string_hyphens(self):
+        expected_status = "reference_coj_ep06_gp_111.11_-84.44_20240511.fits"
+
+        status = get_reference_name(111.111, -84.444,  "coj", "ep06", "gp", '2024-05-11')
+
+        self.assertEqual(expected_status, status)
+
+    def test_obs_date_date_string_hyphens_long(self):
+        expected_status = "reference_coj_ep06_gp_111.11_-84.44_20240511.fits"
+
+        status = get_reference_name(111.111, -84.444,  "coj", "ep06", "gp", '2024-05-11T17:00:00')
+
+        self.assertEqual(expected_status, status)
+
+    def test_obs_date_date_string_slashes(self):
+        expected_status = "reference_coj_ep06_gp_111.11_-84.44_20240511.fits"
+
+        status = get_reference_name(111.111, -84.444,  "coj", "ep06", "gp", '2024/05/11')
+
+        self.assertEqual(expected_status, status)
+
     def test_bad_obs_date(self):
         expected_status = -98
 

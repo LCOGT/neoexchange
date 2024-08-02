@@ -230,7 +230,7 @@ def get_reference_name(field_ra, field_dec, site, instrument, obs_filter, obs_da
             date_str = '_' + obs_date.strftime("%Y%m%d")
         except AttributeError:
             try:
-                date_str = '+' + obs_date.replace('-', '').replace('/', '')[0:8]
+                date_str = '_' + obs_date.replace('-', '').replace('/', '')[0:8]
             except (TypeError, AttributeError):
                 logger.error("Couldn't parse obs_date")
                 return -98
