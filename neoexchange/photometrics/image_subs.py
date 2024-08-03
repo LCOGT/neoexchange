@@ -297,12 +297,13 @@ def determine_reference_frame_for_block(obs_block, reference_dir, obs_filter=Non
         if filtered_frames.count() > 0:
             # Find all existing reference frames
             ref_frames = find_reference_images(reference_dir, "reference*.fits")
-            print(ref_frames)
+            if dbg: print("Found", len(ref_frames), " reference frames. Ref frames:\n", ref_frames)
             # Check if existing reference frame exists
             ref_frame_name = get_reference_name(field.ra, field.dec, obs_block.site, filtered_frames[0].instrument, obs_filter, '*')
             if dbg: print(ref_frame_name)
             #match_ref_frames = [frame for frame in ref_frames if os.path.basename(frame)==ref_frame_name]
             ref_names = find_reference_images(reference_dir, ref_frame_name)
+            ### XXX Replace with finding best FWHM version
             if len(ref_names) >= 1:
                 ref_name = ref_names[0]
         else:
