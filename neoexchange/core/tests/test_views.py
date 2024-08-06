@@ -27,8 +27,10 @@ from django.conf import settings
 from django.http import Http404
 from bs4 import BeautifulSoup
 from mock import patch
+import astropy.units as u
 from astropy.io import fits
 from astropy.wcs import WCS
+from astropy.table import QTable
 from numpy.testing import assert_allclose
 
 from neox.tests.mocks import MockDateTime, mock_check_request_status, mock_check_for_images, \
@@ -9130,3 +9132,250 @@ class TestSummarizeBlockQuality(TestCase):
 
         self.assertEqual(len(self.test_qc_table), len(qc_table))
         self.compare_tables(self.test_qc_table, qc_table)
+
+class TestPerformAperPhotometry(TestCase):
+
+    def setUp(self):
+
+        self.framedir = os.path.abspath(os.path.join('photometrics', 'tests'))
+        self.test_file = 'hotpants_test_frame.fits'
+        self.test_file_path = os.path.join(self.framedir, self.test_file)
+        self.test_file_rms = 'hotpants_test_frame.rms.fits'
+        self.test_file_path_rms = os.path.join(self.framedir, self.test_file)
+
+#       self.test_dir = '/tmp/tmp_neox_wibble'
+        self.test_dir =  '/tmp/tmp_neox_fjody5q5' #tempfile.mkdtemp(prefix='tmp_neox_')
+
+        self.test_output_dir = os.path.join(self.test_dir, '20240610')
+        os.makedirs(self.test_output_dir, exist_ok=True)
+
+        body_params = {
+                         'id': 36254,
+                         'provisional_name': None,
+                         'provisional_packed': None,
+                         'name': '65803',
+                         'origin': 'N',
+                         'source_type': 'N',
+                         'source_subtype_1': 'N3',
+                         'source_subtype_2': 'PH',
+                         'elements_type': 'MPC_MINOR_PLANET',
+                         'active': False,
+                         'fast_moving': False,
+                         'urgency': None,
+                         'epochofel': datetime(2021, 2, 25, 0, 0),
+                         'orbit_rms': 0.56,
+                         'orbinc': 3.40768,
+                         'longascnode': 73.20234,
+                         'argofperih': 319.32035,
+                         'eccentricity': 0.3836409,
+                         'meandist': 1.6444571,
+                         'meananom': 77.75787,
+                         'perihdist': None,
+                         'epochofperih': None,
+                         'abs_mag': 18.27,
+                         'slope': 0.15,
+                         'score': None,
+                         'discovery_date': datetime(1996, 4, 11, 0, 0),
+                         'num_obs': 829,
+                         'arc_length': 7305.0,
+                         'not_seen': 2087.29154187494,
+                         'updated': True,
+                         'ingest': datetime(2018, 8, 14, 17, 45, 42),
+                         'update_time': datetime(2021, 3, 1, 19, 59, 56, 957500)
+                         }
+
+        self.test_body, created = Body.objects.get_or_create(**body_params)
+
+        desig_params = { 'body' : self.test_body, 'value' : 'Didymos', 'desig_type' : 'N', 'preferred' : True, 'packed' : False}
+        test_desig, created = Designations.objects.get_or_create(**desig_params)
+        desig_params['value'] = '65803'
+        desig_params['desig_type'] = '#'
+        test_desig, created = Designations.objects.get_or_create(**desig_params)
+
+        block_params = {
+                         'body' : self.test_body,
+                         'request_number' : '12345',
+                         'block_start' : datetime(2024, 6, 10, 0, 40),
+                         'block_end' : datetime(2024, 6, 10, 17, 59),
+                         'obstype' : Block.OPT_IMAGING,
+                         'num_observed' : 1
+                        }
+        self.test_block, created = Block.objects.get_or_create(**block_params)
+        # Second block with no frames attached
+        block_params['num_observed'] = 0
+        self.test_block2, created = Block.objects.get_or_create(**block_params)
+
+        midpoints_for_good_elevs = []
+        for i in range (0, 28):
+            desired_midpoint = datetime(2024, 6, 10, 17, 2 * i)
+            midpoints_for_good_elevs.append(desired_midpoint)
+        print("GOOD ELEV MIDPOINTS", midpoints_for_good_elevs)
+
+        frame_params = {
+                         'sitecode' : 'E10',
+                         'instrument' : 'ep07',
+                         'exptime' : 170.0,
+                         'filter' : 'rp',
+                         'block' : self.test_block,
+                         'frametype' : Frame.BANZAI_RED_FRAMETYPE,
+                         'zeropoint' : 27.0,
+                         'zeropoint_err' : 0.03,
+                         'midpoint' : block_params['block_start'] + timedelta(minutes=5)
+                       }
+        i = 0
+        self.test_banzai_files = []
+        source_details = { 45234032 : {'mag' : 14.8447, 'err_mag' : 0.0054, 'flags' : 0},
+                           45234584 : {'mag' : 14.8637, 'err_mag' : 0.0052, 'flags' : 3},
+                           45235052 : {'mag' : 14.8447, 'err_mag' : 0.0051, 'flags' : 0}
+                         }
+        ra = [0, 283.50961, 283.50922, 283.50883]
+        dec = [0, -25.07526, -25.07538, -25.07550]
+        for frame_num, frameid in zip(range(65,126,30),[45234032, 45234584, 45235052]):
+            i += 1
+            frame_params['filename'] = f"coj2m002-ep07-20240610-{frame_num:04d}-e91.fits"
+            frame_params['midpoint'] = midpoints_for_good_elevs[i]
+            frame_params['frameid'] = frameid
+            frame, created = Frame.objects.get_or_create(**frame_params)
+            # Create NEOX_RED_FRAMETYPE type also
+            red_frame_params = frame_params.copy()
+            red_frame_params['frametype'] = Frame.NEOX_RED_FRAMETYPE
+            red_frame_params['filename'] = red_frame_params['filename'].replace('e91', 'e92')
+            frame, created = Frame.objects.get_or_create(**red_frame_params)
+            # Create NEOX_SUB_FRAMETYPE type also
+            sub_frame_params = frame_params.copy()
+            sub_frame_params['frametype'] = Frame.NEOX_SUB_FRAMETYPE
+            sub_frame_params['filename'] = red_frame_params['filename'].replace('e91', 'e93')
+            frame, created = Frame.objects.get_or_create(**sub_frame_params)
+
+            cat_source = source_details[frameid]
+            source_params = { 'body' : self.test_body,
+                              'frame' : frame,
+                              'obs_ra' : 208.728,
+                              'obs_dec' : -10.197,
+                              'obs_mag' : cat_source['mag'],
+                              'err_obs_ra' : 0.0003,
+                              'err_obs_dec' : 0.0003,
+                              'err_obs_mag' : cat_source['err_mag'],
+                              'astrometric_catalog' : frame.astrometric_catalog,
+                              'photometric_catalog' : frame.photometric_catalog,
+                              'aperture_size' : 10*0.389,
+                              'snr' : 1/cat_source['err_mag'],
+                              'flags' : cat_source['flags']
+                            }
+            source, created = SourceMeasurement.objects.get_or_create(**source_params)
+            source_params = { 'frame' : frame,
+                              'obs_x' : 2048+frame_num/10.0,
+                              'obs_y' : 2043-frame_num/10.0,
+                              'obs_ra' : 208.728,
+                              'obs_dec' : -10.197,
+                              'obs_mag' : cat_source['mag'],
+                              'err_obs_ra' : 0.0003,
+                              'err_obs_dec' : 0.0003,
+                              'err_obs_mag' : cat_source['err_mag'],
+                              'background' : 42,
+                              'major_axis' : 3.5,
+                              'minor_axis' : 3.25,
+                              'position_angle' : 42.5,
+                              'ellipticity' : 0.3711,
+                              'aperture_size' : 10*0.389,
+                              'flags' : cat_source['flags']
+                            }
+            cat_src, created = CatalogSources.objects.get_or_create(**source_params)
+            for extn in ['e92-ldac', 'e92.bkgsub', 'e92', 'e92.rms', 'e93', 'e93.rms']:
+                new_name = os.path.join(self.test_output_dir, frame_params['filename'].replace('e91', extn))
+                filename = shutil.copy(self.test_file_path, new_name)
+                # Change object name to 65803
+                with fits.open(filename) as hdulist:
+                    #print(f"FILENAME {filename}")
+                    hdulist[0].header['telescop'] = '2m0-02'
+                    hdulist[0].header['instrume'] = 'ep07'
+                    hdulist[0].header['object'] = '65803 '
+                    half_exp = timedelta(seconds=hdulist[0].header['exptime'] / 2.0)
+                    date_obs = frame_params['midpoint'] - half_exp
+                    #print("SUB LOOP MIDPOINT", frame_params['midpoint'])
+                    hdulist[0].header['date-obs'] = date_obs.strftime("%Y-%m-%dT%H:%M:%S")
+                    utstop = frame_params['midpoint'] + half_exp + timedelta(seconds=8.77)
+                    hdulist[0].header['utstop'] = utstop.strftime("%H:%M:%S.%f")[0:12]
+                    hdulist[0].header['crval1'] = ra[i]
+                    hdulist[0].header['crval2'] = dec[i]
+                    hdulist.writeto(filename, overwrite=True, checksum=True)
+#                   hdulist.close()
+                    self.test_banzai_files.append(os.path.basename(filename))
+
+        # Make one additional copy which is renamed to an -e91 (so it shouldn't be found)
+        new_name = os.path.join(self.test_output_dir, 'coj2m002-ep07-20240610-0065-e91.fits')
+        shutil.copy(self.test_file_path, new_name)
+        self.test_banzai_files.insert(1, os.path.basename(new_name))
+
+        self.remove = True
+        self.debug_print = True
+        self.maxDiff = None
+
+    def tearDown(self):
+        # Generate an example test dir to compare root against and then remove it
+        temp_test_dir = tempfile.mkdtemp(prefix='tmp_neox')
+        os.rmdir(temp_test_dir)
+        if self.remove and self.test_dir.startswith(temp_test_dir[:-8]):
+            shutil.rmtree(self.test_dir)
+        else:
+            if self.debug_print:
+                print("Not removing temporary test directory", self.test_dir)
+    def test_basic(self):
+        expected_num_body = 1
+        expected_num_blocks = 2
+        expected_num_frames = 9
+        expected_num_files = 3*6 + 1 #3 is the number of original files, 6 is number of products per file, plus one extra random e91
+
+        self.assertEqual(expected_num_body, Body.objects.all().count())
+        self.assertEqual(expected_num_blocks, Block.objects.all().count())
+        self.assertEqual(expected_num_frames, Frame.objects.all().count())
+
+        num_files = len(glob(self.test_output_dir + '/*'))
+        self.assertEqual(expected_num_files, num_files)
+
+    def compare_tables(self, expected_table, table, column, num_to_check=6, precision=6):
+        for i in range(0, num_to_check+1):
+            print(expected_table[column][i], table[column][i])
+            try:
+                self.assertAlmostEqual(expected_table[column][i], table[column][i], precision)
+            except TypeError:
+                print(f"TYPERROR {expected_table[column][i], table[column][i][0], precision}")
+                self.assertAlmostEqual(expected_table[column][i], table[column][i][0], precision)
+    def test_perform_aperture_photometry(self):
+        expected_results = 1
+                #position_test = SkyCoord(48.56973336292208, 48.26605304144391, frame = "icrs")
+        #source_aperture = SkyCircularAperture(position_test, r = aperture_radius*u.arcsec)
+        #wcs = header['wcs']
+        #pix_source_aperture = source_aperture.to_pixel(wcs)
+        expected_results = QTable()
+        expected_results['path to frame'] = ['/tmp/tmp_neox_fjody5q5/20240610/coj2m002-ep07-20240610-0065-e93.fits', '/tmp/tmp_neox_fjody5q5/20240610/coj2m002-ep07-20240610-0095-e93.fits', '/tmp/tmp_neox_fjody5q5/20240610/coj2m002-ep07-20240610-0125-e93.fits']
+        expected_results['times'] = [datetime(2024, 6, 10, 17, 2, 0), datetime(2024, 6, 10, 17, 4, 0), datetime(2024, 6, 10, 17, 6, 0)]
+        expected_results['filters'] = ['rp', 'rp', 'rp']
+        expected_results['xcenter'] = [48.770001555583654, 48.76999999999983, 48.76999999999983] #*u.pix
+        expected_results['ycenter'] = [48.269999454136475, 48.2699999999529, 48.2699999999529] #* u.pix
+        expected_results['aperture sum'] = [22316.1840698799, 22316.184106891462, 22316.184106891462]
+        expected_results['aperture sum err'] = [1823.6603510462946, 1823.660352672292, 1823.660352672292]
+        expected_results['mag'] = [-109.87154983732658, -109.87154983912728, -109.87154983912728]
+        expected_results['magerr'] = [0.08846918854318914, 0.08846918847534249, 0.08846918847534249]
+        expected_results['aperture radius'] = [5.80355155615856, 5.80355155615856, 5.80355155615856]
+        #exp_dtypes = expected_results.dtype
+
+        dataroot = self.test_output_dir
+        results = perform_aper_photometry(self.test_block, dataroot)
+
+        print(f"EXPECTED RESULTS \n")
+        print(f'{expected_results}')
+        print(f"ACTUAL RESULTS \n")
+        print(f"{results}")
+        #print(f'dtypes {results.dtype}')
+
+        self.compare_tables(expected_results, results, column = 'path to frame',num_to_check= 2, precision=6)
+        self.compare_tables(expected_results, results, column = 'times',num_to_check= 2, precision=6)
+        self.compare_tables(expected_results, results, column = 'filters',num_to_check= 2,precision=6)
+        self.compare_tables(expected_results, results, column = 'xcenter',num_to_check= 2, precision=6)
+        self.compare_tables(expected_results, results, column = 'ycenter',num_to_check= 2, precision=6)
+        self.compare_tables(expected_results, results, column = 'aperture sum',num_to_check= 2, precision=6)
+        self.compare_tables(expected_results, results, column = 'aperture sum err',num_to_check= 2, precision=6)
+        self.compare_tables(expected_results, results, column = 'mag',num_to_check= 2, precision=6)
+        self.compare_tables(expected_results, results, column = 'magerr',num_to_check= 2, precision=6)
+        self.compare_tables(expected_results, results, column = 'aperture radius',num_to_check= 2, precision=6)

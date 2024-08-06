@@ -19,8 +19,9 @@ from operator import itemgetter
 from datetime import datetime, timedelta, date
 from math import floor, ceil, degrees, radians, pi, acos, pow, cos
 from astropy import units as u
+from astropy.io import fits
 from astropy.time import Time
-from astropy.table import Table
+from astropy.table import Table, QTable
 from astropy.coordinates import SkyCoord
 import json
 import logging
@@ -74,6 +75,8 @@ from astrometrics.sources_subs import fetchpage_and_make_soup, packed_to_normal,
     store_jpl_physparams
 from astrometrics.time_subs import extract_mpc_epoch, parse_neocp_date, \
     parse_neocp_decimal_date, get_semester_dates, jd_utc2datetime, datetime2st
+import photometrics
+import photometrics.catalog_subs
 from photometrics.external_codes import run_sextractor, run_swarp, run_hotpants, run_scamp, updateFITSWCS,\
     read_mtds_file, unpack_tarball, run_findorb, get_scamp_xml_info
 from photometrics.catalog_subs import open_fits_catalog, get_header, get_catalog_header, \
@@ -85,9 +88,12 @@ from core.frames import create_frame, ingest_frames, measurements_from_block
 from core.mpc_submit import email_report_to_mpc
 from core.archive_subs import lco_api_call
 from core.utils import search
+from core.blocksfind import find_frames, get_ephem, ephem_interpolate
+from photometrics.external_codes import single_frame_aperture_photometry
 from photometrics.SA_scatter import readSources, genGalPlane, plotScatter, \
     plotFormat
 from core.plots import spec_plot, lin_vis_plot, lc_plot
+from core.models.blocks import Block, SuperBlock
 
 # import matplotlib
 # matplotlib.use('Agg')
@@ -4957,3 +4963,55 @@ def summarize_block_quality(dataroot, blocks):
             names=('frame filename', 'midpoint', 'filter', 'ZP', 'ZP err', 'FWHM', 'Fit RMS', 'num fit stars', 'XY contrast', 'AS contrast', 'num ref stars')
             )
     return block_qc_table
+
+def perform_aper_photometry(block, dataroot):
+    e92_frameset = find_frames(block)
+    #print(e92_frameset)
+    fwhms = []
+    times = []
+    e92_frames = []
+    path_to_e92_frame = []
+    for i in range (0, len(e92_frameset[0])):
+        e92_frames.append(e92_frameset[0][i])
+        current_e92_file = dataroot + f"/{e92_frames[i]}"
+        #print("CURRENT e92 FILE", current_e92_file)
+        try:
+            opened_e92_file = fits.open(current_e92_file)
+            path_to_e92_frame.append(opened_e92_file)
+            fwhms.append(e92_frameset[0][i].fwhm)
+            times.append(e92_frameset[0][i].midpoint)
+        except FileNotFoundError:
+            print("FILE NOT FOUND")
+            #pass
+    working_ephem = get_ephem(block)
+    interpolated_ephem = ephem_interpolate(times, working_ephem)
+    path_to_e93_frame = glob(dataroot +  '/*e93.fits')
+    aperture_photometry_results = []
+    filters = []
+    for i in range (0, len(path_to_e92_frame)):
+        data_header = photometrics.catalog_subs.get_header(path_to_e93_frame[i])
+        aper_photometry_of_ephem = single_frame_aperture_photometry(path_to_e93_frame[i], interpolated_ephem[0][i], interpolated_ephem[1][i])
+        aperture_photometry_results.append(aper_photometry_of_ephem)
+        filters.append(data_header[0]['filter'])
+    ids, xcenters, ycenters, aperture_sums, aperture_sum_errs, mags, magerrs, aperture_radii = [],[],[],[],[],[],[],[]
+    for i in range (0, len(aperture_photometry_results)):
+        ids.append(aperture_photometry_results[i]['id'])
+        xcenters.append(aperture_photometry_results[i]['xcenter'])
+        ycenters.append(aperture_photometry_results[i]['ycenter'])
+        aperture_sums.append(aperture_photometry_results[i]['aperture_sum'])
+        aperture_sum_errs.append(aperture_photometry_results[i]['aperture_sum_err'])
+        mags.append(aperture_photometry_results[i]['mag'])
+        magerrs.append(aperture_photometry_results[i]['magerr'])
+        aperture_radii.append(aperture_photometry_results[i]['aperture_radius'])
+    results = Table()
+    results['path to frame'] = path_to_e93_frame
+    results['times'] = times
+    results['filters'] = filters
+    results['xcenter'] = xcenters
+    results['ycenter'] = ycenters
+    results['aperture sum'] = aperture_sums
+    results['aperture sum err'] = aperture_sum_errs
+    results['mag'] = mags
+    results['magerr'] = magerrs
+    results['aperture radius'] = aperture_radii
+    return results

@@ -15,6 +15,7 @@ GNU General Public License for more details.
 
 import logging
 import os
+import numpy as np
 from math import floor
 from datetime import datetime, timedelta
 
@@ -24,8 +25,13 @@ import warnings
 from shutil import unpack_archive
 from glob import glob
 
+import astropy.units as u
+from astropy import wcs
 from astropy.io import fits
 from astropy.io.votable import parse
+from astropy.coordinates import ICRS
+from astropy.coordinates import SkyCoord
+from photutils.aperture import SkyCircularAperture
 from astropy.wcs import WCS, FITSFixedWarning, InvalidTransformError
 from astropy.wcs.utils import proj_plane_pixel_scales
 from numpy import loadtxt, split, empty, median, absolute, sqrt
@@ -33,10 +39,19 @@ from numpy import loadtxt, split, empty, median, absolute, sqrt
 from core.models import detections_array_dtypes
 from core.utils import NeoException
 from astrometrics.time_subs import timeit
+from photutils.aperture import aperture_photometry
+from photutils.aperture import CircularAnnulus
+from photutils.aperture import CircularAperture
+from core.blocksfind import get_ephem, ephem_interpolate
 from photometrics.catalog_subs import oracdr_catalog_mapping, banzai_catalog_mapping, \
     banzai_ldac_catalog_mapping, swope_ldac_catalog_mapping, mro_ldac_catalog_mapping,\
     fits_ldac_to_header, convert_value
+import photometrics.catalog_subs
 from photometrics.image_subs import create_weight_image, create_rms_image, get_saturate
+
+
+import photometrics
+from photometrics.catalog_subs import get_header
 
 logger = logging.getLogger(__name__)
 
@@ -1627,3 +1642,41 @@ def run_damit(call_name, cat_input_filename, primary_call, write_out=False, bina
         retcode_or_cmdline = cmd_call.communicate()
 
     return retcode_or_cmdline
+
+
+def single_frame_aperture_photometry(fits_filepath, ra, dec, background_subtract = False):
+    fits_file = fits.open(fits_filepath)
+    header, cattype = photometrics.catalog_subs.get_header(fits_filepath)
+    FWHM = header['fwhm']
+    aperture_radius = 2.5*FWHM
+    annulus_outer_radius = 7.5*FWHM
+    source_data_for_photomet = fits_file[0].data
+    rms_image_name = (fits_filepath[:-8] + 'e93.rms.fits')
+    try:
+        rms_image = fits.open(rms_image_name)
+        rms_data = rms_image[0].data
+    except FileNotFoundError:
+        logger.warning(f'{rms_image_name} not found')
+        return None
+    #print(f"RMS DATA {rms_data}")
+    print(f"RMS DATA DIMENSIONS {len(rms_data)} X {len(rms_data[0])}")
+    right_ascension = ra * u.deg
+    declination = dec * u.deg
+    positions = SkyCoord(right_ascension, declination, frame = "icrs")
+    source_aperture = SkyCircularAperture(positions, r = aperture_radius*u.arcsec)
+    wcs = header['wcs']
+    pix_source_aperture = source_aperture.to_pixel(wcs)
+    if background_subtract == True:
+        background_annulus = CircularAnnulus((ra, dec), aperture_radius, annulus_outer_radius)
+        background_annulus_mask = background_annulus.to_mask(method = 'exact')
+        background_annulus_data_for_photomet = background_annulus_mask.get_values(source_data_for_photomet)
+        background_flux_per_pixel = background_annulus_data_for_photomet/background_annulus.area
+        background_subtracted_data_for_photomet = source_data_for_photomet - background_flux_per_pixel
+        source_flux = aperture_photometry(background_subtracted_data_for_photomet, pix_source_aperture)
+    else:
+        source_flux = aperture_photometry(source_data_for_photomet, pix_source_aperture, error = rms_data)
+        source_flux['mag'] = -2.5*np.log10(source_flux['aperture_sum']) + header['zeropoint']
+        source_flux['magerr'] = 1.0826 * source_flux['aperture_sum_err'] / source_flux['aperture_sum']
+        source_flux['aperture_radius'] = [aperture_radius]
+
+    return source_flux

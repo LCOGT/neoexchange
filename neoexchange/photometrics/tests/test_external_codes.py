@@ -21,8 +21,13 @@ import warnings
 import shutil
 from copy import deepcopy
 
+import astropy.units as u
 from astropy.io import fits
+from astropy.table import QTable
 from numpy import array, arange
+from astropy.tests.helper import assert_quantity_allclose
+
+from numpy import array, arange, dtype
 from numpy.testing import assert_allclose
 
 from django.test import TestCase, SimpleTestCase
@@ -35,6 +40,11 @@ from photometrics.catalog_subs import funpack_fits_file, get_header
 # Disable logging during testing
 import logging
 logger = logging.getLogger(__name__)
+
+from core.models import frame
+from core.models.body import Body
+from core.models.frame import Frame
+from core.models.blocks import Block, SuperBlock
 
 class ExternalCodeUnitTest(TestCase):
 
@@ -1908,3 +1918,77 @@ class TestUnpackTarball(TestCase):
     #
     #     self.assertEqual(expected_num_files,len(files))
     #     self.assertEqual(expected_file_name,files[1])
+
+class TestFrameAperturePhotometry(ExternalCodeUnitTest):
+
+    def setUp(self):
+        super(TestFrameAperturePhotometry, self).setUp()
+        # needs to copy and rename the hotpants file
+        self.test_hotpants_file = os.path.join(self.testfits_dir, 'hotpants_test_frame.fits')
+        self.test_hotpants_file_COPIED = os.path.join(self.test_dir, 'coj2m0-hotpants-test-e93.fits')
+        self.test_hotpants_file_COPIED = shutil.copy(os.path.abspath(self.test_hotpants_file), self.test_hotpants_file_COPIED)
+        self.test_hotpants_file_rms = os.path.join(self.testfits_dir, 'hotpants_test_frame.rms.fits')
+        self.test_hotpants_file_rms_COPIED = os.path.join(self.test_dir, 'coj2m0-hotpants-test-e93.rms.fits')
+        self.test_hotpants_file_rms_COPIED = shutil.copy(os.path.abspath(self.test_hotpants_file_rms), self.test_hotpants_file_rms_COPIED)
+        self.ephem_ra = 283.6448209
+        self.ephem_dec = -25.1285058
+        self.remove = False
+        self.debug_print = True
+
+    def test_rms_file_not_present(self):
+        #Remove RMS file for this test
+        os.remove(self.test_hotpants_file_rms_COPIED)
+        expected_results = None
+        results = single_frame_aperture_photometry(self.test_hotpants_file_COPIED, self.ephem_ra, self.ephem_dec, False)
+        self.assertEqual(expected_results, results)
+
+
+    def compare_tables(self, expected_table, table, column, num_to_check=6, precision=6):
+        for i in range(0, num_to_check+1):
+            self.assertAlmostEqual(expected_table[column][i], table[column][i], precision)
+
+    def test_single_frame_aperture_photometry(self):
+        #position_test = SkyCoord(48.56973336292208, 48.26605304144391, frame = "icrs")
+        #source_aperture = SkyCircularAperture(position_test, r = aperture_radius*u.arcsec)
+        #wcs = header['wcs']
+        #pix_source_aperture = source_aperture.to_pixel(wcs)
+        expected_results = QTable()
+        expected_results['id'] = [1]
+        expected_results['xcenter'] = [48.56973336292208] *u.pix
+        expected_results['ycenter'] = [48.26605304144391] * u.pix
+        expected_results['aperture_sum'] = [22315.303483993972]
+        expected_results['aperture_sum_err'] = [1537.5511918712682]
+        expected_results['mag'] = [-109.87150699385306]
+        expected_results['magerr'] = [0.074592439287853]
+        expected_results['aperture_radius'] = [5.80355155615856]
+        exp_dtypes = expected_results.dtype
+        #dtypes = [dtype(expected_results['id'][0]), dtype(expected_results['xcenter'][0]), dtype(expected_results['ycenter'][0]), dtype(expected_results['aperture_sum'][0]), dtype(expected_results['aperture_sum_err'][0]), dtype(expected_results['mag'][0]), dtype(expected_results['magerr'][0]), dtype(expected_results['aperture_radius'][0])]
+        print(f'expected dtypes: {exp_dtypes}')
+        #expected_results = QTable(names =('id', 'xcenter', 'ycenter', 'aperture_sum', 'aperture_sum_err', 'mag', 'magerr', 'aperture_radius'), dtype = ('i8', 'f8', 'f8', 'f8','f8','f8','f8','f8'))
+        #expected_results.add_row((1, u.Quantity(48.56973336292208, 'pix'), u.Quantity(48.26605304144391, 'pix'), 22315.303483993972, 1537.5511918712682, -109.87150699385306, 0.074592439287853, 5.80355155615856))
+        expected_result_array_form = np.array([1, 48.56973336292208, 48.26605304144391 , 22315.303483993972, 1537.5511918712682, -109.87150699385306, 0.074592439287853, 5.80355155615856])
+        #expected_results = os.path.basename(self.test_hotpants_file_COPIED)
+        results = single_frame_aperture_photometry(self.test_hotpants_file_COPIED, self.ephem_ra, self.ephem_dec, False)
+        #typetester = type(u.Quantity(48.26605304144391, 'pix'))
+        #print(f'TYPE CHECKING NOW {typetester}')
+        #print(f"RESULTS VALUES ISOLATED {results[0][0], results[0][1]/u.pix, results[0][2]/u.pix}")
+        #print(f'EXPECTED DTYPES{dtype(expected_results)}', f'ACTUAL DTYPES {dtype(results)}')
+        results_array = np.array([results[0][0], results[0][1]/u.pix, results[0][2]/u.pix, results[0][3], results[0][4], results[0][5], results[0][6], results[0][7]])
+        print(f"EXPECTED RESULTS \n")
+        print(f'{expected_results}')
+        print(f"ACTUAL RESULTS \n")
+        print(f"{results}")
+        print(f'dtypes {results.dtype}')
+        #final_type_tester = type(results[0][2])
+        #print(f'TYPE CHECKING RESULT {final_type_tester}')
+        #assert_quantity_allclose(expected_result_array_form, results_array)
+        #assert_quantity_allclose(expected_results, results, rtol=1e-5)
+        self.compare_tables(expected_results, results, column = 'id',num_to_check= 0)
+        self.compare_tables(expected_results, results, column = 'xcenter',num_to_check= 0)
+        self.compare_tables(expected_results, results, column = 'ycenter',num_to_check= 0)
+        self.compare_tables(expected_results, results, column = 'aperture_sum',num_to_check= 0)
+        self.compare_tables(expected_results, results, column = 'aperture_sum_err',num_to_check= 0)
+        self.compare_tables(expected_results, results, column = 'mag',num_to_check= 0)
+        self.compare_tables(expected_results, results, column = 'magerr',num_to_check= 0)
+        self.compare_tables(expected_results, results, column = 'aperture_radius',num_to_check= 0)
+        #assert_allclose(expected_results, results, rtol=1e-5)
