@@ -49,13 +49,17 @@ class Command(BaseCommand):
         if os.path.exists(reference_dir) is False:
             os.makedirs(reference_dir)
 
-        sci_dir = options['datadir']
-        dest_dir = options['datadir']
+        # Ensure paths end in slashes
+        sci_dir = os.path.join(options['datadir'], '')
+        dest_dir = os.path.join(options['datadir'], '')
 
         now = datetime.utcnow()
         now_string = now.strftime('%Y-%m-%d %H:%M')
         proc_filters = options['filter'] or 'all'
-        self.stdout.write(f"==== Making subtracted frames {now_string} ====")
+        prefix_text = ''
+        if options['execute'] is False:
+            prefix_text = '(dry-run) '
+        self.stdout.write(f"==== Making {prefix_text}subtracted frames {now_string} ====")
         self.stdout.write(f"Block and filters to run for: Block Request# {options['blocknum']} filters: {proc_filters}")
 
         ### Find block corresponding to passed request number
@@ -65,6 +69,10 @@ class Command(BaseCommand):
             sys.exit(-1)
         obs_block = obs_blocks[0]
 
+        # Verify directory and Block dayobs roughly match
+        block_dayobs = obs_block.get_blockdayobs
+        if block_dayobs not in sci_dir:
+            self.stdout.write(f"Warning: Date of observation ({block_dayobs}) not found in path {sci_dir}")
         frames = Frame.objects.filter(block=obs_block, frametype=Frame.NEOX_RED_FRAMETYPE).order_by('midpoint')
         # List of the filters used on these frames
         obs_filters = frames.order_by('filter').values_list("filter", flat=True).distinct()
@@ -87,7 +95,7 @@ class Command(BaseCommand):
             sys.exit(-1)
 
         self.stdout.write(f"\nMaking subtractions for: {field.current_name()} Block ID: {obs_block.id} ReqNum: {obs_block.request_number} Site: {obs_block.site}\n" \
-                          f"Filter(s): {filter_string} Frames: {frames.earliest('midpoint')} -> {frames.latest('midpoint')} Num Frames: {num_frames}")
+                          f"Filter(s): {filter_string} Frames: {frames.earliest('midpoint')} -> {frames.latest('midpoint')} #Frames for Block: {num_frames}")
 
         ### Combine frames by filter type
         for obs_filter in obs_filters:
@@ -105,7 +113,7 @@ class Command(BaseCommand):
                 out.append(f'{frame_prefix}{start:04d} -- {end[-1]:04d}{frame_suffix}')
             filenames = ", ".join(out)
 
-            msg = f"\nFilter: {obs_filter:>2s} Frames: {filenames} Num frames: {filtered_frames.count()}"
+            msg = f"\nFilter: {obs_filter:>2s} Frames: {filenames} #Frames for filter: {filtered_frames.count()}"
             self.stdout.write(msg)
 
             ref_framepath = determine_reference_frame_for_block(obs_block, reference_dir, obs_filter)
