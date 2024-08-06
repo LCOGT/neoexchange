@@ -591,15 +591,18 @@ def fetch_NEOCP_observations(obj_id_or_page):
     return obs_lines
 
 
-def fetch_mpcobs(asteroid, debug=False):
+def fetch_mpcobs(asteroid, debug=False, ssl_verify=True):
     """Performs a search on the MPC Database for <asteroid> and returns the
-    resulting observation as a list of text observations."""
+    resulting observation as a list of text observations.
+    SSL certificate and hostname verifcation can be bypassed in an emergency
+    by setting ssl_verify=False ((small?) Security Risk).
+    """
 
     asteroid = asteroid.strip().replace(' ', '+')
     html_id = asteroid.replace('/', '%2F')
     query_url = 'https://www.minorplanetcenter.net/db_search/show_object?object_id=' + html_id
 
-    page = fetchpage_and_make_soup(query_url)
+    page = fetchpage_and_make_soup(query_url, ssl_verify=ssl_verify)
     if page is None:
         return None
 
@@ -853,9 +856,12 @@ def clean_element(element):
     return key, value
 
 
-def fetch_mpcdb_page(asteroid, dbg=False):
+def fetch_mpcdb_page(asteroid, dbg=False, ssl_verify=True):
     """Performs a search on the MPC Database for <asteroid> and returns a
-    BeautifulSoup object of the page (for future use by parse_mpcorbit())"""
+    BeautifulSoup object of the page (for future use by parse_mpcorbit()).
+    SSL certificate and hostname verifcation can be bypassed in an emergency
+    by setting ssl_verify=False ((small?) Security Risk).
+    """
 
     # Strip off any leading or trailing space and replace internal space with a
     # plus sign
@@ -866,7 +872,7 @@ def fetch_mpcdb_page(asteroid, dbg=False):
         print("Asteroid  after=", asteroid)
     query_url = 'https://www.minorplanetcenter.net/db_search/show_object?object_id=' + asteroid
 
-    page = fetchpage_and_make_soup(query_url)
+    page = fetchpage_and_make_soup(query_url, ssl_verify=ssl_verify)
     if page is None:
         return None
 

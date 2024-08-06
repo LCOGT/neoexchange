@@ -2984,19 +2984,21 @@ def clean_mpcorbit(elements, dbg=False, origin='M'):
     return params
 
 
-def update_MPC_orbit(obj_id_or_page, dbg=False, origin='M', force=False):
+def update_MPC_orbit(obj_id_or_page, dbg=False, origin='M', force=False, ssl_verify=True):
     """
     Performs remote look up of orbital elements for object with id obj_id_or_page,
     Gets or creates corresponding Body instance and updates entry.
     Alternatively obj_id_or_page can be a BeautifulSoup object, in which case
     the call to fetch_mpcdb_page() will be skipped and the passed BeautifulSoup
     object will parsed.
+    SSL certificate and hostname verifcation can be bypassed in an emergency
+    by setting ssl_verify=False ((small?) Security Risk).
     """
 
     obj_id = None
     if type(obj_id_or_page) != BeautifulSoup:
         obj_id = obj_id_or_page
-        page = fetch_mpcdb_page(obj_id, dbg)
+        page = fetch_mpcdb_page(obj_id, dbg, ssl_verify=ssl_verify)
 
         if page is None:
             logger.warning("Could not find elements for %s" % obj_id)
@@ -3235,7 +3237,7 @@ def ingest_new_object(orbit_file, obs_file=None, dbg=False):
     return body, created, msg
 
 
-def update_MPC_obs(obj_id_or_page):
+def update_MPC_obs(obj_id_or_page, ssl_verify=True):
     """
     Performs remote look up of observations for object with id obj_id_or_page,
     Gets or creates corresponding Body instance and updates or creates
@@ -3243,11 +3245,13 @@ def update_MPC_obs(obj_id_or_page):
     Alternatively obj_id_or_page can be a BeautifulSoup object, in which case
     the call to fetch_mpcdb_page() will be skipped and the passed BeautifulSoup
     object will parsed.
+    SSL certificate and hostname verifcation can be bypassed in an emergency
+    by setting ssl_verify=False ((small?) Security Risk).
     """
     obj_id = None
     if type(obj_id_or_page) != BeautifulSoup:
         obj_id = obj_id_or_page
-        obslines = fetch_mpcobs(obj_id)
+        obslines = fetch_mpcobs(obj_id, ssl_verify=ssl_verify)
 
         if obslines is None:
             logger.warning("Could not find observations for %s" % obj_id)
