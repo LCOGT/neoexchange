@@ -126,23 +126,38 @@ def random_delay(lower_limit=10, upper_limit=20):
     return delay
 
 
-def fetchpage_and_make_soup(url, fakeagent=False, dbg=False, parser="html.parser"):
+def fetchpage_and_make_soup(url, fakeagent=False, dbg=False, parser="html.parser", ssl_verify=True):
     """Fetches the specified URL from <url> and parses it using BeautifulSoup.
     If [fakeagent] is set to True, we will pretend to be a Firefox browser on
     Linux rather than as Python-urllib (in case of anti-machine filtering).
     If [parser] is specified, try and use that BeautifulSoup parser (which
     needs to be installed). Defaults to "html.parser" if not specified; may need
     to use "html5lib" to properly parse malformed MPC pages.
+    SSL certificate and hostname verifcation can be bypassed in an emergency
+    by setting ssl_verify=False ((small?) Security Risk).
 
     Returns the page as a BeautifulSoup object if all was OK or None if the
     page retrieval failed."""
+
+    import ssl
 
     req_headers = {}
     if fakeagent is True:
         req_headers = {'User-Agent': "Mozilla/5.0 (X11; Linux x86_64; rv:15.0) Gecko/20100101 Firefox/15.0",
                       }
+    ssl_context = ssl.create_default_context()
+    if ssl_verify is False:
+        logger.warning("Warning: Disabling SSL verification")
+        if dbg: print("Warning: Disabling SSL verification")
+        ssl_context.check_hostname = False
+        ssl_context.verify_mode = ssl.CERT_NONE
+
     req_page = urllib.request.Request(url, headers=req_headers)
     opener = urllib.request.build_opener()  # create an opener object
+    # Add updated HTTPS handler with new SSL context. Remove old handler first
+    index = [index for index, item in enumerate(opener.handlers) if type(item) == urllib.request.HTTPSHandler]
+    opener.handlers.pop(index[0])
+    opener.add_handler(urllib.request.HTTPSHandler(context=ssl_context))
     try:
         response = opener.open(req_page, timeout=20)
     except (urllib.error.HTTPError, urllib.error.URLError) as e:
