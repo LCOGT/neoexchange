@@ -1806,6 +1806,100 @@ class TestGetSCAMPXMLInfo(SimpleTestCase):
                 self.assertEqual(expected_results[key], results[key], "Failure on " + key)
 
 
+class TestUpdateFITSdia(SimpleTestCase):
+
+    def setUp(self):
+
+        self.test_hotpants_file = os.path.abspath(os.path.join('photometrics', 'tests', 'hotpants_test_frame.fits'))
+        self.test_hotpantsrms_file = os.path.abspath(os.path.join('photometrics', 'tests', 'hotpants_test_frame.rms.fits'))
+        self.hotpants_header_file = os.path.abspath(os.path.join('photometrics', 'tests', 'hotpants_test_header'))
+
+        self.test_dir = tempfile.mkdtemp(prefix='tmp_neox_')
+
+        # Need to copy files as we're modifying them.
+        self.hotpants_file_output = os.path.abspath(os.path.join(self.test_dir, 'example-hotpants-e93.fits'))
+        self.test_hotpants_file = shutil.copy(self.test_hotpants_file, self.hotpants_file_output)
+        self.hotpantsrms_file_output = os.path.abspath(os.path.join(self.test_dir, 'example-hotpants-e93.rms.fits'))
+        self.test_hotpantsrms_file = shutil.copy(self.test_hotpantsrms_file, self.hotpantsrms_file_output)
+        self.hotpants_header_file_output = os.path.abspath(os.path.join(self.test_dir, os.path.basename(self.hotpants_header_file)))
+        self.hotpants_header_file = shutil.copy(self.hotpants_header_file, self.hotpants_header_file_output)
+
+        self.test_header, self.test_cattype = get_header(self.hotpants_file_output)
+
+        self.precision = 7
+        self.debug_print = False
+        self.remove = True
+
+        # Disable anything below CRITICAL level
+        logging.disable(logging.CRITICAL)
+
+    def tearDown(self):
+        if self.remove:
+            try:
+                files_to_remove = glob(os.path.join(self.test_dir, '*'))
+                for file_to_rm in files_to_remove:
+                    os.remove(file_to_rm)
+            except OSError:
+                print("Error removing files in temporary test directory", self.test_dir)
+            try:
+                os.rmdir(self.test_dir)
+                if self.debug_print: print("Removed", self.test_dir)
+            except OSError:
+                print("Error removing temporary test directory", self.test_dir)
+
+    def test_missing_file(self):
+        expected_status = (-1, None)
+
+        status = updateFITSdia('/foo/bar.fits')
+
+        self.assertEqual(expected_status, status)
+
+    def test_bad_type(self):
+        expected_status = (-1, None)
+
+        status = updateFITSdia(self.hotpants_header_file)
+
+        self.assertEqual(expected_status, status)
+
+    def test_new_l1zp(self):
+        header = deepcopy(self.test_header)
+        header['pprecipe'] = 'NEOEXCHANGE DIA'
+        header['rlevel'] = 93
+
+        expected_status = 0
+        expected_keywords = { 'pprecipe' : 'PPRECIPE',
+                              'rlevel' : 'RLEVEL',
+                            }
+
+        status, new_header = updateFITSdia(self.hotpants_file_output)
+
+        self.assertEqual(expected_status, status)
+
+        for key, fits_keyword in expected_keywords.items():
+            self.assertTrue(fits_keyword in new_header, "Failure on " + fits_keyword)
+            self.assertEqual(header[key], new_header[fits_keyword])
+
+    def test_existing_rlevel(self):
+        header = deepcopy(self.test_header)
+        header['pprecipe'] = 'NEOEXCHANGE DIA'
+        header['rlevel'] = 93
+        with fits.open(self.hotpants_file_output, mode='update') as hdul:
+            fits_header = hdul[0].header
+            hdul.flush()
+
+        expected_status = 0
+        expected_keywords = { 'pprecipe' : 'PPRECIPE',
+                              'rlevel' : 'RLEVEL',
+                            }
+        status, new_header = updateFITSdia(self.hotpants_file_output)
+
+        self.assertEqual(expected_status, status)
+
+        for key, fits_keyword in expected_keywords.items():
+            self.assertTrue(fits_keyword in new_header, "Failure on " + fits_keyword)
+            self.assertEqual(header[key], new_header[fits_keyword])
+
+
 class TestReadMTDSFile(TestCase):
 
     def setUp(self):

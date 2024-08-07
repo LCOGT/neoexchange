@@ -1492,6 +1492,32 @@ def updateFITScalib(header, fits_file, catalog_type='BANZAI'):
 
     return status, fits_header
 
+def updateFITSdia(fits_file):
+    """Update reduction level and post-processing in the passed <fits_file>
+    """
+
+    try:
+        hdulist = fits.open(fits_file, mode='update')
+        header = hdulist[0].header
+    except (IOError, IndexError) as e:
+        logger.error("Unable to open FITS image %s (Reason=%s)" % (fits_file, e))
+        return -1, None
+
+    # header keywords we have
+    file_bits = fits_file.split(os.extsep)
+    new_red_level = 93
+    if len(file_bits) == 2:
+        filename_noext = file_bits[0]
+        new_red_level = int(filename_noext[-2:])
+    # Swope files don't have a RLEVEL header so assume one corresponding to the proc level
+    if new_red_level != header.get('rlevel', 71):
+        print(f"Updating header RLEVEL to: {new_red_level}")
+        header['RLEVEL'] = new_red_level
+    header['PPRECIPE'] = 'NEOEXCHANGE DIA'
+    hdulist.close()
+
+    return 0, header
+
 def read_mtds_file(mtdsfile, dbg=False):
     """Read a detections file produced by mtdlink and return a dictionary of the
     version number, number of frames, number of detections and a list of
