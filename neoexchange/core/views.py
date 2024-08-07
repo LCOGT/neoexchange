@@ -75,10 +75,8 @@ from astrometrics.sources_subs import fetchpage_and_make_soup, packed_to_normal,
     store_jpl_physparams
 from astrometrics.time_subs import extract_mpc_epoch, parse_neocp_date, \
     parse_neocp_decimal_date, get_semester_dates, jd_utc2datetime, datetime2st
-import photometrics
-import photometrics.catalog_subs
 from photometrics.external_codes import run_sextractor, run_swarp, run_hotpants, run_scamp, updateFITSWCS,\
-    read_mtds_file, unpack_tarball, run_findorb, get_scamp_xml_info
+    read_mtds_file, unpack_tarball, run_findorb, get_scamp_xml_info, single_frame_aperture_photometry
 from photometrics.catalog_subs import open_fits_catalog, get_header, get_catalog_header, \
     determine_filenames, increment_red_level, funpack_fits_file, update_ldac_catalog_wcs, FITSHdrException, \
     get_reference_catalog, reset_database_connection, sanitize_object_name
@@ -89,15 +87,9 @@ from core.mpc_submit import email_report_to_mpc
 from core.archive_subs import lco_api_call
 from core.utils import search
 from core.blocksfind import find_frames, get_ephem, ephem_interpolate
-from photometrics.external_codes import single_frame_aperture_photometry
 from photometrics.SA_scatter import readSources, genGalPlane, plotScatter, \
     plotFormat
 from core.plots import spec_plot, lin_vis_plot, lc_plot
-from core.models.blocks import Block, SuperBlock
-
-# import matplotlib
-# matplotlib.use('Agg')
-import matplotlib.pyplot as plt
 
 logger = logging.getLogger(__name__)
 
