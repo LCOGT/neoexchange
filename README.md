@@ -6,6 +6,9 @@ Portal for scheduling observations of NEOs (and other Solar System objects) usin
 
 ## History
 
+### 3.15.2
+* Add suport for disabling SSL verification in data pulls for emergency use e.g. for the recent MPC website issues. (Issue #646)
+
 ### 3.15.1
 * Bugfix for QHY support and objects leaving the CCD when using the central 30'x30' region and half-rate tracking. (Issue #644)
 
