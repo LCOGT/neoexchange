@@ -1615,7 +1615,7 @@ def create_pds_collection(output_dir, input_dir, files, collection_type, schema_
 def make_pds_asteroid_name(body_or_bodyname):
 
     filename = pds_name = None
-    if isinstance(body_or_bodyname, Body):
+    if hasattr(body_or_bodyname, 'full_name'):
         bodyname = body_or_bodyname.full_name()
     else:
         bodyname = body_or_bodyname
