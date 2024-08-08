@@ -134,7 +134,7 @@ class Command(BaseCommand):
 
                 ## Find and process science frames
                 sci_files = sorted(glob(sci_dir + f'{frame.filename[0:14]}*e92.fits'))
-                self.stdout.write(dest_ref_name, sci_dir, configs_dir, dest_dir, len(sci_files))
+                self.stdout.write(f"Found {len(sci_files)} e92 frames with correct rootname in {sci_dir}, processing using {os.path.basename(dest_ref_name)}")
                 start = time.time()
                 if options['execute']:
                     status = run_hotpants_subtraction(dest_ref_name, sci_dir, configs_dir, dest_dir, sci_files)
