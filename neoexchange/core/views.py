@@ -3585,14 +3585,33 @@ def run_hotpants_subtraction(ref, sci_dir, configs_dir, dest_dir, sci_files=None
 
     # Loop over each sci image and subtract it
     for sci in sci_files:
-        status = run_hotpants(ref, sci, configs_dir, dest_dir)
+        hotpants_file = increment_red_level(sci)
+        hotpants_filepath = os.path.join(dest_dir, hotpants_file)
+        if os.path.exists(hotpants_filepath) is False:
+            status = run_hotpants(ref, sci, configs_dir, dest_dir)
+        else:
+            logger.info(f"{hotpants_file} already exists.")
+            status = 0
         if status != 0:
             return status
         # Update reduction level in the subtracted frame and RMS files
-        hotpants_file = increment_red_level(sci)
-        hotpants_filepath = os.path.join(dest_dir, hotpants_file)
         status, header = updateFITSdia(hotpants_filepath)
-
+        # Create Frame entry for e93 frame
+        block = find_block_for_frame(sci)
+        if block and status == 0:
+            neox_header = get_catalog_header(header, 'HOTPANTS')
+            if len(neox_header) > 0:
+                num_new_frames = make_new_catalog_entry(hotpants_filepath, neox_header, block, Frame.NEOX_SUB_FRAMETYPE)
+                status
+            else:
+                logger.warning(f"Error parsing header of HOTPANTS file {hotpants_filepath}")
+                status = -2
+        else:
+            if status != 0:
+                logger.warning("Bad status from updateFITSdia")
+            else:
+                logger.warning(f"No Block found for {sci}")
+                status = -3
     return status
 
 def find_block_for_frame(catfile):
