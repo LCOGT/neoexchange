@@ -76,7 +76,8 @@ from astrometrics.sources_subs import fetchpage_and_make_soup, packed_to_normal,
 from astrometrics.time_subs import extract_mpc_epoch, parse_neocp_date, \
     parse_neocp_decimal_date, get_semester_dates, jd_utc2datetime, datetime2st
 from photometrics.external_codes import run_sextractor, run_swarp, run_hotpants, run_scamp, updateFITSWCS,\
-    read_mtds_file, unpack_tarball, run_findorb, get_scamp_xml_info, single_frame_aperture_photometry
+    read_mtds_file, unpack_tarball, run_findorb, get_scamp_xml_info, single_frame_aperture_photometry,\
+    updateFITSdia
 from photometrics.catalog_subs import open_fits_catalog, get_header, get_catalog_header, \
     determine_filenames, increment_red_level, funpack_fits_file, update_ldac_catalog_wcs, FITSHdrException, \
     get_reference_catalog, reset_database_connection, sanitize_object_name
@@ -3587,6 +3588,10 @@ def run_hotpants_subtraction(ref, sci_dir, configs_dir, dest_dir, sci_files=None
         status = run_hotpants(ref, sci, configs_dir, dest_dir)
         if status != 0:
             return status
+        # Update reduction level in the subtracted frame and RMS files
+        hotpants_file = increment_red_level(sci)
+        hotpants_filepath = os.path.join(dest_dir, hotpants_file)
+        status, header = updateFITSdia(hotpants_filepath)
 
     return status
 

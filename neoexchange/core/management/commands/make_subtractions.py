@@ -119,7 +119,7 @@ class Command(BaseCommand):
             ref_framepath = determine_reference_frame_for_block(obs_block, reference_dir, obs_filter)
             if ref_framepath:
                 ref = ref_framepath
-                print(f"Found reference frame {os.path.basename(ref)} in {os.path.dirname(ref)}")
+                self.stdout.write(f"Found reference frame {os.path.basename(ref)} in {os.path.dirname(ref)}")
                 ## Symlink reference and rms frames
                 frame = filtered_frames[0]
                 dest_ref_name = os.path.join(dest_dir, f'reference_{obs_block.site}_{frame.instrument}_{obs_filter}.fits')
@@ -134,12 +134,12 @@ class Command(BaseCommand):
 
                 ## Find and process science frames
                 sci_files = sorted(glob(sci_dir + f'{frame.filename[0:14]}*e92.fits'))
-                print(dest_ref_name, sci_dir, configs_dir, dest_dir, len(sci_files))
+                self.stdout.write(dest_ref_name, sci_dir, configs_dir, dest_dir, len(sci_files))
                 start = time.time()
                 if options['execute']:
                     status = run_hotpants_subtraction(dest_ref_name, sci_dir, configs_dir, dest_dir, sci_files)
                 else:
-                    print("run_hotpants_subtraction(dest_ref_name, sci_dir, configs_dir, dest_dir, sci_files)")
+                    self.stdout.write("SIM: Would run: run_hotpants_subtraction(dest_ref_name, sci_dir, configs_dir, dest_dir, sci_files)")
                 end = time.time()
-                print(f"subtraction took {end-start:.1f} seconds for {len(sci_files)} frames")
+                self.stdout.write(f"subtraction took {end-start:.1f} seconds for {len(sci_files)} frames")
 
