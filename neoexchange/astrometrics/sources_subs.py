@@ -153,11 +153,8 @@ def fetchpage_and_make_soup(url, fakeagent=False, dbg=False, parser="html.parser
         ssl_context.verify_mode = ssl.CERT_NONE
 
     req_page = urllib.request.Request(url, headers=req_headers)
-    opener = urllib.request.build_opener()  # create an opener object
-    # Add updated HTTPS handler with new SSL context. Remove old handler first
-    index = [index for index, item in enumerate(opener.handlers) if type(item) == urllib.request.HTTPSHandler]
-    opener.handlers.pop(index[0])
-    opener.add_handler(urllib.request.HTTPSHandler(context=ssl_context))
+    # Add updated HTTPS handler with new SSL context.
+    opener = urllib.request.build_opener(urllib.request.HTTPSHandler(context=ssl_context))  # create an opener object
     try:
         response = opener.open(req_page, timeout=20)
     except (urllib.error.HTTPError, urllib.error.URLError) as e:
