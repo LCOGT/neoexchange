@@ -54,8 +54,8 @@ def summarize_observations(target_name='65803', start_date='2022-07-15', proposa
         num_all_frames = all_frames.count()
         srcs = SourceMeasurement.objects.filter(frame__block=block)
         block_length_hrs = -1
-        username = block.superblock.proposal.pi
-        if num_raw_frames > min_frames:
+        if num_raw_frames > min_frames and block.superblock:
+            username = block.superblock.proposal.pi or 'Unknown'
             filters = all_raw_frames.values_list('filter',flat=True).distinct()
             for filter_count, obs_filter in enumerate(filters):
                 filter_str = obs_filter #", ".join(list(filters))
