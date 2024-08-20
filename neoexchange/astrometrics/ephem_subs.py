@@ -2391,17 +2391,29 @@ def get_planetary_elements(planet=None):
         return_elements = planet_elements
     return return_elements
 
-def convert_findorb_elements(elements_json):
+def convert_findorb_elements(elements_json, now=None):
     """Converts JSON elements output from find_orb in the elem_short.json file
     to NEOexchange format"""
 
+    datetime_now = now or datetime.utcnow()
+    fsec_str = '%Y-%m-%dT%H:%M:%S.%fZ'
+
     obj = elements_json['objects'][elements_json['ids'][0]]
     elements = obj['elements']
+    obs = obj['observations']
+    td = datetime_now - datetime.strptime(obs['latest_used iso'], fsec_str)
+    td_days = td.total_seconds() / 86400.0
+    arc_length = datetime.strptime(obs['latest_used iso'], fsec_str) - datetime.strptime(obs['earliest_used iso'], fsec_str)
+    arc_length_days = arc_length.total_seconds() / 86400.0
+
     neox_elements = { 'name' : obj['object'].replace('(', '').replace(')', ''),
                       'origin' : 'F',
                       'elements_type' : 'MPC_MINOR_PLANET',
                       'epochofel' : datetime.strptime(elements['epoch_iso'], '%Y-%m-%dT%H:%M:%SZ'),
-                      'epochofperih' : datetime.strptime(elements['Tp_iso'], '%Y-%m-%dT%H:%M:%S.%fZ'),
+                      'epochofperih' : datetime.strptime(elements['Tp_iso'], fsec_str),
+                      'arc_length' : arc_length_days,
+                      'not_seen' : td_days,
+                      'num_obs' : obs['used']
                     }
     # Mapping from find_orb -> NEOx element sets for direct values
     mapping = {
@@ -2435,5 +2447,6 @@ def convert_findorb_elements(elements_json):
         # Asteroid, Remove cometary fields
         neox_elements['epochofperih'] = None
         neox_elements['perihdist'] = None
+    neox_elements['updated'] = True
 
     return neox_elements

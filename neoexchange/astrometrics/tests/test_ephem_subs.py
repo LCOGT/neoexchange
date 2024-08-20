@@ -4099,21 +4099,33 @@ class TestConvertFOElements(SimpleTestCase):
     def setUp(self):
         with open(os.path.join('astrometrics', 'tests', 'test_fo_elements.json'), 'r') as fp:
             self.test_json = json.load(fp)
+            self.test_obs = self.test_json['objects'][self.test_json['ids'][0]]['observations']
         with open(os.path.join('astrometrics', 'tests', 'test_fo_elements_comet.json'), 'r') as fp:
             self.test_comet_json = json.load(fp)
+            self.test_comet_obs = self.test_comet_json['objects'][self.test_comet_json['ids'][0]]['observations']
 
         self.maxDiff = None
+        self.tolerance = 5
+        self.now = datetime(2024, 8, 20, 20, 30)
 
     def test_65803_keys(self):
-        expected_keys = ['name', 'origin', 'elements_type', 'epochofel', 'epochofperih', 'meananom', 'meandist',  'eccentricity',  'perihdist', 'orbinc', 'argofperih', 'longascnode', 'abs_mag', 'slope', 'orbit_rms']
-        expected_types = [str, str, str, datetime, None, float, float, float, None, float, float, float, float, float, float]
+        expected_keys = ['name', 'origin', 'elements_type', 'epochofel',
+                         'epochofperih', 'arc_length', 'not_seen',
+                         'num_obs', 'meananom', 'meandist',  'eccentricity',
+                         'perihdist', 'orbinc', 'argofperih', 'longascnode',
+                         'abs_mag', 'slope', 'orbit_rms', 'updated']
+        expected_types = [str, str, str, datetime, None, float, float, int,
+            float, float, float, None, float, float, float, float, float, float]
         expected_values = { 'elements_type' : 'MPC_MINOR_PLANET',
                             'epochofel' : datetime(2022, 9, 25),
                             'epochofperih' : None,
-                            'perihdist' : None
+                            'perihdist' : None,
+                            'arc_length': self.test_obs["latest_used"] - self.test_obs["earliest_used"],
+                            'num_obs' : 5278,
+                            'not_seen' : 567.4291782407407
                           }
 
-        new_elements = convert_findorb_elements(self.test_json)
+        new_elements = convert_findorb_elements(self.test_json, now=self.now)
 
         self.assertEqual(expected_keys, list(new_elements.keys()))
         for expected_type, key in zip(expected_types, list(new_elements.keys())):
@@ -4122,20 +4134,31 @@ class TestConvertFOElements(SimpleTestCase):
             else:
                 self.assertEqual(expected_type, type(new_elements[key]), msg="Failure on " + key)
         for key, expected_value in expected_values.items():
-            self.assertEqual(expected_value, new_elements[key])
+            if type(expected_value) == float:
+                self.assertAlmostEqual(expected_value, new_elements[key], self.tolerance)
+            else:
+                self.assertEqual(expected_value, new_elements[key])
 
     def test_comet_keys(self):
-        expected_keys = ['name', 'origin', 'elements_type', 'epochofel', 'epochofperih', 'meandist',  'eccentricity',  'perihdist', 'orbinc', 'argofperih', 'longascnode', 'abs_mag', 'slope', 'orbit_rms', 'meananom']
-        expected_types = [str, str, str, datetime, datetime, None, float, float, float, float, float, float, float, float, None]
+        expected_keys = ['name', 'origin', 'elements_type', 'epochofel',
+                         'epochofperih', 'arc_length', 'not_seen',
+                         'num_obs', 'meandist', 'eccentricity', 'perihdist',
+                         'orbinc', 'argofperih', 'longascnode', 'abs_mag',
+                         'slope', 'orbit_rms', 'meananom', 'updated']
+        expected_types = [str, str, str, datetime, datetime, float, float, int,
+            None, float, float, float, float, float, float, float, float, None]
         expected_values = { 'elements_type' : 'MPC_COMET',
                             'epochofel' : datetime(2024, 8, 2),
                             'epochofperih' : datetime(2024, 9, 27, 17, 52, 23, int(1e6 * 0.34)),
                             'meandist' : None,
                             'meananom' : None,
-                            'perihdist' : 0.3914363976578
+                            'perihdist' : 0.3914363976578,
+                            'arc_length': self.test_comet_obs["latest_used"] - self.test_comet_obs["earliest_used"],
+                            'num_obs' : 4760,
+                            'not_seen' : 18.1219866
                           }
 
-        new_elements = convert_findorb_elements(self.test_comet_json)
+        new_elements = convert_findorb_elements(self.test_comet_json, now=self.now)
 
         self.assertEqual(expected_keys, list(new_elements.keys()))
         for expected_type, key in zip(expected_types, list(new_elements.keys())):
@@ -4144,4 +4167,7 @@ class TestConvertFOElements(SimpleTestCase):
             else:
                 self.assertEqual(expected_type, type(new_elements[key]), msg="Failure on " + key)
         for key, expected_value in expected_values.items():
-            self.assertEqual(expected_value, new_elements[key])
+            if type(expected_value) == float:
+                self.assertAlmostEqual(expected_value, new_elements[key], self.tolerance)
+            else:
+                self.assertEqual(expected_value, new_elements[key])
