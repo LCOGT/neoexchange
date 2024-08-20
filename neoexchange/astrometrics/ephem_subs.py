@@ -2450,5 +2450,6 @@ def convert_findorb_elements(elements_json, now=None):
         neox_elements['epochofperih'] = None
         neox_elements['perihdist'] = None
     neox_elements['updated'] = True
+    neox_elements['update_time'] = datetime_now
 
     return neox_elements
