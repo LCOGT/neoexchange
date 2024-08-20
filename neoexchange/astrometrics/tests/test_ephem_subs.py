@@ -4099,15 +4099,49 @@ class TestConvertFOElements(SimpleTestCase):
     def setUp(self):
         with open(os.path.join('astrometrics', 'tests', 'test_fo_elements.json'), 'r') as fp:
             self.test_json = json.load(fp)
+        with open(os.path.join('astrometrics', 'tests', 'test_fo_elements_comet.json'), 'r') as fp:
+            self.test_comet_json = json.load(fp)
 
         self.maxDiff = None
 
     def test_65803_keys(self):
         expected_keys = ['name', 'origin', 'elements_type', 'epochofel', 'epochofperih', 'meananom', 'meandist',  'eccentricity',  'perihdist', 'orbinc', 'argofperih', 'longascnode', 'abs_mag', 'slope', 'orbit_rms']
-        expected_types = [str, str, str, datetime, datetime, float, float, float, float, float, float, float, float, float, float]
+        expected_types = [str, str, str, datetime, None, float, float, float, None, float, float, float, float, float, float]
+        expected_values = { 'elements_type' : 'MPC_MINOR_PLANET',
+                            'epochofel' : datetime(2022, 9, 25),
+                            'epochofperih' : None,
+                            'perihdist' : None
+                          }
 
         new_elements = convert_findorb_elements(self.test_json)
 
         self.assertEqual(expected_keys, list(new_elements.keys()))
         for expected_type, key in zip(expected_types, list(new_elements.keys())):
-            self.assertEqual(expected_type, type(new_elements[key]), msg="Failure on " + key)
+            if expected_type is None:
+                self.assertTrue(new_elements[key] is None, msg="Failure on " + key)
+            else:
+                self.assertEqual(expected_type, type(new_elements[key]), msg="Failure on " + key)
+        for key, expected_value in expected_values.items():
+            self.assertEqual(expected_value, new_elements[key])
+
+    def test_comet_keys(self):
+        expected_keys = ['name', 'origin', 'elements_type', 'epochofel', 'epochofperih', 'meandist',  'eccentricity',  'perihdist', 'orbinc', 'argofperih', 'longascnode', 'abs_mag', 'slope', 'orbit_rms', 'meananom']
+        expected_types = [str, str, str, datetime, datetime, None, float, float, float, float, float, float, float, float, None]
+        expected_values = { 'elements_type' : 'MPC_COMET',
+                            'epochofel' : datetime(2024, 8, 2),
+                            'epochofperih' : datetime(2024, 9, 27, 17, 52, 23, int(1e6 * 0.34)),
+                            'meandist' : None,
+                            'meananom' : None,
+                            'perihdist' : 0.3914363976578
+                          }
+
+        new_elements = convert_findorb_elements(self.test_comet_json)
+
+        self.assertEqual(expected_keys, list(new_elements.keys()))
+        for expected_type, key in zip(expected_types, list(new_elements.keys())):
+            if expected_type is None:
+                self.assertTrue(new_elements[key] is None, msg="Failure on " + key)
+            else:
+                self.assertEqual(expected_type, type(new_elements[key]), msg="Failure on " + key)
+        for key, expected_value in expected_values.items():
+            self.assertEqual(expected_value, new_elements[key])

@@ -2417,7 +2417,23 @@ def convert_findorb_elements(elements_json):
                 'rms_residual' : 'orbit_rms'
             }
 
+    comet = False
     for fo_key, neox_key in mapping.items():
-        neox_elements[neox_key] = elements[fo_key]
+        try:
+            neox_elements[neox_key] = elements[fo_key]
+        except KeyError:
+            if fo_key == 'M':
+                # Likely we have a comet so need to flip somethings afterwards
+                comet = True
+            else:
+                raise
+    if comet is True:
+        neox_elements['elements_type'] = 'MPC_COMET'
+        neox_elements['meandist'] = None
+        neox_elements['meananom'] = None
+    else:
+        # Asteroid, Remove cometary fields
+        neox_elements['epochofperih'] = None
+        neox_elements['perihdist'] = None
 
     return neox_elements
