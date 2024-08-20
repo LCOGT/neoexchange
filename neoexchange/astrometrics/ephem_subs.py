@@ -2398,6 +2398,8 @@ def convert_findorb_elements(elements_json, now=None):
     datetime_now = now or datetime.utcnow()
     fsec_str = '%Y-%m-%dT%H:%M:%S.%fZ'
 
+    if 'objects' not in elements_json or 'ids' not in elements_json:
+        return {}
     obj = elements_json['objects'][elements_json['ids'][0]]
     elements = obj['elements']
     obs = obj['observations']

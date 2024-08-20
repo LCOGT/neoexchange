@@ -4108,6 +4108,27 @@ class TestConvertFOElements(SimpleTestCase):
         self.tolerance = 5
         self.now = datetime(2024, 8, 20, 20, 30)
 
+    def test_blank(self):
+        expected_elements = {}
+
+        new_elements = convert_findorb_elements({})
+
+        self.assertEqual(expected_elements, new_elements)
+
+    def test_no_objects(self):
+        expected_elements = {}
+
+        new_elements = convert_findorb_elements({"ids" : [ "wibble"]})
+
+        self.assertEqual(expected_elements, new_elements)
+
+    def test_no_ids(self):
+        expected_elements = {}
+
+        new_elements = convert_findorb_elements({"objects" : { "wibble" : {} }})
+
+        self.assertEqual(expected_elements, new_elements)
+
     def test_65803_keys(self):
         expected_keys = ['name', 'origin', 'elements_type', 'epochofel',
                          'epochofperih', 'arc_length', 'not_seen',
