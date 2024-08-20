@@ -2401,6 +2401,7 @@ def convert_findorb_elements(elements_json):
                       'origin' : 'F',
                       'elements_type' : 'MPC_MINOR_PLANET',
                       'epochofel' : datetime.strptime(elements['epoch_iso'], '%Y-%m-%dT%H:%M:%SZ'),
+                      'epochofperih' : datetime.strptime(elements['Tp_iso'], '%Y-%m-%dT%H:%M:%S.%fZ'),
                     }
     # Mapping from find_orb -> NEOx element sets for direct values
     mapping = {
@@ -2411,7 +2412,6 @@ def convert_findorb_elements(elements_json):
                 'i' : 'orbinc',
                 'arg_per' : 'argofperih',
                 'asc_node' : 'longascnode',
-                'Tp' : 'epochofperih',
                 'H' : 'abs_mag',
                 'G' :  'slope',
                 'rms_residual' : 'orbit_rms'

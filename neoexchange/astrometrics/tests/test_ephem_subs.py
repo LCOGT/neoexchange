@@ -4103,8 +4103,11 @@ class TestConvertFOElements(SimpleTestCase):
         self.maxDiff = None
 
     def test_65803_keys(self):
-        expected_keys = ['name', 'origin', 'elements_type', 'epochofel', 'meananom', 'meandist',  'eccentricity',  'perihdist', 'orbinc', 'argofperih', 'longascnode', 'epochofperih', 'abs_mag', 'slope', 'orbit_rms']
+        expected_keys = ['name', 'origin', 'elements_type', 'epochofel', 'epochofperih', 'meananom', 'meandist',  'eccentricity',  'perihdist', 'orbinc', 'argofperih', 'longascnode', 'abs_mag', 'slope', 'orbit_rms']
+        expected_types = [str, str, str, datetime, datetime, float, float, float, float, float, float, float, float, float, float]
 
         new_elements = convert_findorb_elements(self.test_json)
 
         self.assertEqual(expected_keys, list(new_elements.keys()))
+        for expected_type, key in zip(expected_types, list(new_elements.keys())):
+            self.assertEqual(expected_type, type(new_elements[key]), msg="Failure on " + key)
