@@ -268,7 +268,7 @@ SECRET_KEY = os.environ.get('SECRET_KEY', get_random_string(50, chars))
 DATABASES = {
     "default": {
         # Live DB
-        "ENGINE": os.environ.get('NEOX_DB_ENGINE', 'django.db.backends.mysql'),
+        "ENGINE": os.environ.get('NEOX_DB_ENGINE', 'django.db.backends.postgresql'),
         "NAME": os.environ.get('NEOX_DB_NAME', 'neoexchange'),
         "USER": os.environ.get('NEOX_DB_USER',''),
         "PASSWORD": os.environ.get('NEOX_DB_PASSWD',''),
@@ -365,6 +365,7 @@ else:
 # Allow any settings to be defined in local_settings.py which should be
 # ignored in your version control system allowing for settings to be
 # defined per machine.
+
 if not CURRENT_PATH.startswith('/app'):
     try:
         from .local_settings import *

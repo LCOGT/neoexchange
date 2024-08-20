@@ -42,7 +42,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 from core.models import frame
-from core.models.body import Body
+from core.models.body import Body, Designations
 from core.models.frame import Frame
 from core.models.blocks import Block, SuperBlock
 
@@ -1806,100 +1806,6 @@ class TestGetSCAMPXMLInfo(SimpleTestCase):
                 self.assertEqual(expected_results[key], results[key], "Failure on " + key)
 
 
-class TestUpdateFITSdia(SimpleTestCase):
-
-    def setUp(self):
-
-        self.test_hotpants_file = os.path.abspath(os.path.join('photometrics', 'tests', 'hotpants_test_frame.fits'))
-        self.test_hotpantsrms_file = os.path.abspath(os.path.join('photometrics', 'tests', 'hotpants_test_frame.rms.fits'))
-        self.hotpants_header_file = os.path.abspath(os.path.join('photometrics', 'tests', 'hotpants_test_header'))
-
-        self.test_dir = tempfile.mkdtemp(prefix='tmp_neox_')
-
-        # Need to copy files as we're modifying them.
-        self.hotpants_file_output = os.path.abspath(os.path.join(self.test_dir, 'example-hotpants-e93.fits'))
-        self.test_hotpants_file = shutil.copy(self.test_hotpants_file, self.hotpants_file_output)
-        self.hotpantsrms_file_output = os.path.abspath(os.path.join(self.test_dir, 'example-hotpants-e93.rms.fits'))
-        self.test_hotpantsrms_file = shutil.copy(self.test_hotpantsrms_file, self.hotpantsrms_file_output)
-        self.hotpants_header_file_output = os.path.abspath(os.path.join(self.test_dir, os.path.basename(self.hotpants_header_file)))
-        self.hotpants_header_file = shutil.copy(self.hotpants_header_file, self.hotpants_header_file_output)
-
-        self.test_header, self.test_cattype = get_header(self.hotpants_file_output)
-
-        self.precision = 7
-        self.debug_print = False
-        self.remove = True
-
-        # Disable anything below CRITICAL level
-        logging.disable(logging.CRITICAL)
-
-    def tearDown(self):
-        if self.remove:
-            try:
-                files_to_remove = glob(os.path.join(self.test_dir, '*'))
-                for file_to_rm in files_to_remove:
-                    os.remove(file_to_rm)
-            except OSError:
-                print("Error removing files in temporary test directory", self.test_dir)
-            try:
-                os.rmdir(self.test_dir)
-                if self.debug_print: print("Removed", self.test_dir)
-            except OSError:
-                print("Error removing temporary test directory", self.test_dir)
-
-    def test_missing_file(self):
-        expected_status = (-1, None)
-
-        status = updateFITSdia('/foo/bar.fits')
-
-        self.assertEqual(expected_status, status)
-
-    def test_bad_type(self):
-        expected_status = (-1, None)
-
-        status = updateFITSdia(self.hotpants_header_file)
-
-        self.assertEqual(expected_status, status)
-
-    def test_new_l1zp(self):
-        header = deepcopy(self.test_header)
-        header['pprecipe'] = 'NEOEXCHANGE DIA'
-        header['rlevel'] = 93
-
-        expected_status = 0
-        expected_keywords = { 'pprecipe' : 'PPRECIPE',
-                              'rlevel' : 'RLEVEL',
-                            }
-
-        status, new_header = updateFITSdia(self.hotpants_file_output)
-
-        self.assertEqual(expected_status, status)
-
-        for key, fits_keyword in expected_keywords.items():
-            self.assertTrue(fits_keyword in new_header, "Failure on " + fits_keyword)
-            self.assertEqual(header[key], new_header[fits_keyword])
-
-    def test_existing_rlevel(self):
-        header = deepcopy(self.test_header)
-        header['pprecipe'] = 'NEOEXCHANGE DIA'
-        header['rlevel'] = 93
-        with fits.open(self.hotpants_file_output, mode='update') as hdul:
-            fits_header = hdul[0].header
-            hdul.flush()
-
-        expected_status = 0
-        expected_keywords = { 'pprecipe' : 'PPRECIPE',
-                              'rlevel' : 'RLEVEL',
-                            }
-        status, new_header = updateFITSdia(self.hotpants_file_output)
-
-        self.assertEqual(expected_status, status)
-
-        for key, fits_keyword in expected_keywords.items():
-            self.assertTrue(fits_keyword in new_header, "Failure on " + fits_keyword)
-            self.assertEqual(header[key], new_header[fits_keyword])
-
-
 class TestReadMTDSFile(TestCase):
 
     def setUp(self):
@@ -2024,10 +1930,96 @@ class TestFrameAperturePhotometry(ExternalCodeUnitTest):
         self.test_hotpants_file_rms = os.path.join(self.testfits_dir, 'hotpants_test_frame.rms.fits')
         self.test_hotpants_file_rms_COPIED = os.path.join(self.test_dir, 'coj2m0-hotpants-test-e93.rms.fits')
         self.test_hotpants_file_rms_COPIED = shutil.copy(os.path.abspath(self.test_hotpants_file_rms), self.test_hotpants_file_rms_COPIED)
-        self.ephem_ra = 283.6448209
-        self.ephem_dec = -25.1285058
+
+        body_params = {
+                                'id': 5555500,
+                                'provisional_name': None,
+                                'provisional_packed': None,
+                                'name': '65803',
+                                'origin': 'N',
+                                'source_type': 'N',
+                                'source_subtype_1': 'N3',
+                                'source_subtype_2': 'PH',
+                                'elements_type': 'MPC_MINOR_PLANET',
+                                'active': False,
+                                'fast_moving': False,
+                                'urgency': None,
+                                'epochofel': datetime(2021, 2, 25, 0, 0),
+                                'orbit_rms': 0.56,
+                                'orbinc': 3.40768,
+                                'longascnode': 73.20234,
+                                'argofperih': 319.32035,
+                                'eccentricity': 0.3836409,
+                                'meandist': 1.6444571,
+                                'meananom': 77.75787,
+                                'perihdist': None,
+                                'epochofperih': None,
+                                'abs_mag': 18.27,
+                                'slope': 0.15,
+                                'score': None,
+                                'discovery_date': datetime(1996, 4, 11, 0, 0),
+                                'num_obs': 829,
+                                'arc_length': 7305.0,
+                                'not_seen': 2087.29154187494,
+                                'updated': True,
+                                'ingest': datetime(2018, 8, 14, 17, 45, 42),
+                                'update_time': datetime(2021, 3, 1, 19, 59, 56, 957500)
+                                }
+
+        self.test_body, created = Body.objects.get_or_create(**body_params)
+
+        desig_params = { 'body' : self.test_body, 'value' : 'Didymos', 'desig_type' : 'N', 'preferred' : True, 'packed' : False}
+        test_desig, created = Designations.objects.get_or_create(**desig_params)
+        desig_params['value'] = '65803'
+        desig_params['desig_type'] = '#'
+        test_desig, created = Designations.objects.get_or_create(**desig_params)
+
+        block_params = {
+                        'body' : self.test_body,
+                        'request_number' : '12345',
+                        'block_start' : datetime(2024, 6, 10, 0, 40),
+                        'block_end' : datetime(2024, 6, 10, 17, 59),
+                        'obstype' : Block.OPT_IMAGING,
+                        'num_observed' : 1
+                        }
+        self.test_block, created = Block.objects.get_or_create(**block_params)
+
+        frame_params = {
+                        'sitecode' : 'E10',
+                        'instrument' : 'ep07',
+                        'exptime' : 170.0,
+                        'filter' : 'rp',
+                        'block' : self.test_block,
+                        'frametype' : Frame.NEOX_SUB_FRAMETYPE,
+                        'zeropoint' : 27.0,
+                        'zeropoint_err' : 0.03,
+                        'fwhm' : 2.7,
+                        'midpoint' : block_params['block_start'] + timedelta(minutes=5)
+                    }
+        
+        frame_params['filename'] = f"{self.test_hotpants_file_COPIED[-29:]}"
+        frame_params['midpoint'] = datetime(2024, 6, 10, 11, 30)
+        frame_params['frameid'] = 12345
+        self.test_e93_frame, created = Frame.objects.get_or_create(**frame_params)
+        # Create NEOX_RED_FRAMETYPE type also
+        red_frame_params = frame_params.copy()
+        red_frame_params['frametype'] = Frame.NEOX_RED_FRAMETYPE
+        red_frame_params['filename'] = red_frame_params['filename'].replace('e93', 'e92')
+        frame, created = Frame.objects.get_or_create(**red_frame_params)
+        # Create NEOX_SUB_FRAMETYPE type also
+        sub_frame_params = frame_params.copy()
+        sub_frame_params['frametype'] = Frame.BANZAI_RED_FRAMETYPE
+        sub_frame_params['filename'] = red_frame_params['filename'].replace('e92', 'e91')
+        frame, created = Frame.objects.get_or_create(**sub_frame_params)
+
+        self.ephem_ra = 283.5721268
+        self.ephem_dec = -25.0549843
+        #self.ephem_ra = 262.9291150055555
+        #self.ephem_dec = -28.491441521497585
         self.remove = False
         self.debug_print = True
+
+                
 
     def test_rms_file_not_present(self):
         #Remove RMS file for this test
@@ -2037,52 +2029,48 @@ class TestFrameAperturePhotometry(ExternalCodeUnitTest):
         self.assertEqual(expected_results, results)
 
 
-    def compare_tables(self, expected_table, table, column, num_to_check=6, precision=6):
+    def compare_tables(self, expected_table, table, column, num_to_check, precision=6):
         for i in range(0, num_to_check+1):
             self.assertAlmostEqual(expected_table[column][i], table[column][i], precision)
 
     def test_single_frame_aperture_photometry(self):
-        #position_test = SkyCoord(48.56973336292208, 48.26605304144391, frame = "icrs")
-        #source_aperture = SkyCircularAperture(position_test, r = aperture_radius*u.arcsec)
-        #wcs = header['wcs']
-        #pix_source_aperture = source_aperture.to_pixel(wcs)
+        header, cattype = photometrics.catalog_subs.get_header(self.test_hotpants_file_COPIED)
+        right_ascension = self.ephem_ra * u.deg
+        declination = self.ephem_dec * u.deg
+        positions = SkyCoord(right_ascension, declination, frame = "icrs")
+        source_aperture = SkyCircularAperture(positions, r = 2.5*self.test_e93_frame.fwhm*u.arcsec)
+        wcs = header['wcs']
+        pix_source_aperture = source_aperture.to_pixel(wcs)
+        FLUX2MAG = 2.5/np.log(10)
         expected_results = QTable()
         expected_results['id'] = [1]
-        expected_results['xcenter'] = [48.56973336292208] *u.pix
-        expected_results['ycenter'] = [48.26605304144391] * u.pix
-        expected_results['aperture_sum'] = [22315.303483993972]
-        expected_results['aperture_sum_err'] = [1537.5511918712682]
-        expected_results['mag'] = [-109.87150699385306]
-        expected_results['magerr'] = [0.074592439287853]
-        expected_results['aperture_radius'] = [5.80355155615856]
+        expected_results['xcenter'] = [48.45815299066739] *u.pix
+        expected_results['ycenter'] = [48.576667811450456] * u.pix
+        expected_results['aperture_sum'] = [135.01533390388389]
+        expected_results['aperture_sum_err'] = [10.514787835583155]
+        expected_results['FWHM'] = self.test_e93_frame.fwhm
+        expected_results['ZP'] = self.test_e93_frame.zeropoint
+        expected_results['ZP_sig'] = self.test_e93_frame.zeropoint_err
+        expected_results['mag'] = -2.5*np.log10(expected_results['aperture_sum']) + self.test_e93_frame.zeropoint
+        expected_results['magerr'] = FLUX2MAG * expected_results['aperture_sum_err'] / expected_results['aperture_sum']
+        expected_results['filter'] = self.test_e93_frame.filter
+        expected_results['aperture_radius'] = 2.5*self.test_e93_frame.fwhm
         exp_dtypes = expected_results.dtype
-        #dtypes = [dtype(expected_results['id'][0]), dtype(expected_results['xcenter'][0]), dtype(expected_results['ycenter'][0]), dtype(expected_results['aperture_sum'][0]), dtype(expected_results['aperture_sum_err'][0]), dtype(expected_results['mag'][0]), dtype(expected_results['magerr'][0]), dtype(expected_results['aperture_radius'][0])]
-        print(f'expected dtypes: {exp_dtypes}')
-        #expected_results = QTable(names =('id', 'xcenter', 'ycenter', 'aperture_sum', 'aperture_sum_err', 'mag', 'magerr', 'aperture_radius'), dtype = ('i8', 'f8', 'f8', 'f8','f8','f8','f8','f8'))
-        #expected_results.add_row((1, u.Quantity(48.56973336292208, 'pix'), u.Quantity(48.26605304144391, 'pix'), 22315.303483993972, 1537.5511918712682, -109.87150699385306, 0.074592439287853, 5.80355155615856))
-        expected_result_array_form = np.array([1, 48.56973336292208, 48.26605304144391 , 22315.303483993972, 1537.5511918712682, -109.87150699385306, 0.074592439287853, 5.80355155615856])
-        #expected_results = os.path.basename(self.test_hotpants_file_COPIED)
         results = single_frame_aperture_photometry(self.test_hotpants_file_COPIED, self.ephem_ra, self.ephem_dec, False)
-        #typetester = type(u.Quantity(48.26605304144391, 'pix'))
-        #print(f'TYPE CHECKING NOW {typetester}')
-        #print(f"RESULTS VALUES ISOLATED {results[0][0], results[0][1]/u.pix, results[0][2]/u.pix}")
-        #print(f'EXPECTED DTYPES{dtype(expected_results)}', f'ACTUAL DTYPES {dtype(results)}')
-        results_array = np.array([results[0][0], results[0][1]/u.pix, results[0][2]/u.pix, results[0][3], results[0][4], results[0][5], results[0][6], results[0][7]])
-        print(f"EXPECTED RESULTS \n")
-        print(f'{expected_results}')
-        print(f"ACTUAL RESULTS \n")
-        print(f"{results}")
-        print(f'dtypes {results.dtype}')
-        #final_type_tester = type(results[0][2])
-        #print(f'TYPE CHECKING RESULT {final_type_tester}')
-        #assert_quantity_allclose(expected_result_array_form, results_array)
-        #assert_quantity_allclose(expected_results, results, rtol=1e-5)
+        dtypes = results.dtype
+        print(type(self.test_e93_frame.filter), type(results['filter'][0]))
+        self.assertEqual(pix_source_aperture.positions[0], 48.45815299066739)
+        self.assertEqual(pix_source_aperture.positions[1], 48.576667811450456)
+        self.assertEqual(exp_dtypes, dtypes)
         self.compare_tables(expected_results, results, column = 'id',num_to_check= 0)
         self.compare_tables(expected_results, results, column = 'xcenter',num_to_check= 0)
         self.compare_tables(expected_results, results, column = 'ycenter',num_to_check= 0)
         self.compare_tables(expected_results, results, column = 'aperture_sum',num_to_check= 0)
         self.compare_tables(expected_results, results, column = 'aperture_sum_err',num_to_check= 0)
+        self.compare_tables(expected_results, results, column = 'FWHM',num_to_check= 0)
+        self.compare_tables(expected_results, results, column = 'ZP',num_to_check= 0)
+        self.compare_tables(expected_results, results, column = 'ZP_sig',num_to_check= 0)
         self.compare_tables(expected_results, results, column = 'mag',num_to_check= 0)
         self.compare_tables(expected_results, results, column = 'magerr',num_to_check= 0)
+        self.compare_tables(expected_results, results, column = 'filter',num_to_check= 0)
         self.compare_tables(expected_results, results, column = 'aperture_radius',num_to_check= 0)
-        #assert_allclose(expected_results, results, rtol=1e-5)

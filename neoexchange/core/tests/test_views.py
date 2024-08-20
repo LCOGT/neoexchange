@@ -9218,10 +9218,12 @@ class TestPerformAperPhotometry(TestCase):
                          'filter' : 'rp',
                          'block' : self.test_block,
                          'frametype' : Frame.BANZAI_RED_FRAMETYPE,
+                         'fwhm': 2.7,
                          'zeropoint' : 27.0,
                          'zeropoint_err' : 0.03,
                          'midpoint' : block_params['block_start'] + timedelta(minutes=5)
                        }
+        print(f"filter {frame_params['filter']}")
         i = 0
         self.test_banzai_files = []
         source_details = { 45234032 : {'mag' : 14.8447, 'err_mag' : 0.0054, 'flags' : 0},
@@ -9231,39 +9233,43 @@ class TestPerformAperPhotometry(TestCase):
         ra = [0, 283.50961, 283.50922, 283.50883]
         dec = [0, -25.07526, -25.07538, -25.07550]
         for frame_num, frameid in zip(range(65,126,30),[45234032, 45234584, 45235052]):
+            print(f"FRAME NUM {frame_num, i}")
             i += 1
             frame_params['filename'] = f"coj2m002-ep07-20240610-{frame_num:04d}-e91.fits"
             frame_params['midpoint'] = midpoints_for_good_elevs[i]
             frame_params['frameid'] = frameid
-            frame, created = Frame.objects.get_or_create(**frame_params)
+            self.e91_frame, created = Frame.objects.get_or_create(**frame_params)
+            print(self.e91_frame.filename)
             # Create NEOX_RED_FRAMETYPE type also
             red_frame_params = frame_params.copy()
             red_frame_params['frametype'] = Frame.NEOX_RED_FRAMETYPE
             red_frame_params['filename'] = red_frame_params['filename'].replace('e91', 'e92')
-            frame, created = Frame.objects.get_or_create(**red_frame_params)
+            self.e92_frame, created = Frame.objects.get_or_create(**red_frame_params)
+            print(self.e92_frame.filename)
             # Create NEOX_SUB_FRAMETYPE type also
             sub_frame_params = frame_params.copy()
             sub_frame_params['frametype'] = Frame.NEOX_SUB_FRAMETYPE
-            sub_frame_params['filename'] = red_frame_params['filename'].replace('e91', 'e93')
-            frame, created = Frame.objects.get_or_create(**sub_frame_params)
+            sub_frame_params['filename'] = red_frame_params['filename'].replace('e92', 'e93')
+            self.e93_frame, created = Frame.objects.get_or_create(**sub_frame_params)
+            print(self.e93_frame.filename)
 
             cat_source = source_details[frameid]
             source_params = { 'body' : self.test_body,
-                              'frame' : frame,
+                              'frame' : self.e93_frame,
                               'obs_ra' : 208.728,
                               'obs_dec' : -10.197,
                               'obs_mag' : cat_source['mag'],
                               'err_obs_ra' : 0.0003,
                               'err_obs_dec' : 0.0003,
                               'err_obs_mag' : cat_source['err_mag'],
-                              'astrometric_catalog' : frame.astrometric_catalog,
-                              'photometric_catalog' : frame.photometric_catalog,
+                              'astrometric_catalog' : self.e93_frame.astrometric_catalog,
+                              'photometric_catalog' : self.e93_frame.photometric_catalog,
                               'aperture_size' : 10*0.389,
                               'snr' : 1/cat_source['err_mag'],
                               'flags' : cat_source['flags']
                             }
             source, created = SourceMeasurement.objects.get_or_create(**source_params)
-            source_params = { 'frame' : frame,
+            source_params = { 'frame' : self.e93_frame,
                               'obs_x' : 2048+frame_num/10.0,
                               'obs_y' : 2043-frame_num/10.0,
                               'obs_ra' : 208.728,
@@ -9320,6 +9326,7 @@ class TestPerformAperPhotometry(TestCase):
         else:
             if self.debug_print:
                 print("Not removing temporary test directory", self.test_dir)
+
     def test_basic(self):
         expected_num_body = 1
         expected_num_blocks = 2
@@ -9333,49 +9340,70 @@ class TestPerformAperPhotometry(TestCase):
         num_files = len(glob(self.test_output_dir + '/*'))
         self.assertEqual(expected_num_files, num_files)
 
-    def compare_tables(self, expected_table, table, column, num_to_check=6, precision=6):
+    def compare_aper_tables(self, expected_table, table, column, num_to_check=6, precision=6):
         for i in range(0, num_to_check+1):
-            print(expected_table[column][i], table[column][i])
-            try:
-                self.assertAlmostEqual(expected_table[column][i], table[column][i], precision)
-            except TypeError:
-                print(f"TYPERROR {expected_table[column][i], table[column][i][0], precision}")
-                self.assertAlmostEqual(expected_table[column][i], table[column][i][0], precision)
+            self.assertAlmostEqual(expected_table[column][i], table[column][i], precision)
+            print(f'{column} OK')
+        # for i in range(0, num_to_check+1):
+        #     try:
+        #         self.assertAlmostEqual(expected_table[column][i], table[column][i], precision)
+        #     except TypeError:
+        #         print(f"TYPERROR {expected_table[column][i], table[column][i][0], precision}")
+        #         self.assertAlmostEqual(expected_table[column][i], table[column][i][0], precision)
+    def compare_tables_with_strings(self, expected_table, table, column, num_to_check=6, precision=6):
+        for i in range(0, num_to_check+1):
+            self.assertEqual(expected_table[column][i], table[column][i], precision)
+            print(f'{column} OK')
+
+    def compare_rows(self, expected_table, table, column):
+        self.assertEqual(expected_table[column], table[column])
+        print(f'{column} OK')
+
     def test_perform_aperture_photometry(self):
-        expected_results = 1
-                #position_test = SkyCoord(48.56973336292208, 48.26605304144391, frame = "icrs")
-        #source_aperture = SkyCircularAperture(position_test, r = aperture_radius*u.arcsec)
-        #wcs = header['wcs']
-        #pix_source_aperture = source_aperture.to_pixel(wcs)
+
+        FLUX2MAG = 2.5/np.log(10)
         expected_results = QTable()
         expected_results['path to frame'] = ['/tmp/tmp_neox_fjody5q5/20240610/coj2m002-ep07-20240610-0065-e93.fits', '/tmp/tmp_neox_fjody5q5/20240610/coj2m002-ep07-20240610-0095-e93.fits', '/tmp/tmp_neox_fjody5q5/20240610/coj2m002-ep07-20240610-0125-e93.fits']
         expected_results['times'] = [datetime(2024, 6, 10, 17, 2, 0), datetime(2024, 6, 10, 17, 4, 0), datetime(2024, 6, 10, 17, 6, 0)]
-        expected_results['filters'] = ['rp', 'rp', 'rp']
-        expected_results['xcenter'] = [48.770001555583654, 48.76999999999983, 48.76999999999983] #*u.pix
-        expected_results['ycenter'] = [48.269999454136475, 48.2699999999529, 48.2699999999529] #* u.pix
-        expected_results['aperture sum'] = [22316.1840698799, 22316.184106891462, 22316.184106891462]
-        expected_results['aperture sum err'] = [1823.6603510462946, 1823.660352672292, 1823.660352672292]
-        expected_results['mag'] = [-109.87154983732658, -109.87154983912728, -109.87154983912728]
-        expected_results['magerr'] = [0.08846918854318914, 0.08846918847534249, 0.08846918847534249]
-        expected_results['aperture radius'] = [5.80355155615856, 5.80355155615856, 5.80355155615856]
-        #exp_dtypes = expected_results.dtype
 
+        expected_row2 = QTable()
+        expected_row2['path to frame'] = [os.path.join(self.test_output_dir, self.e93_frame.filename)]
+        expected_row2['times'] = [self.e93_frame.midpoint]
+        expected_row2['filters'] = [np.str_(self.e93_frame.filter)]
+        expected_row2['xcenter'] = [48.76999999999983] #*u.pix
+        expected_row2['ycenter'] = [48.2699999999529] #* u.pix
+        expected_row2['aperture sum'] = [135.68437393971408]
+        expected_row2['aperture sum err'] = [11.646125295033322]
+        expected_row2['FWHM'] = [self.e93_frame.fwhm]
+        expected_row2['ZP'] = [self.e93_frame.zeropoint]
+        expected_row2['ZP_sig'] = [self.e93_frame.zeropoint_err]
+        expected_row2['mag'] = -2.5*np.log10(expected_row2['aperture sum']) + self.e93_frame.zeropoint
+        expected_row2['magerr'] = FLUX2MAG * expected_row2['aperture sum err'] / expected_row2['aperture sum']
+        expected_row2['aperture radius'] = [2.5*self.e93_frame.fwhm]
         dataroot = self.test_output_dir
         results = perform_aper_photometry(self.test_block, dataroot)
 
-        print(f"EXPECTED RESULTS \n")
-        print(f'{expected_results}')
-        print(f"ACTUAL RESULTS \n")
-        print(f"{results}")
-        #print(f'dtypes {results.dtype}')
+        exp_dtypes = expected_row2.dtype
+        dtypes = results.dtype
 
-        self.compare_tables(expected_results, results, column = 'path to frame',num_to_check= 2, precision=6)
-        self.compare_tables(expected_results, results, column = 'times',num_to_check= 2, precision=6)
-        self.compare_tables(expected_results, results, column = 'filters',num_to_check= 2,precision=6)
-        self.compare_tables(expected_results, results, column = 'xcenter',num_to_check= 2, precision=6)
-        self.compare_tables(expected_results, results, column = 'ycenter',num_to_check= 2, precision=6)
-        self.compare_tables(expected_results, results, column = 'aperture sum',num_to_check= 2, precision=6)
-        self.compare_tables(expected_results, results, column = 'aperture sum err',num_to_check= 2, precision=6)
-        self.compare_tables(expected_results, results, column = 'mag',num_to_check= 2, precision=6)
-        self.compare_tables(expected_results, results, column = 'magerr',num_to_check= 2, precision=6)
-        self.compare_tables(expected_results, results, column = 'aperture radius',num_to_check= 2, precision=6)
+        expected_table_length = len(Frame.objects.filter(block = self.test_block, filename__contains = 'e93.fits'))
+        print(expected_table_length)
+
+        self.assertEqual(exp_dtypes, dtypes)
+        self.assertEqual(expected_row2.colnames, results.colnames)
+        print(expected_row2.colnames, results.colnames)
+        self.assertEqual(len(expected_results), len(results))
+        self.assertEqual(len(results), expected_table_length)
+        print(len(expected_results), len(results))
+        self.compare_tables_with_strings(expected_results, results, column = 'path to frame',num_to_check= 2, precision=6)
+        self.compare_tables_with_strings(expected_results, results, column = 'times',num_to_check= 2, precision=6)
+        self.compare_rows(expected_row2, results[:][2], column = 'path to frame')
+        self.compare_rows(expected_row2, results[:][2], column = 'times')
+        self.compare_rows(expected_row2, results[:][2], column = 'filters')
+        self.compare_rows(expected_row2, results[:][2], column = 'xcenter')
+        self.compare_rows(expected_row2, results[:][2], column = 'ycenter')
+        self.compare_rows(expected_row2, results[:][2], column = 'aperture sum')
+        self.compare_rows(expected_row2, results[:][2], column = 'aperture sum err')
+        self.compare_rows(expected_row2, results[:][2], column = 'mag')
+        self.compare_rows(expected_row2, results[:][2], column = 'magerr')
+        self.compare_rows(expected_row2, results[:][2], column = 'aperture radius')

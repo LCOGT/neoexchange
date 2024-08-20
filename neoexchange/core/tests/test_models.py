@@ -1422,12 +1422,14 @@ class TestBlock(TestCase):
                         'astrometric_catalog': 'GAIA-DR2',
                         'photometric_catalog': ' '
                         }
-        for obs_filter in ['gp', 'rp', 'ip', 'zs']:
+        #for obs_filter in ['gp', 'rp', 'ip', 'zs']:
+        for obs_filter in ['ip', 'rp', 'zs', 'gp']:
             ref_frame['frametype'] = 91
             ref_frame['filter'] = obs_filter
             Frame.objects.create(**ref_frame)
             ref_frame['frametype'] = 92
             Frame.objects.create(**ref_frame)
+        ref_frame['filter'] = 'zs'
         ref_frame['zeropoint'] = 25
         ref_frame['zeropoint_err'] = 0.03
         Frame.objects.create(**ref_frame)
@@ -1525,12 +1527,14 @@ class TestBlock(TestCase):
 
     def test_obs_details_retriever(self):
 
-        expected_lines = ['#Track# Rquest# Site(MPC) Obs details Filter #raw #good_zp/#num all frames FWHM \n Didymos COJ 2024 Field v2 #34# \n',
+        expected_lines = ['#Track# Rquest# Site(MPC) Obs details Filter #raw #good_zp/#num all frames FWHM \n Didymos COJ 2024 Field v2 #34 \n',
                             'https://observe.lco.global/requests/3586212\n',
-                            '2006179 3586212 coj 9x60.0 secs, gp 1 --> 0/1 --> fwhm: 3.260 \n',
-                            '2006179 3586212 coj 9x60.0 secs, rp 1 --> 0/1 --> fwhm: 3.260 \n',
-                            '2006179 3586212 coj 9x60.0 secs, ip 1 --> 0/1 --> fwhm: 3.260 \n',
-                            '2006179 3586212 coj 9x60.0 secs, zs 1 --> 1/2 --> fwhm: 3.260 \n']
+                            '2006179 3586212 coj 9x60.0 secs, ip 1  0/1 fwhm: 3.260 2024-07-12 00:00:00 --> 2024-07-12 23:59:59\n',
+                            '2006179 3586212 coj 9x60.0 secs, rp 1  0/1 fwhm: 3.260 2024-07-12 00:00:00 --> 2024-07-12 23:59:59\n',
+                            '2006179 3586212 coj 9x60.0 secs, zs 1  1/2 fwhm: 3.260 2024-07-12 00:00:00 --> 2024-07-12 23:59:59\n',
+                            '2006179 3586212 coj 9x60.0 secs, gp 1  0/1 fwhm: 3.260 2024-07-12 00:00:00 --> 2024-07-12 23:59:59\n']
+
+        print(f"EXPECTED LINES {expected_lines} ")
         num_frames = Frame.objects.filter(block = self.ref_block).count()
         self.assertEquals(9, num_frames)
 

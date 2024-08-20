@@ -449,11 +449,17 @@ def obs_details_retriever(ref_fields):
     lines = []
     for ref in ref_fields:
         ref_count +=1
-        blocks = Block.objects.filter(superblock__calibsource=ref)
-        obs_blocks = blocks.filter(num_observed__gte=1)
+        try:
+            blocks = Block.objects.filter(superblock__calibsource=ref)
+            obs_blocks = blocks.filter(num_observed__gte=1)
+        except ValueError:
+            blocks = []
+            obs_blocks = ref_fields.filter(num_observed__gte =1)
+            for ref in ref_fields:
+                blocks.append(ref)
         for block in obs_blocks:
-            lines.append(f"#Track# Rquest# Site(MPC) Obs details Filter #raw #good_zp/#num all frames FWHM \n {block.current_name()}# \n")
-            all_frames = Frame.objects.filter(block__superblock__calibsource= ref)
+            lines.append(f"#Track# Rquest# Site(MPC) Obs details Filter #raw #good_zp/#num all frames FWHM \n {block.current_name()} \n")
+            all_frames = Frame.objects.filter(block = block)
             filterset = all_frames.values_list('filter', flat = True).distinct()
             lines.append(block.make_obsblock_link() + "\n")
             for obs_filter in filterset:
@@ -473,5 +479,5 @@ def obs_details_retriever(ref_fields):
                     if frame.frametype == 92 and frame.zeropoint > 0:
                         good_zp +=1
                 mean_fwhm = mean(fwhms)
-                lines.append(f"{block.superblock.tracking_number} {block.request_number} {block.site} {block.superblock.get_obsdetails()}, {obs_filter} {raw} --> {good_zp}/{neoxreds} --> fwhm: {mean_fwhm:.3f} \n")
+                lines.append(f"{block.superblock.tracking_number} {block.request_number} {block.site} {block.superblock.get_obsdetails()}, {obs_filter} {raw}  {good_zp}/{neoxreds} fwhm: {mean_fwhm:.3f} {block.block_start} --> {block.block_end}\n")
     return lines

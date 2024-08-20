@@ -38,6 +38,7 @@ from numpy import loadtxt, split, empty, median, absolute, sqrt
 
 from core.models import detections_array_dtypes
 from core.utils import NeoException
+from core.models.frame import Frame
 from astrometrics.time_subs import timeit
 from photutils.aperture import aperture_photometry
 from photutils.aperture import CircularAnnulus
@@ -1673,19 +1674,20 @@ def run_damit(call_name, cat_input_filename, primary_call, write_out=False, bina
 def single_frame_aperture_photometry(fits_filepath, ra, dec, background_subtract = False):
     fits_file = fits.open(fits_filepath)
     header, cattype = photometrics.catalog_subs.get_header(fits_filepath)
-    FWHM = header['fwhm']
+    fits_filename = os.path.basename(fits_filepath)
+    frame = Frame.objects.get(filename=fits_filename)
+    FWHM = frame.fwhm
     aperture_radius = 2.5*FWHM
     annulus_outer_radius = 7.5*FWHM
-    source_data_for_photomet = fits_file[0].data
-    rms_image_name = (fits_filepath[:-8] + 'e93.rms.fits')
+    source_data_for_photomet = fits_file[0].data/ header['exptime']
+    #this should be replaced by something that matches other frametypes
+    rms_image_name = (fits_filepath.replace('e93.fits', 'e93.rms.fits').replace('e92.fits', 'e92.rms.fits').replace('e91.fits', 'e91.rms.fits'))
     try:
         rms_image = fits.open(rms_image_name)
-        rms_data = rms_image[0].data
+        rms_data = rms_image[0].data / header['exptime']
     except FileNotFoundError:
         logger.warning(f'{rms_image_name} not found')
         return None
-    #print(f"RMS DATA {rms_data}")
-    print(f"RMS DATA DIMENSIONS {len(rms_data)} X {len(rms_data[0])}")
     right_ascension = ra * u.deg
     declination = dec * u.deg
     positions = SkyCoord(right_ascension, declination, frame = "icrs")
@@ -1699,10 +1701,16 @@ def single_frame_aperture_photometry(fits_filepath, ra, dec, background_subtract
         background_flux_per_pixel = background_annulus_data_for_photomet/background_annulus.area
         background_subtracted_data_for_photomet = source_data_for_photomet - background_flux_per_pixel
         source_flux = aperture_photometry(background_subtracted_data_for_photomet, pix_source_aperture)
+        #needs: add SNR formula
     else:
+        FLUX2MAG = 2.5/np.log(10)
         source_flux = aperture_photometry(source_data_for_photomet, pix_source_aperture, error = rms_data)
-        source_flux['mag'] = -2.5*np.log10(source_flux['aperture_sum']) + header['zeropoint']
-        source_flux['magerr'] = 1.0826 * source_flux['aperture_sum_err'] / source_flux['aperture_sum']
+        source_flux['FWHM'] = FWHM
+        source_flux['ZP'] = frame.zeropoint
+        source_flux['ZP_sig'] = frame.zeropoint_err
+        source_flux['mag'] = -2.5*np.log10(source_flux['aperture_sum']) + frame.zeropoint
+        source_flux['magerr'] = FLUX2MAG * source_flux['aperture_sum_err'] / source_flux['aperture_sum']
+        source_flux['filter'] = frame.filter
         source_flux['aperture_radius'] = [aperture_radius]
-
     return source_flux
+

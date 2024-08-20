@@ -112,7 +112,7 @@ def filter_blocks(original_blocks, start_date, end_date, min_frames=3, max_frame
 
     return filtered_blocks, dates
 
-def find_frames(block):
+def find_frames(block, frametype = Frame.NEOX_RED_FRAMETYPE):
     '''
     Routine to find all frames for a given block as well as number of banzai
     frames and number of neox frames. 
@@ -120,13 +120,15 @@ def find_frames(block):
     '''
     frames = Frame.objects.filter(block=block)
     # Determine frame types to search for
-    frame_types = [Frame.BANZAI_RED_FRAMETYPE, ]
+    banzai_frame_types = [Frame.BANZAI_RED_FRAMETYPE, ]
     try:
-        frame_types.append(Frame.MRO_RED_FRAMETYPE)
+        banzai_frame_types.append(Frame.MRO_RED_FRAMETYPE)
     except AttributeError:
         pass
-    banzai_frames = frames.filter(frametype__in=frame_types)
-    neox_frames = frames.filter(frametype=Frame.NEOX_RED_FRAMETYPE) #, rms_of_fit__gte=0.0)
+    if type(frametype) != list:
+        frametype = [frametype, ]
+    banzai_frames = frames.filter(frametype__in=banzai_frame_types) #, rms_of_fit__gte=0.0)
+    neox_frames = frames.filter(frametype__in=frametype)
     neox_frames = neox_frames.order_by('midpoint')
     #if len(banzai_frames) != len(neox_frames):
     #    print(f'Block uid: {block.get_blockuid}, Num banzai frames: {len(banzai_frames)}, Num neox frames: {len(neox_frames)}')

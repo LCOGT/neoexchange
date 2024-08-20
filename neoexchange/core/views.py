@@ -4981,52 +4981,50 @@ def summarize_block_quality(dataroot, blocks):
     return block_qc_table
 
 def perform_aper_photometry(block, dataroot):
-    e92_frameset = find_frames(block)
-    #print(e92_frameset)
+    e93_frameset, banzai_count,  neox_count = find_frames(block, frametype = Frame.NEOX_SUB_FRAMETYPE)
     fwhms = []
     times = []
-    e92_frames = []
-    path_to_e92_frame = []
-    for i in range (0, len(e92_frameset[0])):
-        e92_frames.append(e92_frameset[0][i])
-        current_e92_file = dataroot + f"/{e92_frames[i]}"
-        #print("CURRENT e92 FILE", current_e92_file)
-        try:
-            opened_e92_file = fits.open(current_e92_file)
-            path_to_e92_frame.append(opened_e92_file)
-            fwhms.append(e92_frameset[0][i].fwhm)
-            times.append(e92_frameset[0][i].midpoint)
-        except FileNotFoundError:
-            print("FILE NOT FOUND")
-            #pass
+    filters = []
+    paths_to_e93_frames = []
+    print(f"E93 FRAMESET {e93_frameset}")
+    for i in range (0, len(e93_frameset)):
+        current_e93_filename = os.path.join(dataroot, e93_frameset[i].filename)
+        if os.path.exists(current_e93_filename) == True:
+            fwhms.append(e93_frameset[i].fwhm)
+            times.append(e93_frameset[i].midpoint)
+            filters.append(e93_frameset[i].filter)
+            paths_to_e93_frames.append(current_e93_filename)
+            print(current_e93_filename)
+    if len(paths_to_e93_frames) == 0:
+        return 'no valid files'
     working_ephem = get_ephem(block)
     interpolated_ephem = ephem_interpolate(times, working_ephem)
-    path_to_e93_frame = glob(dataroot +  '/*e93.fits')
-    aperture_photometry_results = []
-    filters = []
-    for i in range (0, len(path_to_e92_frame)):
-        data_header = photometrics.catalog_subs.get_header(path_to_e93_frame[i])
-        aper_photometry_of_ephem = single_frame_aperture_photometry(path_to_e93_frame[i], interpolated_ephem[0][i], interpolated_ephem[1][i])
-        aperture_photometry_results.append(aper_photometry_of_ephem)
-        filters.append(data_header[0]['filter'])
-    ids, xcenters, ycenters, aperture_sums, aperture_sum_errs, mags, magerrs, aperture_radii = [],[],[],[],[],[],[],[]
-    for i in range (0, len(aperture_photometry_results)):
-        ids.append(aperture_photometry_results[i]['id'])
-        xcenters.append(aperture_photometry_results[i]['xcenter'])
-        ycenters.append(aperture_photometry_results[i]['ycenter'])
-        aperture_sums.append(aperture_photometry_results[i]['aperture_sum'])
-        aperture_sum_errs.append(aperture_photometry_results[i]['aperture_sum_err'])
-        mags.append(aperture_photometry_results[i]['mag'])
-        magerrs.append(aperture_photometry_results[i]['magerr'])
-        aperture_radii.append(aperture_photometry_results[i]['aperture_radius'])
+    ids, xcenters, ycenters, aperture_sums, aperture_sum_errs, fwhms, zps, zp_errs, mags, magerrs, filter, aperture_radii = [],[],[],[],[],[],[],[],[],[],[],[]
+    for i in range (0, len(paths_to_e93_frames)):
+        aper_photometry_of_ephem = single_frame_aperture_photometry(paths_to_e93_frames[i], interpolated_ephem[0][i], interpolated_ephem[1][i])
+        ids.append(aper_photometry_of_ephem['id'])
+        xcenters.append(aper_photometry_of_ephem['xcenter'][0])
+        ycenters.append(aper_photometry_of_ephem['ycenter'][0])
+        aperture_sums.append(aper_photometry_of_ephem['aperture_sum'][0])
+        aperture_sum_errs.append(aper_photometry_of_ephem['aperture_sum_err'][0])
+        fwhms.append(aper_photometry_of_ephem['FWHM'][0])
+        zps.append(aper_photometry_of_ephem['ZP'][0])
+        zp_errs.append(aper_photometry_of_ephem['ZP_sig'][0])
+        mags.append(aper_photometry_of_ephem['mag'][0])
+        magerrs.append(aper_photometry_of_ephem['magerr'][0])
+        filter.append(aper_photometry_of_ephem['filter'][0])
+        aperture_radii.append(aper_photometry_of_ephem['aperture_radius'][0])
     results = Table()
-    results['path to frame'] = path_to_e93_frame
+    results['path to frame'] = paths_to_e93_frames
     results['times'] = times
     results['filters'] = filters
     results['xcenter'] = xcenters
     results['ycenter'] = ycenters
     results['aperture sum'] = aperture_sums
     results['aperture sum err'] = aperture_sum_errs
+    results['FWHM'] = fwhms
+    results['ZP'] = zps
+    results['ZP_sig'] = zp_errs
     results['mag'] = mags
     results['magerr'] = magerrs
     results['aperture radius'] = aperture_radii
