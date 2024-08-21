@@ -30,6 +30,7 @@ def summarize_observations(target_name='65803', start_date='2022-07-15', proposa
             blocks = blocks.exclude(superblock__proposal__code=exclude_proposal)
     if end_date is not None:
         blocks = blocks.filter(block_end__lt=end_date)
+    blocks = blocks.order_by('block_start')
     exclude_ef = True
     filt_width = 6
     # if blocks.filter(site='ogg', telclass='2m0').count() > 0:
@@ -42,7 +43,7 @@ def summarize_observations(target_name='65803', start_date='2022-07-15', proposa
     except AttributeError:
         pass
     print(f'#Track# Rquest# Blockuid# Site(MPC)  Block start         Block end       Block length Obs details       Filter  #raw #good_zp/#num all frames   FWHM DPs')
-    for block in blocks.order_by('block_start'):
+    for block in blocks:
 
         all_raw_frames = Frame.objects.filter(block=block, frametype__in=frame_types)
         all_frames = Frame.objects.filter(block=block, frametype=Frame.NEOX_RED_FRAMETYPE)
