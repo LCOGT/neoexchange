@@ -599,6 +599,32 @@ def normalize(images, swarp_zp_key="L1ZP"):
 
     return return_code
 
+def determine_astwarp_options(filename, dest_dir, center_RA, center_DEC, width = 1991.0, height = 511.0):
+    raw_filename = os.path.basename(filename)
+    output_filename = os.path.join(dest_dir, raw_filename.replace('-chisel', '-crop'))
+    options = f'-hINPUT-NO-SKY --center={center_RA},{center_DEC} --widthinpix --width={width},{height} --output={output_filename} {filename}'
+    return output_filename, options
+
+def determine_astarithmetic_options(filenames, dest_dir, hdu = 'ALIGNED'):
+    filenames_list = " ".join(filenames)
+    raw_filename = os.path.basename(filenames[0])
+    if "-crop" in raw_filename:
+        output_filename = os.path.join(dest_dir, raw_filename.replace("-crop", "-combine"))
+    elif "-combine-superstack" in raw_filename:
+        # Set output filename to middle of list
+        midpoint_index = int(len(filenames) / 2)
+        raw_filename = os.path.basename(filenames[midpoint_index])
+        # Rip out run number from the middle if found with the regexp
+        runnum_regex = r"(-\d{4})-e"
+        raw_filename =  re.sub(runnum_regex, '-e', raw_filename)
+        output_filename = os.path.join(dest_dir, raw_filename.replace("-combine-superstack", "-combine-hyperstack"))
+    else:
+        output_filename = os.path.join(dest_dir, raw_filename.replace(".fits", "-superstack.fits"))
+    #original options (maybe from tutorial?)
+    #options = f'--globalhdu ALIGNED --output={output_filename} {filenames_list} {len(filenames)} 5 0.2 sigclip-median'
+    #values from Agata Rozek configuration/Makefile
+    options = f'--globalhdu {hdu} --output={output_filename} {filenames_list} {len(filenames)} 2 0.05 sigclip-mean'
+    return output_filename, options
 
 def determine_image_stats(filename, hdu='SCI'):
     mean, status = run_aststatistics(filename, 'mean', hdu)
@@ -1737,6 +1763,67 @@ def single_frame_aperture_photometry(fits_filepath, ra, dec, background_subtract
     return source_flux
 
 
+def run_astwarp(filename, dest_dir, center_RA, center_DEC, width = 1991.0, height = 511.0, binary='astwarp', dbg=False):
+    '''
+    Runs astwarp on <filename> to crop to <center_RA>,<center_DEC> with
+    [width]x[height] writing output to <dest_dir>
+    '''
+    if filename is None:
+        return None, -2
+    if os.path.exists(filename) is False:
+        return None, -1
+    with fits.open(filename) as hdulist:
+        header = hdulist['NOISECHISEL-CONFIG'].header
+        input_1 = header['INPUT_1']
+        input_2 = header['INPUT_2']
+    input_filename = os.path.join(input_1, input_2)
+    header, dummy_table, cattype = open_fits_catalog(input_filename, header_only=True)
+    wcs_err = header['WCSERR']
+    if wcs_err != 0:
+        return None, -5
+    binary = binary or find_binary(binary)
+    if binary is None:
+        logger.error(f"Could not locate {binary} executable in PATH")
+        return None, -42
+    cmdline = f"{binary} "
+
+    wcs = WCS(header)
+    #print(header['NAXIS1'], header['NAXIS2'])
+    x, y = wcs.world_to_pixel_values(center_RA, center_DEC)
+    rot_angle = get_rot(wcs)
+    #print(f"{os.path.basename(input_filename)}: {x:.3f} {y:.3f} PA= {rot_angle:+.2f}")
+    # Offset by 30% of width to put comet/Didymos at left 20% of crop
+    shift = -0.3
+    if rot_angle > 0:
+        shift = 0.3
+    new_center_RA, new_center_DEC = wcs.pixel_to_world_values(x+(shift*width), y)
+    #print(f"{center_RA}->{new_center_RA}, {center_DEC}->{new_center_DEC} {shift} {x+(shift*width)}, {y}")
+    x_max = header['NAXIS1']
+    y_max = header['NAXIS2']
+    if x<0 or x>x_max or y<0 or y>y_max:
+        return None, -3
+    if width>x_max or height>y_max:
+        return None, -4
+    cropped_filename, options = determine_astwarp_options(filename, dest_dir, new_center_RA, new_center_DEC, width, height)
+    if os.path.exists(cropped_filename):
+        return cropped_filename, 1
+    cmdline += options
+    cmdline = cmdline.rstrip()
+    if dbg:
+        print(cmdline)
+
+    if dbg is True:
+        retcode_or_cmdline = cmdline
+    else:
+        logger.debug(f"cmdline={cmdline}")
+        cmd_args = cmdline.split()
+        cmd_call = Popen(cmd_args, cwd=dest_dir, stdout=PIPE)
+        (out, errors) = cmd_call.communicate()
+        retcode_or_cmdline = cmd_call.returncode
+
+    return cropped_filename, retcode_or_cmdline
+
+
 def run_astarithmetic(filenames, dest_dir, binary='astarithmetic', dbg=False):
     '''
     Runs astarithmetic on list of <filenames> to median combine writing 
@@ -1790,6 +1877,7 @@ def run_aststatistics(filename, keyword, hdu='SCI', binary='aststatistics', dbg=
 
     if dbg is True:
         retcode_or_cmdline = cmdline
+        out = None
     else:
         logger.debug(f"cmdline={cmdline}")
         cmd_args = cmdline.split()
