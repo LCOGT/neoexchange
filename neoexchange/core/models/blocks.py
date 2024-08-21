@@ -232,7 +232,7 @@ class Block(models.Model):
         if frames_qs.count() > 1:
             frame = frames_qs.earliest('midpoint')
             frames = [frame, ]
-            if self.num_observed >= 2:
+            if self.num_observed and self.num_observed >= 2:
                 if self.num_observed > 2:
                     logger.warning(f"More than 2 observations of Block id={self.id} - cannot retrieve all BLKUIDs")
                 last_frame = Frame.objects.filter(block=self, frametype=Frame.BANZAI_RED_FRAMETYPE, frameid__isnull=False).latest('midpoint')
