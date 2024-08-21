@@ -12,7 +12,6 @@ but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 """
-
 import os
 import shutil
 from datetime import datetime, timedelta, date
@@ -9209,7 +9208,6 @@ class TestPerformAperPhotometry(TestCase):
         for i in range (0, 28):
             desired_midpoint = datetime(2024, 6, 10, 17, 2 * i)
             midpoints_for_good_elevs.append(desired_midpoint)
-        print("GOOD ELEV MIDPOINTS", midpoints_for_good_elevs)
 
         frame_params = {
                          'sitecode' : 'E10',
@@ -9223,7 +9221,7 @@ class TestPerformAperPhotometry(TestCase):
                          'zeropoint_err' : 0.03,
                          'midpoint' : block_params['block_start'] + timedelta(minutes=5)
                        }
-        print(f"filter {frame_params['filter']}")
+        #print(f"filter {frame_params['filter']}")
         i = 0
         self.test_banzai_files = []
         source_details = { 45234032 : {'mag' : 14.8447, 'err_mag' : 0.0054, 'flags' : 0},
@@ -9233,25 +9231,25 @@ class TestPerformAperPhotometry(TestCase):
         ra = [0, 283.50961, 283.50922, 283.50883]
         dec = [0, -25.07526, -25.07538, -25.07550]
         for frame_num, frameid in zip(range(65,126,30),[45234032, 45234584, 45235052]):
-            print(f"FRAME NUM {frame_num, i}")
+            #print(f"FRAME NUM {frame_num, i}")
             i += 1
             frame_params['filename'] = f"coj2m002-ep07-20240610-{frame_num:04d}-e91.fits"
             frame_params['midpoint'] = midpoints_for_good_elevs[i]
             frame_params['frameid'] = frameid
             self.e91_frame, created = Frame.objects.get_or_create(**frame_params)
-            print(self.e91_frame.filename)
+            #print(self.e91_frame.filename)
             # Create NEOX_RED_FRAMETYPE type also
             red_frame_params = frame_params.copy()
             red_frame_params['frametype'] = Frame.NEOX_RED_FRAMETYPE
             red_frame_params['filename'] = red_frame_params['filename'].replace('e91', 'e92')
             self.e92_frame, created = Frame.objects.get_or_create(**red_frame_params)
-            print(self.e92_frame.filename)
+            #print(self.e92_frame.filename)
             # Create NEOX_SUB_FRAMETYPE type also
             sub_frame_params = frame_params.copy()
             sub_frame_params['frametype'] = Frame.NEOX_SUB_FRAMETYPE
             sub_frame_params['filename'] = red_frame_params['filename'].replace('e92', 'e93')
             self.e93_frame, created = Frame.objects.get_or_create(**sub_frame_params)
-            print(self.e93_frame.filename)
+            #print(self.e93_frame.filename)
 
             cat_source = source_details[frameid]
             source_params = { 'body' : self.test_body,
@@ -9407,3 +9405,16 @@ class TestPerformAperPhotometry(TestCase):
         self.compare_rows(expected_row2, results[:][2], column = 'mag')
         self.compare_rows(expected_row2, results[:][2], column = 'magerr')
         self.compare_rows(expected_row2, results[:][2], column = 'aperture radius')
+
+    def test_generate_ecsv_file_post_photomet(self):
+        block_date_str = f"{self.test_block.block_start}"[:-9]
+        expected_file_name = f"{self.test_output_dir}aperture_photometry_table_{block_date_str}.ecsv"
+        photometry_file_name = generate_ecsv_file_post_photomet(self.test_block, self.test_output_dir, overwrite = True)
+        print(photometry_file_name)
+        photometry_file_contents = Table.read(photometry_file_name, format = 'ascii.ecsv')
+        photometry_table = perform_aper_photometry(self.test_block, self.test_output_dir)
+        self.assertTrue(os.path.exists(photometry_file_name))
+        self.assertTrue(os.path.getsize(photometry_file_name) > 0)
+        self.assertEqual(expected_file_name, photometry_file_name)
+        self.assertEqual(str(photometry_file_contents), str(photometry_table))
+

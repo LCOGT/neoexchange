@@ -90,7 +90,14 @@ from core.utils import search
 from core.blocksfind import find_frames, get_ephem, ephem_interpolate
 from photometrics.SA_scatter import readSources, genGalPlane, plotScatter, \
     plotFormat
-from core.plots import spec_plot, lin_vis_plot, lc_plot
+from core.plots import spec_plot, lin_vis_plot, lc_plot, plot_magnitude
+from core.models.blocks import Block, SuperBlock
+
+
+# import matplotlib
+# matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
 
 logger = logging.getLogger(__name__)
 
@@ -4986,8 +4993,7 @@ def perform_aper_photometry(block, dataroot):
     fwhms = []
     times = []
     filters = []
-    paths_to_e93_frames = []
-    print(f"E93 FRAMESET {e93_frameset}")
+    paths_to_e93_frames = [] 
     for i in range (0, len(e93_frameset)):
         current_e93_filename = os.path.join(dataroot, e93_frameset[i].filename)
         if os.path.exists(current_e93_filename) == True:
@@ -4995,7 +5001,6 @@ def perform_aper_photometry(block, dataroot):
             times.append(e93_frameset[i].midpoint)
             filters.append(e93_frameset[i].filter)
             paths_to_e93_frames.append(current_e93_filename)
-            print(current_e93_filename)
     if len(paths_to_e93_frames) == 0:
         return 'no valid files'
     working_ephem = get_ephem(block)
@@ -5030,3 +5035,27 @@ def perform_aper_photometry(block, dataroot):
     results['magerr'] = magerrs
     results['aperture radius'] = aperture_radii
     return results
+
+def generate_ecsv_file_post_photomet(block, dataroot, overwrite):
+    results_table = perform_aper_photometry(block, dataroot)
+    times = results_table['times']
+    stringified_times = []
+    results_table.remove_column('times')
+    for i in range (0, len(times)):
+        stringified_times.append(f"{times[i]}")
+    results_table['times'] = stringified_times
+    new_order = ['path to frame','times','filters','xcenter','ycenter','aperture sum','aperture sum err','FWHM','ZP','ZP_sig','mag','magerr','aperture radius']
+    results_table = results_table[new_order]
+    block_date_str = f"{block.block_start}"[:-9]
+    results_table_filename = f"{dataroot}aperture_photometry_table_{block_date_str}.ecsv"
+    results_table.write(results_table_filename, format='ascii.ecsv', overwrite = overwrite)
+    return results_table_filename
+
+def get_lightcurves(blocks, shortdataroot, savepath):
+    filenames = []
+    for block in blocks:
+        dataroot = os.path.join(shortdataroot, f"{block.get_blockdayobs}")
+        photomet_table = perform_aper_photometry(block, dataroot)
+        current_file = plot_magnitude(block, photomet_table, savepath)
+        filenames.append(current_file)
+    return filenames
