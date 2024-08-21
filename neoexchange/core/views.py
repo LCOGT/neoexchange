@@ -90,7 +90,7 @@ from core.utils import search
 from core.blocksfind import find_frames, get_ephem, ephem_interpolate
 from photometrics.SA_scatter import readSources, genGalPlane, plotScatter, \
     plotFormat
-from core.plots import spec_plot, lin_vis_plot, lc_plot, plot_magnitude
+from core.plots import spec_plot, lin_vis_plot, lc_plot #, plot_magnitude
 from core.models.blocks import Block, SuperBlock
 
 
