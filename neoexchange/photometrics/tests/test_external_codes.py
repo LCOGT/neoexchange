@@ -2076,28 +2076,28 @@ class TestFrameAperturePhotometry(ExternalCodeUnitTest):
         self.compare_tables(expected_results, results, column = 'filter',num_to_check= 0)
         self.compare_tables(expected_results, results, column = 'aperture_radius',num_to_check= 0)
 
-=======
+
 class TestDetermineAstcropOptions(SimpleTestCase):
     def setUp(self):
         self.test_dir = '/tmp/foo' #Doesn't need to be actually valid/existing as only needed for string compares
         self.test_file = 'tfn1m014-fa20-20221104-0207-e91-chisel.fits'
 
     def test_fullsize(self):
-        expected_cmdline = f'--mode=img --section=1:1991,1:511 --output={self.test_dir}/tfn1m014-fa20-20221104-0207-e91-chisel-crop.fits tfn1m014-fa20-20221104-0207-e91-chisel.fits'
+        expected_cmdline = f'--mode=img --section=1:1991,1:511 --hdu=<hdu> --append --metaname=<hdu> --output={self.test_dir}{os.sep}tfn1m014-fa20-20221104-0207-e91-chisel-trim.fits tfn1m014-fa20-20221104-0207-e91-chisel.fits'
 
         output_filename, cmdline = determine_astcrop_options(self.test_file, self.test_dir, 0, 1991, 0, 511)
 
         self.assertEqual(expected_cmdline, cmdline)
 
     def test_crop(self):
-        expected_cmdline = f'--mode=img --section=42:1949,42:469 --output={self.test_dir}/tfn1m014-fa20-20221104-0207-e91-chisel-crop.fits tfn1m014-fa20-20221104-0207-e91-chisel.fits'
+        expected_cmdline = f'--mode=img --section=42:1949,42:469 --hdu=<hdu> --append --metaname=<hdu> --output={self.test_dir}{os.sep}tfn1m014-fa20-20221104-0207-e91-chisel-trim.fits tfn1m014-fa20-20221104-0207-e91-chisel.fits'
 
         output_filename, cmdline = determine_astcrop_options(self.test_file, self.test_dir, 42, 1991-42, 42, 511-42)
 
         self.assertEqual(expected_cmdline, cmdline)
 
     def test_negative(self):
-        expected_cmdline = f'--mode=img --section=1:1991,1:511 --output={self.test_dir}/tfn1m014-fa20-20221104-0207-e91-chisel-crop.fits tfn1m014-fa20-20221104-0207-e91-chisel.fits'
+        expected_cmdline = f'--mode=img --section=1:1991,1:511 --hdu=<hdu> --append --metaname=<hdu> --output={self.test_dir}{os.sep}tfn1m014-fa20-20221104-0207-e91-chisel-trim.fits tfn1m014-fa20-20221104-0207-e91-chisel.fits'
 
         output_filename, cmdline = determine_astcrop_options(self.test_file, self.test_dir, -1, 1991, -42, 511)
 
@@ -2206,100 +2206,17 @@ class TestDetermineAstarithmeticOptions(SimpleTestCase):
         self.assertEqual(expected_cmdline, cmdline)
 
 
-class TestDetermineDidymosExtractionOptions(SimpleTestCase):
-    def setUp(self):
-        self.test_dir = '/tmp/foo'
-        self.test_file = 'tfn1m014-fa20-20221104-0207-e91-chisel.fits'
-        self.output_file = self.test_file.replace('-chisel', '-didymos_chisel')
-
-    def test_1(self):
-        expected_cmdline = f'-hDETECTIONS {self.test_file} 1 eq 1 erode 1 erode 1 erode --output={self.test_dir}/{self.output_file}'
-
-        output_filename, cmdline = determine_didymos_extraction_options(self.test_file, self.test_dir, 1)
-
-        self.assertEqual(expected_cmdline, cmdline)
-
-    def test_2(self):
-        expected_cmdline = f'-hDETECTIONS {self.test_file} 2 eq 1 erode 1 erode 1 erode --output={self.test_dir}/{self.output_file}'
-
-        output_filename, cmdline = determine_didymos_extraction_options(self.test_file, self.test_dir, 2)
-
-        self.assertEqual(expected_cmdline, cmdline)
-
-
-class TestDetermineDidymosBorderOptions(SimpleTestCase):
-    def setUp(self):
-        self.test_dir = '/tmp/foo'
-        self.test_file = 'tfn1m014-fa20-20221104-0207-e91-chisel.fits'
-        self.output_file = self.test_file.replace('-chisel', '-bd')
-        self.output_file_all = self.test_file.replace('-chisel', '-bda')
-
-    def test_border1(self):
-        expected_cmdline = f'{self.test_file} 801 eq set-i i i 1 erode 1 erode 1 erode 0 where --output={self.test_dir}/{self.output_file}'
-
-        output_filename, cmdline = determine_didymos_border_options(self.test_file, self.test_dir, 801)
-
-        self.assertEqual(expected_cmdline, cmdline)
-
-    def test_borderall1(self):
-        expected_cmdline = f'{self.test_file} 0 gt set-i i i 1 erode 1 erode 1 erode 0 where --output={self.test_dir}/{self.output_file_all}'
-
-        output_filename, cmdline = determine_didymos_border_options(self.test_file, self.test_dir, 2, True)
-
-        self.assertEqual(expected_cmdline, cmdline)
-
-    def test_borderall2(self):
-        expected_cmdline = f'{self.test_file} 0 gt set-i i i 1 erode 1 erode 1 erode 0 where --output={self.test_dir}/{self.output_file_all}'
-
-        output_filename, cmdline = determine_didymos_border_options(self.test_file, self.test_dir, 2, all_borders=True)
-
-        self.assertEqual(expected_cmdline, cmdline)
-
-
-class TestDetermineAstnoisechiselOptions(SimpleTestCase):
-    def setUp(self):
-        self.test_dir = '/tmp/foo'
-        self.test_file = 'tfn1m014-fa20-20221104-0207-e91-combine.fits'
-
-    def test_default_values(self):
-        expected_cmdline = f'-h0 --quiet --label --rawoutput --output={self.test_dir}/{self.test_file.replace("-combine","-combine-chisel")} {self.test_file}'
-
-        output_filename, cmdline = determine_astnoisechisel_options(self.test_file, self.test_dir)
-
-        self.assertEqual(expected_cmdline, cmdline)
-
-    def test_hdu(self):
-        expected_cmdline = f'-h1 --quiet --label --rawoutput --output={self.test_dir}/{self.test_file.replace("-combine","-combine-chisel")} {self.test_file}'
-
-        output_filename, cmdline = determine_astnoisechisel_options(self.test_file, self.test_dir, hdu = 1)
-
-        self.assertEqual(expected_cmdline, cmdline)
-
-    def test_bkg_only(self):
-        expected_cmdline = f'-h0 --quiet --oneelempertile --interpnumngb=8 --minnumfalse=50 --output={self.test_dir}/{self.test_file.replace("-combine","-combine-chisel")} {self.test_file}'
-
-        output_filename, cmdline = determine_astnoisechisel_options(self.test_file, self.test_dir, bkg_only=True)
-
-        self.assertEqual(expected_cmdline, cmdline)
-
-    def test_filename(self):
-        expected_cmdline = f'-h0 --quiet --label --rawoutput --output={self.test_dir}/banzai_test_frame-combine-chisel.fits banzai_test_frame-combine.fits'
-
-        output_filename, cmdline = determine_astnoisechisel_options('banzai_test_frame-combine.fits', self.test_dir)
-
-        self.assertEqual(expected_cmdline, cmdline)
-
-
 class TestDetermineImageStats(ExternalCodeUnitTest):
     def setUp(self):
         super(TestDetermineImageStats, self).setUp()
 
         shutil.copy(os.path.abspath(self.test_banzai_file), self.test_dir)
         self.test_banzai_file_COPIED = os.path.join(self.test_dir, 'banzai_test_frame.fits')
+        self.precision = 4
 
     def test_1(self):
-        expected_mean = 405.2504
-        expected_std = 36.74769
+        expected_mean = 404.2137
+        expected_std = 35.0392
 
         mean, std = determine_image_stats(self.test_banzai_file_COPIED)
 
@@ -2315,6 +2232,35 @@ class TestDetermineImageStats(ExternalCodeUnitTest):
 
         self.assertEqual(expected_mean, mean)
         self.assertEqual(expected_std, std)
+
+    def test_box_no_defaults(self):
+        '''This can be replicated in AstroPy but the order of axes, origin and
+        range specifications are all different...
+        from astopy.io import fits
+        from astropy.stats import sigma_clipped_stats
+        data = fits.getdata('photometrics/tests/banzai_test_frame.fits', ext=0)
+        sigma_clipped_stats(data[1366-1:1375-1,596-1:605-1], sigma=3)
+        (397.37677, 398.81302, 33.955204)
+        # mean      median      std dev
+        '''
+
+        expected_mean = 397.37677
+        expected_std = 33.9552
+
+        mean, std = determine_image_stats(self.test_banzai_file_COPIED, center=(600, 1370), size=(9,9) )
+
+        self.assertAlmostEqual(expected_mean, mean, self.precision)
+        self.assertAlmostEqual(expected_std, std, self.precision)
+
+    def test_box2_no_defaults(self):
+        expected_mean = 405.45273
+        expected_std = 33.431175
+
+        mean, std = determine_image_stats(self.test_banzai_file_COPIED, center=(11, 11), size=(21,21) )
+
+        self.assertAlmostEqual(expected_mean, mean, self.precision)
+        self.assertAlmostEqual(expected_std, std, self.precision)
+
 
 class TestDetermineAstconverttOptions(SimpleTestCase):
     def setUp(self):
@@ -2356,6 +2302,96 @@ class TestDetermineAstconverttOptions(SimpleTestCase):
         output_filename, cmdline = determine_astconvertt_options(self.test_file, self.test_dir, mean, std, hdu='ALIGNED')
 
         self.assertEqual(expected_cmdline, cmdline)
+
+@skipIf(True, "Needs run_astnoisechisel porting over")
+class TestRunAstcrop(ExternalCodeUnitTest):
+    def setUp(self):
+        super(TestRunAstcrop, self).setUp()
+
+        # needs to modify the original image when running astwarp
+        shutil.copy(os.path.abspath(self.test_banzai_file), self.test_dir)
+        test_banzai_file_COPIED = os.path.join(self.test_dir, 'banzai_test_frame.fits')
+
+        self.test_file, status = run_astnoisechisel(test_banzai_file_COPIED, self.test_dir, bkgd_only=True)
+
+        self.output_filename = os.path.join(self.test_dir, self.test_file.replace('-chisel', '-chisel-trim'))
+
+        self.center_RA = 272.953000468
+        self.center_DEC = 1.28040205532
+
+        # Disable anything below CRITICAL level
+        logging.disable(logging.CRITICAL)
+
+        self.remove = True
+        self.maxDiff = None
+
+    def return_fits_dims(self, filename, keywords = ['NAXIS1', 'NAXIS2']):
+        dims = {}
+        with fits.open(filename) as hdulist:
+            for hdu in hdulist:
+                header = hdu.header
+                dims[hdu.name] = []
+                for key in keywords:
+                    dims[hdu.name].append(header.get(key, None))
+        return dims
+
+    def touch(self, fname, times=None):
+        with open(fname, 'a'):
+            os.utime(fname, times)
+
+    def test_nofilename(self):
+        expected_filename = None
+        expected_status = -2
+
+        cropped_filename, status = run_astcrop(None, self.test_dir, 0, 1991, 0, 511)
+
+        self.assertEqual(expected_filename, cropped_filename)
+        self.assertEqual(expected_status, status)
+
+    def test_nonexistant_filename(self):
+        expected_filename = None
+        expected_status = -1
+
+        cropped_filename, status = run_astcrop('/foo/bar', self.test_dir, 0, 1991, 0, 511)
+
+        self.assertEqual(expected_filename, cropped_filename)
+        self.assertEqual(expected_status, status)
+
+    def test_zerobased(self):
+        expected_status = 0
+        expected_naxis1 = 1991.0
+        expected_naxis2 = 511.0
+        expected_vals = [expected_naxis1, expected_naxis2, self.center_RA, self.center_DEC]
+
+        hdr_keywords = ['NAXIS1', 'NAXIS2', 'CRVAL1', 'CRVAL2']
+        cropped_filename, status = run_astcrop(self.test_file, self.test_dir, 0, 1991, 0, 511)
+        all_dims = self.return_fits_dims(self.output_filename, keywords= hdr_keywords)
+
+        self.assertEquals(expected_status, status)
+        self.assertTrue(os.path.exists(self.output_filename))
+        self.assertEquals(self.output_filename, cropped_filename)
+        for hduname, dims in all_dims.items():
+            for i, keyword in enumerate(hdr_keywords):
+                if dims[i] is not None:
+                    self.assertEquals(expected_vals[i], dims[i], msg=f"Failure in {hduname} on {keyword}")
+
+    def test_change_center(self):
+        expected_status = 0
+        expected_naxis1 = 1981
+        expected_naxis2 = 492
+        expected_vals = [expected_naxis1, expected_naxis2, self.center_RA, self.center_DEC]
+
+        hdr_keywords = ['NAXIS1', 'NAXIS2', 'CRVAL1', 'CRVAL2']
+        cropped_filename, status = run_astcrop(self.test_file, self.test_dir, 10, 1990, 10, 501)
+        all_dims = self.return_fits_dims(self.output_filename, keywords = hdr_keywords)
+
+        self.assertEquals(expected_status, status)
+        self.assertTrue(os.path.exists(self.output_filename))
+        self.assertEquals(self.output_filename, cropped_filename)
+        for hduname, dims in all_dims.items():
+            for i, keyword in enumerate(hdr_keywords):
+                if dims[i] is not None:
+                    self.assertEquals(expected_vals[i], dims[i], msg=f"Failure in {hduname} on {keyword}")
 
 
 class TestRunAstarithmetic(ExternalCodeUnitTest):
@@ -2432,8 +2468,8 @@ class TestRunAststatistics(ExternalCodeUnitTest):
         self.maxDiff = None
 
     def test_cmdline(self):
-        expected_cmdline_mean = f'aststatistics {self.test_banzai_file_COPIED} -hSCI --sigclip-mean'
-        expected_cmdline_std = f'aststatistics {self.test_banzai_file_COPIED} -hSCI --sigclip-std'
+        expected_cmdline_mean = f'aststatistics {self.test_banzai_file_COPIED} -hSCI --sigclip-mean --sclipparams=3,5'
+        expected_cmdline_std = f'aststatistics {self.test_banzai_file_COPIED} -hSCI --sigclip-std --sclipparams=3,5'
 
         mean, cmdline_mean = run_aststatistics(self.test_banzai_file_COPIED, 'mean', dbg=True)
         std, cmdline_std = run_aststatistics(self.test_banzai_file_COPIED, 'std', dbg=True)
@@ -2442,8 +2478,8 @@ class TestRunAststatistics(ExternalCodeUnitTest):
         self.assertEquals(expected_cmdline_std, cmdline_std)
 
     def test_change_hdu(self):
-        expected_cmdline_mean = f'aststatistics {self.test_banzai_file_COPIED} -hALIGNED --sigclip-mean'
-        expected_cmdline_std = f'aststatistics {self.test_banzai_file_COPIED} -hALIGNED --sigclip-std'
+        expected_cmdline_mean = f'aststatistics {self.test_banzai_file_COPIED} -hALIGNED --sigclip-mean --sclipparams=3,5'
+        expected_cmdline_std = f'aststatistics {self.test_banzai_file_COPIED} -hALIGNED --sigclip-std --sclipparams=3,5'
 
         mean, cmdline_mean = run_aststatistics(self.test_banzai_file_COPIED, 'mean', hdu='ALIGNED', dbg=True)
         std, cmdline_std = run_aststatistics(self.test_banzai_file_COPIED, 'std', hdu='ALIGNED', dbg=True)

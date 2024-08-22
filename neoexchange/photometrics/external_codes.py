@@ -15,6 +15,7 @@ GNU General Public License for more details.
 
 import logging
 import os
+import re
 import numpy as np
 from math import floor
 from datetime import datetime, timedelta
@@ -605,14 +606,20 @@ def round_up_to_odd(f):
     return int(ceil(f) // 2) * 2 + 1
 
 def determine_astcrop_options(filename, dest_dir, xmin, xmax, ymin, ymax):
+    """Determine the options for running `astcrop`. Since this is designed to
+    be run in a loop over all HDUS, the string returned contains a placeholder
+    '--hdu=<hdu>' that needs to be substitued.
+    """
+
     raw_filename = os.path.basename(filename)
-    output_filename = os.path.join(dest_dir, raw_filename.replace('-chisel', '-chisel-crop'))
+    output_filename = raw_filename.replace('.fits', '-trim.fits')
+    output_filename = os.path.join(dest_dir, output_filename)
     # FITS files have a 1-based origin but the bounds from NumPy are/could be
     # zero-based. Ensure we don't try to start the section at 0.
     xmin = max(xmin, 1)
     ymin = max(ymin, 1)
 
-    options = f'--mode=img --section={xmin}:{xmax},{ymin}:{ymax} --output={output_filename} {filename}'
+    options = f'--mode=img --section={xmin}:{xmax},{ymin}:{ymax} --hdu=<hdu> --append --metaname=<hdu> --output={output_filename} {filename}'
 
     return output_filename, options
 
@@ -643,9 +650,16 @@ def determine_astarithmetic_options(filenames, dest_dir, hdu = 'ALIGNED'):
     options = f'--globalhdu {hdu} --output={output_filename} {filenames_list} {len(filenames)} 2 0.05 sigclip-mean'
     return output_filename, options
 
-def determine_image_stats(filename, hdu='SCI'):
-    mean, status = run_aststatistics(filename, 'mean', hdu)
-    std, status = run_aststatistics(filename, 'std', hdu)
+def determine_image_stats(filename, hdu='SCI', center=None, size=None):
+    """Compute mean and standard deviation on the FITS image referenced by
+    <filename>, optionally in the specific [HDU] (defaults to 'SCI').
+    Optionally [center] and [size] can be passed as pairs of values for the
+    X, Y pixel center of the box and the (width, height) in pixels of the box
+    within which the statistics will be calculated.
+    """
+
+    mean, status = run_aststatistics(filename, 'mean', hdu, center=center, size=size)
+    std, status = run_aststatistics(filename, 'std', hdu, center=center, size=size)
 
     if mean is not None and std is not None:
         mean = float(mean)
@@ -1779,6 +1793,48 @@ def single_frame_aperture_photometry(fits_filepath, ra, dec, background_subtract
         source_flux['aperture_radius'] = [aperture_radius]
     return source_flux
 
+def run_astcrop(filename, dest_dir, xmin, xmax, ymin, ymax, binary='astcrop', dbg=False):
+    '''
+    Crops the passed <filename> using astcrop to xmin:xmax,ymin:ymax pixel extent,
+    writing output to <dest_dir>
+    '''
+    if filename is None:
+        return None, -2
+    if os.path.exists(filename) is False:
+        return None, -1
+
+    binary = binary or find_binary(binary)
+    if binary is None:
+        logger.error(f"Could not locate {binary} executable in PATH")
+        return None, -42
+
+    cropped_filename, options = determine_astcrop_options(filename, dest_dir, xmin, xmax, ymin, ymax)
+    if os.path.exists(cropped_filename):
+        return cropped_filename, 1
+
+    with fits.open(filename) as hdulist:
+        hdu_names = [hdu.name for hdu in hdulist]
+
+    for hdu in hdu_names:
+        cmdline = f"{binary} "
+        if hdu == '':
+            cmdline += options.replace('--hdu=<hdu>', '').replace('--metaname=<hdu>', '')
+        else:
+            cmdline += options.replace('<hdu>', hdu)
+        cmdline = cmdline.rstrip()
+        if dbg:
+            print(cmdline)
+
+        if dbg is True:
+            retcode_or_cmdline = cmdline
+        else:
+            logger.debug(f"cmdline={cmdline}")
+            cmd_args = cmdline.split()
+            cmd_call = Popen(cmd_args, cwd=dest_dir, stdout=PIPE)
+            (out, errors) = cmd_call.communicate()
+            retcode_or_cmdline = cmd_call.returncode
+
+    return cropped_filename, retcode_or_cmdline
 
 def run_astwarp(filename, dest_dir, center_RA, center_DEC, width = 1991.0, height = 511.0, binary='astwarp', dbg=False):
     '''
@@ -1874,11 +1930,17 @@ def run_astarithmetic(filenames, dest_dir, binary='astarithmetic', dbg=False):
     return combined_filename, retcode_or_cmdline
 
 
-def run_aststatistics(filename, keyword, hdu='SCI', binary='aststatistics', dbg=False):
+def run_aststatistics(filename, keyword, hdu='SCI', binary='aststatistics', center=None, size=None, dbg=False):
     '''
     Runs aststatistics on <filename> to find either the sigma-clipped mean
-    or the sigma-clipped standard deviation depending on the provided <keyword>
+    or the sigma-clipped standard deviation depending on the provided <keyword>.
+    By default, the whole image is used for statistics; if [center] and [size]
+    are passed as a center coordinate pair and (width, height) in pixels, the
+    image will be cropped down to that first. (This may be inefficient if 
+    doing large amounts of regions in a single image)
     '''
+    import tempfile
+
     if filename is None:
         return None, -2
     if os.path.exists(filename) is False:
@@ -1887,7 +1949,20 @@ def run_aststatistics(filename, keyword, hdu='SCI', binary='aststatistics', dbg=
     if binary is None:
         logger.error(f"Could not locate {binary} executable in PATH")
         return None, -42
-    cmdline = f"{binary} {filename} -h{hdu} --sigclip-{keyword}"
+    if center is not None and size is not None:
+        # Crop first
+        fd, tempfile = tempfile.mkstemp(suffix='.fits')
+        cmdline = f"astcrop {filename} --hdu={hdu} --mode=img --center={center[0]},{center[1]} --width={size[0]},{size[1]} --output={tempfile}"
+        if dbg: print("crop cmdline",cmdline)
+        cmd_args = cmdline.split()
+        cmd_call = Popen(cmd_args, stdout=PIPE)
+        (out, errors) = cmd_call.communicate()
+        if cmd_call.returncode != 0:
+            logger.error(f"Error running astcrop to create subset")
+            return None, -3
+        filename = tempfile
+        hdu = 'CROP'
+    cmdline = f"{binary} {filename} -h{hdu} --sigclip-{keyword} --sclipparams=3,5"
     cmdline = cmdline.rstrip()
     if dbg:
         print(cmdline)
@@ -1901,7 +1976,12 @@ def run_aststatistics(filename, keyword, hdu='SCI', binary='aststatistics', dbg=
         cmd_call = Popen(cmd_args, stdout=PIPE)
         (out, errors) = cmd_call.communicate()
         retcode_or_cmdline = cmd_call.returncode
-
+        # Clean-up temporary file if made
+        if center is not None and size is not None:
+            if dbg is False:
+                os.remove(tempfile)
+            else:
+                print("Not removing temporary file", tempfile)
     return out, retcode_or_cmdline
 
 def run_astconvertt(filename, dest_dir, mean, std, hdu='SCI', binary='astconvertt', dbg=False):
