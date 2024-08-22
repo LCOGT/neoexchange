@@ -167,6 +167,7 @@ class Command(BaseCommand):
         ax1.set_xlabel('Time')
         ax0.set_ylabel('Magnitude')
         ax1.set_ylabel('Magnitude')
+        ax2.set_ylabel('WMSCLOUD')
         fig.suptitle(title)
         ax0.set_title(sub_title)
         ax1.set_title('Zero Point', size='medium')
