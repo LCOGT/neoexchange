@@ -1955,9 +1955,11 @@ def run_aststatistics(filename, keyword, hdu='SCI', binary='aststatistics', cent
         cmdline = f"astcrop {filename} --hdu={hdu} --mode=img --center={center[0]},{center[1]} --width={size[0]},{size[1]} --output={tempfile}"
         if dbg: print("crop cmdline",cmdline)
         cmd_args = cmdline.split()
-        cmd_call = Popen(cmd_args, stdout=PIPE)
-        (out, errors) = cmd_call.communicate()
-        if cmd_call.returncode != 0:
+        returncode = -1
+        with Popen(cmd_args, stdout=PIPE) as cmd_call:
+            (out, errors) = cmd_call.communicate()
+            returncode = cmd_call.returncode
+        if returncode != 0:
             logger.error(f"Error running astcrop to create subset")
             return None, -3
         filename = tempfile
@@ -1973,9 +1975,10 @@ def run_aststatistics(filename, keyword, hdu='SCI', binary='aststatistics', cent
     else:
         logger.debug(f"cmdline={cmdline}")
         cmd_args = cmdline.split()
-        cmd_call = Popen(cmd_args, stdout=PIPE)
-        (out, errors) = cmd_call.communicate()
-        retcode_or_cmdline = cmd_call.returncode
+        retcode_or_cmdline = -1
+        with Popen(cmd_args, stdout=PIPE) as cmd_call:
+            (out, errors) = cmd_call.communicate()
+            retcode_or_cmdline = cmd_call.returncode
         # Clean-up temporary file if made
         if center is not None and size is not None:
             if dbg is False:
