@@ -1,6 +1,6 @@
 ## NEO Exchange
 
-Portal for scheduling observations of NEOs (and other Solar System objects) using Las Cumbres Observatory.
+Portal for scheduling observations of NEOs (and other Solar System objects) using Las Cumbres Observatory. Described and published in Lister, Gomez, Chatelain, Greenstreet et al. 2021, Icarus, [doi:10.1016/j.icarus.2021.114387](https://ui.adsabs.harvard.edu/link_gateway/2021Icar..36414387L/doi:10.1016/j.icarus.2021.114387).
 
 <a href="https://ascl.net/2311.005"><img src="https://img.shields.io/badge/ascl-2311.005-blue.svg?colorB=262255" alt="ascl:2311.005" /></a>
 
