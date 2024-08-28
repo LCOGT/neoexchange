@@ -811,3 +811,79 @@ class TestGetRot(ExternalCodeUnitTest):
         rot = get_rot(self.header, u.rad)
 
         assert_allclose(expected_rot, rot, rtol=self.rtol)
+
+class TestGetFitsImageStats(ExternalCodeUnitTest):
+    def setUp(self):
+        super(TestGetFitsImageStats, self).setUp()
+        shutil.copy(os.path.abspath(self.test_banzai_file), self.test_dir)
+        self.test_banzai_file_COPIED = os.path.join(self.test_dir, 'banzai_test_frame.fits')
+        self.precision = self.precision = 4
+
+    def test_null_file(self):
+        null_stats = get_fits_imagestats(None, 'mean', hdu = "SCI", center = None, size = None)
+        null_stats_center = get_fits_imagestats(None, 'mean', hdu = "SCI", center = (600, 1370), size = None)
+        null_stats_size = get_fits_imagestats(None, 'mean', hdu = "SCI", center = None, size = (9, 9))
+        null_stats_full = get_fits_imagestats(None, 'mean', hdu = "SCI", center = (600, 1370), size = (9, 9))
+        self.assertEqual(null_stats, None)
+        self.assertEqual(null_stats_center, None)
+        self.assertEqual(null_stats_size, None)
+        self.assertEqual(null_stats_full, None)
+
+    def test_mean_no_center(self):
+        expected_mean = sigma_clipped_stats(fits.getdata(self.test_banzai_file_COPIED), sigma = 3, maxiters = 5)[0]
+        mean_no_center = get_fits_imagestats(self.test_banzai_file_COPIED, 'mean', hdu = "SCI", center = None, size = None)
+        mean_incomp_center = get_fits_imagestats(self.test_banzai_file_COPIED, 'mean', hdu = "SCI", center = (600, 1370), size = None)
+        mean_incomp_size = get_fits_imagestats(self.test_banzai_file_COPIED, 'mean', hdu = "SCI", center = None, size = (9, 9))
+        self.assertEqual(expected_mean, mean_no_center)
+        self.assertEqual(expected_mean, mean_incomp_center)
+        self.assertEqual(expected_mean, mean_incomp_size)
+
+    def test_median_no_center(self):
+        expected_median = sigma_clipped_stats(fits.getdata(self.test_banzai_file_COPIED), sigma = 3, maxiters = 5)[1]
+        median_no_center = get_fits_imagestats(self.test_banzai_file_COPIED, 'median', hdu = "SCI", center = None, size = None)
+        median_incomp_center = get_fits_imagestats(self.test_banzai_file_COPIED, 'median', hdu = "SCI", center = (600, 1370), size = None)
+        median_incomp_size = get_fits_imagestats(self.test_banzai_file_COPIED, 'median', hdu = "SCI", center = None, size = (9, 9))
+        self.assertEqual(expected_median, median_no_center)
+        self.assertEqual(expected_median, median_incomp_center)
+        self.assertEqual(expected_median, median_incomp_size)
+
+    def test_std_no_center(self):
+        expected_std = sigma_clipped_stats(fits.getdata(self.test_banzai_file_COPIED), sigma = 3, maxiters = 5)[2]
+        std_no_center = get_fits_imagestats(self.test_banzai_file_COPIED, 'std', hdu = "SCI", center = None, size = None)
+        std_incomp_center = get_fits_imagestats(self.test_banzai_file_COPIED, 'std', hdu = "SCI", center = (600, 1370), size = None)
+        std_incomp_size = get_fits_imagestats(self.test_banzai_file_COPIED, 'std', hdu = "SCI", center = None, size = (9, 9))
+        self.assertEqual(expected_std, std_no_center)
+        self.assertEqual(expected_std, std_incomp_center)
+        self.assertEqual(expected_std, std_incomp_size)
+
+    def test_mean_center_1(self):
+        expected_mean = 397.37677
+        mean_center_1 = get_fits_imagestats(self.test_banzai_file_COPIED, 'mean', hdu = "SCI", center = (600, 1370), size = (9,9))
+        self.assertAlmostEqual(expected_mean, mean_center_1, self.precision)
+
+    def test_median_center_1(self):
+        expected_median = 398.81302
+        median_center_1 = get_fits_imagestats(self.test_banzai_file_COPIED, 'median', hdu = "SCI", center = (600, 1370), size = (9,9))
+        print(median_center_1)
+        self.assertAlmostEqual(expected_median, median_center_1, self.precision)
+
+    def test_std_center_1(self):
+        expected_std = 33.9552
+        std_center_1 = get_fits_imagestats(self.test_banzai_file_COPIED, 'std', hdu = "SCI", center = (600, 1370), size = (9,9))
+        self.assertAlmostEqual(expected_std, std_center_1, self.precision)
+
+    def test_mean_center_2(self):
+        expected_mean = 405.45273
+        mean_center_2 = get_fits_imagestats(self.test_banzai_file_COPIED, 'mean', hdu = "SCI", center = (11, 11), size = (21,21))
+        self.assertAlmostEqual(expected_mean, mean_center_2, self.precision)
+
+    def test_median_center_2(self):
+        expected_median = 405.23233
+        median_center_2 = get_fits_imagestats(self.test_banzai_file_COPIED, 'median', hdu = "SCI", center = (11, 11), size = (21,21))
+        print(median_center_2)
+        self.assertAlmostEqual(expected_median, median_center_2, self.precision)
+
+    def test_std_center_2(self):
+        expected_std = 33.431175
+        std_center_2 = get_fits_imagestats(self.test_banzai_file_COPIED, 'std', hdu = "SCI", center = (11, 11), size = (21,21))
+        self.assertAlmostEqual(expected_std, std_center_2, self.precision)

@@ -24,7 +24,7 @@ from astropy.io import fits
 from astropy.wcs import WCS
 from astropy import units as u
 from astropy.coordinates import SkyCoord
-
+from astropy.stats import sigma_clipped_stats
 from core.models import StaticSource, Block, Frame
 
 logger = logging.getLogger(__name__)
@@ -432,3 +432,25 @@ def determine_reference_frame_for_block(obs_block, reference_dir, obs_filter=Non
         else:
             print("No matching frames found")
     return ref_name
+
+def get_fits_imagestats(fits_filename, keyword, hdu = "SCI", center = None, size = None):
+    if fits_filename is None:
+        return None
+    if os.path.exists(fits_filename) is False:
+        return None
+    data = fits.getdata(fits_filename)
+    if center is not None and size is not None:
+        y_lower = center[1] - (size[1]/2)
+        y_upper = center[1] + (size[1]/2)
+        x_lower = center[0] - (size[0]/2)
+        x_upper = center[0] + (size[0]/2)
+        statdata = data[int(y_lower):int(y_upper), int(x_lower):int(x_upper)]
+        stats = sigma_clipped_stats(data[(int(y_lower)):(int(y_upper)), (int(x_lower)):(int(x_upper))], sigma = 3, maxiters = 5)
+    else:
+        stats = sigma_clipped_stats(data, sigma = 3, maxiters = 5)
+    if keyword == "std":
+        return stats[2]
+    if keyword == 'median':
+        return stats[1]
+    if keyword == "mean":
+        return stats[0]

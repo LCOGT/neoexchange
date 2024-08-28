@@ -24,6 +24,7 @@ from copy import deepcopy
 import astropy.units as u
 from astropy.io import fits
 from astropy.table import QTable
+from astropy.stats import sigma_clipped_stats
 from numpy import array, arange
 from astropy.tests.helper import assert_quantity_allclose
 
@@ -2261,6 +2262,101 @@ class TestDetermineImageStats(ExternalCodeUnitTest):
         self.assertAlmostEqual(expected_mean, mean, self.precision)
         self.assertAlmostEqual(expected_std, std, self.precision)
 
+class TestDetermineImageStatsFromFits(ExternalCodeUnitTest):
+    def setUp(self):
+        super(TestDetermineImageStatsFromFits, self).setUp()
+
+        shutil.copy(os.path.abspath(self.test_banzai_file), self.test_dir)
+        self.test_banzai_file_COPIED = os.path.join(self.test_dir, 'banzai_test_frame.fits')
+        self.precision = 4
+
+    def test_1(self):
+        expected_mean = sigma_clipped_stats(fits.getdata(self.test_banzai_file_COPIED), sigma = 3, maxiters = 5)[0]
+        expected_std = sigma_clipped_stats(fits.getdata(self.test_banzai_file_COPIED), sigma = 3, maxiters = 5)[2]
+
+        mean, std = determine_image_stats_from_fits(self.test_banzai_file_COPIED)
+
+        self.assertEqual(expected_mean, mean)
+        self.assertEqual(expected_std, std)
+
+    def test_null_filename(self):
+        filename = None
+        expected_mean = None
+        expected_std = None
+
+        mean, std = determine_image_stats_from_fits(filename)
+
+        self.assertEqual(expected_mean, mean)
+        self.assertEqual(expected_std, std)
+
+    def test_box_no_defaults(self):
+        '''This can be replicated in AstroPy but the order of axes, origin and
+        range specifications are all different...
+        from astopy.io import fits
+        from astropy.stats import sigma_clipped_stats
+        data = fits.getdata('photometrics/tests/banzai_test_frame.fits', ext=0)
+        sigma_clipped_stats(data[1366-1:1375-1,596-1:605-1], sigma=3)
+        (397.37677, 398.81302, 33.955204)
+        # mean      median      std dev
+        '''
+
+        expected_mean = 397.37677
+        expected_std = 33.9552
+
+        mean, std = determine_image_stats_from_fits(self.test_banzai_file_COPIED, center=(600, 1370), size=(9,9) )
+
+        #self.assertAlmostEqual(expected_mean, mean, self.precision)
+        #self.assertAlmostEqual(expected_std, std, self.precision)
+
+    def test_box2_no_defaults(self):
+        expected_mean = 405.45273
+        expected_std = 33.431175
+
+        mean, std = determine_image_stats_from_fits(self.test_banzai_file_COPIED, center=(11, 11), size=(21,21) )
+
+        self.assertAlmostEqual(expected_mean, mean, self.precision)
+        self.assertAlmostEqual(expected_std, std, self.precision)
+
+class TestDetermineStatsinBoxes(ExternalCodeUnitTest):
+    def setUp(self):
+
+        super(TestDetermineStatsinBoxes, self).setUp()
+        shutil.copy(os.path.abspath(self.test_banzai_file), self.test_dir)
+        self.test_banzai_file_COPIED = os.path.join(self.test_dir, 'banzai_test_frame.fits')
+        self.filename = self.test_banzai_file_COPIED
+        self.precision = 4
+
+    def test_determine_stats_in_boxes(self):
+
+        filebasename = os.path.basename(self.filename)
+        frame = Frame.objects.filter(filename = filebasename)
+        determined_stats = determine_stats_in_boxes(frame, self.filename)
+        self.assertEqual(len(determined_stats), 4)
+        for i in range(0, len(determined_stats)):
+            self.assertEqual(type(determined_stats[i]), type([]))
+            self.assertEqual(len(determined_stats[i]), 3)
+            for j in range(0, len(determined_stats[i])):
+                self.assertEqual(type(determined_stats[i][j]), type([]))
+                self.assertEqual(len(determined_stats[i][j]), 3)
+        expected_tuple = ([[396.0893859863281, 395.49700927734375, 395.6500549316406],
+                        [399.9060363769531, 416.3839416503906, 412.6002502441406],
+                        [429.7848205566406, 410.1677551269531, 406.4407043457031]],
+                        [[33.26267623901367, 31.74565315246582, 28.088960647583008],
+                        [31.029478073120117, 33.14799118041992, 39.418983459472656],
+                        [31.536035537719727, 36.009647369384766, 38.264678955078125]],
+                        [[338, 1014, 1690], [338, 1014, 1690], [338, 1014, 1690]],
+                        [[1697, 1697, 1697], [1018, 1018, 1018], [339, 339, 339]])
+
+        self.assertEqual(determined_stats, expected_tuple)
+
+    def test_badness_good_file(self):
+        bad_subtraction = determine_bad_subtractions_in_box_stats(None, fits_filepath = self.filename, badness_threshold= 1000)
+        self.assertEqual(bad_subtraction, None)
+
+    def test_badness_bad_file(self):
+        bad_subtraction = determine_bad_subtractions_in_box_stats(None, fits_filepath = self.filename, badness_threshold= 1)
+        print(bad_subtraction)
+        self.assertEqual(bad_subtraction, os.path.basename(self.filename))
 
 class TestDetermineAstconverttOptions(SimpleTestCase):
     def setUp(self):

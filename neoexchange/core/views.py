@@ -81,6 +81,7 @@ from photometrics.external_codes import run_sextractor, run_swarp, run_hotpants,
 from photometrics.catalog_subs import open_fits_catalog, get_header, get_catalog_header, \
     determine_filenames, increment_red_level, funpack_fits_file, update_ldac_catalog_wcs, FITSHdrException, \
     get_reference_catalog, reset_database_connection, sanitize_object_name
+from photometrics.external_codes import determine_stats_in_boxes, determine_bad_subtractions_in_box_stats
 from photometrics.photometry_subs import calc_asteroid_snr, calc_sky_brightness
 from photometrics.spectraplot import pull_data_from_spectrum, pull_data_from_text, spectrum_plot
 from core.frames import create_frame, ingest_frames, measurements_from_block
@@ -90,7 +91,7 @@ from core.utils import search
 from core.blocksfind import find_frames, get_ephem, ephem_interpolate
 from photometrics.SA_scatter import readSources, genGalPlane, plotScatter, \
     plotFormat
-from core.plots import spec_plot, lin_vis_plot, lc_plot #, plot_magnitude
+from core.plots import spec_plot, lin_vis_plot, lc_plot
 from core.models.blocks import Block, SuperBlock
 
 
@@ -5047,15 +5048,141 @@ def generate_ecsv_file_post_photomet(block, dataroot, overwrite):
     new_order = ['path to frame','times','filters','xcenter','ycenter','aperture sum','aperture sum err','FWHM','ZP','ZP_sig','mag','magerr','aperture radius']
     results_table = results_table[new_order]
     block_date_str = f"{block.block_start}"[:-9]
-    results_table_filename = f"{dataroot}aperture_photometry_table_{block_date_str}.ecsv"
+    results_table_filename = os.path.join(dataroot, f"aperture_photometry_table_{block_date_str}.ecsv")
     results_table.write(results_table_filename, format='ascii.ecsv', overwrite = overwrite)
     return results_table_filename
 
-def get_lightcurves(blocks, shortdataroot, savepath):
-    filenames = []
-    for block in blocks:
-        dataroot = os.path.join(shortdataroot, f"{block.get_blockdayobs}")
-        photomet_table = perform_aper_photometry(block, dataroot)
-        current_file = plot_magnitude(block, photomet_table, savepath)
-        filenames.append(current_file)
-    return filenames
+def examine_subtractions(obs_block, save_directory, overwrite, badness_threshold = 1000):
+    """Loops over all subtracted Frames in <obs_block> computing statistics in a box on a 3x3 grid, arranges into table """
+    block_date_str = f"{obs_block.block_start}"[:-9]
+    data_storage_filename = os.path.join(save_directory, f"examined_subtractions_table_{block_date_str}.ecsv")
+    badness_storage_filename = os.path.join(save_directory, f"bad_subtraction_info_{block_date_str}.ecsv")
+    if overwrite == False:
+        data_storage_file = open(data_storage_filename, 'x')
+        badness_storage_file = open(badness_storage_filename, 'x')
+    if overwrite == True:
+        data_storage_file = open(data_storage_filename, "w")
+        badness_storage_file = open(badness_storage_filename, 'w')
+    sub_frames = Frame.objects.filter(block=obs_block, frametype=Frame.NEOX_SUB_FRAMETYPE, filter = 'rp').order_by('midpoint')
+    dataroot = os.path.join(settings.DATA_ROOT, 'Hera', obs_block.get_blockdayobs)
+    bad_filenames = []
+    total_files = 0
+    bad_files = 0
+    statstable = Table()
+    mean_up_left, mean_up_mid, mean_up_right    = [], [], []
+    mean_mid_left, mean_mid_mid, mean_mid_right = [], [], []
+    mean_low_left, mean_low_mid, mean_low_right = [], [], []
+    std_up_left, std_up_mid, std_up_right    = [], [], []
+    std_mid_left, std_mid_mid, std_mid_right = [], [], []
+    std_low_left, std_low_mid, std_low_right = [], [], []
+    x_cen_up_left, x_cen_up_mid, x_cen_up_right    = [], [], []
+    x_cen_mid_left, x_cen_mid_mid, x_cen_mid_right = [], [], []
+    x_cen_low_left, x_cen_low_mid, x_cen_low_right = [], [], []
+    y_cen_up_left, y_cen_up_mid, y_cen_up_right    = [], [], []
+    y_cen_mid_left, y_cen_mid_mid, y_cen_mid_right = [], [], []
+    y_cen_low_left, y_cen_low_mid, y_cen_low_right = [], [], []
+    filename_col = []
+    fwhm_col = []
+    zp_col = []
+    zp_err_col = []
+    bad_subtraction_col = []
+    for frame in sub_frames:
+        total_files +=1
+        fits_filepath = os.path.join(dataroot, frame.filename)
+        stats = determine_stats_in_boxes(frame, fits_filepath)
+        means  = stats[0]
+        stds   = stats[1]
+        x_cens = stats[2]
+        y_cens = stats[3]
+        bad_sub = determine_bad_subtractions_in_box_stats(frame, fits_filepath, badness_threshold)
+        mean_up_left.append(means[0][0])
+        mean_up_mid.append(means[0][1])
+        mean_up_right.append(means[0][2])
+        mean_mid_left.append(means[1][0])
+        mean_mid_mid.append(means[1][1])
+        mean_mid_right.append(means[1][2])
+        mean_low_left.append(means[2][0])
+        mean_low_mid.append(means[2][1])
+        mean_low_right.append(means[2][2])
+        std_up_left.append(stds[0][0])
+        std_up_mid.append(stds[0][1])
+        std_up_right.append(stds[0][2])
+        std_mid_left.append(stds[1][0])
+        std_mid_mid.append(stds[1][1])
+        std_mid_right.append(stds[1][2])
+        std_low_left.append(stds[2][0])
+        std_low_mid.append(stds[2][1])
+        std_low_right.append(stds[2][2])
+        x_cen_up_left.append(x_cens[0][0])
+        x_cen_up_mid.append(x_cens[0][1])
+        x_cen_up_right.append(x_cens[0][2])
+        x_cen_mid_left.append(x_cens[1][0])
+        x_cen_mid_mid.append(x_cens[1][1])
+        x_cen_mid_right.append(x_cens[1][2])
+        x_cen_low_left.append(x_cens[2][0])
+        x_cen_low_mid.append(x_cens[2][1])
+        x_cen_low_right.append(x_cens[2][2])
+        y_cen_up_left.append(y_cens[0][0])
+        y_cen_up_mid.append(y_cens[0][1])
+        y_cen_up_right.append(y_cens[0][2])
+        y_cen_mid_left.append(y_cens[1][0])
+        y_cen_mid_mid.append(y_cens[1][1])
+        y_cen_mid_right.append(y_cens[1][2])
+        y_cen_low_left.append(y_cens[2][0])
+        y_cen_low_mid.append(y_cens[2][1])
+        y_cen_low_right.append(y_cens[2][2])
+        filename_col.append(frame.filename)
+        fwhm_col.append(frame.fwhm)
+        zp_col.append(frame.zeropoint)
+        zp_err_col.append(frame.zeropoint_err)
+        if bad_sub != None:
+            bad_subtraction_col.append(True)
+            bad_filenames.append(frame.filename)
+            bad_files += 1
+        else:
+            bad_subtraction_col.append(False)
+    statstable['mean_up_left'] = mean_up_left
+    statstable['mean_up_mid'] = mean_up_mid
+    statstable['mean_up_right'] = mean_up_right
+    statstable['mean_mid_left'] = mean_mid_left
+    statstable['mean_mid_mid'] = mean_mid_mid
+    statstable['mean_mid_right'] = mean_mid_right
+    statstable['mean_low_left'] = mean_low_left
+    statstable['mean_low_mid'] = mean_low_mid
+    statstable['mean_low_right'] = mean_low_right
+    statstable['std_up_left'] = std_up_left
+    statstable['std_up_mid'] = std_up_mid
+    statstable['std_up_right'] = std_up_right
+    statstable['std_mid_left'] = std_mid_left
+    statstable['std_mid_mid'] = std_mid_mid
+    statstable['std_mid_right'] = std_mid_right
+    statstable['std_low_left'] = std_low_left
+    statstable['std_low_mid'] = std_low_mid
+    statstable['std_low_right'] = std_low_right
+    statstable['x_cen_up_left'] = x_cen_up_left
+    statstable['x_cen_up_mid'] = x_cen_up_mid
+    statstable['x_cen_up_right'] = x_cen_up_right
+    statstable['x_cen_mid_left'] = x_cen_mid_left
+    statstable['x_cen_mid_mid'] = x_cen_mid_mid
+    statstable['x_cen_mid_right'] = x_cen_mid_right
+    statstable['x_cen_low_left'] = x_cen_low_left
+    statstable['x_cen_low_mid'] = x_cen_low_mid
+    statstable['x_cen_low_right'] = x_cen_low_right
+    statstable['y_cen_up_left'] = y_cen_up_left
+    statstable['y_cen_up_mid'] = y_cen_up_mid
+    statstable['y_cen_up_right'] = y_cen_up_right
+    statstable['y_cen_mid_left'] = y_cen_mid_left
+    statstable['y_cen_mid_mid'] = y_cen_mid_mid
+    statstable['y_cen_mid_right'] = y_cen_mid_right
+    statstable['y_cen_low_left'] = y_cen_low_left
+    statstable['y_cen_low_mid'] = y_cen_low_mid
+    statstable['y_cen_low_right'] = y_cen_low_right
+    statstable['filename'] = filename_col
+    statstable['fwhm'] = fwhm_col
+    statstable['zeropoint'] = zp_col
+    statstable['zp_err'] = zp_err_col
+    statstable['bad_subtraction'] = bad_subtraction_col
+    percent_bad_files = (bad_files/total_files)*100
+    statstable.write(data_storage_filename, format='ascii.ecsv', overwrite = overwrite)
+    badness_storage_file.write(f"bad subtraction files {bad_filenames}, percent bad files = {percent_bad_files}")
+    return data_storage_filename, badness_storage_filename, bad_filenames, percent_bad_files

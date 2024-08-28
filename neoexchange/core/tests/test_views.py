@@ -9410,7 +9410,6 @@ class TestPerformAperPhotometry(TestCase):
         block_date_str = f"{self.test_block.block_start}"[:-9]
         expected_file_name = f"{self.test_output_dir}aperture_photometry_table_{block_date_str}.ecsv"
         photometry_file_name = generate_ecsv_file_post_photomet(self.test_block, self.test_output_dir, overwrite = True)
-        print(photometry_file_name)
         photometry_file_contents = Table.read(photometry_file_name, format = 'ascii.ecsv')
         photometry_table = perform_aper_photometry(self.test_block, self.test_output_dir)
         self.assertTrue(os.path.exists(photometry_file_name))

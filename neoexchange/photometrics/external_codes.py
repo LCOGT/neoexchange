@@ -49,7 +49,7 @@ from photometrics.catalog_subs import oracdr_catalog_mapping, banzai_catalog_map
     banzai_ldac_catalog_mapping, swope_ldac_catalog_mapping, mro_ldac_catalog_mapping,\
     fits_ldac_to_header, convert_value
 import photometrics.catalog_subs
-from photometrics.image_subs import create_weight_image, create_rms_image, get_saturate
+from photometrics.image_subs import create_weight_image, create_rms_image, get_saturate, get_fits_imagestats
 
 
 import photometrics
@@ -666,6 +666,85 @@ def determine_image_stats(filename, hdu='SCI', center=None, size=None):
         std = float(std)
 
     return mean, std
+
+def determine_image_stats_from_fits(filename, hdu='SCI', center=None, size=None):
+
+    mean = get_fits_imagestats(filename, 'mean', hdu, center=center, size=size)
+    std = get_fits_imagestats(filename, 'std', hdu, center=center, size=size)
+
+    if mean is not None and std is not None:
+        mean = float(mean)
+        std = float(std)
+    return mean, std
+
+def determine_stats_in_boxes(frame, fits_filepath):
+    """Computes statistics in a box on a 3x3 grid for an individual Frame object using its filename"""
+    if hasattr(frame, 'frametype'):
+        frame_for_stat_analysis = frame
+        xsize = frame_for_stat_analysis.get_x_size()
+        ysize = frame_for_stat_analysis.get_y_size()
+    else:
+        print("not a frame")
+        frame_for_stat_analysis = fits.getdata(fits_filepath)
+        xsize = frame_for_stat_analysis.shape[1]
+        ysize = frame_for_stat_analysis.shape[0]
+    inc_x = xsize//3
+    inc_y = ysize//3
+    all_means = []
+    all_stds = []
+    all_center_xs = []
+    all_center_ys = []
+    for center_y in np.arange(inc_y // 2, ysize, inc_y)[::-1]:
+        for center_x in np.arange(inc_x // 2, xsize, inc_x):
+            mean, std = determine_image_stats_from_fits(fits_filepath, center=(center_x, center_y), size=(21, 21))
+            all_means.append(mean)
+            all_stds.append(std)
+            all_center_xs.append(center_x)
+            all_center_ys.append(center_y)
+    mean_grid       = []
+    std_grid        = []
+    cent_x_grid     = []
+    cent_y_grid     = []
+    mean_grid_row   = []
+    std_grid_row    = []
+    cent_x_grid_row = []
+    cent_y_grid_row = []
+    for i in range (0, len(all_means)):
+        mean_grid_row.append(all_means[i])
+        std_grid_row.append(all_stds[i])
+        cent_x_grid_row.append(all_center_xs[i])
+        cent_y_grid_row.append(all_center_ys[i])
+        if len(mean_grid_row) % 3 == 0:
+            mean_grid.append(mean_grid_row)
+            std_grid.append(std_grid_row)
+            cent_x_grid.append(cent_x_grid_row)
+            cent_y_grid.append(cent_y_grid_row)
+            mean_grid_row   = []
+            std_grid_row    = []
+            cent_x_grid_row = []
+            cent_y_grid_row = []
+    return mean_grid, std_grid, cent_x_grid, cent_y_grid
+
+def determine_bad_subtractions_in_box_stats(frame, fits_filepath, badness_threshold):
+    stats = determine_stats_in_boxes(frame, fits_filepath)
+    means = stats[0]
+    stds = stats[1]
+    bad_means = 0
+    bad_stds = 0
+    for i in range(0, len(means)):
+        means = stats[0][i]
+        stds = stats[1][i]
+        for mean in means:
+            for std in stds:
+                if abs(mean) > badness_threshold:
+                    bad_means += 1
+                if abs(std) > badness_threshold:
+                    bad_stds += 1
+    if bad_means > 0 or bad_stds > 0:
+        bad_filename = os.path.basename(fits_filepath)
+    else:
+        bad_filename = None
+    return(bad_filename)
 
 def determine_astconvertt_options(filename, dest_dir, mean, std, hdu='SCI'):
     raw_filename = os.path.basename(filename)
