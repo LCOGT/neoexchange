@@ -47,6 +47,7 @@ from astrometrics.time_subs import datetime2mjd_utc
 from core.archive_subs import make_data_dir
 from core.models import Block, Frame, SuperBlock, SourceMeasurement, CatalogSources, DataProduct
 from core.utils import save_dataproduct
+from core.urlsubs import get_seeing_for_site
 from photometrics.catalog_subs import search_box, sanitize_object_name, \
     open_fits_catalog, make_object_directory, increment_red_level
 from photometrics.gf_movie import make_gif
@@ -101,7 +102,7 @@ class Command(BaseCommand):
 
         return expected_fwhm
 
-    def plot_timeseries(self, times, alltimes, mags, mag_errs, zps, zp_errs, fwhm, air_mass, cloud, colors='r,gray', title='', sub_title='', datadir='./', filename='tmp_', diameter=0.4*u.m):
+    def plot_timeseries(self, times, alltimes, mags, mag_errs, zps, zp_errs, fwhm, air_mass, temps, seeing, colors='r,gray', title='', sub_title='', datadir='./', filename='tmp_', diameter=0.4*u.m, temp_keyword="FOCTEMP"):
         """Uses matplotlib to create and save a quick LC plot png as well as a sky conditions plot png.
 
         Parameters
@@ -160,7 +161,7 @@ class Command(BaseCommand):
         ax1.set_ylim(ylims[0]-0.1, ylims[1])
         # Make copy of ax1 ZP Axis sharing the same x axis for plotting cloud
         ax2 = ax1.twinx()
-        ax2.plot(alltimes, cloud, color=colors[1], marker='.', alpha=0.5)
+        ax2.plot(alltimes, temps['WMSCLOUD'], color=colors[1], marker='.', alpha=0.5)
         # Set up Axes/Titles
         ax0.invert_yaxis()
         #ax1.invert_yaxis()
@@ -181,11 +182,13 @@ class Command(BaseCommand):
         ax1.xaxis.set_major_formatter(DateFormatter(date_string))
         ax1.fmt_xdata = DateFormatter(date_string)
         fig.autofmt_xdate()
+        fig.tight_layout()
 
         fig.savefig(os.path.join(datadir, filename + 'lightcurve.png'))
 
         # Build Conditions plot
         fig2, (ax2, ax3) = plt.subplots(nrows=2, sharex=True)
+        ax4 = ax3.twinx()
         ax2.plot(alltimes, fwhm, marker='.', color=colors[0], linestyle=' ')
         fwhm_0_median = fwhm[0]
         if len(fwhm) > 3:
@@ -196,15 +199,36 @@ class Command(BaseCommand):
         else:
             ax2.plot(alltimes, expected_fwhm, color='black', linestyle=' ', marker='+', markersize=2, label="Predicted")
 
+        # Cut down DIMM results to span of Block
+        if len(seeing) > 0:
+            mask1 = seeing['measure_time'] >= alltimes[0]
+            mask2 = seeing['measure_time'] <= alltimes[-1]
+            mask = mask1 & mask2
+            block_seeing = seeing[mask]
+            ax2.plot(block_seeing['measure_time'], block_seeing['seeing'], color='#73bf69', linestyle='-', label='DIMM')
+        temp_lines = []
+        temp_labels = []
+        for temp in temps:
+            if temp != 'WMSCLOUD':
+                # Skip sky temperature as its already plotted and very different
+                # to the other temperatures
+                temp_line = ax4.plot(alltimes, temps[temp], linewidth=0.66, marker='.', linestyle='-', label=temp)
+                temp_lines.append(temp_line[0])
+                temp_labels.append(temp)
         # Set up Axes/Titles
         ax2.set_ylabel('FWHM (")')
         # ax2.set_title('FWHM')
         fig2.suptitle('Conditions for obs: '+title)
         ax2.set_title(sub_title)
         ax3.plot(alltimes, air_mass, marker='.', color=colors[0], linestyle=' ')
+        ax4.legend(temp_lines, temp_labels, loc='best', fontsize='xx-small')
         ax3.set_xlabel('Time')
         ax3.set_ylabel('Airmass')
         # ax3.set_title('Airmass')
+        temp_label = "Temp"
+        if temp_keyword is not None and temp_keyword != '' and type(temp_keyword) != list:
+            temp_label = temp_label + "(" + temp_keyword.strip() + ")"
+        ax4.set_ylabel(temp_label)
         ax2.minorticks_on()
         ax3.minorticks_on()
         ax3.invert_yaxis()
@@ -212,6 +236,7 @@ class Command(BaseCommand):
         ax2.fmt_xdata = DateFormatter(date_string)
         ax3.xaxis.set_major_formatter(DateFormatter(date_string))
         ax3.fmt_xdata = DateFormatter(date_string)
+        fig2.tight_layout()
         fig2.autofmt_xdate()
         ax2.legend()
         fig2.savefig(os.path.join(datadir, filename + 'lightcurve_cond.png'))
@@ -539,13 +564,27 @@ class Command(BaseCommand):
                     # Create gif of fits files used for LC extraction
                     data_path = make_data_dir(out_path, model_to_dict(frames_all_zp[0]))
                     red_paths = []
-                    cloud = []
+                    temp_keywords = ['WMSCLOUD', 'WMSTEMP', 'TUBETEMP', 'FOCTEMP', 'REFTEMP']
+                    # TUBETEMP= Temperature of the telescope tube
+                    # FOCTEMP= Focus temperature
+                    # REFTEMP= Temperature used in refraction calculation
+                    focus_temps = {}
                     for f in frames_all_zp:
                         fits_filepath = os.path.join(data_path, f.filename.replace('e92', 'e91').replace('-e72', ''))
                         fits_header, fits_table, cattype = open_fits_catalog(fits_filepath, header_only=True)
                         object_name = fits_header.get('OBJECT', None)
-                        wmscloud = fits_header.get('WMSCLOUD', -99.0)
-                        cloud.append(wmscloud)
+                        for tempkey in temp_keywords:
+                                foc_temp = fits_header.get(tempkey, None)
+                                if foc_temp is not None:
+                                    try:
+                                        foc_temp = float(foc_temp)
+                                    except ValueError:
+                                        foc_temp = -99
+                                    #print("Value of {key:8s}={val:.2f}".format(key=tempkey, val=foc_temp))
+                                    if tempkey not in focus_temps:
+                                        focus_temps[tempkey] = [foc_temp,]
+                                    else:
+                                        focus_temps[tempkey].append(foc_temp)
                         block_id = fits_header.get('BLKUID', '').replace('/', '')
                         object_directory = ''
                         if object_name:
@@ -685,8 +724,10 @@ class Command(BaseCommand):
 
                 # Make plots
                 if not settings.USE_S3:
+                    seeing = get_seeing_for_site(frames_all_zp[0].sitecode, frames_all_zp[0].midpoint)
+                    self.stdout.write(f"Found {len(seeing)} seeing records")
                     self.plot_timeseries(times, alltimes, mags, mag_errs, zps, zp_errs, fwhm, air_mass, \
-                        cloud, title=plot_title, sub_title=subtitle, datadir=datadir, filename=base_name, \
+                        focus_temps, seeing, title=plot_title, sub_title=subtitle, datadir=datadir, filename=base_name, \
                         diameter=tel_diameter)
                     output_file_list.append('{},{}'.format(os.path.join(datadir, base_name + 'lightcurve_cond.png'), datadir.lstrip(out_path)))
                     output_file_list.append('{},{}'.format(os.path.join(datadir, base_name + 'lightcurve.png'), datadir.lstrip(out_path)))
