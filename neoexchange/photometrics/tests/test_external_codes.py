@@ -2237,7 +2237,7 @@ class TestDetermineImageStats(ExternalCodeUnitTest):
     def test_box_no_defaults(self):
         '''This can be replicated in AstroPy but the order of axes, origin and
         range specifications are all different...
-        from astopy.io import fits
+        from astropy.io import fits
         from astropy.stats import sigma_clipped_stats
         data = fits.getdata('photometrics/tests/banzai_test_frame.fits', ext=0)
         sigma_clipped_stats(data[1366-1:1375-1,596-1:605-1], sigma=3)
