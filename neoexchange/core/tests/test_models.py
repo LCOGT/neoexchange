@@ -1903,6 +1903,225 @@ class TestFrame(TestCase):
         self.assertEqual(self.w.pixel_shape[0], frame.wcs.pixel_shape[0])
         self.assertEqual(self.w.pixel_shape[1], frame.wcs.pixel_shape[1])
 
+    def test_set_quality(self):
+        params = { 'sitecode': 'E10',
+                   'instrument': 'ep07',
+                   'filter': 'rp',
+                   'filename': 'coj2m002-ep07-20240729-0063-e93.fits',
+                   'exptime': 170.0,
+                   'midpoint': datetime(2024, 7, 29, 9, 32, 4, 271000),
+                   'block': self.test_block,
+                   'quality': ' ',
+                   'zeropoint': 23.29,
+                   'zeropoint_err': 0.05,
+                   'zeropoint_src': 'py_zp_cvc-V0.2.1',
+                   'color_used': 'N/A',
+                   'color': -99.0,
+                   'color_err': 0.0,
+                   'fwhm': 2.246,
+                   'frametype': 93,
+                   'extrainfo': None,
+                   'rms_of_fit': 0.138575,
+                   'nstars_in_fit': 1168.0,
+                   'time_uncertainty': None,
+                   'frameid': None,
+                   'astrometric_catalog': 'GAIA-DR2',
+                   'photometric_catalog': 'PS1'
+                }
+        frame = Frame.objects.create(**params)
+        self.assertEqual(" ", frame.quality)
+
+        frame.set_quality(Frame.QUALITY_BADSUBTRACTION)
+        self.assertEqual("B", frame.quality)
+
+    def test_set_quality_none(self):
+        params = { 'sitecode': 'E10',
+                   'instrument': 'ep07',
+                   'filter': 'rp',
+                   'filename': 'coj2m002-ep07-20240729-0063-e93.fits',
+                   'exptime': 170.0,
+                   'midpoint': datetime(2024, 7, 29, 9, 32, 4, 271000),
+                   'block': self.test_block,
+                   'quality': ' ',
+                   'zeropoint': 23.29,
+                   'zeropoint_err': 0.05,
+                   'zeropoint_src': 'py_zp_cvc-V0.2.1',
+                   'color_used': 'N/A',
+                   'color': -99.0,
+                   'color_err': 0.0,
+                   'fwhm': 2.246,
+                   'frametype': 93,
+                   'extrainfo': None,
+                   'rms_of_fit': 0.138575,
+                   'nstars_in_fit': 1168.0,
+                   'time_uncertainty': None,
+                   'frameid': None,
+                   'astrometric_catalog': 'GAIA-DR2',
+                   'photometric_catalog': 'PS1'
+                }
+        frame = Frame.objects.create(**params)
+        self.assertEqual(" ", frame.quality)
+
+        frame.set_quality(None)
+        self.assertEqual(" ", frame.quality)
+
+    def test_set_quality_existing_none(self):
+        params = { 'sitecode': 'E10',
+                   'instrument': 'ep07',
+                   'filter': 'rp',
+                   'filename': 'coj2m002-ep07-20240729-0063-e93.fits',
+                   'exptime': 170.0,
+                   'midpoint': datetime(2024, 7, 29, 9, 32, 4, 271000),
+                   'block': self.test_block,
+                   'quality': 'I',
+                   'zeropoint': 23.29,
+                   'zeropoint_err': 0.05,
+                   'zeropoint_src': 'py_zp_cvc-V0.2.1',
+                   'color_used': 'N/A',
+                   'color': -99.0,
+                   'color_err': 0.0,
+                   'fwhm': 2.246,
+                   'frametype': 93,
+                   'extrainfo': None,
+                   'rms_of_fit': 0.138575,
+                   'nstars_in_fit': 1168.0,
+                   'time_uncertainty': None,
+                   'frameid': None,
+                   'astrometric_catalog': 'GAIA-DR2',
+                   'photometric_catalog': 'PS1'
+                }
+        frame = Frame.objects.create(**params)
+        self.assertEqual("I", frame.quality)
+
+        frame.set_quality(None)
+        self.assertEqual("I", frame.quality)
+
+    def test_set_quality_no_default(self):
+        params = { 'sitecode': 'E10',
+                   'instrument': 'ep07',
+                   'filter': 'rp',
+                   'filename': 'coj2m002-ep07-20240729-0063-e93.fits',
+                   'exptime': 170.0,
+                   'midpoint': datetime(2024, 7, 29, 9, 32, 4, 271000),
+                   'block': self.test_block,
+                   'zeropoint': 23.29,
+                   'zeropoint_err': 0.05,
+                   'zeropoint_src': 'py_zp_cvc-V0.2.1',
+                   'color_used': 'N/A',
+                   'color': -99.0,
+                   'color_err': 0.0,
+                   'fwhm': 2.246,
+                   'frametype': 93,
+                   'extrainfo': None,
+                   'rms_of_fit': 0.138575,
+                   'nstars_in_fit': 1168.0,
+                   'time_uncertainty': None,
+                   'frameid': None,
+                   'astrometric_catalog': 'GAIA-DR2',
+                   'photometric_catalog': 'PS1'
+                }
+        frame = Frame.objects.create(**params)
+        self.assertEqual(" ", frame.quality)
+
+        frame.set_quality(Frame.QUALITY_BADSUBTRACTION)
+        self.assertEqual("B", frame.quality)
+
+    def test_set_quality_existing_value(self):
+        params = { 'sitecode': 'E10',
+                   'instrument': 'ep07',
+                   'filter': 'rp',
+                   'filename': 'coj2m002-ep07-20240729-0063-e93.fits',
+                   'exptime': 170.0,
+                   'midpoint': datetime(2024, 7, 29, 9, 32, 4, 271000),
+                   'block': self.test_block,
+                   'quality': 'I',
+                   'zeropoint': 23.29,
+                   'zeropoint_err': 0.05,
+                   'zeropoint_src': 'py_zp_cvc-V0.2.1',
+                   'color_used': 'N/A',
+                   'color': -99.0,
+                   'color_err': 0.0,
+                   'fwhm': 2.246,
+                   'frametype': 93,
+                   'extrainfo': None,
+                   'rms_of_fit': 0.138575,
+                   'nstars_in_fit': 1168.0,
+                   'time_uncertainty': None,
+                   'frameid': None,
+                   'astrometric_catalog': 'GAIA-DR2',
+                   'photometric_catalog': 'PS1'
+                }
+        frame = Frame.objects.create(**params)
+        self.assertEqual("I", frame.quality)
+
+        frame.set_quality(Frame.QUALITY_BADSUBTRACTION)
+        self.assertEqual("I,B", frame.quality)
+
+    def test_set_quality_back_to_good(self):
+        params = { 'sitecode': 'E10',
+                   'instrument': 'ep07',
+                   'filter': 'rp',
+                   'filename': 'coj2m002-ep07-20240729-0063-e93.fits',
+                   'exptime': 170.0,
+                   'midpoint': datetime(2024, 7, 29, 9, 32, 4, 271000),
+                   'block': self.test_block,
+                   'quality': 'I,B',
+                   'zeropoint': 23.29,
+                   'zeropoint_err': 0.05,
+                   'zeropoint_src': 'py_zp_cvc-V0.2.1',
+                   'color_used': 'N/A',
+                   'color': -99.0,
+                   'color_err': 0.0,
+                   'fwhm': 2.246,
+                   'frametype': 93,
+                   'extrainfo': None,
+                   'rms_of_fit': 0.138575,
+                   'nstars_in_fit': 1168.0,
+                   'time_uncertainty': None,
+                   'frameid': None,
+                   'astrometric_catalog': 'GAIA-DR2',
+                   'photometric_catalog': 'PS1'
+                }
+        frame = Frame.objects.create(**params)
+        self.assertEqual("I,B", frame.quality)
+
+        frame.set_quality(Frame.QUALITY_GOOD)
+        self.assertEqual(" ", frame.quality)
+
+    def test_set_quality_cumulatively(self):
+        params = { 'sitecode': 'E10',
+                   'instrument': 'ep07',
+                   'filter': 'rp',
+                   'filename': 'coj2m002-ep07-20240729-0063-e93.fits',
+                   'exptime': 170.0,
+                   'midpoint': datetime(2024, 7, 29, 9, 32, 4, 271000),
+                   'block': self.test_block,
+                   'quality': ' ',
+                   'zeropoint': 23.29,
+                   'zeropoint_err': 0.05,
+                   'zeropoint_src': 'py_zp_cvc-V0.2.1',
+                   'color_used': 'N/A',
+                   'color': -99.0,
+                   'color_err': 0.0,
+                   'fwhm': 2.246,
+                   'frametype': 93,
+                   'extrainfo': None,
+                   'rms_of_fit': 0.138575,
+                   'nstars_in_fit': 1168.0,
+                   'time_uncertainty': None,
+                   'frameid': None,
+                   'astrometric_catalog': 'GAIA-DR2',
+                   'photometric_catalog': 'PS1'
+                }
+        frame = Frame.objects.create(**params)
+        self.assertEqual(" ", frame.quality)
+
+        expected_quality = 'B'
+        for i, quality in enumerate([Frame.QUALITY_BADSUBTRACTION, Frame.QUALITY_INVOLVED_WITH_STAR, 'K', 't']):
+            if i != 0:
+                expected_quality = ",".join(expected_quality.split(",") + [quality,])
+            frame.set_quality(quality)
+            self.assertEqual(expected_quality, frame.quality)
 
 class TestWCSField(TestCase):
 

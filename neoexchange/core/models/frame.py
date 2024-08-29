@@ -108,6 +108,10 @@ class Frame(models.Model):
                         (NEOX_SUB_FRAMETYPE, 'NEOexchange DIA subtracted frame'),
 
                     )
+    QUALITY_GOOD = ' '
+    QUALITY_BADSUBTRACTION = 'B'
+    QUALITY_INVOLVED_WITH_STAR = 'I'
+
     sitecode    = models.CharField('MPC site code', max_length=4, blank=False)
     instrument  = models.CharField('instrument code', max_length=4, blank=True, null=True)
     filter      = models.CharField('filter class', max_length=15, blank=False, default="B")
@@ -283,6 +287,22 @@ class Frame(models.Model):
         if len(new_filt) > 1 and new_filt[1] == 'p':
             new_filt = 's'+new_filt[0]
         return new_filt.upper()
+
+    def set_quality(self, quality_flags):
+        # TBD handle case where quality_flags is a list
+        if quality_flags is not None:
+            if quality_flags != self.QUALITY_GOOD:
+                if quality_flags not in self.quality:
+                    if self.quality != ' ':
+                        flags = self.quality.replace(' ', '').split(",")
+                        flags.append(quality_flags)
+                        self.quality = ",".join(flags)
+                    else:
+                        self.quality = quality_flags
+            else:
+                # Reset to good
+                self.quality = self.QUALITY_GOOD
+        return self.quality
 
     class Meta:
         verbose_name = _('Observed Frame')
