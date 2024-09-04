@@ -1,11 +1,22 @@
 import os
+import re
+import shutil
+import warnings
 from glob import glob
 from math import ceil
 from datetime import datetime, timedelta
 
 from lxml import etree
+import astropy.units as u
+from astropy.time import Time
+from astropy.table import Column, Table
+from astropy.wcs import FITSFixedWarning
 
+from core.models import Body, Frame, Block, ExportedBlock, SourceMeasurement
+from astrometrics.ast_subs import normal_to_packed
+from photometrics.lightcurve_subs import *
 from photometrics.catalog_subs import open_fits_catalog
+from photometrics.external_codes import convert_file_to_crlf
 from photometrics.photometry_subs import map_filter_to_wavelength, map_filter_to_bandwidth
 
 def get_namespace(schema_filepath):
@@ -652,3 +663,179 @@ def create_pds_labels(procdir, schema_root):
             xml_labels.append(xml_file)
 
     return xml_labels
+
+def split_filename(filename):
+    """Splits an LCO filename <filename> into component parts
+    Returns a dict of components"""
+
+    name_parts = {}
+    fileroot, name_parts['extension'] = os.path.splitext(filename)
+    if len(fileroot) >= 31:
+        chunks = fileroot.split('-')
+        name_parts['site'] = chunks[0][0:3]
+        name_parts['tel_class'] = chunks[0][3:6]
+        name_parts['tel_serial'] = chunks[0][6:8]
+        name_parts['instrument'] = chunks[1]
+        name_parts['dayobs'] = chunks[2]
+        name_parts['frame_num'] = chunks[3]
+        name_parts['frame_type'] = chunks[4]
+    elif len(fileroot) == 8 and fileroot.startswith('rccd'):
+        # Swope, need to make up many things....
+        name_parts['site'] = 'lco'
+        name_parts['tel_class'] = '1m0'
+        name_parts['tel_serial'] = '01'
+        name_parts['instrument'] = 'Direct4Kx4K-4'
+        name_parts['dayobs'] = '20220925'
+        name_parts['frame_num'] = fileroot[4:9]
+        name_parts['frame_type'] = 'e72'
+    elif len(fileroot) == 18 and fileroot.startswith('rccd'):
+        # Swope, need to make up many things....
+        chunks = fileroot.split('-')
+        name_parts['site'] = 'lco'
+        name_parts['tel_class'] = '1m0'
+        name_parts['tel_serial'] = '01'
+        name_parts['instrument'] = 'Direct4Kx4K-4'
+        name_parts['dayobs'] = chunks[1]
+        name_parts['frame_num'] = chunks[2]
+        name_parts['frame_type'] = 'e72'
+    elif len(fileroot) == 20 and fileroot.startswith('ccd'):
+        # Swope, need to make up many things....
+        chunks = fileroot.split('-')
+        name_parts['site'] = 'lco'
+        name_parts['tel_class'] = '1m0'
+        name_parts['tel_serial'] = '01'
+        name_parts['instrument'] = 'Direct4Kx4K-4'
+        name_parts['dayobs'] = chunks[1]
+        name_parts['frame_num'] = chunks[0][-4:]
+        name_parts['frame_type'] = 'e72'
+
+    return name_parts
+
+def make_pds_asteroid_name(body_or_bodyname):
+
+    filename = pds_name = None
+    if isinstance(body_or_bodyname, Body):
+        bodyname = body_or_bodyname.full_name()
+    else:
+        bodyname = body_or_bodyname
+
+    if body_or_bodyname is not None and body_or_bodyname != '':
+        paren_loc = bodyname.rfind('(')
+        if paren_loc > 0:
+            bodyname = bodyname[0:paren_loc].rstrip()
+
+        # Filename and therefore the logical_identifier can only contain lowercase
+        # letters.
+        filename = bodyname.replace(' ', '').lower()
+        chunks = bodyname.split(' ')
+        _, conv_status = normal_to_packed(bodyname)
+        if len(chunks) == 2 and chunks[0].isdigit() and conv_status == -1:
+            pds_name = f"({chunks[0]}) {chunks[1]}"
+        else:
+            pds_name = bodyname
+
+    return filename, pds_name
+
+def create_dart_lightcurve(input_dir_or_block, output_dir, block, match='photometry_*.dat', create_symlink=False):
+    """Creates a DART-format lightcurve file from either:
+    1) the photometry file and LOG in <input_dir_or_block>. or,
+    2) the SourceMeasurements belonging to the Block passed as <input_dir_or_block>
+    outputting to <output_dir>. Block <block> is used find the directory
+    for the photometry file.
+    The file is converted to CRLF line endings for PDS archiving
+    """
+
+    warnings.simplefilter('ignore', FITSFixedWarning)
+    output_lc_filepath = None
+    #frames = Frame.objects.filter(block=block, frametype__in=[Frame.BANZAI_RED_FRAMETYPE, Frame.SWOPE_RED_FRAMETYPE])
+    frames = Frame.objects.filter(block=block, frametype=Frame.BANZAI_RED_FRAMETYPE)
+    if frames.count() > 0:
+        first_frame = frames.earliest('midpoint')
+        first_filename = first_frame.filename
+        file_parts = split_filename(first_filename)
+        if len(file_parts) == 8:
+            if type(input_dir_or_block) != Block:
+                # Directory path passed
+                root_dir = input_dir_or_block
+                photometry_files = sorted(glob(os.path.join(root_dir, match)))
+                # Weed out Control_Star photometry files
+                photometry_files = [x for x in photometry_files if 'Control_Star' not in x]
+                # No matches, retry with dayobs added onto the path
+                if len(photometry_files) == 0:
+                    root_dir = os.path.join(input_dir_or_block, file_parts['dayobs'])
+                    photometry_files = sorted(glob(os.path.join(root_dir, match)))
+                    # Weed out Control_Star photometry files
+                    photometry_files = [x for x in photometry_files if 'Control_Star' not in x]
+            else:
+                # Assuming Block passed
+                num_srcs = SourceMeasurement.objects.filter(frame__block=input_dir_or_block, frame__frametype=Frame.NEOX_RED_FRAMETYPE).count()
+                if num_srcs > 0:
+                    photometry_files = [input_dir_or_block, ]
+                else:
+                    logger.warning(f"No SourceMeasurements found for reduced e92 frames for Block id {input_dir_or_block.id}")
+                    photometry_files = []
+            for photometry_file in photometry_files:
+                fits_bintable = False
+                if type(photometry_file) != Block:
+                    if photometry_file.endswith('.fits') is True:
+                        print("Multi-aperture FITS BINTABLE")
+                        fits_bintable = True
+                        table = photometry_file
+                        aper_radius = -1
+                    else:
+                        print("Table from PHOTPIPE output + LOG")
+                        log_file = os.path.join(os.path.dirname(photometry_file), 'LOG')
+                        table = read_photompipe_file(photometry_file)
+                        aper_radius = extract_photompipe_aperradius(log_file)
+                        if '-PP' not in file_parts['site']:
+                            file_parts['site'] += '-PP'
+                else:
+                    print("Table from SourceMeasurements")
+                    table = create_table_from_srcmeasures(input_dir_or_block)
+                    aper_radius = table['aprad'].mean()
+#                    file_parts['site'] += '-Src'
+#                print(len(table), aper_radius)
+                if table and aper_radius:
+                    phot_filename, pds_name = make_pds_asteroid_name(block.body)
+                    # Format for LC files: '<origin>_<site>_<inst.>_<YYYYMMDD>_<request #>_<astname#>_photometry.txt'
+                    file_parts['dayobs'] = first_frame.midpoint.strftime("%Y%m%d")
+                    origin = 'lcogt'
+                    observer = 'Lister'
+                    if file_parts['site'].startswith('lco'):
+                        origin = 'lco'
+                        observer = 'Osip'
+                    extn = 'tab'
+                    if fits_bintable is True:
+                        extn = 'fits'
+                    output_lc_file = f"{origin.lower()}_{file_parts['site']}_{file_parts['instrument']}_{file_parts['dayobs']}_{block.request_number}_{phot_filename}_photometry.{extn}"
+                    output_lc_filepath = os.path.join(output_dir, output_lc_file)
+                    if fits_bintable is True and type(table) == str:
+                        # Create directory path if it doesn't exist
+                        filepath_dir = os.path.dirname(output_lc_filepath)
+                        if os.path.exists(filepath_dir) is False:
+                            os.makedirs(filepath_dir)
+                        # FITS binary table, just copy input `photometry_file`
+                        # filepath to output filename
+                        shutil.copy(photometry_file, output_lc_filepath)
+                    else:
+                        write_dartformat_file(table, output_lc_filepath, aper_radius)
+                        # Convert lc file to CRLF endings required by PDS
+                        status = convert_file_to_crlf(output_lc_filepath)
+                    # Create DART upload format symlink
+                    if create_symlink:
+                        symlink_lc_file = f"{origin.upper()}_{file_parts['site'].upper()}-{file_parts['instrument'].upper()}_{observer}_{file_parts['dayobs']}.dat"
+                        dir_fh = os.open(output_dir, os.O_RDONLY)
+                        if os.path.exists(os.path.join(output_dir, symlink_lc_file)):
+                            os.remove(os.path.join(output_dir, symlink_lc_file))
+                        os.symlink(output_lc_file, symlink_lc_file, dir_fd=dir_fh)
+                else:
+                    if table:
+                        logger.error("Couldn't extract aperture radius from LOG")
+                    else:
+                        logger.error("Couldn't extract table")
+        else:
+            logger.warning(f"Could not decode filename: {first_filename}")
+    else:
+        logger.warning("Could not find any reduced Frames")
+
+    return output_lc_filepath

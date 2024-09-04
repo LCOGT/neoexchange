@@ -1766,6 +1766,29 @@ def unpack_tarball(tar_path, unpack_dir):
 
     return files
 
+def convert_file_to_crlf(file_to_convert, binary=None, dbg=False):
+    """Converts the passed <file_to_convert> to DOS/CRLF line endings by running
+    'unix2dos' on it."""
+
+    binary = binary or find_binary("unix2dos")
+    if binary is None:
+        logger.error("Could not locate 'unix2dos' executable in PATH")
+        return -42
+
+    cmdline = "%s %s" % ( binary, file_to_convert)
+    cmdline = cmdline.rstrip()
+    if dbg:
+        print(cmdline)
+
+    if dbg is True:
+        retcode_or_cmdline = cmdline
+    else:
+        dest_dir = os.path.dirname(file_to_convert)
+        logger.debug("cmdline=%s" % cmdline)
+        args = cmdline.split()
+        retcode_or_cmdline = call(args, cwd=dest_dir)
+
+    return retcode_or_cmdline
 
 def run_damit_periodscan(lcs_input_filename, psinput_filename, psoutput_filename, binary=None, dbg=False):
     """ Run DAMIT code to calculate periodogram based on lc .

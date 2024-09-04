@@ -5,10 +5,16 @@ from glob import glob
 from lxml import etree
 from lxml import objectify
 from datetime import datetime
+from mock import patch, MagicMock, PropertyMock
 
+from astropy.io import fits
+
+from core.models import Body, Designations, SuperBlock, Block, Frame, CatalogSources, SourceMeasurement
 from photometrics.pds_subs import *
+from photometrics.lightcurve_subs import read_photompipe_file, write_photompipe_file
 
-from django.test import SimpleTestCase
+from unittest import skipIf
+from django.test import SimpleTestCase, TestCase
 
 class TestPDSSchemaMappings(SimpleTestCase):
 
@@ -2343,3 +2349,464 @@ class TestCreatePDSLabels(SimpleTestCase):
 
         self.assertEqual(len(expected_xml_labels), len(xml_labels))
         self.assertEqual(expected_xml_labels, xml_labels)
+
+
+class TestSplitFilename(SimpleTestCase):
+
+    def test_cpt_1m(self):
+        expected_parts = { 'site' : 'cpt',
+                           'tel_class' : '1m0',
+                           'tel_serial' : '13',
+                           'instrument' : 'fa14',
+                           'dayobs' : '20211013',
+                           'frame_num' : '0035',
+                           'frame_type' : 'e91',
+                           'extension' : '.fits'
+                          }
+
+        parts = split_filename('cpt1m013-fa14-20211013-0035-e91.fits')
+
+        self.assertEqual(expected_parts, parts)
+
+    def test_tfn_1m(self):
+        expected_parts = { 'site' : 'tfn',
+                           'tel_class' : '1m0',
+                           'tel_serial' : '01',
+                           'instrument' : 'fa11',
+                           'dayobs' : '20211013',
+                           'frame_num' : '0126',
+                           'frame_type' : 'e91',
+                           'extension' : '.fits'
+                         }
+
+        parts = split_filename('tfn1m001-fa11-20211013-0126-e91.fits')
+
+        self.assertEqual(expected_parts, parts)
+
+    def test_Swope_1m(self):
+        expected_parts = { 'site' : 'lco',
+                           'tel_class' : '1m0',
+                           'tel_serial' : '01',
+                           'instrument' : 'Direct4Kx4K-4',
+                           'dayobs' : '20220925',
+                           'frame_num' : '1258',
+                           'frame_type' : 'e72',
+                           'extension' : '.fits'
+                         }
+
+        parts = split_filename('rccd1258.fits')
+
+        self.assertEqual(expected_parts, parts)
+
+    def test_Swope_1m_long(self):
+        expected_parts = { 'site' : 'lco',
+                           'tel_class' : '1m0',
+                           'tel_serial' : '01',
+                           'instrument' : 'Direct4Kx4K-4',
+                           'dayobs' : '20220924',
+                           'frame_num' : '1258',
+                           'frame_type' : 'e72',
+                           'extension' : '.fits'
+                         }
+
+        parts = split_filename('rccd-20220924-1258.fits')
+
+        self.assertEqual(expected_parts, parts)
+
+    def test_Swope_1m_banzai(self):
+        expected_parts = { 'site' : 'lco',
+                           'tel_class' : '1m0',
+                           'tel_serial' : '01',
+                           'instrument' : 'Direct4Kx4K-4',
+                           'dayobs' : '20220824',
+                           'frame_num' : '1473',
+                           'frame_type' : 'e72',
+                           'extension' : '.fits'
+                         }
+
+        parts = split_filename('ccd1473-20220824-e91.fits')
+
+        self.assertEqual(expected_parts, parts)
+
+    def test_invalid(self):
+        expected_parts = {'extension' : '.fits',}
+
+        parts = split_filename('foobar.fits')
+
+        self.assertEqual(expected_parts, parts)
+
+
+class TestMakePDSAsteroidName(SimpleTestCase):
+
+    def test_none(self):
+        expected_filename = None
+        expected_pds_name = None
+
+        filename, pds_name = make_pds_asteroid_name(None)
+
+        self.assertEqual(expected_filename, filename)
+        self.assertEqual(expected_pds_name, pds_name)
+
+    def test_nullstring(self):
+        expected_filename = None
+        expected_pds_name = None
+
+        filename, pds_name = make_pds_asteroid_name('')
+
+        self.assertEqual(expected_filename, filename)
+        self.assertEqual(expected_pds_name, pds_name)
+
+    def test_12923_Zephyr(self):
+        expected_filename = '12923zephyr'
+        expected_pds_name = '(12923) Zephyr'
+
+        filename, pds_name = make_pds_asteroid_name('12923 Zephyr (1999 GK4)')
+
+        self.assertEqual(expected_filename, filename)
+        self.assertEqual(expected_pds_name, pds_name)
+
+    def test_didymos(self):
+        expected_filename = '65803didymos'
+        expected_pds_name = '(65803) Didymos'
+
+        filename, pds_name = make_pds_asteroid_name('65803 Didymos (1996 GT)')
+
+        self.assertEqual(expected_filename, filename)
+        self.assertEqual(expected_pds_name, pds_name)
+
+    def test_unnumbered_ast(self):
+        expected_filename = '2021so2'
+        expected_pds_name = '2021 SO2'
+
+        filename, pds_name = make_pds_asteroid_name('2021 SO2')
+
+        self.assertEqual(expected_filename, filename)
+        self.assertEqual(expected_pds_name, pds_name)
+
+class TestExportBlockToPDS(TestCase):
+
+    def setUp(self):
+        # self.schemadir = os.path.abspath(os.path.join('photometrics', 'tests', 'test_schemas'))
+        # self.docs_root = os.path.abspath(os.path.join('photometrics', 'configs', 'PDS_docs'))
+        # test_xml_collection = os.path.abspath(os.path.join('photometrics', 'tests', 'example_pds4_collection_cal.xml'))
+        # with open(test_xml_collection, 'r') as xml_file:
+            # self.expected_xml_cal = xml_file.readlines()
+        # test_xml_collection = os.path.abspath(os.path.join('photometrics', 'tests', 'example_pds4_collection_raw.xml'))
+        # with open(test_xml_collection, 'r') as xml_file:
+            # self.expected_xml_raw = xml_file.readlines()
+        # test_xml_collection = os.path.abspath(os.path.join('photometrics', 'tests', 'example_pds4_collection_ddp.xml'))
+        # with open(test_xml_collection, 'r') as xml_file:
+            # self.expected_xml_ddp = xml_file.readlines()
+
+        self.framedir = os.path.abspath(os.path.join('photometrics', 'tests'))
+        self.test_file = 'banzai_test_frame.fits'
+        self.test_file_path = os.path.join(self.framedir, self.test_file)
+
+#        self.test_dir = '/tmp/tmp_neox_wibble'
+        self.test_dir = tempfile.mkdtemp(prefix='tmp_neox_')
+        self.test_input_dir = os.path.join(self.test_dir, 'input_testblock')
+        self.test_input_daydir = os.path.join(self.test_input_dir,  '20211013')
+        os.makedirs(self.test_input_daydir, exist_ok=True)
+        self.test_output_dir = os.path.join(self.test_dir, 'output')
+        os.makedirs(self.test_output_dir, exist_ok=True)
+        self.expected_root_dir = os.path.join(self.test_output_dir, '')
+        self.test_ddp_daydir = os.path.join(self.expected_root_dir, 'data_lcogtddp')
+        self.test_blockdir = 'lcogt_1m0_01_fa11_20211013'
+        self.test_daydir = os.path.join(self.test_ddp_daydir, self.test_blockdir)
+
+        body_params = {
+                         'id': 36254,
+                         'provisional_name': None,
+                         'provisional_packed': None,
+                         'name': '65803',
+                         'origin': 'N',
+                         'source_type': 'N',
+                         'source_subtype_1': 'N3',
+                         'source_subtype_2': 'PH',
+                         'elements_type': 'MPC_MINOR_PLANET',
+                         'active': False,
+                         'fast_moving': False,
+                         'urgency': None,
+                         'epochofel': datetime(2021, 2, 25, 0, 0),
+                         'orbit_rms': 0.56,
+                         'orbinc': 3.40768,
+                         'longascnode': 73.20234,
+                         'argofperih': 319.32035,
+                         'eccentricity': 0.3836409,
+                         'meandist': 1.6444571,
+                         'meananom': 77.75787,
+                         'perihdist': None,
+                         'epochofperih': None,
+                         'abs_mag': 18.27,
+                         'slope': 0.15,
+                         'score': None,
+                         'discovery_date': datetime(1996, 4, 11, 0, 0),
+                         'num_obs': 829,
+                         'arc_length': 7305.0,
+                         'not_seen': 2087.29154187494,
+                         'updated': True,
+                         'ingest': datetime(2018, 8, 14, 17, 45, 42),
+                         'update_time': datetime(2021, 3, 1, 19, 59, 56, 957500)
+                         }
+
+        self.test_body, created = Body.objects.get_or_create(**body_params)
+
+        desig_params = { 'body' : self.test_body, 'value' : 'Didymos', 'desig_type' : 'N', 'preferred' : True, 'packed' : False}
+        test_desig, created = Designations.objects.get_or_create(**desig_params)
+        desig_params['value'] = '65803'
+        desig_params['desig_type'] = '#'
+        test_desig, created = Designations.objects.get_or_create(**desig_params)
+
+        block_params = {
+                         'body' : self.test_body,
+                         'request_number' : '12345',
+                         'block_start' : datetime(2021, 10, 13, 0, 40),
+                         'block_end' : datetime(2021, 10, 14, 0, 40),
+                         'obstype' : Block.OPT_IMAGING,
+                         'num_observed' : 1
+                        }
+        self.test_block, created = Block.objects.get_or_create(**block_params)
+        # Second block with no frames attached
+        block_params['num_observed'] = 0
+        self.test_block2, created = Block.objects.get_or_create(**block_params)
+
+        frame_params = {
+                         'sitecode' : 'Z24',
+                         'instrument' : 'fa11',
+                         'filter' : 'ip',
+                         'block' : self.test_block,
+                         'frametype' : Frame.BANZAI_RED_FRAMETYPE,
+                         'zeropoint' : 27.0,
+                         'zeropoint_err' : 0.03,
+                         'midpoint' : block_params['block_start'] + timedelta(minutes=5)
+                       }
+
+        self.test_banzai_files = []
+        source_details = { 45234032 : {'mag' : 14.8447, 'err_mag' : 0.0054, 'flags' : 0},
+                           45234584 : {'mag' : 14.8637, 'err_mag' : 0.0052, 'flags' : 3},
+                           45235052 : {'mag' : 14.8447, 'err_mag' : 0.0051, 'flags' : 0}
+                         }
+        for frame_num, frameid in zip(range(65,126,30),[45234032, 45234584, 45235052]):
+            frame_params['filename'] = f"tfn1m001-fa11-20211013-{frame_num:04d}-e91.fits"
+            frame_params['midpoint'] += timedelta(minutes=frame_num-65)
+            frame_params['frameid'] = frameid
+            frame, created = Frame.objects.get_or_create(**frame_params)
+            # Create NEOX_RED_FRAMETYPE type also
+            red_frame_params = frame_params.copy()
+            red_frame_params['frametype'] = Frame.NEOX_RED_FRAMETYPE
+            red_frame_params['filename'] = red_frame_params['filename'].replace('e91', 'e92')
+            frame, created = Frame.objects.get_or_create(**red_frame_params)
+
+            cat_source = source_details[frameid]
+            source_params = { 'body' : self.test_body,
+                              'frame' : frame,
+                              'obs_ra' : 208.728,
+                              'obs_dec' : -10.197,
+                              'obs_mag' : cat_source['mag'],
+                              'err_obs_ra' : 0.0003,
+                              'err_obs_dec' : 0.0003,
+                              'err_obs_mag' : cat_source['err_mag'],
+                              'astrometric_catalog' : frame.astrometric_catalog,
+                              'photometric_catalog' : frame.photometric_catalog,
+                              'aperture_size' : 10*0.389,
+                              'snr' : 1/cat_source['err_mag'],
+                              'flags' : cat_source['flags']
+                            }
+            source, created = SourceMeasurement.objects.get_or_create(**source_params)
+            source_params = { 'frame' : frame,
+                              'obs_x' : 2048+frame_num/10.0,
+                              'obs_y' : 2043-frame_num/10.0,
+                              'obs_ra' : 208.728,
+                              'obs_dec' : -10.197,
+                              'obs_mag' : cat_source['mag'],
+                              'err_obs_ra' : 0.0003,
+                              'err_obs_dec' : 0.0003,
+                              'err_obs_mag' : cat_source['err_mag'],
+                              'background' : 42,
+                              'major_axis' : 3.5,
+                              'minor_axis' : 3.25,
+                              'position_angle' : 42.5,
+                              'ellipticity' : 0.3711,
+                              'aperture_size' : 10*0.389,
+                              'flags' : cat_source['flags']
+                            }
+            cat_src, created = CatalogSources.objects.get_or_create(**source_params)
+            for extn in ['e00', 'e92-ldac', 'e92.bkgsub', 'e92', 'e92.rms']:
+                new_name = os.path.join(self.test_input_daydir, frame_params['filename'].replace('e91', extn))
+                filename = shutil.copy(self.test_file_path, new_name)
+                # Change object name to 65803
+                with fits.open(filename) as hdulist:
+                    hdulist[0].header['telescop'] = '1m0-01'
+                    hdulist[0].header['instrume'] = 'fa15'
+                    hdulist[0].header['object'] = '65803   '
+                    half_exp = timedelta(seconds=hdulist[0].header['exptime'] / 2.0)
+                    date_obs = frame_params['midpoint'] - half_exp
+                    hdulist[0].header['date-obs'] = date_obs.strftime("%Y-%m-%dT%H:%M:%S")
+                    utstop = frame_params['midpoint'] + half_exp + timedelta(seconds=8.77)
+                    hdulist[0].header['utstop'] = utstop.strftime("%H:%M:%S.%f")[0:12]
+                    hdulist.writeto(filename, overwrite=True, checksum=True)
+#                    hdulist.close()
+                self.test_banzai_files.append(os.path.basename(filename))
+
+        # Make one additional copy which is renamed to an -e91 (so it shouldn't be found)
+        new_name = os.path.join(self.test_input_daydir, 'tfn1m001-fa11-20211013-0065-e91.fits')
+        shutil.copy(self.test_file_path, new_name)
+        self.test_banzai_files.insert(1, os.path.basename(new_name))
+
+        self.remove = True
+        self.debug_print = False
+        self.maxDiff = None
+
+    def tearDown(self):
+        # Generate an example test dir to compare root against and then remove it
+        temp_test_dir = tempfile.mkdtemp(prefix='tmp_neox')
+        os.rmdir(temp_test_dir)
+        if self.remove and self.test_dir.startswith(temp_test_dir[:-8]):
+            shutil.rmtree(self.test_dir)
+        else:
+            if self.debug_print:
+                print("Not removing temporary test directory", self.test_dir)
+
+    def test_create_dart_lightcurve(self):
+        expected_lc_file = os.path.join(self.test_ddp_daydir, 'lcogt_tfn-PP_fa11_20211013_12345_65803didymos_photometry.tab')
+        expected_lines = [
+        '                                 file      julian_date      mag     sig       ZP  ZP_sig  inst_mag  inst_sig  filter  SExtractor_flag  aprad \r\n',
+        ' tfn1m001-fa11-20211012-0073-e92.fits  2459500.3339392  14.8447  0.0397  27.1845  0.0394  -12.3397    0.0052       r                0  10.00 \r\n',
+        ' tfn1m001-fa11-20211012-0074-e92.fits  2459500.3345790  14.8637  0.0293  27.1824  0.0288  -12.3187    0.0053       r                3  10.00 \r\n'
+        ]
+
+        test_lc_file = os.path.abspath(os.path.join('photometrics', 'tests', 'example_photompipe.dat'))
+        test_logfile = os.path.abspath(os.path.join('photometrics', 'tests', 'example_photompipe_log'))
+        # Copy files to input directory, renaming log
+        shutil.copy(test_lc_file, self.test_input_daydir)
+        new_name = os.path.join(self.test_input_daydir, 'LOG')
+        shutil.copy(test_logfile, new_name)
+
+        dart_lc_file = create_dart_lightcurve(self.test_input_dir, self.test_ddp_daydir, self.test_block, '*photompipe.dat')
+
+        self.assertEqual(expected_lc_file, dart_lc_file)
+        self.assertTrue(os.path.exists(expected_lc_file))
+
+        # Open with `newline=''` to suppress newline conversion
+        with open(dart_lc_file, 'r', newline='') as table_file:
+            lines = table_file.readlines()
+
+        self.assertEqual(63, len(lines))
+        for i, expected_line in enumerate(expected_lines):
+            self.assertEqual(expected_line, lines[i])
+
+    def test_create_dart_lightcurve_default(self):
+        expected_lc_file = os.path.join(self.test_ddp_daydir, 'lcogt_tfn-PP_fa11_20211013_12345_65803didymos_photometry.tab')
+        expected_lines = [
+        '                                 file      julian_date      mag     sig       ZP  ZP_sig  inst_mag  inst_sig  filter  SExtractor_flag  aprad \r\n',
+        ' tfn1m001-fa11-20211012-0073-e92.fits  2459500.3339392  14.8447  0.0397  27.1845  0.0394  -12.3397    0.0052       r                0  10.00 \r\n',
+        ' tfn1m001-fa11-20211012-0074-e92.fits  2459500.3345790  14.8637  0.0293  27.1824  0.0288  -12.3187    0.0053       r                3  10.00 \r\n'
+        ]
+
+        test_lc_file = os.path.abspath(os.path.join('photometrics', 'tests', 'example_photompipe.dat'))
+        test_logfile = os.path.abspath(os.path.join('photometrics', 'tests', 'example_photompipe_log'))
+        # Copy files to input directory, renaming log
+        new_name = os.path.join(self.test_input_daydir, 'photometry_65803_Didymos__1996_GT.dat')
+        shutil.copy(test_lc_file, new_name)
+        new_name = os.path.join(self.test_input_daydir, 'LOG')
+        shutil.copy(test_logfile, new_name)
+
+        dart_lc_file = create_dart_lightcurve(self.test_input_dir, self.test_ddp_daydir, self.test_block)
+
+        self.assertEqual(expected_lc_file, dart_lc_file)
+        self.assertTrue(os.path.exists(expected_lc_file))
+
+        with open(dart_lc_file, 'r', newline='') as table_file:
+            lines = table_file.readlines()
+
+        self.assertEqual(63, len(lines))
+        for i, expected_line in enumerate(expected_lines):
+            self.assertEqual(expected_line, lines[i])
+
+    def test_create_dart_lightcurve_default_controlphot(self):
+        expected_lc_file = os.path.join(self.test_ddp_daydir, 'lcogt_tfn-PP_fa11_20211013_12345_65803didymos_photometry.tab')
+        expected_lines = [
+        '                                 file      julian_date      mag     sig       ZP  ZP_sig  inst_mag  inst_sig  filter  SExtractor_flag  aprad \r\n',
+        ' tfn1m001-fa11-20211012-0073-e92.fits  2459500.3339392  14.8447  0.0397  27.1845  0.0394  -12.3397    0.0052       r                0  10.00 \r\n',
+        ' tfn1m001-fa11-20211012-0074-e92.fits  2459500.3345790  14.8637  0.0293  27.1824  0.0288  -12.3187    0.0053       r                3  10.00 \r\n'
+        ]
+
+        test_lc_file = os.path.abspath(os.path.join('photometrics', 'tests', 'example_photompipe.dat'))
+        test_logfile = os.path.abspath(os.path.join('photometrics', 'tests', 'example_photompipe_log'))
+        # Copy files to input directory, renaming log and photometry file to control star
+        new_name = os.path.join(self.test_input_daydir, 'photometry_65803_Didymos__1996_GT.dat')
+        shutil.copy(test_lc_file, new_name)
+        new_name = os.path.join(self.test_input_daydir, 'photometry_Control_Star.dat')
+        shutil.copy(test_lc_file, new_name)
+        # Open "control star" photometry file, make brighter/higher SNR and re-save
+        table = read_photompipe_file(new_name)
+        table['mag'] -= 1.5
+        table['sig'] /= 3.75
+        table['in_sig'] /= 3.75
+        write_photompipe_file(table, new_name)
+        # Copy log and rename
+        new_name = os.path.join(self.test_input_daydir, 'LOG')
+        shutil.copy(test_logfile, new_name)
+
+        dart_lc_file = create_dart_lightcurve(self.test_input_dir, self.test_ddp_daydir, self.test_block)
+
+        self.assertEqual(expected_lc_file, dart_lc_file)
+        self.assertTrue(os.path.exists(expected_lc_file))
+
+        with open(dart_lc_file, 'r', newline='') as table_file:
+            lines = table_file.readlines()
+
+        self.assertEqual(63, len(lines))
+        for i, expected_line in enumerate(expected_lines):
+            self.assertEqual(expected_line, lines[i])
+
+    def test_create_dart_lightcurve_srcmeasures(self):
+        expected_lc_file = os.path.join(self.test_ddp_daydir, 'lcogt_tfn_fa11_20211013_12345_65803didymos_photometry.tab')
+        expected_lc_link = os.path.join(self.test_ddp_daydir, 'LCOGT_TFN-FA11_Lister_20211013.dat')
+        expected_lines = [
+        '                                 file      julian_date      mag     sig       ZP  ZP_sig  inst_mag  inst_sig  filter  SExtractor_flag  aprad \r\n',
+        ' tfn1m001-fa11-20211013-0065-e92.fits  2459500.5312500  14.8447  0.0305  27.0000  0.0300  -12.1553    0.0054      ip                0  10.00 \r\n',
+        ' tfn1m001-fa11-20211013-0095-e92.fits  2459500.5520833  14.8637  0.0304  27.0000  0.0300  -12.1363    0.0052      ip                3  10.00 \r\n',
+        ' tfn1m001-fa11-20211013-0125-e92.fits  2459500.5937500  14.8447  0.0304  27.0000  0.0300  -12.1553    0.0051      ip                0  10.00 \r\n'
+        ]
+
+        dart_lc_file = create_dart_lightcurve(self.test_block, self.test_ddp_daydir, self.test_block, create_symlink=True)
+
+        self.assertEqual(expected_lc_file, dart_lc_file)
+        self.assertTrue(os.path.exists(expected_lc_file))
+        self.assertTrue(os.path.exists(expected_lc_link))
+
+        with open(dart_lc_file, 'r', newline='') as table_file:
+            lines = table_file.readlines()
+
+        self.assertEqual(4, len(lines))
+        for i, expected_line in enumerate(expected_lines):
+            self.assertEqual(expected_line, lines[i])
+
+    def test_create_dart_lightcurve_multiaper(self):
+        expected_lc_file = os.path.join(self.test_ddp_daydir, 'lcogt_tfn_fa11_20211013_12345_65803didymos_photometry.fits')
+        expected_colnames = ['filename', 'mjd', 'obs_midpoint', 'exptime', 'filter', 'obs_ra', 'obs_dec', 'flux_radius', 'fwhm']
+        for index in range(0,20):
+            expected_colnames.append('mag_aperture_' + str(index))
+            expected_colnames.append('mag_err_aperture_' + str(index))
+        expected_lines = [
+        ' tfn1m001-fa11-20211012-0073-e92.fits  2459500.3339392  14.8447  0.0397  27.1845  0.0394  -12.3397    0.0052       r                0  10.00 \r\n',
+        ' tfn1m001-fa11-20211012-0074-e92.fits  2459500.3345790  14.8637  0.0293  27.1824  0.0288  -12.3187    0.0053       r                3  10.00 \r\n'
+        ]
+
+        test_lc_file = os.path.abspath(os.path.join('photometrics', 'tests', 'example_bintable.fits'))
+        # Copy files to input directory, renaming table
+        new_name = os.path.join(self.test_input_daydir, '65803_data_gp.fits')
+        shutil.copy(test_lc_file, new_name)
+
+        dart_lc_file = create_dart_lightcurve(self.test_input_dir, self.test_ddp_daydir, self.test_block, match='*_data_*.fits')
+
+        self.assertEqual(expected_lc_file, dart_lc_file)
+        self.assertTrue(os.path.exists(expected_lc_file))
+
+        table_file = Table.read(dart_lc_file, format='fits')
+
+        self.assertEqual(22, len(table_file))
+        self.assertEqual(expected_colnames, table_file.colnames)
+        # for i, expected_line in enumerate(expected_lines):
+            # self.assertEqual(expected_line, table_file[i])
