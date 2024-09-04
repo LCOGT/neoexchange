@@ -667,10 +667,16 @@ def determine_image_stats(filename, hdu='SCI', center=None, size=None):
 
     return mean, std
 
-def determine_image_stats_from_fits(filename, hdu='SCI', center=None, size=None):
+def determine_image_stats_from_fits(filename, center=None, size=None):
+    """Compute mean and standard deviation on the FITS image referenced
+    by \<filename\>. Instead of using run_aststatistics, this function pulls
+    from get_fits_imagestats, using the astropy sigma_clipped_stats method.
+    Optionally \<center\> (x, y) and \<size\> (x, y) can be passed as pairs of
+    values for the pixel center of the box and the (width, height) in pixels
+    of the box within which the statistics will be calculated."""
 
-    mean = get_fits_imagestats(filename, 'mean', hdu, center=center, size=size)
-    std = get_fits_imagestats(filename, 'std', hdu, center=center, size=size)
+    mean = get_fits_imagestats(filename, 'mean', center=center, size=size)
+    std = get_fits_imagestats(filename, 'std', center=center, size=size)
 
     if mean is not None and std is not None:
         mean = float(mean)
@@ -678,7 +684,9 @@ def determine_image_stats_from_fits(filename, hdu='SCI', center=None, size=None)
     return mean, std
 
 def determine_stats_in_boxes(frame, fits_filepath):
-    """Computes statistics in a box on a 3x3 grid for an individual Frame object using its filename"""
+    """Computes means and stds in boxes on a 3x3 grid
+    for an individual Frame object <frame> using its
+    filename \<fits_filepath\>"""
     if hasattr(frame, 'frametype'):
         frame_for_stat_analysis = frame
         xsize = frame_for_stat_analysis.get_x_size()
@@ -726,6 +734,13 @@ def determine_stats_in_boxes(frame, fits_filepath):
     return mean_grid, std_grid, cent_x_grid, cent_y_grid
 
 def determine_bad_subtractions_in_box_stats(frame, fits_filepath, badness_threshold):
+    """For a \<frame\> and \<fits_filepath\> (enter None for \<frame\> if using a FITS file
+    with no associated Frame object), determine whether bad subtractions occur in any
+    box of 3x3 grid based on a \<badness_threshold\> above which mean/std data is too high
+    for a good subtraction. If a bad subtraction occurs anywhere on the filename,
+    function returns the filename so it can be noted as a bad subtraction in other
+    functions. Does not specify where on 3x3 grid bad subtraction occurs. If no bad
+    subtractions are found, function returns None."""
     stats = determine_stats_in_boxes(frame, fits_filepath)
     means = stats[0]
     stds = stats[1]
@@ -1852,13 +1867,19 @@ def run_damit(call_name, cat_input_filename, primary_call, write_out=False, bina
     return retcode_or_cmdline
 
 
-def single_frame_aperture_photometry(fits_filepath, ra, dec, background_subtract = False):
+def single_frame_aperture_photometry(fits_filepath, ra, dec, account_zps, aperture_radius = None, background_subtract = False):
+    """For a single FITS file referenced by <fits_filepath>, perform aperture photometry to determine magnitude and
+    magnitude error. Use <ra> and <dec> to specify location of object on which to center aperture, use  <account_zps> as a
+    boolean variable to determine whether or not zeropoints should be adjusted for in magnitude. Select an aper. \<background_subtract\>
+    is a boolean for whether the code needs to do the background subtracting itself. Background subtraction routine is NOT tested/
+    fully developed, use default \<background_subtract\> to False until update"""
     fits_file = fits.open(fits_filepath)
     header, cattype = photometrics.catalog_subs.get_header(fits_filepath)
     fits_filename = os.path.basename(fits_filepath)
     frame = Frame.objects.get(filename=fits_filename)
     FWHM = frame.fwhm
-    aperture_radius = 2.5*FWHM
+    if aperture_radius == None:
+        aperture_radius = 2.5*FWHM
     annulus_outer_radius = 7.5*FWHM
     source_data_for_photomet = fits_file[0].data/ header['exptime']
     #this should be replaced by something that matches other frametypes
@@ -1889,7 +1910,10 @@ def single_frame_aperture_photometry(fits_filepath, ra, dec, background_subtract
         source_flux['FWHM'] = FWHM
         source_flux['ZP'] = frame.zeropoint
         source_flux['ZP_sig'] = frame.zeropoint_err
-        source_flux['mag'] = -2.5*np.log10(source_flux['aperture_sum']) + frame.zeropoint
+        if account_zps == True:
+            source_flux['mag'] = -2.5*np.log10(source_flux['aperture_sum']) + frame.zeropoint
+        else:
+            source_flux['mag'] = -2.5*np.log10(source_flux['aperture_sum'])
         source_flux['magerr'] = FLUX2MAG * source_flux['aperture_sum_err'] / source_flux['aperture_sum']
         source_flux['filter'] = frame.filter
         source_flux['aperture_radius'] = [aperture_radius]
@@ -1940,7 +1964,7 @@ def run_astcrop(filename, dest_dir, xmin, xmax, ymin, ymax, binary='astcrop', db
 
 def run_astwarp(filename, dest_dir, center_RA, center_DEC, width = 1991.0, height = 511.0, binary='astwarp', dbg=False):
     '''
-    Runs astwarp on <filename> to crop to <center_RA>,<center_DEC> with
+    Runs astwarp on <filename> to crbp to <center_RA>,<center_DEC> with
     [width]x[height] writing output to <dest_dir>
     '''
     if filename is None:
@@ -2121,3 +2145,31 @@ def run_astconvertt(filename, dest_dir, mean, std, hdu='SCI', binary='astconvert
         retcode_or_cmdline = cmd_call.returncode
 
     return pdf_filename, retcode_or_cmdline
+
+def format_box_stats_for_pretty_print(frame, fits_filepath):
+    """Arranges mean and std into strings stored in a 3x3 list
+    to match results of determine_stats_in_boxes for a particular
+    <frame> and <fits_filepath>. Then repeats the process for the
+    x and y centers of the 3x3 grid. Returns two 3x3 lists, one
+    for means and stds, one for center positions. This allows for
+    legible printing of statistics and their associated positions
+    on an image."""
+    stats = determine_stats_in_boxes(frame, fits_filepath)
+    all_means = stats[0]
+    all_stds = stats[1]
+    all_center_xs = stats[2]
+    all_center_ys = stats[3]
+    mean_and_std_griddable_form = []
+    locs_griddable_form = []
+    stat_row = []
+    loc_key_row = []
+    for i in range (0, len(all_means)):
+        for j in range (0, len(all_means[0])):
+            stat_row.append(f"{all_means[i][j]:0.3f} +- {all_stds[i][j]:0.3f}")
+            loc_key_row.append(f"({all_center_xs[i][j]}, {all_center_ys[i][j]})")
+            if len(stat_row) % 3 == 0:
+                mean_and_std_griddable_form.append(stat_row)
+                locs_griddable_form.append(loc_key_row)
+                stat_row = []
+                loc_key_row = []
+    return mean_and_std_griddable_form, locs_griddable_form

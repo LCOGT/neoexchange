@@ -2027,7 +2027,8 @@ class TestFrameAperturePhotometry(ExternalCodeUnitTest):
         #Remove RMS file for this test
         os.remove(self.test_hotpants_file_rms_COPIED)
         expected_results = None
-        results = single_frame_aperture_photometry(self.test_hotpants_file_COPIED, self.ephem_ra, self.ephem_dec, False)
+        results = single_frame_aperture_photometry(self.test_hotpants_file_COPIED, self.ephem_ra, self.ephem_dec, account_zps= True)
+        print(self.test_hotpants_file_COPIED)
         self.assertEqual(expected_results, results)
 
 
@@ -2035,7 +2036,7 @@ class TestFrameAperturePhotometry(ExternalCodeUnitTest):
         for i in range(0, num_to_check+1):
             self.assertAlmostEqual(expected_table[column][i], table[column][i], precision)
 
-    def test_single_frame_aperture_photometry(self):
+    def test_single_frame_aperture_photometry_default_settings(self):
         header, cattype = photometrics.catalog_subs.get_header(self.test_hotpants_file_COPIED)
         right_ascension = self.ephem_ra * u.deg
         declination = self.ephem_dec * u.deg
@@ -2058,12 +2059,142 @@ class TestFrameAperturePhotometry(ExternalCodeUnitTest):
         expected_results['filter'] = self.test_e93_frame.filter
         expected_results['aperture_radius'] = 2.5*self.test_e93_frame.fwhm
         exp_dtypes = expected_results.dtype
-        results = single_frame_aperture_photometry(self.test_hotpants_file_COPIED, self.ephem_ra, self.ephem_dec, False)
+        results = single_frame_aperture_photometry(self.test_hotpants_file_COPIED, self.ephem_ra, self.ephem_dec, account_zps=True, aperture_radius= None, background_subtract= False)
         dtypes = results.dtype
-        print(type(self.test_e93_frame.filter), type(results['filter'][0]))
         self.assertEqual(pix_source_aperture.positions[0], 48.45815299066739)
         self.assertEqual(pix_source_aperture.positions[1], 48.576667811450456)
         self.assertEqual(exp_dtypes, dtypes)
+        self.assertEqual(len(expected_results), len(results))
+        self.assertEqual(expected_results.colnames, results.colnames)
+        self.compare_tables(expected_results, results, column = 'id',num_to_check= 0)
+        self.compare_tables(expected_results, results, column = 'xcenter',num_to_check= 0)
+        self.compare_tables(expected_results, results, column = 'ycenter',num_to_check= 0)
+        self.compare_tables(expected_results, results, column = 'aperture_sum',num_to_check= 0)
+        self.compare_tables(expected_results, results, column = 'aperture_sum_err',num_to_check= 0)
+        self.compare_tables(expected_results, results, column = 'FWHM',num_to_check= 0)
+        self.compare_tables(expected_results, results, column = 'ZP',num_to_check= 0)
+        self.compare_tables(expected_results, results, column = 'ZP_sig',num_to_check= 0)
+        self.compare_tables(expected_results, results, column = 'mag',num_to_check= 0)
+        self.compare_tables(expected_results, results, column = 'magerr',num_to_check= 0)
+        self.compare_tables(expected_results, results, column = 'filter',num_to_check= 0)
+        self.compare_tables(expected_results, results, column = 'aperture_radius',num_to_check= 0)
+
+    def test_single_frame_aperture_photometry_default_ap_ignore_zps(self):
+        header, cattype = photometrics.catalog_subs.get_header(self.test_hotpants_file_COPIED)
+        right_ascension = self.ephem_ra * u.deg
+        declination = self.ephem_dec * u.deg
+        positions = SkyCoord(right_ascension, declination, frame = "icrs")
+        source_aperture = SkyCircularAperture(positions, r = 2.5*self.test_e93_frame.fwhm*u.arcsec)
+        wcs = header['wcs']
+        pix_source_aperture = source_aperture.to_pixel(wcs)
+        FLUX2MAG = 2.5/np.log(10)
+        expected_results = QTable()
+        expected_results['id'] = [1]
+        expected_results['xcenter'] = [48.45815299066739] *u.pix
+        expected_results['ycenter'] = [48.576667811450456] * u.pix
+        expected_results['aperture_sum'] = [135.01533390388389]
+        expected_results['aperture_sum_err'] = [10.514787835583155]
+        expected_results['FWHM'] = self.test_e93_frame.fwhm
+        expected_results['ZP'] = self.test_e93_frame.zeropoint
+        expected_results['ZP_sig'] = self.test_e93_frame.zeropoint_err
+        expected_results['mag'] = -2.5*np.log10(expected_results['aperture_sum'])
+        expected_results['magerr'] = FLUX2MAG * expected_results['aperture_sum_err'] / expected_results['aperture_sum']
+        expected_results['filter'] = self.test_e93_frame.filter
+        expected_results['aperture_radius'] = 2.5*self.test_e93_frame.fwhm
+        exp_dtypes = expected_results.dtype
+        results = single_frame_aperture_photometry(self.test_hotpants_file_COPIED, self.ephem_ra, self.ephem_dec, account_zps=False, aperture_radius= None, background_subtract= False)
+        dtypes = results.dtype
+        self.assertEqual(pix_source_aperture.positions[0], 48.45815299066739)
+        self.assertEqual(pix_source_aperture.positions[1], 48.576667811450456)
+        self.assertEqual(exp_dtypes, dtypes)
+        self.assertEqual(len(expected_results), len(results))
+        self.assertEqual(expected_results.colnames, results.colnames)
+        self.compare_tables(expected_results, results, column = 'id',num_to_check= 0)
+        self.compare_tables(expected_results, results, column = 'xcenter',num_to_check= 0)
+        self.compare_tables(expected_results, results, column = 'ycenter',num_to_check= 0)
+        self.compare_tables(expected_results, results, column = 'aperture_sum',num_to_check= 0)
+        self.compare_tables(expected_results, results, column = 'aperture_sum_err',num_to_check= 0)
+        self.compare_tables(expected_results, results, column = 'FWHM',num_to_check= 0)
+        self.compare_tables(expected_results, results, column = 'ZP',num_to_check= 0)
+        self.compare_tables(expected_results, results, column = 'ZP_sig',num_to_check= 0)
+        self.compare_tables(expected_results, results, column = 'mag',num_to_check= 0)
+        self.compare_tables(expected_results, results, column = 'magerr',num_to_check= 0)
+        self.compare_tables(expected_results, results, column = 'filter',num_to_check= 0)
+        self.compare_tables(expected_results, results, column = 'aperture_radius',num_to_check= 0)
+
+    def test_single_frame_aperture_photometry_manual_ap_include_zps(self):
+        header, cattype = photometrics.catalog_subs.get_header(self.test_hotpants_file_COPIED)
+        right_ascension = self.ephem_ra * u.deg
+        declination = self.ephem_dec * u.deg
+        positions = SkyCoord(right_ascension, declination, frame = "icrs")
+        source_aperture = SkyCircularAperture(positions, r = 2.5*self.test_e93_frame.fwhm*u.arcsec)
+        wcs = header['wcs']
+        pix_source_aperture = source_aperture.to_pixel(wcs)
+        FLUX2MAG = 2.5/np.log(10)
+        expected_results = QTable()
+        expected_results['id'] = [1]
+        expected_results['xcenter'] = [48.45815299066739] *u.pix
+        expected_results['ycenter'] = [48.576667811450456] * u.pix
+        expected_results['aperture_sum'] = [104.841575893131]
+        expected_results['aperture_sum_err'] = [5.258561331253688]
+        expected_results['FWHM'] = self.test_e93_frame.fwhm
+        expected_results['ZP'] = self.test_e93_frame.zeropoint
+        expected_results['ZP_sig'] = self.test_e93_frame.zeropoint_err
+        expected_results['mag'] = -2.5*np.log10(expected_results['aperture_sum']) + self.test_e93_frame.zeropoint
+        expected_results['magerr'] = FLUX2MAG * expected_results['aperture_sum_err'] / expected_results['aperture_sum']
+        expected_results['filter'] = self.test_e93_frame.filter
+        expected_results['aperture_radius'] =  (2.5*self.test_e93_frame.fwhm)/2
+        exp_dtypes = expected_results.dtype
+        results = single_frame_aperture_photometry(self.test_hotpants_file_COPIED, self.ephem_ra, self.ephem_dec, account_zps=True, aperture_radius= ((2.5*self.test_e93_frame.fwhm)/2), background_subtract= False)
+        dtypes = results.dtype
+        self.assertEqual(pix_source_aperture.positions[0], 48.45815299066739)
+        self.assertEqual(pix_source_aperture.positions[1], 48.576667811450456)
+        self.assertEqual(exp_dtypes, dtypes)
+        self.assertEqual(len(expected_results), len(results))
+        self.assertEqual(expected_results.colnames, results.colnames)
+        self.compare_tables(expected_results, results, column = 'id',num_to_check= 0)
+        self.compare_tables(expected_results, results, column = 'xcenter',num_to_check= 0)
+        self.compare_tables(expected_results, results, column = 'ycenter',num_to_check= 0)
+        self.compare_tables(expected_results, results, column = 'aperture_sum',num_to_check= 0)
+        self.compare_tables(expected_results, results, column = 'aperture_sum_err',num_to_check= 0)
+        self.compare_tables(expected_results, results, column = 'FWHM',num_to_check= 0)
+        self.compare_tables(expected_results, results, column = 'ZP',num_to_check= 0)
+        self.compare_tables(expected_results, results, column = 'ZP_sig',num_to_check= 0)
+        self.compare_tables(expected_results, results, column = 'mag',num_to_check= 0)
+        self.compare_tables(expected_results, results, column = 'magerr',num_to_check= 0)
+        self.compare_tables(expected_results, results, column = 'filter',num_to_check= 0)
+        self.compare_tables(expected_results, results, column = 'aperture_radius',num_to_check= 0)
+
+    def test_single_frame_aperture_photometry_manual_ap_ignore_zps(self):
+        header, cattype = photometrics.catalog_subs.get_header(self.test_hotpants_file_COPIED)
+        right_ascension = self.ephem_ra * u.deg
+        declination = self.ephem_dec * u.deg
+        positions = SkyCoord(right_ascension, declination, frame = "icrs")
+        source_aperture = SkyCircularAperture(positions, r = 2.5*self.test_e93_frame.fwhm*u.arcsec)
+        wcs = header['wcs']
+        pix_source_aperture = source_aperture.to_pixel(wcs)
+        FLUX2MAG = 2.5/np.log(10)
+        expected_results = QTable()
+        expected_results['id'] = [1]
+        expected_results['xcenter'] = [48.45815299066739] *u.pix
+        expected_results['ycenter'] = [48.576667811450456] * u.pix
+        expected_results['aperture_sum'] = [104.841575893131]
+        expected_results['aperture_sum_err'] = [5.258561331253688]
+        expected_results['FWHM'] = self.test_e93_frame.fwhm
+        expected_results['ZP'] = self.test_e93_frame.zeropoint
+        expected_results['ZP_sig'] = self.test_e93_frame.zeropoint_err
+        expected_results['mag'] = -2.5*np.log10(expected_results['aperture_sum'])
+        expected_results['magerr'] = FLUX2MAG * expected_results['aperture_sum_err'] / expected_results['aperture_sum']
+        expected_results['filter'] = self.test_e93_frame.filter
+        expected_results['aperture_radius'] = (2.5*self.test_e93_frame.fwhm)/2
+        exp_dtypes = expected_results.dtype
+        results = single_frame_aperture_photometry(self.test_hotpants_file_COPIED, self.ephem_ra, self.ephem_dec, account_zps=False, aperture_radius= (2.5*self.test_e93_frame.fwhm)/2, background_subtract= False)
+        dtypes = results.dtype
+        self.assertEqual(pix_source_aperture.positions[0], 48.45815299066739)
+        self.assertEqual(pix_source_aperture.positions[1], 48.576667811450456)
+        self.assertEqual(exp_dtypes, dtypes)
+        self.assertEqual(len(expected_results), len(results))
+        self.assertEqual(expected_results.colnames, results.colnames)
         self.compare_tables(expected_results, results, column = 'id',num_to_check= 0)
         self.compare_tables(expected_results, results, column = 'xcenter',num_to_check= 0)
         self.compare_tables(expected_results, results, column = 'ycenter',num_to_check= 0)
@@ -2305,8 +2436,8 @@ class TestDetermineImageStatsFromFits(ExternalCodeUnitTest):
 
         mean, std = determine_image_stats_from_fits(self.test_banzai_file_COPIED, center=(600, 1370), size=(9,9) )
 
-        #self.assertAlmostEqual(expected_mean, mean, self.precision)
-        #self.assertAlmostEqual(expected_std, std, self.precision)
+        self.assertAlmostEqual(expected_mean, mean, self.precision)
+        self.assertAlmostEqual(expected_std, std, self.precision)
 
     def test_box2_no_defaults(self):
         expected_mean = 405.45273
@@ -2357,6 +2488,21 @@ class TestDetermineStatsinBoxes(ExternalCodeUnitTest):
         bad_subtraction = determine_bad_subtractions_in_box_stats(None, fits_filepath = self.filename, badness_threshold= 1)
         print(bad_subtraction)
         self.assertEqual(bad_subtraction, os.path.basename(self.filename))
+
+    def test_format_box_stats_for_pretty_print(self):
+        expected_lists = ([["396.089 +- 33.263", "395.497 +- 31.746", "395.650 +- 28.089"],
+                           ["399.906 +- 31.029", "416.384 +- 33.148", "412.600 +- 39.419"],
+                           ["429.785 +- 31.536", "410.168 +- 36.010", "406.441 +- 38.265"]],
+                          [["(338, 1697)", "(1014, 1697)", "(1690, 1697)"],
+                           ["(338, 1018)", "(1014, 1018)", "(1690, 1018)"],
+                           ["(338, 339)", "(1014, 339)", "(1690, 339)"]])
+        pretty_printed_lists = format_box_stats_for_pretty_print(None, self.filename)
+        self.assertEqual(len(expected_lists), len(pretty_printed_lists))
+        self.assertEqual(len(expected_lists[0]), len(pretty_printed_lists[0]))
+        for i in range (0, len(expected_lists[0]) - 1):
+            for j in range(0, len(expected_lists[0][i]) - 1):
+                self.assertEqual(len(expected_lists[i][j]), len(pretty_printed_lists[i][j]))
+        self.assertEqual(expected_lists, pretty_printed_lists)
 
 class TestDetermineAstconverttOptions(SimpleTestCase):
     def setUp(self):

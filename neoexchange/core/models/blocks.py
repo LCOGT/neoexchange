@@ -441,6 +441,12 @@ def detections_array_dtypes():
     return dtypes
 
 def obs_details_retriever(ref_fields):
+    """Given a set of reference fields <ref_fields>, returns information about
+    each observed block associated about the reference field in string format.
+    Information includes, for each observed filter within the observed block:
+    Tracking #, Request #, Site, obs details for superblock, observed filter,
+    \# of raw frames, ratio of frames with good zeropoints to total neox
+    reduced frames, fwhm, range of block observation time"""
     try:
         num_ref_fields = len(ref_fields)
     except TypeError:
@@ -458,7 +464,7 @@ def obs_details_retriever(ref_fields):
             for ref in ref_fields:
                 blocks.append(ref)
         for block in obs_blocks:
-            lines.append(f"#Track# Rquest# Site(MPC) Obs details Filter #raw #good_zp/#num all frames FWHM \n {block.current_name()} \n")
+            lines.append(f"#Track# Rquest# Site(MPC) Obs details Filter #raw #good_zp/#num reduced frames FWHM \n {block.current_name()} \n")
             all_frames = Frame.objects.filter(block = block)
             filterset = all_frames.values_list('filter', flat = True).distinct()
             lines.append(block.make_obsblock_link() + "\n")

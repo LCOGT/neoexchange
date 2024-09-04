@@ -81,7 +81,7 @@ from photometrics.external_codes import run_sextractor, run_swarp, run_hotpants,
 from photometrics.catalog_subs import open_fits_catalog, get_header, get_catalog_header, \
     determine_filenames, increment_red_level, funpack_fits_file, update_ldac_catalog_wcs, FITSHdrException, \
     get_reference_catalog, reset_database_connection, sanitize_object_name
-from photometrics.external_codes import determine_stats_in_boxes, determine_bad_subtractions_in_box_stats
+from photometrics.external_codes import determine_stats_in_boxes, determine_bad_subtractions_in_box_stats, format_box_stats_for_pretty_print
 from photometrics.photometry_subs import calc_asteroid_snr, calc_sky_brightness
 from photometrics.spectraplot import pull_data_from_spectrum, pull_data_from_text, spectrum_plot
 from core.frames import create_frame, ingest_frames, measurements_from_block
@@ -4989,7 +4989,15 @@ def summarize_block_quality(dataroot, blocks):
             )
     return block_qc_table
 
-def perform_aper_photometry(block, dataroot):
+def perform_aper_photometry(block, dataroot, account_zps = True, aperture_radius = None):
+    """For a full \<block\>, run single_frame_aperture_photometry on every individual frame.
+    Determines magnitude and magnitude error + provides other information including aperture sum,
+    aperture sum err, aperture radius, zeropoint, zp err, etc. Optionally, use \<account_zps\> as
+    a boolean variable to  determine whether or not zeropoints should be adjusted for in magnitude.
+    Input a \<dataroot\> that is a directory to the fits images for the selected Block object passed
+    as \<block\>. If needed, specify an \<aperture_radius\>.If not passed, function will default to
+    2.5*full width half max for the aperture radius of a particular frame. Function always assumes
+    background subtraction is done in advance and need not be done inside the routine."""
     e93_frameset, banzai_count,  neox_count = find_frames(block, frametype = Frame.NEOX_SUB_FRAMETYPE)
     fwhms = []
     times = []
@@ -5008,7 +5016,7 @@ def perform_aper_photometry(block, dataroot):
     interpolated_ephem = ephem_interpolate(times, working_ephem)
     ids, xcenters, ycenters, aperture_sums, aperture_sum_errs, fwhms, zps, zp_errs, mags, magerrs, filter, aperture_radii = [],[],[],[],[],[],[],[],[],[],[],[]
     for i in range (0, len(paths_to_e93_frames)):
-        aper_photometry_of_ephem = single_frame_aperture_photometry(paths_to_e93_frames[i], interpolated_ephem[0][i], interpolated_ephem[1][i])
+        aper_photometry_of_ephem = single_frame_aperture_photometry(paths_to_e93_frames[i], interpolated_ephem[0][i], interpolated_ephem[1][i], aperture_radius= aperture_radius, account_zps = account_zps, background_subtract= False)
         ids.append(aper_photometry_of_ephem['id'])
         xcenters.append(aper_photometry_of_ephem['xcenter'][0])
         ycenters.append(aper_photometry_of_ephem['ycenter'][0])
@@ -5037,8 +5045,11 @@ def perform_aper_photometry(block, dataroot):
     results['aperture radius'] = aperture_radii
     return results
 
-def generate_ecsv_file_post_photomet(block, dataroot, overwrite):
-    results_table = perform_aper_photometry(block, dataroot)
+def generate_ecsv_file_post_photomet(block, dataroot, overwrite, account_zps = True, aperture_radius = None):
+    """Writes the aperture photometry table generated in perform_aper_photometry to a ascii.ecsv file for data storage
+    and accessibility. Input \<block\> on which to perform photometry, \<dataroot\> as the directory pointing to the FITS
+    files for frames in the block, and a boolean \<overwrite\> for whether this should replace old data on the same block. """
+    results_table = perform_aper_photometry(block, dataroot, account_zps = account_zps, aperture_radius = aperture_radius)
     times = results_table['times']
     stringified_times = []
     results_table.remove_column('times')
@@ -5048,12 +5059,22 @@ def generate_ecsv_file_post_photomet(block, dataroot, overwrite):
     new_order = ['path to frame','times','filters','xcenter','ycenter','aperture sum','aperture sum err','FWHM','ZP','ZP_sig','mag','magerr','aperture radius']
     results_table = results_table[new_order]
     block_date_str = f"{block.block_start}"[:-9]
-    results_table_filename = os.path.join(dataroot, f"aperture_photometry_table_{block_date_str}.ecsv")
+    if aperture_radius == None:
+        aper_rad_label = '2.5*fwhm'
+    else:
+        aper_rad_label = aperture_radius
+    if account_zps == True:
+        results_table_filename = os.path.join(dataroot, f"aperture_photometry_table_{block_date_str}_aper_radius_{aper_rad_label}_zps_included.ecsv")
+    if account_zps == False:
+        results_table_filename = os.path.join(dataroot, f"aperture_photometry_table_{block_date_str}_aper_radius_{aper_rad_label}_zps_excluded.ecsv")
     results_table.write(results_table_filename, format='ascii.ecsv', overwrite = overwrite)
     return results_table_filename
 
-def examine_subtractions(obs_block, save_directory, overwrite, badness_threshold = 1000):
-    """Loops over all subtracted Frames in <obs_block> computing statistics in a box on a 3x3 grid, arranges into table """
+def examine_subtractions(obs_block, save_directory, overwrite, badness_threshold = 1000, filter = 'rp'):
+    """Loops over all subtracted Frames in \<obs_block\> computing statistics in a box on a 3x3 grid, arranges into a
+    single row table with means, stds, positions, filenames, and whether a bad subtractions (mean or median above)
+    \<badness_threshold\>) is found for a passed \<filter\>. Table is written to a file stored in \<save_directory\>.
+    Use \<overwrite\> as a boolean variable for whether this data should replace that in file with the same name/block"""
     block_date_str = f"{obs_block.block_start}"[:-9]
     data_storage_filename = os.path.join(save_directory, f"examined_subtractions_table_{block_date_str}.ecsv")
     badness_storage_filename = os.path.join(save_directory, f"bad_subtraction_info_{block_date_str}.ecsv")
@@ -5063,7 +5084,7 @@ def examine_subtractions(obs_block, save_directory, overwrite, badness_threshold
     if overwrite == True:
         data_storage_file = open(data_storage_filename, "w")
         badness_storage_file = open(badness_storage_filename, 'w')
-    sub_frames = Frame.objects.filter(block=obs_block, frametype=Frame.NEOX_SUB_FRAMETYPE, filter = 'rp').order_by('midpoint')
+    sub_frames = Frame.objects.filter(block=obs_block, frametype=Frame.NEOX_SUB_FRAMETYPE, filter = filter).order_by('midpoint')
     dataroot = os.path.join(settings.DATA_ROOT, 'Hera', obs_block.get_blockdayobs)
     bad_filenames = []
     total_files = 0
@@ -5186,3 +5207,61 @@ def examine_subtractions(obs_block, save_directory, overwrite, badness_threshold
     statstable.write(data_storage_filename, format='ascii.ecsv', overwrite = overwrite)
     badness_storage_file.write(f"bad subtraction files {bad_filenames}, percent bad files = {percent_bad_files}")
     return data_storage_filename, badness_storage_filename, bad_filenames, percent_bad_files
+
+def pretty_printed_subtractions_info(obs_block, save_directory, overwrite, badness_threshold = 1000, filter = 'rp'):
+    """From FITS files for frames in the passed \<obs_block\>, for a passed \<filter\> organize results of examine_subtractions into two
+    3x3 grids: One for statistics and one for positions, corresponding to the 3x3 gridding of the FITS files + which filenames point to
+    frames with bad subtractions. Use \<badness_threshold\> to define a pixel value above which means and stds are inconsistent with high
+    quality subtractions. Tables + badness test results are stored in a file under \<save_directory\>; \<overwrite\> is a boolean for whether
+    the function overwrites past data under the same block/filename."""
+    block_date_str = f"{obs_block.block_start}"[:-9]
+    data_storage_filename = os.path.join(save_directory, f"pretty_printed_subtractions_info_{block_date_str}.ecsv")
+    if overwrite == False:
+        data_storage_file = open(data_storage_filename, 'x')
+    if overwrite == True:
+        data_storage_file = open(data_storage_filename, "w")
+    sub_frames = Frame.objects.filter(block=obs_block, frametype=Frame.NEOX_SUB_FRAMETYPE, filter = filter).order_by('midpoint')
+    dataroot = os.path.join(settings.DATA_ROOT, 'Hera', obs_block.get_blockdayobs)
+    bad_filenames = []
+    total_files = 0
+    bad_files = 0
+    statstable = Table()
+    postable = Table()
+    for frame_num, frame in enumerate(sub_frames):
+        stat_x_grid_1 = []
+        stat_x_grid_2 = []
+        stat_x_grid_3 = []
+        pos_x_grid_1 = []
+        pos_x_grid_2 = []
+        pos_x_grid_3 = []
+        total_files +=1
+        fits_filepath = os.path.join(dataroot, frame.filename)
+        stats = format_box_stats_for_pretty_print(frame, fits_filepath)
+        means_stds  = stats[0]
+        pos = stats[1]
+        bad_sub = determine_bad_subtractions_in_box_stats(frame, fits_filepath, badness_threshold)
+        if bad_sub != None:
+            bad_filenames.append(frame.filename)
+            bad_files += 1
+        for i in range(0, len(means_stds)):
+            stat_x_grid_1.append(means_stds[i][0])
+            stat_x_grid_2.append(means_stds[i][1])
+            stat_x_grid_3.append(means_stds[i][2])
+            if frame_num == 0:
+                pos_x_grid_1.append(pos[i][0])
+                pos_x_grid_2.append(pos[i][1])
+                pos_x_grid_3.append(pos[i][2])
+        statstable['stat_x_grid_1'] = stat_x_grid_1
+        statstable['stat_x_grid_2'] = stat_x_grid_2
+        statstable['stat_x_grid_3'] = stat_x_grid_3
+        if frame_num == 0:
+            postable['pos_x_grid_1'] =  pos_x_grid_1
+            postable['pos_x_grid_2'] = pos_x_grid_2
+            postable['pos_x_grid_3'] = pos_x_grid_3
+            data_storage_file.write(f"POSITIONS \n {postable} \n")
+            data_storage_file.write(f"STATISTICS \n")
+        data_storage_file.write(f"{frame.filename} \n")
+        data_storage_file.write(f"{statstable} \n")
+    percent_bad_files = (bad_files/total_files)*100
+    data_storage_file.write(f"bad subtraction files {bad_filenames}, percent bad files = {percent_bad_files}")
+    return data_storage_filename

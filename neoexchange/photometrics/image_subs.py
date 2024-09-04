@@ -433,7 +433,10 @@ def determine_reference_frame_for_block(obs_block, reference_dir, obs_filter=Non
             print("No matching frames found")
     return ref_name
 
-def get_fits_imagestats(fits_filename, keyword, hdu = "SCI", center = None, size = None):
+def get_fits_imagestats(fits_filename, keyword, center = None, size = None):
+    """Finds std, median, or mean of pixel data in FITS image referenced <fits_filename>, depending 
+    on \<keyword\>. Pixel data will optionally be cropped to a specified \<size\> 
+    (x, y) around a specified \<center\> (x, y)"""
     if fits_filename is None:
         return None
     if os.path.exists(fits_filename) is False:
@@ -444,7 +447,6 @@ def get_fits_imagestats(fits_filename, keyword, hdu = "SCI", center = None, size
         y_upper = center[1] + (size[1]/2)
         x_lower = center[0] - (size[0]/2)
         x_upper = center[0] + (size[0]/2)
-        statdata = data[int(y_lower):int(y_upper), int(x_lower):int(x_upper)]
         stats = sigma_clipped_stats(data[(int(y_lower)):(int(y_upper)), (int(x_lower)):(int(x_upper))], sigma = 3, maxiters = 5)
     else:
         stats = sigma_clipped_stats(data, sigma = 3, maxiters = 5)

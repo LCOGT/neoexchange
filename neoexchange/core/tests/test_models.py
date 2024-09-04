@@ -1358,6 +1358,7 @@ class TestBlock(TestCase):
                              'spectral_type': '',
                              'source_type': 16,
                            }
+
         cls.ref_fields = StaticSource.objects.create(**ref_fields_params)
 
         ref_proposal = Proposal.objects.create(code = 'LCOEngineering')
@@ -1375,6 +1376,7 @@ class TestBlock(TestCase):
                                 'jitter': None,
                                 'timeused': 804.0,
                                 'active': False}
+
         cls.ref_sblock = SuperBlock.objects.create(**ref_sblock_params)
 
         params_ref_block = {
@@ -1433,6 +1435,7 @@ class TestBlock(TestCase):
         ref_frame['zeropoint'] = 25
         ref_frame['zeropoint_err'] = 0.03
         Frame.objects.create(**ref_frame)
+
 
         cls.params_spectro = { 'telclass' : '2m0',
                     'site' : 'coj',
@@ -1525,18 +1528,19 @@ class TestBlock(TestCase):
                 self.assertNotEqual('', obs_string)
                 self.assertNotIn('Unknown LCO site', obs_string)
 
-    def test_obs_details_retriever(self):
+    def test_obs_details_retriever_single_blocks(self):
+        expected_lines = ['#Track# Rquest# Site(MPC) Obs details Filter #raw #good_zp/#num reduced frames FWHM \n Didymos COJ 2024 Field v2 #34 \n',
+                        'https://observe.lco.global/requests/3586212\n',
+                        '2006179 3586212 coj 9x60.0 secs, ip 1  0/1 fwhm: 3.260 2024-07-12 00:00:00 --> 2024-07-12 23:59:59\n',
+                        '2006179 3586212 coj 9x60.0 secs, rp 1  0/1 fwhm: 3.260 2024-07-12 00:00:00 --> 2024-07-12 23:59:59\n',
+                        '2006179 3586212 coj 9x60.0 secs, zs 1  1/2 fwhm: 3.260 2024-07-12 00:00:00 --> 2024-07-12 23:59:59\n',
+                        '2006179 3586212 coj 9x60.0 secs, gp 1  0/1 fwhm: 3.260 2024-07-12 00:00:00 --> 2024-07-12 23:59:59\n']
 
-        expected_lines = ['#Track# Rquest# Site(MPC) Obs details Filter #raw #good_zp/#num all frames FWHM \n Didymos COJ 2024 Field v2 #34 \n',
-                            'https://observe.lco.global/requests/3586212\n',
-                            '2006179 3586212 coj 9x60.0 secs, ip 1  0/1 fwhm: 3.260 2024-07-12 00:00:00 --> 2024-07-12 23:59:59\n',
-                            '2006179 3586212 coj 9x60.0 secs, rp 1  0/1 fwhm: 3.260 2024-07-12 00:00:00 --> 2024-07-12 23:59:59\n',
-                            '2006179 3586212 coj 9x60.0 secs, zs 1  1/2 fwhm: 3.260 2024-07-12 00:00:00 --> 2024-07-12 23:59:59\n',
-                            '2006179 3586212 coj 9x60.0 secs, gp 1  0/1 fwhm: 3.260 2024-07-12 00:00:00 --> 2024-07-12 23:59:59\n']
-
-        print(f"EXPECTED LINES {expected_lines} ")
         num_frames = Frame.objects.filter(block = self.ref_block).count()
         self.assertEquals(9, num_frames)
+
+        num_blocks = Block.objects.filter(calibsource= self.ref_fields).count()
+        self.assertEqual(1, num_blocks)
 
         num_sblocks = SuperBlock.objects.filter(calibsource= self.ref_fields).count()
         self.assertEquals(1, num_sblocks)
@@ -1545,11 +1549,131 @@ class TestBlock(TestCase):
         self.assertEquals(1, num_ref_fields)
 
         lines = obs_details_retriever(self.ref_fields)
-
-        print("LINES =", lines)
-
         self.assertEqual(expected_lines, lines)
 
+        list_detected_lines = obs_details_retriever([self.ref_fields, ])
+        self.assertEqual(expected_lines, list_detected_lines)
+
+    def test_obs_details_retriever_multiple_blocks(self):
+
+        params_ref_block2 = {
+            'telclass' : '2m0',
+            'site' : 'coj',
+            'body' : None,
+            'calibsource' : self.ref_fields,
+            'superblock' : self.ref_sblock,
+            'obstype' : 0,
+            'block_start' : datetime(2024, 7, 13, 0, 0, 0),
+            'block_end' : datetime(2024, 7, 13, 23, 59, 59),
+            'request_number' : '3586213',
+            'num_exposures' : 9,
+            'exp_length' : 60.0,
+            'num_observed': 1,
+            'when_observed': datetime(2024, 7, 13, 11, 36, 43),
+            'active':False ,
+            'reported': False,
+            'when_reported': None,
+            'tracking_rate': 0}
+        
+        self.ref_block2 = Block.objects.get_or_create(**params_ref_block2)[0]
+
+        ref_frame2 = {
+                        'sitecode': 'E10',
+                        'instrument': 'ep08',
+                        'filter': 'ip',
+                        'filename': 'coj2m002-ep08-20240712-0051-e92_ldac.fits',
+                        'exptime': 60.0,
+                        'midpoint': datetime(2024, 7, 13, 11, 30, 53, 187000),
+                        'block': self.ref_block2,
+                        'quality': ' ',
+                        'zeropoint': -99.0, 'zeropoint_err': -99.0,
+                        'zeropoint_src': 'BANZAI',
+                        'color_used': '',
+                        'color': -99.0,
+                        'color_err': -99.0,
+                        'fwhm': 3.26,
+                        'frametype': 91,
+                        'extrainfo': None,
+                        'rms_of_fit': 0.09994,
+                        'nstars_in_fit': 168.0,
+                        'time_uncertainty': None,
+                        'frameid': None,
+                        'astrometric_catalog': 'GAIA-DR2',
+                        'photometric_catalog': ' '
+                        }
+        #for obs_filter in ['gp', 'rp', 'ip', 'zs']:
+        for obs_filter in ['ip', 'rp', 'zs', 'gp']:
+            ref_frame2['frametype'] = 91
+            ref_frame2['filter'] = obs_filter
+            Frame.objects.create(**ref_frame2)
+            ref_frame2['frametype'] = 92
+            Frame.objects.create(**ref_frame2)
+        ref_frame2['filter'] = 'zs'
+        ref_frame2['zeropoint'] = 25
+        ref_frame2['zeropoint_err'] = 0.03
+        Frame.objects.create(**ref_frame2)
+
+        expected_lines = ['#Track# Rquest# Site(MPC) Obs details Filter #raw #good_zp/#num reduced frames FWHM \n Didymos COJ 2024 Field v2 #34 \n',
+                            'https://observe.lco.global/requests/3586212\n',
+                            '2006179 3586212 coj 9x60.0 secs, ip 1  0/1 fwhm: 3.260 2024-07-12 00:00:00 --> 2024-07-12 23:59:59\n',
+                            '2006179 3586212 coj 9x60.0 secs, rp 1  0/1 fwhm: 3.260 2024-07-12 00:00:00 --> 2024-07-12 23:59:59\n',
+                            '2006179 3586212 coj 9x60.0 secs, zs 1  1/2 fwhm: 3.260 2024-07-12 00:00:00 --> 2024-07-12 23:59:59\n',
+                            '2006179 3586212 coj 9x60.0 secs, gp 1  0/1 fwhm: 3.260 2024-07-12 00:00:00 --> 2024-07-12 23:59:59\n',
+                            '#Track# Rquest# Site(MPC) Obs details Filter #raw #good_zp/#num reduced frames FWHM \n Didymos COJ 2024 Field v2 #34 \n',
+                            'https://observe.lco.global/requests/3586213\n',
+                            '2006179 3586213 coj 9x60.0 secs, ip 1  0/1 fwhm: 3.260 2024-07-13 00:00:00 --> 2024-07-13 23:59:59\n',
+                            '2006179 3586213 coj 9x60.0 secs, rp 1  0/1 fwhm: 3.260 2024-07-13 00:00:00 --> 2024-07-13 23:59:59\n',
+                            '2006179 3586213 coj 9x60.0 secs, zs 1  1/2 fwhm: 3.260 2024-07-13 00:00:00 --> 2024-07-13 23:59:59\n',
+                            '2006179 3586213 coj 9x60.0 secs, gp 1  0/1 fwhm: 3.260 2024-07-13 00:00:00 --> 2024-07-13 23:59:59\n']
+
+        expected_lines_mult_refs = ['#Track# Rquest# Site(MPC) Obs details Filter #raw #good_zp/#num reduced frames FWHM \n Didymos COJ 2024 Field v2 #34 \n',
+                            'https://observe.lco.global/requests/3586212\n',
+                            '2006179 3586212 coj 9x60.0 secs, ip 1  0/1 fwhm: 3.260 2024-07-12 00:00:00 --> 2024-07-12 23:59:59\n',
+                            '2006179 3586212 coj 9x60.0 secs, rp 1  0/1 fwhm: 3.260 2024-07-12 00:00:00 --> 2024-07-12 23:59:59\n',
+                            '2006179 3586212 coj 9x60.0 secs, zs 1  1/2 fwhm: 3.260 2024-07-12 00:00:00 --> 2024-07-12 23:59:59\n',
+                            '2006179 3586212 coj 9x60.0 secs, gp 1  0/1 fwhm: 3.260 2024-07-12 00:00:00 --> 2024-07-12 23:59:59\n',
+                            '#Track# Rquest# Site(MPC) Obs details Filter #raw #good_zp/#num reduced frames FWHM \n Didymos COJ 2024 Field v2 #34 \n',
+                            'https://observe.lco.global/requests/3586213\n',
+                            '2006179 3586213 coj 9x60.0 secs, ip 1  0/1 fwhm: 3.260 2024-07-13 00:00:00 --> 2024-07-13 23:59:59\n',
+                            '2006179 3586213 coj 9x60.0 secs, rp 1  0/1 fwhm: 3.260 2024-07-13 00:00:00 --> 2024-07-13 23:59:59\n',
+                            '2006179 3586213 coj 9x60.0 secs, zs 1  1/2 fwhm: 3.260 2024-07-13 00:00:00 --> 2024-07-13 23:59:59\n',
+                            '2006179 3586213 coj 9x60.0 secs, gp 1  0/1 fwhm: 3.260 2024-07-13 00:00:00 --> 2024-07-13 23:59:59\n',
+                            '#Track# Rquest# Site(MPC) Obs details Filter #raw #good_zp/#num reduced frames FWHM \n Didymos COJ 2024 Field v2 #34 \n',
+                            'https://observe.lco.global/requests/3586212\n',
+                            '2006179 3586212 coj 9x60.0 secs, ip 1  0/1 fwhm: 3.260 2024-07-12 00:00:00 --> 2024-07-12 23:59:59\n',
+                            '2006179 3586212 coj 9x60.0 secs, rp 1  0/1 fwhm: 3.260 2024-07-12 00:00:00 --> 2024-07-12 23:59:59\n',
+                            '2006179 3586212 coj 9x60.0 secs, zs 1  1/2 fwhm: 3.260 2024-07-12 00:00:00 --> 2024-07-12 23:59:59\n',
+                            '2006179 3586212 coj 9x60.0 secs, gp 1  0/1 fwhm: 3.260 2024-07-12 00:00:00 --> 2024-07-12 23:59:59\n',
+                            '#Track# Rquest# Site(MPC) Obs details Filter #raw #good_zp/#num reduced frames FWHM \n Didymos COJ 2024 Field v2 #34 \n',
+                            'https://observe.lco.global/requests/3586213\n',
+                            '2006179 3586213 coj 9x60.0 secs, ip 1  0/1 fwhm: 3.260 2024-07-13 00:00:00 --> 2024-07-13 23:59:59\n',
+                            '2006179 3586213 coj 9x60.0 secs, rp 1  0/1 fwhm: 3.260 2024-07-13 00:00:00 --> 2024-07-13 23:59:59\n',
+                            '2006179 3586213 coj 9x60.0 secs, zs 1  1/2 fwhm: 3.260 2024-07-13 00:00:00 --> 2024-07-13 23:59:59\n',
+                            '2006179 3586213 coj 9x60.0 secs, gp 1  0/1 fwhm: 3.260 2024-07-13 00:00:00 --> 2024-07-13 23:59:59\n']
+
+        num_frames = Frame.objects.filter(block = self.ref_block).count()
+        self.assertEquals(9, num_frames)
+
+        num_frames2 = Frame.objects.filter(block = self.ref_block2).count()
+        self.assertEquals(9, num_frames2)
+
+        num_blocks = Block.objects.filter(calibsource= self.ref_fields).count()
+        self.assertEqual(2, num_blocks)
+
+        num_sblocks = SuperBlock.objects.filter(calibsource= self.ref_fields).count()
+        self.assertEquals(1, num_sblocks)
+
+        num_ref_fields = StaticSource.objects.filter(name__contains='COJ 2024 Field v2').count()
+        self.assertEquals(1, num_ref_fields)
+
+        lines = obs_details_retriever(self.ref_fields)
+        self.assertEqual(expected_lines, lines)
+
+        list_detected_lines = obs_details_retriever([self.ref_fields, ])
+        self.assertEqual(expected_lines, list_detected_lines)
+
+        mult_field_lines = obs_details_retriever([self.ref_fields, self.ref_fields])
+        self.assertEqual(expected_lines_mult_refs, mult_field_lines)
 
 class TestFrame(TestCase):
 

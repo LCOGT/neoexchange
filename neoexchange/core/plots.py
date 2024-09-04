@@ -56,6 +56,23 @@ from photometrics.obsgeomplot import plot_ra_dec, plot_brightness, plot_helio_ge
 from photometrics.catalog_subs import sanitize_object_name
 from photometrics.SA_scatter import readSources, plotScatter, plotFormat
 from photometrics.spectraplot import spectrum_plot, read_mean_tax
+import os
+from datetime import datetime, timedelta
+
+from astrometrics import *
+from astrometrics.ephem_subs import horizons_ephem
+from core.models import SuperBlock, Block, Frame, StaticSource, User
+import core as core
+
+import numpy as np
+import matplotlib
+matplotlib.use('TkAgg')
+import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
+from matplotlib.ticker import AutoMinorLocator
+from operator import itemgetter
+from importlib import reload
+plt=reload(plt)
 
 logger = logging.getLogger(__name__)
 
@@ -1235,3 +1252,491 @@ def translate_from_alcdef_filter(filt):
         elif filt == 'c':
             filt = 'Clear'
     return filt
+
+def generalized_fwhm_plotter(blocks_or_ref_fields, filters, colors, output_dir, individual_block_plots, make_full_night_plot):
+    """Plots full width half maxima against time for each filter in a block or group of blocks over the blocks' observation nights.
+    Pass a block, list/Queryset of blocks, reference field, or list/Queryset of reference fields through \<blocks_or_ref_fields\>.
+    If a single block is passed, it will be thrown into a one element list. If a list or Queryset of blocks is passed, all elements
+    will be thrown into a new list. If a reference field is passed, function will find all blocks in the reference field and throw them
+    into a list. The same process will be done for a list of reference fields; all reference will be looped over and have their blocks
+    extracted + thrown into the same list. No matter which of the four options is passed, it will be configured into a list of blocks.
+    Pass an np array or list of \<filters\> for which to plot fwhm, and a corresponding list or np array of colors for which the color
+    matches the filter at its same index. This determines the color coding and legends for the plot. Select an \<output_dir\> as an output
+    directory to save the figure(s). Finally, select True or False for \<individual_block_plots\> and \<make_full_night_plot\>. If
+    \<individual_block_plots\> is true, an individual plot of fwhms for all filters will be made for each block (unique date + ref field combo).
+    If <\make_full_night_plot\> is True, it will make a plot for a night of observation; if multiple blocks fall on this night they will appear as
+    subplots labelled by their corresponding reference field. If there are more than 5 blocks sharing a night of observation, multiple
+    plots will be made for the night, each with 5 subplots in chronological order representing each block. If #blocks % 5 != 0, the final
+    plot will contain as many subplots as there are blocks in the remainder. The separate plots will be numbered in chronological order,
+    (i.e. first 5 blocks chronologically = plot 1, second 5 blocks= plot 2, ...). If \<individual_block_plots\> and \<make_full_night_plot\>
+    are True, both actions will be executed. If both are false, function defaults to \<make_full_night_plot\> = True. If there is only one block,
+    \<individual_block_plots\> defaults to true and \<make_full_night_plot\> defaults to false to save computational time, since for one block
+    they do the same thing and individual block plots are faster. """
+    filenames = []
+    #determine datatype given and extract corresponding blocks
+    if type(filters) != np.ndarray:
+        filters = np.array(filters)
+    if type(colors) != np.ndarray:
+        colors = np.array(colors)
+    try:
+        blocks = []
+        if isinstance(blocks_or_ref_fields[0], core.models.sources.StaticSource) == True:
+            ref_fields = blocks_or_ref_fields
+            for ref_field in ref_fields:
+                from_statsource_get_blocks = Block.objects.filter(calibsource = ref_field).order_by('block_start')
+                obs_blocks = from_statsource_get_blocks.filter(num_observed__gte=1)
+                for item in obs_blocks:
+                    blocks.append(item)
+        elif isinstance(blocks_or_ref_fields[0], core.models.blocks.Block) == True:
+            blockset = blocks_or_ref_fields
+            for item in blockset:
+                blocks.append(item)
+    except TypeError:
+        if isinstance(blocks_or_ref_fields, core.models.blocks.Block) == True:
+            blocks = [blocks_or_ref_fields]
+        elif isinstance(blocks_or_ref_fields, core.models.sources.StaticSource) == True:
+            blocks = []
+            from_statsource_get_blocks = Block.objects.filter(calibsource = blocks_or_ref_fields).order_by('block_start')
+            obs_blocks = from_statsource_get_blocks.filter(num_observed__gte=1)
+            for item in obs_blocks:
+                blocks.append(item)
+    if len(blocks) == 1:
+        individual_block_plots = True
+        make_full_night_plot = False
+    elif individual_block_plots == False and make_full_night_plot == False:
+        make_full_night_plot = True
+    #make a unique plot for each unique date and reference field combination
+    if individual_block_plots == True:
+        for block in blocks:
+            frames_all_filters = Frame.objects.filter(block = block, frametype__in=[Frame.BANZAI_RED_FRAMETYPE,])
+            fig, ax = plt.subplots(nrows = 1, tight_layout = True)
+            block_date_str = f"{block.block_start}"[:-9]
+            for filter in filters:
+                fwhms = []
+                midpoints = []
+                frames = frames_all_filters.filter(filter=filter)
+                for frame in frames.order_by('midpoint', 'frametype'):
+                    fwhms.append(frame.fwhm)
+                    midpoints.append(frame.midpoint)
+                current_colorcode = colors[np.where(filters==filter)[0][0]]
+                ax.plot(midpoints, fwhms, color = current_colorcode, label = f'{filter}')
+            ax.xaxis.set_major_formatter(mdates.ConciseDateFormatter(ax.xaxis.get_major_locator()))
+            field_name = block.calibsource.name[-3:]
+            filename = os.path.join(output_dir, f"single_block_FWHM_plot_{block_date_str}_Field_{field_name}.png")
+            os.makedirs(os.path.dirname(filename), exist_ok=True)
+            fig.suptitle(f"FWHM for {block.site} {block_date_str} Block, Field {field_name}")
+            fig.legend()
+            fig.savefig(filename)
+            filenames.append(f"{filename}")
+    #make combined plots for blocks on same night
+    if make_full_night_plot == True:
+        start_dates = []
+        block_ids = []
+        for block in blocks:
+            if block.block_start not in start_dates:
+                start_dates.append(block.block_start)
+            block_ids.append(block.id)
+        for date in start_dates:
+            current_blocks = Block.objects.filter(id__in = block_ids, block_start = date)
+            current_blocks = current_blocks.order_by('when_observed')
+            supplot_count = 1
+            subplot_count = 0
+            if len(current_blocks) >= 5:
+                fig, ax = plt.subplots(1, 5, constrained_layout = True)
+            else:
+                fig, ax = plt.subplots(1, len(current_blocks), constrained_layout = True)
+            field_names = []
+            for i, block in enumerate(current_blocks):
+                block_date_str = f"{block.block_start}"[:-9]
+                field_name = block.calibsource.name[-3:]
+                field_names.append(field_name)
+                field_name = block.calibsource.name[-3:]
+                frames_all_filters = Frame.objects.filter(block = block, frametype__in=[Frame.BANZAI_RED_FRAMETYPE,])
+                for filter in filters:
+                    fwhms = []
+                    midpoints = []
+                    frames = frames_all_filters.filter(filter=filter)
+                    for frame in frames.order_by('midpoint', 'frametype'):
+                        fwhms.append(frame.fwhm)
+                        midpoints.append(frame.midpoint)
+                    current_colorcode = colors[np.where(filters==filter)[0][0]]
+                    try:
+                        if subplot_count % 5 == 0:
+                            ax[i % 5].plot(midpoints, fwhms, color = current_colorcode, label = f'{filter}')
+                        else:
+                            ax[i % 5].plot(midpoints, fwhms, color = current_colorcode)
+                        ax[i % 5].set_title(f"{field_name}", fontsize = 7)
+                    except TypeError:
+                        ax = [ax]
+                        if subplot_count % 5 == 0:
+                                ax[i % 5].plot(midpoints, fwhms, color = current_colorcode, label = f'{filter}')
+                        else:
+                                ax[i % 5].plot(midpoints, fwhms, color = current_colorcode)
+                        ax[i % 5].set_title(f"{field_name}", fontsize = 7)
+                subplot_count +=1
+                if subplot_count % 5 == 0 or i == len(current_blocks) - 1:
+                    ax[0].xaxis.set_major_formatter(mdates.ConciseDateFormatter(ax[0].xaxis.get_major_locator()))
+                    ax[0].tick_params(axis='x', labelsize= 5)
+                    for ax_rotator in range (0, len(ax)):
+                        if ax_rotator != 0:
+                            ax[ax_rotator].xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))
+                            ax[ax_rotator].tick_params(axis='x', labelsize= 5)
+                        plt.setp(ax[ax_rotator].get_xticklabels(), rotation=60, horizontalalignment='right')
+                    fields_str_for_file = "_".join(field_names)
+                    fields_str_for_title = ",".join(field_names)
+                    shortfilename = f"_FWHM_plot_{block.get_blockdayobs}_Field_{fields_str_for_file}_plot{supplot_count}.png"
+                    filename = os.path.join(output_dir, shortfilename)
+                    filenames.append(filename)
+                    os.makedirs(os.path.dirname(filename), exist_ok=True)
+                    fig.suptitle(f"FWHM for {block_date_str} Block, Field # \n {fields_str_for_title}, Plot # {supplot_count}")
+                    fig.legend()
+                    fig.savefig(filename)
+                    fig.clf()
+                    if (len(current_blocks) - 5*supplot_count) >= 5:
+                        fig, ax = plt.subplots(1, 5, constrained_layout = True)
+                    elif 0 < (len(current_blocks) - 5*supplot_count) < 5:
+                        fig, ax = plt.subplots(1, (len(current_blocks) - 5*supplot_count), constrained_layout = True)
+                    else:
+                        break
+                    supplot_count +=1
+                    field_names = []
+                elif i == len(current_blocks) - 1:
+                    break
+                else:
+                    continue
+    return filenames
+
+
+
+def plot_magnitude(block, filter, photometry_table, savepath, bad_subtractions, err_threshold_mag = None, err_threshold_zp = None, account_zps = True, aperture_radius = None):
+    '''Plots light curve in the passed \<block\> for a specified \<filter\> on a single plot using a \<photometry_table\>, subplot containing fwhm and zp is added
+    to better understand data and bad subtractions are labeled with a '*'. Use \<savepath\> to enter a directory for saving the plot
+    Use examine_subtractions to find bad subtractions, then pass their file names as a list in \<bad_subtractions\> for labelling.
+    If you would like data points with high uncertainty to be excluded, pass a value \<err_threshold_maf\> for maximum tolerable
+    error in magnitude. All magnitudes with an error greater than the value will be dropped from the plot. Repeat for
+    \<err_threshold_zp\> to set a maximum error for zeropoints. WARNING: Make sure aperture radius and zp account specs
+    match what is in aperture photometry table, otherwise it may overwrite a plot for the same block with different specs'''
+    times_col = photometry_table['times'].data
+    magnitudes_col = photometry_table['mag'].data
+    magnitude_errs_col = photometry_table['magerr'].data
+    fwhms_col = photometry_table['FWHM'].data
+    zeropoints_col = photometry_table['ZP'].data
+    zeropoint_errs_col = photometry_table['ZP_sig']
+    bad_zp_loc_col = list(np.where(photometry_table['ZP'].data < -90)[0])
+    times_col = np.delete(times_col, bad_zp_loc_col, 0)
+    frames_col = photometry_table['path to frame'].data
+    frames_col = np.delete(frames_col, bad_zp_loc_col, 0)
+    magnitudes_col = np.delete(magnitudes_col, bad_zp_loc_col, 0)
+    magnitude_errs_col = np.delete(magnitude_errs_col, bad_zp_loc_col, 0)
+    if err_threshold_mag is not None:
+        mag_errs_for_deletion = []
+        for i, mag_err in enumerate(magnitude_errs_col):
+            if mag_err > err_threshold_mag:
+                mag_errs_for_deletion.append(i)
+        magnitudes_col = np.delete(magnitudes_col, mag_errs_for_deletion, 0)
+        magnitude_errs_col = np.delete(magnitude_errs_col, mag_errs_for_deletion, 0)
+        times_for_mags_col = np.delete(times_col, mag_errs_for_deletion, 0)
+    zeropoints_col = np.delete(zeropoints_col, bad_zp_loc_col, 0)
+    zeropoint_errs_col = np.delete(zeropoint_errs_col, bad_zp_loc_col, 0)
+    if err_threshold_zp is not None:
+        zp_errs_for_deletion = []
+        for i, zp_err in enumerate(zeropoint_errs_col):
+            if zp_err > err_threshold_zp:
+                zp_errs_for_deletion.append(i)
+        zeropoints_col = np.delete(zeropoints_col, zp_errs_for_deletion, 0)
+        zeropoint_errs_col = np.delete(zeropoint_errs_col, zp_errs_for_deletion, 0)
+        times_for_zps_col = np.delete(times_col, zp_errs_for_deletion, 0)
+    filters_col = photometry_table['filters'].data
+    fwhms = []
+    times = []
+    magnitudes = []
+    magnitude_errs = []
+    zeropoints = []
+    zeropoint_errs = []
+    times_for_mags = []
+    times_for_zps = []
+    if err_threshold_mag == None and err_threshold_zp == None:
+        for i in range (0, len(times_col)):
+            if filters_col[i] == filter:
+                times.append(times_col[i])
+                fwhms.append(fwhms_col[i])
+                magnitudes.append(magnitudes_col[i])
+                magnitude_errs.append(magnitude_errs_col[i])
+                zeropoints.append(zeropoints_col[i])
+                zeropoint_errs.append(zeropoint_errs_col[i])
+    elif err_threshold_mag != None and err_threshold_zp == None:
+        for i in range (0, len(times_col)):
+            if filters_col[i] == filter:
+                times.append(times_col[i])
+                fwhms.append(fwhms_col[i])
+                zeropoints.append(zeropoints_col[i])
+                zeropoint_errs.append(zeropoint_errs_col[i])
+        for i in range (0, len(times_for_mags_col)):
+            if filters_col[i] == filter:
+                times_for_mags.append(times_for_mags_col[i])
+                magnitudes.append(magnitudes_col[i])
+                magnitude_errs.append(magnitude_errs_col[i])
+    elif err_threshold_zp != None and err_threshold_mag == None:
+        for i in range (0, len(times_col)):
+            if filters_col[i] == filter:
+                times.append(times_col[i])
+                fwhms.append(fwhms_col[i])
+                magnitudes.append(magnitudes_col[i])
+                magnitude_errs.append(magnitude_errs_col[i])
+        for i in range (0, len(times_for_zps_col)):
+            if filters_col[i] == filter:
+                times_for_zps.append(times_for_zps_col[i])
+                zeropoints.append(zeropoints_col[i])
+                zeropoint_errs.append(zeropoint_errs_col[i])
+    elif err_threshold_zp != None and err_threshold_mag != None:
+        for i in range (0, len(times_col)):
+            if filters_col[i] == filter:
+                times.append(times_col[i])
+                fwhms.append(fwhms_col[i])
+        for i in range (0, len(times_for_zps_col)):
+            if filters_col[i] == filter:
+                times_for_zps.append(times_for_zps_col[i])
+                zeropoints.append(zeropoints_col[i])
+                zeropoint_errs.append(zeropoint_errs_col[i])
+        for i in range (0, len(times_for_mags_col)):
+            if filters_col[i] == filter:
+                times_for_mags.append(times_for_mags_col[i])
+                magnitudes.append(magnitudes_col[i])
+                magnitude_errs.append(magnitude_errs_col[i])
+    if len(times) == 0:
+        return 'no data for selected filter'
+    bad_sub_x_axis = []
+    bad_sub_y_axis = []
+    if bad_subtractions != None:
+        for bad_subtract in bad_subtractions:
+            bad_frame = Frame.objects.filter(filename = bad_subtract)[0]
+            bad_sub_x_axis.append(bad_frame.midpoint)
+            bad_sub_y_axis.append(np.max(magnitudes))
+    fig, (ax0, ax1) = plt.subplots(nrows=2, sharex=True, gridspec_kw={'height_ratios': [15, 4]})
+    block_date_str = f"{block.block_start}"[:-9]
+    ax0.invert_yaxis()
+    ax1.invert_yaxis()
+    if err_threshold_mag == None and err_threshold_zp == None:
+        ax0.errorbar(times, magnitudes, linestyle = '', ecolor = 'black', marker = 'o', markersize = 4, markerfacecolor = 'black', markeredgecolor = 'black', yerr = magnitude_errs, label = f'mag')
+        ax1.errorbar(times, zeropoints, linestyle = '', ecolor = 'red', marker = 'o', markersize = 4, markerfacecolor = 'red', markeredgecolor = 'red', yerr = zeropoint_errs, label = f'zp')
+    elif err_threshold_mag != None and err_threshold_zp == None:
+        ax0.errorbar(times_for_mags, magnitudes, linestyle = '', ecolor = 'black', marker = 'o', markersize = 4, markerfacecolor = 'black', markeredgecolor = 'black', yerr = magnitude_errs, label = f'mag')
+        ax1.errorbar(times, zeropoints, linestyle = '', ecolor = 'red', marker = 'o', markersize = 4, markerfacecolor = 'red', markeredgecolor = 'red', yerr = zeropoint_errs, label = f'zp')
+    elif err_threshold_zp != None and err_threshold_mag == None:
+        ax0.errorbar(times, magnitudes, linestyle = '', ecolor = 'black', marker = 'o', markersize = 4, markerfacecolor = 'black', markeredgecolor = 'black', yerr = magnitude_errs, label = f'mag')
+        ax1.errorbar(times_for_zps, zeropoints, linestyle = '', ecolor = 'red', marker = 'o', markersize = 4, markerfacecolor = 'red', markeredgecolor = 'red', yerr = zeropoint_errs, label = f'zp')
+    elif err_threshold_zp != None and err_threshold_mag != None:
+        ax0.errorbar(times_for_mags, magnitudes, linestyle = '', ecolor = 'black', marker = 'o', markersize = 4, markerfacecolor = 'black', markeredgecolor = 'black', yerr = magnitude_errs, label = f'mag')
+        ax1.errorbar(times_for_zps, zeropoints, linestyle = '', ecolor = 'red', marker = 'o', markersize = 4, markerfacecolor = 'red', markeredgecolor = 'red', yerr = zeropoint_errs, label = f'zp')
+    ax2 = ax1.twinx()
+    ax2.scatter(times, fwhms, color= '#73BF69', s = 25, alpha = 0.5)
+    ax2.set_ylabel('FWHM (")')
+    ax0.xaxis.set_minor_locator(AutoMinorLocator())
+    ax1.xaxis.set_minor_locator(AutoMinorLocator())
+    for i in range(0, len(bad_sub_x_axis)):
+        ax0.text(x = bad_sub_x_axis[i], y = bad_sub_y_axis[i], s = '*')
+        ax1.text(x = bad_sub_x_axis[i], y = bad_sub_y_axis[i], s = '*')
+    ax1.xaxis.set_major_formatter(mdates.ConciseDateFormatter(ax0.xaxis.get_major_locator()))
+    ax0.legend()
+    ax1.legend()
+    if aperture_radius == None:
+        aper_rad_label = '2.5*fwhm'
+    else:
+        aper_rad_label = aperture_radius
+    if account_zps == True:
+        if err_threshold_mag == None and err_threshold_zp == None:
+            filename = os.path.join(savepath, f"{filter}_magnitude_plot_{block_date_str}_Block_aper_radius_{aper_rad_label}_zps_included.png")
+            fig.suptitle(f"{filter} Magnitude Light Curve for {block.site} {block_date_str} Block")
+            fig.savefig(filename)
+        elif err_threshold_mag != None and err_threshold_zp == None:
+            filename = os.path.join(savepath, f"{filter}_magnitude_plot_{block_date_str}_Block_magerr_thresh_{err_threshold_mag}_aper_radius_{aper_rad_label}_zps_included.png")
+            fig.suptitle(f"{filter} Magnitude Light Curve for {block.site} {block_date_str} Block \n Magnitude Error Thresh = {err_threshold_mag}")
+            fig.savefig(filename)
+        elif err_threshold_zp != None and err_threshold_mag == None:
+            filename = os.path.join(savepath, f"{filter}_magnitude_plot_{block_date_str}_Block_zperr_thresh_{err_threshold_zp}_aper_radius_{aper_rad_label}_zps_included.png")
+            fig.suptitle(f"{filter} Magnitude Light Curve for {block.site} {block_date_str} Block \n ZP Error Thresh = {err_threshold_zp}")
+            fig.savefig(filename)
+        elif err_threshold_zp != None and err_threshold_mag != None:
+            filename = os.path.join(savepath, f"{filter}_magnitude_plot_{block_date_str}_Block_magerr_thresh_{err_threshold_mag}_aper_radius_{aper_rad_label}_zps_included.png")
+            fig.suptitle(f"{filter} Magnitude Light Curve for {block.site} {block_date_str} Block \n Magnitude Error Thresh = {err_threshold_mag} \n ZP Error Thresh = {err_threshold_zp}")
+            fig.savefig(filename)
+    if account_zps == False:
+        if err_threshold_mag == None and err_threshold_zp == None:
+            filename = os.path.join(savepath, f"{filter}_magnitude_plot_{block_date_str}_Block_aper_radius_{aper_rad_label}_zps_excluded.png")
+            fig.suptitle(f"{filter} Magnitude Light Curve for {block.site} {block_date_str} Block")
+            fig.savefig(filename)
+        elif err_threshold_mag != None and err_threshold_zp == None:
+            filename = os.path.join(savepath, f"{filter}_magnitude_plot_{block_date_str}_Block_magerr_thresh_{err_threshold_mag}_aper_radius_{aper_rad_label}_zps_excluded.png")
+            fig.suptitle(f"{filter} Magnitude Light Curve for {block.site} {block_date_str} Block \n Magnitude Error Thresh = {err_threshold_mag}")
+            fig.savefig(filename)
+        elif err_threshold_zp != None and err_threshold_mag == None:
+            filename = os.path.join(savepath, f"{filter}_magnitude_plot_{block_date_str}_Block_zperr_thresh_{err_threshold_zp}_aper_radius_{aper_rad_label}_zps_excluded.png")
+            fig.suptitle(f"{filter} Magnitude Light Curve for {block.site} {block_date_str} Block \n ZP Error Thresh = {err_threshold_zp}")
+            fig.savefig(filename)
+        elif err_threshold_zp != None and err_threshold_mag != None:
+            filename = os.path.join(savepath, f"{filter}_magnitude_plot_{block_date_str}_Block_magerr_thresh_{err_threshold_mag}_aper_radius_{aper_rad_label}_zps_excluded.png")
+            fig.suptitle(f"{filter} Magnitude Light Curve for {block.site} {block_date_str} Block \n Magnitude Error Thresh = {err_threshold_mag} \n ZP Error Thresh = {err_threshold_zp}")
+            fig.savefig(filename)
+    fig.clf()
+    return filename
+
+def generalized_zeropoint_plotter(blocks_or_ref_fields, filters, colors, output_dir, individual_block_plots, make_full_night_plot):
+    """Plots zeropoints against time for each filter in a block or group of blocks over the blocks' observation nights.
+    Pass a block, list/Queryset of blocks, reference field, or list/Queryset of reference fields through \<blocks_or_ref_fields\>.
+    If a single block is passed, it will be thrown into a one element list. If a list or Queryset of blocks is passed, all elements
+    will be thrown into a new list. If a reference field is passed, function will find all blocks in the reference field and throw them
+    into a list. The same process will be done for a list of reference fields; all reference will be looped over and have their blocks
+    extracted + thrown into the same list. No matter which of the four options is passed, it will be configured into a list of blocks.
+    Pass a list of \<filters\> for which to plot zeropoint, and a corresponding list of colors for which the color matches the filter at its
+    same index. This determines the color coding and legends for the plot. Select an \<output_dir\> as an output directory to save the
+    figure(s). Finally, select True or False for \<individual_block_plots\> and \<make_full_night_plot\>. If \<individual_block_plots\>
+    is true, an individual plot of zeropoints for all filters will be made for each block (unique date + ref field combo). If <\make_full
+    _night_plot\> is True, it will make a plot for a night of observation; if multiple blocks fall on this night they will appear as
+    subplots labelled by their corresponding reference field. If there are more than 5 blocks sharing a night of observation, multiple
+    plots will be made for the night, each with 5 subplots in chronological order representing each block. If #blocks % 5 != 0, the final
+    plot will contain as many subplots as there are blocks in the remainder. The separate plots will be numbered in chronological order,
+    (i.e. first 5 blocks chronologically = plot 1, second 5 blocks= plot 2, ...). If \<individual_block_plots\> and \<make_full_night_plot\>
+    are True, both actions will be executed. If both are false, function defaults to \<make_full_night_plot\> = True. If there is only one block,
+    \<individual_block_plots\> defaults to true and \<make_full_night_plot\> defaults to false to save computational time, since for one block
+    they do the same thing and individual block plots are faster. """
+    filenames = []
+    if type(filters) != np.ndarray:
+        filters = np.array(filters)
+    if type(colors) != np.ndarray:
+        colors = np.array(colors)
+    #determine datatype given and extract corresponding blocks
+    try:
+        blocks = []
+        if isinstance(blocks_or_ref_fields[0], core.models.sources.StaticSource) == True:
+            ref_fields = blocks_or_ref_fields
+            for ref_field in ref_fields:
+                from_statsource_get_blocks = Block.objects.filter(superblock__calibsource = ref_field).order_by('block_start')
+                obs_blocks = from_statsource_get_blocks.filter(num_observed__gte=1)
+                for item in obs_blocks:
+                    blocks.append(item)
+        elif isinstance(blocks_or_ref_fields[0], core.models.blocks.Block) == True:
+            blockset = blocks_or_ref_fields
+            for item in blockset:
+                blocks.append(item)
+    except TypeError:
+        if isinstance(blocks_or_ref_fields, core.models.blocks.Block) == True:
+            blocks = [blocks_or_ref_fields]
+        elif isinstance(blocks_or_ref_fields, core.models.sources.StaticSource) == True:
+            blocks = []
+            from_statsource_get_blocks = Block.objects.filter(calibsource = blocks_or_ref_fields).order_by('block_start')
+            obs_blocks = from_statsource_get_blocks.filter(num_observed__gte=1)
+            for item in obs_blocks:
+                blocks.append(item)
+    if len(blocks) == 1:
+        individual_block_plots = True
+        make_full_night_plot = False
+    elif individual_block_plots == False and make_full_night_plot == False:
+        make_full_night_plot = True
+    #make a unique plot for each unique date and reference field combination
+    if individual_block_plots == True:
+        for block in blocks:
+            frames_all_filters = Frame.objects.filter(block = block, frametype__in=[Frame.NEOX_RED_FRAMETYPE])
+            fig, ax = plt.subplots(nrows = 1, tight_layout = True)
+            block_date_str = f"{block.block_start}"[:-9]
+            for filter in filters:
+                zeropoints = []
+                midpoints = []
+                frames = frames_all_filters.filter(filter=filter)
+                for frame in frames.order_by('midpoint', 'frametype'):
+                    try:
+                        if frame.zeropoint > 0:
+                            zeropoints.append(frame.zeropoint)
+                            midpoints.append(frame.midpoint)
+                    except TypeError:
+                        pass
+                current_colorcode = colors[np.where(filters==filter)[0][0]]
+                ax.plot(midpoints, zeropoints, color = current_colorcode, label = f'{filter}')
+            ax.xaxis.set_major_formatter(mdates.ConciseDateFormatter(ax.xaxis.get_major_locator()))
+            field_name = block.calibsource.name[-3:]
+            filename = os.path.join(output_dir, f"single_block_ZP_plot_{block_date_str}_Field_{field_name}.png")
+            os.makedirs(os.path.dirname(filename), exist_ok=True)
+            fig.suptitle(f"Zero Points for {block.site} {block_date_str} Block, Field {field_name}")
+            fig.legend()
+            fig.savefig(filename)
+            filenames.append(f"{filename}")
+    #make combined plots for blocks on same night
+    if make_full_night_plot == True:
+        start_dates = []
+        block_ids = []
+        for block in blocks:
+            if block.block_start not in start_dates:
+                start_dates.append(block.block_start)
+            block_ids.append(block.id)
+        for date in start_dates:
+            current_blocks = Block.objects.filter(id__in = block_ids, block_start = date)
+            current_blocks = current_blocks.order_by('when_observed')
+            supplot_count = 1
+            subplot_count = 0
+            if len(current_blocks) >= 5:
+                fig, ax = plt.subplots(1, 5, constrained_layout = True)
+            else:
+                fig, ax = plt.subplots(1, len(current_blocks), constrained_layout = True)
+            field_names = []
+            for i, block in enumerate(current_blocks):
+                block_date_str = f"{block.block_start}"[:-9]
+                field_name = block.calibsource.name[-3:]
+                field_names.append(field_name)
+                field_name = block.calibsource.name[-3:]
+                frames_all_filters = Frame.objects.filter(block = block, frametype__in=[Frame.NEOX_RED_FRAMETYPE])
+                for filter in filters:
+                    zeropoints = []
+                    midpoints = []
+                    frames = frames_all_filters.filter(filter=filter)
+                    for frame in frames.order_by('midpoint', 'frametype'):
+                        try:
+                            if frame.zeropoint > 0:
+                                zeropoints.append(frame.zeropoint)
+                                midpoints.append(frame.midpoint)
+                        except TypeError:
+                            pass
+                    current_colorcode = colors[np.where(filters==filter)[0][0]]
+                    try:
+                        if subplot_count % 5 == 0:
+                            ax[i % 5].plot(midpoints, zeropoints, color = current_colorcode, label = f'{filter}')
+                        else:
+                            ax[i % 5].plot(midpoints, zeropoints, color = current_colorcode)
+                        ax[i % 5].set_title(f"{field_name}", fontsize = 7)
+                    except TypeError:
+                        ax = [ax]
+                        if subplot_count % 5 == 0:
+                                ax[i % 5].plot(midpoints, zeropoints, color = current_colorcode, label = f'{filter}')
+                        else:
+                                ax[i % 5].plot(midpoints, zeropoints, color = current_colorcode)
+                        ax[i % 5].set_title(f"{field_name}", fontsize = 7)
+                subplot_count +=1
+                if subplot_count % 5 == 0 or i == len(current_blocks) - 1:
+                    ax[0].xaxis.set_major_formatter(mdates.ConciseDateFormatter(ax[0].xaxis.get_major_locator()))
+                    ax[0].tick_params(axis='x', labelsize= 5)
+                    for ax_rotator in range (0, len(ax)):
+                        if ax_rotator != 0:
+                            ax[ax_rotator].xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))
+                            ax[ax_rotator].tick_params(axis='x', labelsize= 5)
+                        plt.setp(ax[ax_rotator].get_xticklabels(), rotation=60, horizontalalignment='right')
+                    fields_str_for_file = "_".join(field_names)
+                    fields_str_for_title = ",".join(field_names)
+                    shortfilename = f"_ZP_plot_{block.get_blockdayobs}_Field_{fields_str_for_file}_plot{supplot_count}.png"
+                    filename = os.path.join(output_dir, shortfilename)
+                    filenames.append(filename)
+                    os.makedirs(os.path.dirname(filename), exist_ok=True)
+                    fig.suptitle(f"Zero Points for {block_date_str} Block, Field # \n {fields_str_for_title}, Plot # {supplot_count}")
+                    fig.legend()
+                    fig.savefig(filename)
+                    fig.clf()
+                    if (len(current_blocks) - 5*supplot_count) >= 5:
+                        fig, ax = plt.subplots(1, 5, constrained_layout = True)
+                    elif 0 < (len(current_blocks) - 5*supplot_count) < 5:
+                        fig, ax = plt.subplots(1, (len(current_blocks) - 5*supplot_count), constrained_layout = True)
+                    else:
+                        break
+                    supplot_count +=1
+                    field_names = []
+                elif i == len(current_blocks) - 1:
+                    break
+                else:
+                    continue
+    return filenames

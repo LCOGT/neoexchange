@@ -9357,7 +9357,7 @@ class TestPerformAperPhotometry(TestCase):
         self.assertEqual(expected_table[column], table[column])
         print(f'{column} OK')
 
-    def test_perform_aperture_photometry(self):
+    def test_perform_aperture_photometry_default(self):
 
         FLUX2MAG = 2.5/np.log(10)
         expected_results = QTable()
@@ -9383,16 +9383,10 @@ class TestPerformAperPhotometry(TestCase):
 
         exp_dtypes = expected_row2.dtype
         dtypes = results.dtype
-
         expected_table_length = len(Frame.objects.filter(block = self.test_block, filename__contains = 'e93.fits'))
-        print(expected_table_length)
-
-        self.assertEqual(exp_dtypes, dtypes)
         self.assertEqual(expected_row2.colnames, results.colnames)
-        print(expected_row2.colnames, results.colnames)
         self.assertEqual(len(expected_results), len(results))
         self.assertEqual(len(results), expected_table_length)
-        print(len(expected_results), len(results))
         self.compare_tables_with_strings(expected_results, results, column = 'path to frame',num_to_check= 2, precision=6)
         self.compare_tables_with_strings(expected_results, results, column = 'times',num_to_check= 2, precision=6)
         self.compare_rows(expected_row2, results[:][2], column = 'path to frame')
@@ -9406,12 +9400,180 @@ class TestPerformAperPhotometry(TestCase):
         self.compare_rows(expected_row2, results[:][2], column = 'magerr')
         self.compare_rows(expected_row2, results[:][2], column = 'aperture radius')
 
-    def test_generate_ecsv_file_post_photomet(self):
+    def test_perform_aperture_photometry_default_ap_ignore_zp(self):
+        FLUX2MAG = 2.5/np.log(10)
+        expected_results = QTable()
+        expected_results['path to frame'] = ['/tmp/tmp_neox_fjody5q5/20240610/coj2m002-ep07-20240610-0065-e93.fits', '/tmp/tmp_neox_fjody5q5/20240610/coj2m002-ep07-20240610-0095-e93.fits', '/tmp/tmp_neox_fjody5q5/20240610/coj2m002-ep07-20240610-0125-e93.fits']
+        expected_results['times'] = [datetime(2024, 6, 10, 17, 2, 0), datetime(2024, 6, 10, 17, 4, 0), datetime(2024, 6, 10, 17, 6, 0)]
+
+        expected_row2 = QTable()
+        expected_row2['path to frame'] = [os.path.join(self.test_output_dir, self.e93_frame.filename)]
+        expected_row2['times'] = [self.e93_frame.midpoint]
+        expected_row2['filters'] = [np.str_(self.e93_frame.filter)]
+        expected_row2['xcenter'] = [48.76999999999983] #*u.pix
+        expected_row2['ycenter'] = [48.2699999999529] #* u.pix
+        expected_row2['aperture sum'] = [135.68437393971408]
+        expected_row2['aperture sum err'] = [11.646125295033322]
+        expected_row2['FWHM'] = [self.e93_frame.fwhm]
+        expected_row2['ZP'] = [self.e93_frame.zeropoint]
+        expected_row2['ZP_sig'] = [self.e93_frame.zeropoint_err]
+        expected_row2['mag'] = -2.5*np.log10(expected_row2['aperture sum'])
+        expected_row2['magerr'] = FLUX2MAG * expected_row2['aperture sum err'] / expected_row2['aperture sum']
+        expected_row2['aperture radius'] = [2.5*self.e93_frame.fwhm]
+        dataroot = self.test_output_dir
+        results = perform_aper_photometry(self.test_block, dataroot, account_zps= False)
+
+        exp_dtypes = expected_row2.dtype
+        dtypes = results.dtype
+
+        expected_table_length = len(Frame.objects.filter(block = self.test_block, filename__contains = 'e93.fits'))
+
+        self.assertEqual(exp_dtypes, dtypes)
+        self.assertEqual(expected_row2.colnames, results.colnames)
+        self.assertEqual(len(expected_results), len(results))
+        self.assertEqual(len(results), expected_table_length)
+        self.compare_tables_with_strings(expected_results, results, column = 'path to frame',num_to_check= 2, precision=6)
+        self.compare_tables_with_strings(expected_results, results, column = 'times',num_to_check= 2, precision=6)
+        self.compare_rows(expected_row2, results[:][2], column = 'path to frame')
+        self.compare_rows(expected_row2, results[:][2], column = 'times')
+        self.compare_rows(expected_row2, results[:][2], column = 'filters')
+        self.compare_rows(expected_row2, results[:][2], column = 'xcenter')
+        self.compare_rows(expected_row2, results[:][2], column = 'ycenter')
+        self.compare_rows(expected_row2, results[:][2], column = 'aperture sum')
+        self.compare_rows(expected_row2, results[:][2], column = 'aperture sum err')
+        self.compare_rows(expected_row2, results[:][2], column = 'mag')
+        self.compare_rows(expected_row2, results[:][2], column = 'magerr')
+        self.compare_rows(expected_row2, results[:][2], column = 'aperture radius')
+
+    def test_perform_aperture_photometry_manual_ap_ignore_zp(self):
+        FLUX2MAG = 2.5/np.log(10)
+        expected_results = QTable()
+        expected_results['path to frame'] = ['/tmp/tmp_neox_fjody5q5/20240610/coj2m002-ep07-20240610-0065-e93.fits', '/tmp/tmp_neox_fjody5q5/20240610/coj2m002-ep07-20240610-0095-e93.fits', '/tmp/tmp_neox_fjody5q5/20240610/coj2m002-ep07-20240610-0125-e93.fits']
+        expected_results['times'] = [datetime(2024, 6, 10, 17, 2, 0), datetime(2024, 6, 10, 17, 4, 0), datetime(2024, 6, 10, 17, 6, 0)]
+
+        expected_row2 = QTable()
+        expected_row2['path to frame'] = [os.path.join(self.test_output_dir, self.e93_frame.filename)]
+        expected_row2['times'] = [self.e93_frame.midpoint]
+        expected_row2['filters'] = [np.str_(self.e93_frame.filter)]
+        expected_row2['xcenter'] = [48.76999999999983] #*u.pix
+        expected_row2['ycenter'] = [48.2699999999529] #* u.pix
+        expected_row2['aperture sum'] = [99.9718286829744]
+        expected_row2['aperture sum err'] = [8.690970405159566]
+        expected_row2['FWHM'] = [self.e93_frame.fwhm]
+        expected_row2['ZP'] = [self.e93_frame.zeropoint]
+        expected_row2['ZP_sig'] = [self.e93_frame.zeropoint_err]
+        expected_row2['mag'] = -2.5*np.log10(expected_row2['aperture sum'])
+        expected_row2['magerr'] = FLUX2MAG * expected_row2['aperture sum err'] / expected_row2['aperture sum']
+        expected_row2['aperture radius'] = [3.0]
+        dataroot = self.test_output_dir
+        results = perform_aper_photometry(self.test_block, dataroot, account_zps= False, aperture_radius= 3.0)
+
+        exp_dtypes = expected_row2.dtype
+        dtypes = results.dtype
+
+        expected_table_length = len(Frame.objects.filter(block = self.test_block, filename__contains = 'e93.fits'))
+
+        self.assertEqual(exp_dtypes, dtypes)
+        self.assertEqual(expected_row2.colnames, results.colnames)
+        self.assertEqual(len(expected_results), len(results))
+        self.assertEqual(len(results), expected_table_length)
+        self.compare_tables_with_strings(expected_results, results, column = 'path to frame',num_to_check= 2, precision=6)
+        self.compare_tables_with_strings(expected_results, results, column = 'times',num_to_check= 2, precision=6)
+        self.compare_rows(expected_row2, results[:][2], column = 'path to frame')
+        self.compare_rows(expected_row2, results[:][2], column = 'times')
+        self.compare_rows(expected_row2, results[:][2], column = 'filters')
+        self.compare_rows(expected_row2, results[:][2], column = 'xcenter')
+        self.compare_rows(expected_row2, results[:][2], column = 'ycenter')
+        self.compare_rows(expected_row2, results[:][2], column = 'aperture sum')
+        self.compare_rows(expected_row2, results[:][2], column = 'aperture sum err')
+        self.compare_rows(expected_row2, results[:][2], column = 'mag')
+        self.compare_rows(expected_row2, results[:][2], column = 'magerr')
+        self.compare_rows(expected_row2, results[:][2], column = 'aperture radius')
+
+    def test_perform_aperture_photometry_manual_ap_include_zp(self):
+        FLUX2MAG = 2.5/np.log(10)
+        expected_results = QTable()
+        expected_results['path to frame'] = ['/tmp/tmp_neox_fjody5q5/20240610/coj2m002-ep07-20240610-0065-e93.fits', '/tmp/tmp_neox_fjody5q5/20240610/coj2m002-ep07-20240610-0095-e93.fits', '/tmp/tmp_neox_fjody5q5/20240610/coj2m002-ep07-20240610-0125-e93.fits']
+        expected_results['times'] = [datetime(2024, 6, 10, 17, 2, 0), datetime(2024, 6, 10, 17, 4, 0), datetime(2024, 6, 10, 17, 6, 0)]
+
+        expected_row2 = QTable()
+        expected_row2['path to frame'] = [os.path.join(self.test_output_dir, self.e93_frame.filename)]
+        expected_row2['times'] = [self.e93_frame.midpoint]
+        expected_row2['filters'] = [np.str_(self.e93_frame.filter)]
+        expected_row2['xcenter'] = [48.76999999999983] #*u.pix
+        expected_row2['ycenter'] = [48.2699999999529] #* u.pix
+        expected_row2['aperture sum'] = [99.9718286829744]
+        expected_row2['aperture sum err'] = [8.690970405159566]
+        expected_row2['FWHM'] = [self.e93_frame.fwhm]
+        expected_row2['ZP'] = [self.e93_frame.zeropoint]
+        expected_row2['ZP_sig'] = [self.e93_frame.zeropoint_err]
+        expected_row2['mag'] = -2.5*np.log10(expected_row2['aperture sum']) + self.e93_frame.zeropoint
+        expected_row2['magerr'] = FLUX2MAG * expected_row2['aperture sum err'] / expected_row2['aperture sum']
+        expected_row2['aperture radius'] = [3.0]
+        dataroot = self.test_output_dir
+        results = perform_aper_photometry(self.test_block, dataroot, account_zps= True, aperture_radius= 3.0)
+
+        exp_dtypes = expected_row2.dtype
+        dtypes = results.dtype
+
+        expected_table_length = len(Frame.objects.filter(block = self.test_block, filename__contains = 'e93.fits'))
+
+        self.assertEqual(exp_dtypes, dtypes)
+        self.assertEqual(expected_row2.colnames, results.colnames)
+        self.assertEqual(len(expected_results), len(results))
+        self.assertEqual(len(results), expected_table_length)
+        self.compare_tables_with_strings(expected_results, results, column = 'path to frame',num_to_check= 2, precision=6)
+        self.compare_tables_with_strings(expected_results, results, column = 'times',num_to_check= 2, precision=6)
+        self.compare_rows(expected_row2, results[:][2], column = 'path to frame')
+        self.compare_rows(expected_row2, results[:][2], column = 'times')
+        self.compare_rows(expected_row2, results[:][2], column = 'filters')
+        self.compare_rows(expected_row2, results[:][2], column = 'xcenter')
+        self.compare_rows(expected_row2, results[:][2], column = 'ycenter')
+        self.compare_rows(expected_row2, results[:][2], column = 'aperture sum')
+        self.compare_rows(expected_row2, results[:][2], column = 'aperture sum err')
+        self.compare_rows(expected_row2, results[:][2], column = 'mag')
+        self.compare_rows(expected_row2, results[:][2], column = 'magerr')
+        self.compare_rows(expected_row2, results[:][2], column = 'aperture radius')
+
+    def test_generate_ecsv_file_post_photomet_default(self):
         block_date_str = f"{self.test_block.block_start}"[:-9]
-        expected_file_name = f"{self.test_output_dir}aperture_photometry_table_{block_date_str}.ecsv"
+        expected_file_name = os.path.join(self.test_output_dir, f"aperture_photometry_table_{block_date_str}_aper_radius_2.5*fwhm_zps_included.ecsv")
         photometry_file_name = generate_ecsv_file_post_photomet(self.test_block, self.test_output_dir, overwrite = True)
         photometry_file_contents = Table.read(photometry_file_name, format = 'ascii.ecsv')
         photometry_table = perform_aper_photometry(self.test_block, self.test_output_dir)
+        self.assertTrue(os.path.exists(photometry_file_name))
+        self.assertTrue(os.path.getsize(photometry_file_name) > 0)
+        self.assertEqual(expected_file_name, photometry_file_name)
+        self.assertEqual(str(photometry_file_contents), str(photometry_table))
+
+    def test_generate_ecsv_file_post_photomet_default_ap_ignore_zp(self):
+        block_date_str = f"{self.test_block.block_start}"[:-9]
+        expected_file_name = os.path.join(self.test_output_dir, f"aperture_photometry_table_{block_date_str}_aper_radius_2.5*fwhm_zps_excluded.ecsv")
+        photometry_file_name = generate_ecsv_file_post_photomet(self.test_block, self.test_output_dir, overwrite = True, account_zps= False)
+        photometry_file_contents = Table.read(photometry_file_name, format = 'ascii.ecsv')
+        photometry_table = perform_aper_photometry(self.test_block, self.test_output_dir, account_zps= False)
+        self.assertTrue(os.path.exists(photometry_file_name))
+        self.assertTrue(os.path.getsize(photometry_file_name) > 0)
+        self.assertEqual(expected_file_name, photometry_file_name)
+        self.assertEqual(str(photometry_file_contents), str(photometry_table))
+
+    def test_generate_ecsv_file_post_photomet_manual_ap_ignore_zp(self):
+        block_date_str = f"{self.test_block.block_start}"[:-9]
+        expected_file_name = os.path.join(self.test_output_dir, f"aperture_photometry_table_{block_date_str}_aper_radius_3.0_zps_excluded.ecsv")
+        photometry_file_name = generate_ecsv_file_post_photomet(self.test_block, self.test_output_dir, overwrite = True,aperture_radius=3.0, account_zps= False)
+        photometry_file_contents = Table.read(photometry_file_name, format = 'ascii.ecsv')
+        photometry_table = perform_aper_photometry(self.test_block, self.test_output_dir, aperture_radius= 3.0, account_zps= False)
+        self.assertTrue(os.path.exists(photometry_file_name))
+        self.assertTrue(os.path.getsize(photometry_file_name) > 0)
+        self.assertEqual(expected_file_name, photometry_file_name)
+        self.assertEqual(str(photometry_file_contents), str(photometry_table))
+
+    def test_generate_ecsv_file_post_photomet_manual_ap_include_zp(self):
+        block_date_str = f"{self.test_block.block_start}"[:-9]
+        expected_file_name = os.path.join(self.test_output_dir, f"aperture_photometry_table_{block_date_str}_aper_radius_3.0_zps_included.ecsv")
+        photometry_file_name = generate_ecsv_file_post_photomet(self.test_block, self.test_output_dir, overwrite = True,aperture_radius=3.0, account_zps= True)
+        photometry_file_contents = Table.read(photometry_file_name, format = 'ascii.ecsv')
+        photometry_table = perform_aper_photometry(self.test_block, self.test_output_dir, aperture_radius= 3.0, account_zps= True)
         self.assertTrue(os.path.exists(photometry_file_name))
         self.assertTrue(os.path.getsize(photometry_file_name) > 0)
         self.assertEqual(expected_file_name, photometry_file_name)
