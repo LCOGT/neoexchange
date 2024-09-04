@@ -42,7 +42,7 @@ def summarize_observations(target_name='65803', start_date='2022-07-15', proposa
         frame_types.append(Frame.SWOPE_RED_FRAMETYPE)
     except AttributeError:
         pass
-    print(f'#Track# Rquest# Blockuid# Site(MPC)  Block start         Block end       Block length Obs details       Filter  #raw #good_zp/#num all frames   FWHM DPs')
+    print(f'#Track# Rquest# Blockuid# Site(MPC)  Block start         Block end       Block length Obs details       Filter  #raw #good_zp/#num all frames   FWHM  DPs')
     for block in blocks:
 
         all_raw_frames = Frame.objects.filter(block=block, frametype__in=frame_types)
@@ -86,7 +86,7 @@ def summarize_observations(target_name='65803', start_date='2022-07-15', proposa
                 if filter_count >= 1:
                     # For multi-filter blocks, blank out the Block details after the first iteration
                     block_details =  ' '*len(block_details)
-                print(f'{block_details} {block.site} ({first_frame.sitecode}) {block_start.strftime("%Y-%m-%d %H:%M")} -> {block_end.strftime("%Y-%m-%d %H:%M")} ({block_length_hrs:>4.2f} hrs) {block.get_obsdetails().replace(" secs", "s"):10s}({exp_length_hms}) {filter_str:{filt_width}s} {num_raw_frames:>3d}(e91)->{num_good_zp:>3d}/{num_all_frames:>3d} SNR= {snr:>6.1f} {fwhm:>5.1f}  {num_dp} {block.superblock.proposal.code}')
+                print(f'{block_details} {block.site} ({first_frame.sitecode}) {block_start.strftime("%Y-%m-%d %H:%M")} -> {block_end.strftime("%Y-%m-%d %H:%M")} ({block_length_hrs:>4.2f} hrs) {block.get_obsdetails().replace(" secs", "s"):10s}({exp_length_hms}) {filter_str:{filt_width}s} {num_raw_frames:>3d}(e91)->{num_good_zp:>3d}/{num_all_frames:>3d} SNR= {snr:>6.1f} {fwhm:>6.2f}  {num_dp} {block.superblock.proposal.code}')
 #                print(f'{block.superblock.tracking_number} {block.request_number} {block.site} ({first_frame.sitecode}) {block_start.strftime("%Y-%m-%d %H:%M")} -> {block_end.strftime("%Y-%m-%d %H:%M")} ({block_length_hrs:>4.2f} hrs) {block.get_obsdetails().replace(" secs", "s"):10s}{filter_str:{filt_width}s} {num_raw_frames:>3d}(e91)->{num_good_zp:>3d}/{num_all_frames:>3d} SNR= {snr:>6.1f} {fwhm:>5.1f} {username:.26s}')
     if return_blocks:
         return blocks
