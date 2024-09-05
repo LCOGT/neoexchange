@@ -30,9 +30,7 @@ import astropy.units as u
 from astropy import wcs
 from astropy.io import fits
 from astropy.io.votable import parse
-from astropy.coordinates import ICRS
-from astropy.coordinates import SkyCoord
-from photutils.aperture import SkyCircularAperture
+from astropy.coordinates import ICRS, SkyCoord
 from astropy.wcs import WCS, FITSFixedWarning, InvalidTransformError
 from astropy.wcs.utils import proj_plane_pixel_scales
 from numpy import loadtxt, split, empty, median, absolute, sqrt
@@ -41,19 +39,12 @@ from core.models import detections_array_dtypes
 from core.utils import NeoException
 from core.models.frame import Frame
 from astrometrics.time_subs import timeit
-from photutils.aperture import aperture_photometry
-from photutils.aperture import CircularAnnulus
-from photutils.aperture import CircularAperture
+from photutils.aperture import aperture_photometry, CircularAnnulus, CircularAperture, SkyCircularAperture
 from core.blocksfind import get_ephem, ephem_interpolate
 from photometrics.catalog_subs import oracdr_catalog_mapping, banzai_catalog_mapping, \
     banzai_ldac_catalog_mapping, swope_ldac_catalog_mapping, mro_ldac_catalog_mapping,\
-    fits_ldac_to_header, convert_value
-import photometrics.catalog_subs
+    fits_ldac_to_header, convert_value, get_header
 from photometrics.image_subs import create_weight_image, create_rms_image, get_saturate, get_fits_imagestats
-
-
-import photometrics
-from photometrics.catalog_subs import get_header
 
 logger = logging.getLogger(__name__)
 
@@ -1874,7 +1865,7 @@ def single_frame_aperture_photometry(fits_filepath, ra, dec, account_zps, apertu
     is a boolean for whether the code needs to do the background subtracting itself. Background subtraction routine is NOT tested/
     fully developed, use default \<background_subtract\> to False until update"""
     fits_file = fits.open(fits_filepath)
-    header, cattype = photometrics.catalog_subs.get_header(fits_filepath)
+    header, cattype = get_header(fits_filepath)
     fits_filename = os.path.basename(fits_filepath)
     frame = Frame.objects.get(filename=fits_filename)
     FWHM = frame.fwhm
