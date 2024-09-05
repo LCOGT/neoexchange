@@ -79,7 +79,7 @@ def create_table_from_srcmeasures(block):
     dtypes = ('<U36', '<f8', '<f8', '<f8', '<f8', '<f8', '<f8', '<f8', '<U7', '<i8', '<f8')
     table = Table(names=col_names, dtype=dtypes)
 
-    sources = SourceMeasurement.objects.filter(frame__block=block, frame__frametype=Frame.NEOX_RED_FRAMETYPE).order_by('frame__midpoint')
+    sources = SourceMeasurement.objects.filter(frame__block=block, frame__frametype__in=[Frame.NEOX_RED_FRAMETYPE, Frame.NEOX_SUB_FRAMETYPE]).order_by('frame__midpoint')
 
     warnings.simplefilter('ignore', FITSFixedWarning)
 

@@ -10,7 +10,8 @@ from mock import patch, MagicMock, PropertyMock
 
 from astropy.io import fits
 
-from core.models import Body, Designations, SuperBlock, Block, Frame, CatalogSources, SourceMeasurement
+from core.models import Body, Designations, CatalogSources, SourceMeasurement,\
+    Proposal, SuperBlock, Block, Frame
 from photometrics.pds_subs import *
 from photometrics.lightcurve_subs import read_photompipe_file, write_photompipe_file
 
@@ -2811,3 +2812,191 @@ class TestExportBlockToPDS(TestCase):
         self.assertEqual(expected_colnames, table_file.colnames)
         # for i, expected_line in enumerate(expected_lines):
             # self.assertEqual(expected_line, table_file[i])
+
+class TestCreateDartLightcurve(TestCase):
+    """This is a cutdown version of the above TestExportBlockToPDS which only
+    tests the create_dart_lightcurve part (and only for the DIA-subtracted
+    subcase)"""
+
+    def setUp(self):
+
+#        self.test_dir = '/tmp/tmp_neox_wibble'
+        self.test_dir = tempfile.mkdtemp(prefix='tmp_neox_')
+        self.test_output_dir = os.path.join(self.test_dir, 'output')
+        os.makedirs(self.test_output_dir, exist_ok=True)
+
+        body_params = {
+                         'provisional_name': None,
+                         'provisional_packed': None,
+                         'name': '65803',
+                         'origin': 'N',
+                         'source_type': 'N',
+                         'source_subtype_1': 'N3',
+                         'source_subtype_2': 'PH',
+                         'elements_type': 'MPC_MINOR_PLANET',
+                         'active': False,
+                         'fast_moving': False,
+                         'urgency': None,
+                         'epochofel': datetime(2021, 2, 25, 0, 0),
+                         'orbit_rms': 0.56,
+                         'orbinc': 3.40768,
+                         'longascnode': 73.20234,
+                         'argofperih': 319.32035,
+                         'eccentricity': 0.3836409,
+                         'meandist': 1.6444571,
+                         'meananom': 77.75787,
+                         'perihdist': None,
+                         'epochofperih': None,
+                         'abs_mag': 18.27,
+                         'slope': 0.15,
+                         'score': None,
+                         'discovery_date': datetime(1996, 4, 11, 0, 0),
+                         'num_obs': 829,
+                         'arc_length': 7305.0,
+                         'not_seen': 2087.29154187494,
+                         'updated': True,
+                         'ingest': datetime(2018, 8, 14, 17, 45, 42),
+                         'update_time': datetime(2021, 3, 1, 19, 59, 56, 957500)
+                         }
+
+        self.test_body, created = Body.objects.get_or_create(**body_params)
+
+        desig_params = { 'body' : self.test_body, 'value' : 'Didymos', 'desig_type' : 'N', 'preferred' : True, 'packed' : False}
+        test_desig, created = Designations.objects.get_or_create(**desig_params)
+        desig_params['value'] = '65803'
+        desig_params['desig_type'] = '#'
+        test_desig, created = Designations.objects.get_or_create(**desig_params)
+
+        # Create test proposal
+        neo_proposal_params = { 'code'  : 'LCO2024A-999',
+                                'title' : 'LCOGT NEO Follow-up Network'
+                              }
+        self.neo_proposal, created = Proposal.objects.get_or_create(**neo_proposal_params)
+
+        # Create test superblock and block
+        sblock_params = {
+                         'body'     : self.test_body,
+                         'proposal' : self.neo_proposal,
+                         'groupid'  : self.test_body.current_name() + '_COJ-20240610',
+                         'block_start' : '2024-06-10 10:05:00',
+                         'block_end'   : '2024-06-10 19:22:36',
+                         'tracking_number' : '0000123456',
+                         'active'   : False
+                       }
+        self.test_sblock = SuperBlock.objects.create(**sblock_params)
+        block_params = {
+                         'body' : self.test_body,
+                         'superblock' : self.test_sblock,
+                         'request_number' :  '424242',
+                         'block_start' : datetime(2024, 6, 10, 10, 0, 0),
+                         'block_end' : datetime(2024, 6, 10, 19, 0, 0),
+                         'obstype' : Block.OPT_IMAGING,
+                         'num_observed' : 1
+                        }
+        self.test_block_dia, created = Block.objects.get_or_create(**block_params)
+        # Second block with no frames attached
+        block_params['request_number'] = '12346'
+        block_params['num_observed'] = 0
+        self.test_block2, created = Block.objects.get_or_create(**block_params)
+
+
+        # Create test Frames from rows of table. Set common unchanging parameters here
+        frame_params = {    'sitecode': 'E10',
+                            'instrument': 'ep07',
+                            'filter': 'rp',
+                            'exptime': 170.0,
+                            'midpoint': datetime(2024, 6, 10, 11, 17, 10),
+                            'block': self.test_block_dia,
+                            'rms_of_fit': 0.1314,
+                            'nstars_in_fit': 2004,
+                            'astrometric_catalog': 'GAIA-DR2',
+                            'photometric_catalog': 'PS1'
+                        }
+
+        source_details = { 0 : {'mag' : 18.8447, 'err_mag' : 0.0054, 'fwhm' : 1.23, 'zp' : 23.70, 'zp_err' : 0.03},
+                           1 : {'mag' : 18.8637, 'err_mag' : 0.0052, 'fwhm' : 1.21, 'zp' : 23.72, 'zp_err' : 0.03},
+                           2 : {'mag' : 18.8447, 'err_mag' : 0.0051, 'fwhm' : 1.25, 'zp' : 23.69, 'zp_err' : 0.03}
+                         }
+        for frameid, frame_num in enumerate(range(93, 96, 1)):
+            frame_params['midpoint'] += timedelta(minutes=frameid * 3)
+            # print(Time(frame_params['midpoint'], format='datetime').jd)
+            for frametype in [Frame.BANZAI_RED_FRAMETYPE, Frame.NEOX_RED_FRAMETYPE, Frame.NEOX_SUB_FRAMETYPE]:
+                sm = source_details[frameid]
+                frame_params['filename'] = f"coj2m002-ep07-20240610-{frame_num:04d}-e{frametype}.fits"
+                frame_params['frametype'] = frametype
+                frame_params['fwhm'] = sm['fwhm']
+                frame_params['zeropoint'] = sm['zp']
+                frame_params['zeropoint_err'] = sm['zp_err']
+                frame, created = Frame.objects.get_or_create(**frame_params)
+
+                if frametype == Frame.NEOX_SUB_FRAMETYPE:
+                    source_params = { 'body' : self.test_body,
+                                      'frame' : frame,
+                                      'obs_ra' : 208.728,
+                                      'obs_dec' : -10.197,
+                                      'obs_mag' : sm['mag'],
+                                      'err_obs_ra' : None,
+                                      'err_obs_dec' : None,
+                                      'err_obs_mag' : sm['err_mag'],
+                                      'astrometric_catalog' : frame.astrometric_catalog,
+                                      'photometric_catalog' : frame.photometric_catalog,
+                                      'aperture_size' : 3.0, # arcsec
+                                      'snr' : 1.0 / sm['err_mag'],
+                                      'flags' : ' '
+                                    }
+                    source, created = SourceMeasurement.objects.get_or_create(**source_params)
+
+        self.remove = True
+        self.debug_print = False
+        self.maxDiff = None
+
+    def tearDown(self):
+        # Generate an example test dir to compare root against and then remove it
+        temp_test_dir = tempfile.mkdtemp(prefix='tmp_neox')
+        os.rmdir(temp_test_dir)
+        if self.remove and self.test_dir.startswith(temp_test_dir[:-8]):
+            shutil.rmtree(self.test_dir)
+        else:
+            if self.debug_print:
+                print("Not removing temporary test directory", self.test_dir)
+
+    def test_basics(self):
+        self.assertEqual(1, Body.objects.count())
+        self.assertEqual(1, SuperBlock.objects.count())
+        self.assertEqual(2, Block.objects.count())
+        frames = Frame.objects.all()
+        self.assertEqual(9, frames.count())
+        self.assertEqual(3, frames.filter(frametype=Frame.BANZAI_RED_FRAMETYPE).count())
+        self.assertEqual(3, frames.filter(frametype=Frame.NEOX_RED_FRAMETYPE).count())
+        self.assertEqual(3, frames.filter(frametype=Frame.NEOX_SUB_FRAMETYPE).count())
+        self.assertEqual(3, SourceMeasurement.objects.count())
+
+    def test_create_dart_lightcurve_srcmeasures(self):
+        expected_lc_file = os.path.join(self.test_output_dir, 'lcogt_coj_ep07_20240610_424242_65803didymos_photometry.tab')
+        expected_lc_link = os.path.join(self.test_output_dir, 'LCOGT_COJ-EP07_Lister_20240610.dat')
+        expected_lines = [
+        '                                 file      julian_date      mag     sig       ZP  ZP_sig  inst_mag  inst_sig  filter  SExtractor_flag  aprad \r\n',
+        ' coj2m002-ep07-20240610-0093-e93.fits  2460471.9702546  18.8447  0.0305  23.7000  0.0300   -4.8553    0.0054      rp                0  11.11 \r\n',
+        ' coj2m002-ep07-20240610-0094-e93.fits  2460471.9723380  18.8637  0.0304  23.7200  0.0300   -4.8563    0.0052      rp                0  11.11 \r\n',
+        ' coj2m002-ep07-20240610-0095-e93.fits  2460471.9765046  18.8447  0.0304  23.6900  0.0300   -4.8453    0.0051      rp                0  11.11 \r\n'
+        ]
+
+        dart_lc_file = create_dart_lightcurve(self.test_block_dia, self.test_output_dir, self.test_block_dia, create_symlink=True)
+
+        self.assertEqual(expected_lc_file, dart_lc_file)
+        self.assertTrue(os.path.exists(expected_lc_file))
+        self.assertTrue(os.path.exists(expected_lc_link))
+
+        with open(dart_lc_file, 'r', newline='') as table_file:
+            lines = table_file.readlines()
+
+        self.assertEqual(4, len(lines))
+        for i, expected_line in enumerate(expected_lines):
+            self.assertEqual(expected_line, lines[i])
+
+    def test_create_dart_lightcurve_noframes(self):
+        expected_lc_file = None
+
+        dart_lc_file = create_dart_lightcurve(self.test_block2, self.test_output_dir, self.test_block2)
+
+        self.assertEqual(expected_lc_file, dart_lc_file)

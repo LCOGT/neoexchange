@@ -769,7 +769,7 @@ def create_dart_lightcurve(input_dir_or_block, output_dir, block, match='photome
                     photometry_files = [x for x in photometry_files if 'Control_Star' not in x]
             else:
                 # Assuming Block passed
-                num_srcs = SourceMeasurement.objects.filter(frame__block=input_dir_or_block, frame__frametype=Frame.NEOX_RED_FRAMETYPE).count()
+                num_srcs = SourceMeasurement.objects.filter(frame__block=input_dir_or_block, frame__frametype__in=[Frame.NEOX_RED_FRAMETYPE, Frame.NEOX_SUB_FRAMETYPE]).count()
                 if num_srcs > 0:
                     photometry_files = [input_dir_or_block, ]
                 else:
