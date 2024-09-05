@@ -4766,4 +4766,13 @@ class TestMakeSourceMeasurementsFromTable(ExternalCodeUnitTest):
 
         self.assertEqual(expected_num, num_created)
         self.assertEqual(expected_num, sms.count())
-
+        for sm in sms:
+            self.assertEqual(self.test_body, sm.body)
+            self.assertIn(sm.frame, self.test_frames)
+            self.assertEqual(self.test_frames[0].astrometric_catalog, sm.astrometric_catalog)
+            self.assertEqual(self.test_frames[3].photometric_catalog, sm.photometric_catalog)
+            self.assertEqual(Frame.NEOX_SUB_FRAMETYPE, sm.frame.frametype)
+            self.assertAlmostEqual(18.7, sm.obs_mag, 2)
+            self.assertAlmostEqual(0.003, sm.err_obs_mag, 2)
+        self.assertAlmostEqual(250.0, sms[0].snr, 4)
+        self.assertAlmostEqual(333.3333, sms[1].snr, 4)
