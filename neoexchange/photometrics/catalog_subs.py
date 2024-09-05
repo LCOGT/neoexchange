@@ -2126,19 +2126,21 @@ def make_source_measurements_from_table(phot_table):
         frames = Frame.objects.filter(filename=frame_filename, frametype=Frame.NEOX_SUB_FRAMETYPE)
         if frames.count() == 1:
             frame = frames[0]
-            body = frame.body
+            body = frame.block.body
             source_params = { 'body' : body,
                       'frame' : frame,
-                      'obs_ra' : row['obs_ra'],
-                      'obs_dec' : row['obs_dec'],
-                      'obs_mag' : row['obs_mag'],
+                      # XXX These need to be either added to the table or converted
+                      # from x/ycenter via Frame.wcs
+                      # 'obs_ra' : row['obs_ra'],
+                      # 'obs_dec' : row['obs_dec'],
+                      'obs_mag' : row['mag'],
                       'err_obs_ra' : None,      # No idea what to use for this on aperture photometry... Don't think photutils produces moments
                       'err_obs_dec' : None,
-                      'err_obs_mag' : row['err_obs_mag'],
+                      'err_obs_mag' : row['magerr'],
                       'astrometric_catalog' : frame.astrometric_catalog,
                       'photometric_catalog' : frame.photometric_catalog,
-                      'aperture_size' : cat_source.aperture_size,
-                      'snr' : 1.0 / row['err_obs_mag'],
+                      'aperture_size' : row['aperture radius'],
+                      'snr' : 1.0 / row['magerr'],
                       'flags' : frame.quality # Inherit Frame's quality in absence of anything better
                     }
             source, created = SourceMeasurement.objects.get_or_create(**source_params)

@@ -4633,11 +4633,11 @@ class TestDetermineFWHM(FITSUnitTest):
         assert_allclose(expected_fwhm, fwhm, rtol=self.rtol)
 
 
-class TestMakeSourceMeasurementsFromTable(TestCase):
+class TestMakeSourceMeasurementsFromTable(ExternalCodeUnitTest):
 
     def setUp(self):
 
-        self.test_dir = tempfile.mkdtemp(prefix='tmp_neox_')
+        super(TestMakeSourceMeasurementsFromTable, self).setUp()
         self.test_table = Table(names=( 'path to frame', 'times', 'filters',
                                         'xcenter', 'ycenter', 'aperture sum',
                                         'aperture sum err', 'FWHM', 'ZP', 'ZP_sig',
@@ -4648,32 +4648,122 @@ class TestMakeSourceMeasurementsFromTable(TestCase):
         self.test_table.add_row([os.path.join(self.test_dir, 'coj2m002-ep07-20240610-0093-e93.fits'), '2024-06-10 11:17:10.0', 'rp', 512.5, 512.5, 1234.0, 12.0, 1.23, 23.70, 0.03, 18.701, 0.004, 3.0])
         self.test_table.add_row([os.path.join(self.test_dir, 'coj2m002-ep07-20240610-0094-e93.fits'), '2024-06-10 11:19:09.9', 'rp', 515.2, 515.2, 1245.0, 13.0, 1.21, 23.72, 0.03, 18.698, 0.003, 3.0])
 
+        # Create test body
+        params = {
+                     'provisional_name': None,
+                     'provisional_packed': None,
+                     'name': '65803',
+                     'origin': 'N',
+                     'source_type': 'N',
+                     'source_subtype_1': 'N3',
+                     'source_subtype_2': 'PH',
+                     'elements_type': 'MPC_MINOR_PLANET',
+                     'active': True,
+                     'fast_moving': False,
+                     'epochofel': datetime(2024, 3, 31, 0, 0),
+                     'orbit_rms': 0.71,
+                     'orbinc': 3.41422,
+                     'longascnode': 72.98677,
+                     'argofperih': 319.59164,
+                     'eccentricity': 0.3832302,
+                     'meandist': 1.6426815,
+                     'meananom': 246.30743,
+                     'abs_mag': 18.11,
+                     'slope': 0.15,
+                     'discovery_date': datetime(1996, 4, 11, 0, 0),
+                     'num_obs': 5304,
+                     'arc_length': 9923.0,
+                     'not_seen': 359.8285771261227,
+                     'updated': True,
+                     'ingest': datetime(2018, 8, 14, 17, 45, 42),
+                     'update_time': datetime(2024, 9, 4, 19, 53, 20, 409283),
+                     'analysis_status': 0,
+                     'as_updated': None}
+
+        self.test_body, created = Body.objects.get_or_create(**params)
+
+        # Create test proposal
+        neo_proposal_params = { 'code'  : 'LCO2024A-999',
+                                'title' : 'LCOGT NEO Follow-up Network'
+                              }
+        self.neo_proposal, created = Proposal.objects.get_or_create(**neo_proposal_params)
+
+        # Create test superblock and block
+        sblock_params = {
+                         'body'     : self.test_body,
+                         'proposal' : self.neo_proposal,
+                         'groupid'  : self.test_body.current_name() + '_COJ-20240610',
+                         'block_start' : '2024-06-10 10:05:00',
+                         'block_end'   : '2024-06-10 19:22:36',
+                         'tracking_number' : '0000123456',
+                         'active'   : False
+                       }
+        self.test_sblock = SuperBlock.objects.create(**sblock_params)
+        block_params = { 'telclass' : '2m0',
+                         'site'     : 'coj',
+                         'body'     : self.test_body,
+                         'superblock' : self.test_sblock,
+                         'block_start' : '2024-06-10 10:05:00',
+                         'block_end'   : '2024-06-10 19:22:36',
+                         'request_number' : '0009123456',
+                         'num_exposures' : 6,
+                         'exp_length' : 120.0,
+                         'active'   : False
+                       }
+        self.test_block = Block.objects.create(**block_params)
+
+        # Create test Frames from rows of table
+        frame_params = {    'sitecode': 'E10',
+                            'instrument': 'ep07',
+                            'filter': 'rp',
+                            'filename': None,
+                            'exptime': 120.0,
+                            'midpoint': datetime(2017, 3, 8, 5, 6, 40),
+                            'block': self.test_block,
+                            'zeropoint': -99,
+                            'zeropoint_err': -99,
+                            'fwhm': 1.9080,
+                            'frametype': Frame.NEOX_RED_FRAMETYPE,
+                            'rms_of_fit': None,
+                            'nstars_in_fit': None,
+                            'astrometric_catalog': 'GAIA-DR2',
+                            'photometric_catalog': ' '
+                        }
+        self.test_frames = []
+        for row in self.test_table:
+            for frametype in [Frame.NEOX_RED_FRAMETYPE, Frame.NEOX_SUB_FRAMETYPE]:
+                frame_params['filename'] = os.path.basename(row['path to frame']).replace('e93', f'e{frametype}')
+                frame_params['filter'] = row['filters']
+                frame_params['midpoint'] = row['times']
+                frame_params['zeropoint'] = row['ZP']
+                frame_params['zeropoint_err'] = row['ZP_sig']
+                frame_params['fwhm'] = row['FWHM']
+                frame_params['frametype'] = frametype
+
+                self.test_frame, created = Frame.objects.get_or_create(**frame_params)
+                self.test_frames.append(self.test_frame)
+
         self.debug_print = False
 
         self.remove = True
 
-    def tearDown(self):
-        if self.remove:
-            try:
-                files_to_remove = glob(os.path.join(self.test_dir, '*'))
-                for file_to_rm in files_to_remove:
-                    os.remove(file_to_rm)
-            except OSError:
-                print("Error removing files in temporary test directory", self.test_dir)
-            try:
-                os.rmdir(self.test_dir)
-                if self.debug_print:
-                    print("Removed", self.test_dir)
-            except OSError:
-                print("Error removing temporary test directory", self.test_dir)
+    def test_object_setup(self):
+        self.assertEqual(1, Body.objects.count())
+        self.assertEqual(1, SuperBlock.objects.count())
+        self.assertEqual(1, Block.objects.count())
+        frames = Frame.objects.all()
+        self.assertEqual(4, frames.count())
+        self.assertEqual(2, frames.filter(frametype=Frame.NEOX_RED_FRAMETYPE).count())
+        self.assertEqual(2, frames.filter(frametype=Frame.NEOX_SUB_FRAMETYPE).count())
+        self.assertEqual(0, SourceMeasurement.objects.count())
 
     def test_num_creation(self):
-        expected_num = 1
+        expected_num = 2
 
         num_created = make_source_measurements_from_table(self.test_table)
-        num_sm = SourceMeasurement.objects.all().count()
+        sms = SourceMeasurement.objects.all()
 
 
         self.assertEqual(expected_num, num_created)
-        self.assertEqual(expected_num, num_sm)
+        self.assertEqual(expected_num, sms.count())
 
