@@ -41,7 +41,7 @@ from astropy import __version__ as astropyversion
 
 from astrometrics.ephem_subs import LCOGT_domes_to_site_codes, determine_darkness_times
 from astrometrics.time_subs import timeit
-from core.models import CatalogSources, Frame
+from core.models import CatalogSources, Frame, SourceMeasurement
 from core.utils import NeoException
 
 logger = logging.getLogger(__name__)
@@ -2108,6 +2108,43 @@ def get_or_create_CatalogSources(table, frame, header={}):
         logger.info("Number of sources in catalog match number in DB; skipping")
 
     return num_sources_created, num_in_table
+
+
+def make_source_measurements_from_table(phot_table):
+    """Creates SourceMeasurements from the passed <phot_table> of aperture photometry
+    results from e.g. perform_aper_photometry(). This is analagous to the
+    CatalogSource->SourceMeasurement transfer and persistence performed in
+    lightcurve_extraction.make_source_measurement() but for photometry of
+    DIA-subtracted frames for which no Source Extractor source catalog is
+    available.
+
+    Returns the number of SourceMeasurement objects created."""
+
+    num_created = 0
+    for row in phot_table:
+        frame_filename = os.path.basename(row['path to frame'])
+        frames = Frame.objects.filter(filename=frame_filename, frametype=Frame.NEOX_SUB_FRAMETYPE)
+        if frames.count() == 1:
+            frame = frames[0]
+            body = frame.body
+            source_params = { 'body' : body,
+                      'frame' : frame,
+                      'obs_ra' : row['obs_ra'],
+                      'obs_dec' : row['obs_dec'],
+                      'obs_mag' : row['obs_mag'],
+                      'err_obs_ra' : None,      # No idea what to use for this on aperture photometry... Don't think photutils produces moments
+                      'err_obs_dec' : None,
+                      'err_obs_mag' : row['err_obs_mag'],
+                      'astrometric_catalog' : frame.astrometric_catalog,
+                      'photometric_catalog' : frame.photometric_catalog,
+                      'aperture_size' : cat_source.aperture_size,
+                      'snr' : 1.0 / row['err_obs_mag'],
+                      'flags' : frame.quality # Inherit Frame's quality in absence of anything better
+                    }
+            source, created = SourceMeasurement.objects.get_or_create(**source_params)
+            if created:
+                num_created += 1
+    return num_created
 
 
 def make_sext_dict(catsrc, num_iter):
