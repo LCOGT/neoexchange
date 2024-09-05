@@ -9364,10 +9364,14 @@ class TestPerformAperPhotometry(TestCase):
         expected_results['path to frame'] = ['/tmp/tmp_neox_fjody5q5/20240610/coj2m002-ep07-20240610-0065-e93.fits', '/tmp/tmp_neox_fjody5q5/20240610/coj2m002-ep07-20240610-0095-e93.fits', '/tmp/tmp_neox_fjody5q5/20240610/coj2m002-ep07-20240610-0125-e93.fits']
         expected_results['times'] = [datetime(2024, 6, 10, 17, 2, 0), datetime(2024, 6, 10, 17, 4, 0), datetime(2024, 6, 10, 17, 6, 0)]
 
+        file_for_pix2world = WCS('/tmp/tmp_neox_fjody5q5/20240610/coj2m002-ep07-20240610-0095-e93.fits')
+
         expected_row2 = QTable()
         expected_row2['path to frame'] = [os.path.join(self.test_output_dir, self.e93_frame.filename)]
         expected_row2['times'] = [self.e93_frame.midpoint]
         expected_row2['filters'] = [np.str_(self.e93_frame.filter)]
+        expected_row2['RA'] = [file_for_pix2world.all_pix2world(48.76999999999983, 48.2699999999529, 1)[0]]
+        expected_row2['DEC'] = [file_for_pix2world.all_pix2world(48.76999999999983, 48.2699999999529, 1)[1]]
         expected_row2['xcenter'] = [48.76999999999983] #*u.pix
         expected_row2['ycenter'] = [48.2699999999529] #* u.pix
         expected_row2['aperture sum'] = [135.68437393971408]
@@ -9384,6 +9388,7 @@ class TestPerformAperPhotometry(TestCase):
         exp_dtypes = expected_row2.dtype
         dtypes = results.dtype
         expected_table_length = len(Frame.objects.filter(block = self.test_block, filename__contains = 'e93.fits'))
+        self.assertEqual(exp_dtypes, dtypes)
         self.assertEqual(expected_row2.colnames, results.colnames)
         self.assertEqual(len(expected_results), len(results))
         self.assertEqual(len(results), expected_table_length)
@@ -9392,6 +9397,8 @@ class TestPerformAperPhotometry(TestCase):
         self.compare_rows(expected_row2, results[:][2], column = 'path to frame')
         self.compare_rows(expected_row2, results[:][2], column = 'times')
         self.compare_rows(expected_row2, results[:][2], column = 'filters')
+        self.assertAlmostEqual(expected_row2['RA'][0], results[:][2]['RA'], 3)
+        self.assertAlmostEqual(expected_row2['DEC'][0], results[:][2]['DEC'], 3)
         self.compare_rows(expected_row2, results[:][2], column = 'xcenter')
         self.compare_rows(expected_row2, results[:][2], column = 'ycenter')
         self.compare_rows(expected_row2, results[:][2], column = 'aperture sum')
@@ -9406,10 +9413,14 @@ class TestPerformAperPhotometry(TestCase):
         expected_results['path to frame'] = ['/tmp/tmp_neox_fjody5q5/20240610/coj2m002-ep07-20240610-0065-e93.fits', '/tmp/tmp_neox_fjody5q5/20240610/coj2m002-ep07-20240610-0095-e93.fits', '/tmp/tmp_neox_fjody5q5/20240610/coj2m002-ep07-20240610-0125-e93.fits']
         expected_results['times'] = [datetime(2024, 6, 10, 17, 2, 0), datetime(2024, 6, 10, 17, 4, 0), datetime(2024, 6, 10, 17, 6, 0)]
 
+        file_for_pix2world = WCS('/tmp/tmp_neox_fjody5q5/20240610/coj2m002-ep07-20240610-0095-e93.fits')
+
         expected_row2 = QTable()
         expected_row2['path to frame'] = [os.path.join(self.test_output_dir, self.e93_frame.filename)]
         expected_row2['times'] = [self.e93_frame.midpoint]
         expected_row2['filters'] = [np.str_(self.e93_frame.filter)]
+        expected_row2['RA'] = [file_for_pix2world.all_pix2world(48.76999999999983, 48.2699999999529, 1)[0]]
+        expected_row2['DEC'] = [file_for_pix2world.all_pix2world(48.76999999999983, 48.2699999999529, 1)[1]]
         expected_row2['xcenter'] = [48.76999999999983] #*u.pix
         expected_row2['ycenter'] = [48.2699999999529] #* u.pix
         expected_row2['aperture sum'] = [135.68437393971408]
@@ -9437,6 +9448,8 @@ class TestPerformAperPhotometry(TestCase):
         self.compare_rows(expected_row2, results[:][2], column = 'path to frame')
         self.compare_rows(expected_row2, results[:][2], column = 'times')
         self.compare_rows(expected_row2, results[:][2], column = 'filters')
+        self.assertAlmostEqual(expected_row2['RA'][0], results[:][2]['RA'], 3)
+        self.assertAlmostEqual(expected_row2['DEC'][0], results[:][2]['DEC'], 3)
         self.compare_rows(expected_row2, results[:][2], column = 'xcenter')
         self.compare_rows(expected_row2, results[:][2], column = 'ycenter')
         self.compare_rows(expected_row2, results[:][2], column = 'aperture sum')
@@ -9451,10 +9464,14 @@ class TestPerformAperPhotometry(TestCase):
         expected_results['path to frame'] = ['/tmp/tmp_neox_fjody5q5/20240610/coj2m002-ep07-20240610-0065-e93.fits', '/tmp/tmp_neox_fjody5q5/20240610/coj2m002-ep07-20240610-0095-e93.fits', '/tmp/tmp_neox_fjody5q5/20240610/coj2m002-ep07-20240610-0125-e93.fits']
         expected_results['times'] = [datetime(2024, 6, 10, 17, 2, 0), datetime(2024, 6, 10, 17, 4, 0), datetime(2024, 6, 10, 17, 6, 0)]
 
+        file_for_pix2world = WCS('/tmp/tmp_neox_fjody5q5/20240610/coj2m002-ep07-20240610-0095-e93.fits')
+
         expected_row2 = QTable()
         expected_row2['path to frame'] = [os.path.join(self.test_output_dir, self.e93_frame.filename)]
         expected_row2['times'] = [self.e93_frame.midpoint]
         expected_row2['filters'] = [np.str_(self.e93_frame.filter)]
+        expected_row2['RA'] = [file_for_pix2world.all_pix2world(48.76999999999983, 48.2699999999529, 1)[0]]
+        expected_row2['DEC'] = [file_for_pix2world.all_pix2world(48.76999999999983, 48.2699999999529, 1)[1]]
         expected_row2['xcenter'] = [48.76999999999983] #*u.pix
         expected_row2['ycenter'] = [48.2699999999529] #* u.pix
         expected_row2['aperture sum'] = [99.9718286829744]
@@ -9482,6 +9499,8 @@ class TestPerformAperPhotometry(TestCase):
         self.compare_rows(expected_row2, results[:][2], column = 'path to frame')
         self.compare_rows(expected_row2, results[:][2], column = 'times')
         self.compare_rows(expected_row2, results[:][2], column = 'filters')
+        self.assertAlmostEqual(expected_row2['RA'][0], results[:][2]['RA'], 3)
+        self.assertAlmostEqual(expected_row2['DEC'][0], results[:][2]['DEC'], 3)
         self.compare_rows(expected_row2, results[:][2], column = 'xcenter')
         self.compare_rows(expected_row2, results[:][2], column = 'ycenter')
         self.compare_rows(expected_row2, results[:][2], column = 'aperture sum')
@@ -9496,10 +9515,14 @@ class TestPerformAperPhotometry(TestCase):
         expected_results['path to frame'] = ['/tmp/tmp_neox_fjody5q5/20240610/coj2m002-ep07-20240610-0065-e93.fits', '/tmp/tmp_neox_fjody5q5/20240610/coj2m002-ep07-20240610-0095-e93.fits', '/tmp/tmp_neox_fjody5q5/20240610/coj2m002-ep07-20240610-0125-e93.fits']
         expected_results['times'] = [datetime(2024, 6, 10, 17, 2, 0), datetime(2024, 6, 10, 17, 4, 0), datetime(2024, 6, 10, 17, 6, 0)]
 
+        file_for_pix2world = WCS('/tmp/tmp_neox_fjody5q5/20240610/coj2m002-ep07-20240610-0095-e93.fits')
+
         expected_row2 = QTable()
         expected_row2['path to frame'] = [os.path.join(self.test_output_dir, self.e93_frame.filename)]
         expected_row2['times'] = [self.e93_frame.midpoint]
         expected_row2['filters'] = [np.str_(self.e93_frame.filter)]
+        expected_row2['RA'] = [file_for_pix2world.all_pix2world(48.76999999999983, 48.2699999999529, 1)[0]]
+        expected_row2['DEC'] = [file_for_pix2world.all_pix2world(48.76999999999983, 48.2699999999529, 1)[1]]
         expected_row2['xcenter'] = [48.76999999999983] #*u.pix
         expected_row2['ycenter'] = [48.2699999999529] #* u.pix
         expected_row2['aperture sum'] = [99.9718286829744]
@@ -9527,6 +9550,8 @@ class TestPerformAperPhotometry(TestCase):
         self.compare_rows(expected_row2, results[:][2], column = 'path to frame')
         self.compare_rows(expected_row2, results[:][2], column = 'times')
         self.compare_rows(expected_row2, results[:][2], column = 'filters')
+        self.assertAlmostEqual(expected_row2['RA'][0], results[:][2]['RA'], 3)
+        self.assertAlmostEqual(expected_row2['DEC'][0], results[:][2]['DEC'], 3)
         self.compare_rows(expected_row2, results[:][2], column = 'xcenter')
         self.compare_rows(expected_row2, results[:][2], column = 'ycenter')
         self.compare_rows(expected_row2, results[:][2], column = 'aperture sum')
