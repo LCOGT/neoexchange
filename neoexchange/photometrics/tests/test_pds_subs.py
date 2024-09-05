@@ -5,6 +5,7 @@ from glob import glob
 from lxml import etree
 from lxml import objectify
 from datetime import datetime
+from collections import OrderedDict
 from mock import patch, MagicMock, PropertyMock
 
 from astropy.io import fits
@@ -2515,7 +2516,6 @@ class TestExportBlockToPDS(TestCase):
         self.test_daydir = os.path.join(self.test_ddp_daydir, self.test_blockdir)
 
         body_params = {
-                         'id': 36254,
                          'provisional_name': None,
                          'provisional_packed': None,
                          'name': '65803',
@@ -2567,6 +2567,7 @@ class TestExportBlockToPDS(TestCase):
                         }
         self.test_block, created = Block.objects.get_or_create(**block_params)
         # Second block with no frames attached
+        block_params['request_number'] = '12346'
         block_params['num_observed'] = 0
         self.test_block2, created = Block.objects.get_or_create(**block_params)
 
