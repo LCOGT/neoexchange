@@ -755,7 +755,7 @@ def create_dart_lightcurve(input_dir_or_block, output_dir, block, match='photome
         first_filename = first_frame.filename
         file_parts = split_filename(first_filename)
         if len(file_parts) == 8:
-            if type(input_dir_or_block) != Block:
+            if hasattr(input_dir_or_block, 'request_number') is False:
                 # Directory path passed
                 root_dir = input_dir_or_block
                 photometry_files = sorted(glob(os.path.join(root_dir, match)))
@@ -777,7 +777,7 @@ def create_dart_lightcurve(input_dir_or_block, output_dir, block, match='photome
                     photometry_files = []
             for photometry_file in photometry_files:
                 fits_bintable = False
-                if type(photometry_file) != Block:
+                if hasattr(photometry_file, 'request_number') is False:
                     if photometry_file.endswith('.fits') is True:
                         print("Multi-aperture FITS BINTABLE")
                         fits_bintable = True
