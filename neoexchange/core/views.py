@@ -4995,7 +4995,7 @@ def perform_aper_photometry(block, dataroot, account_zps = True, aperture_radius
     aperture sum err, aperture radius, zeropoint, zp err, etc. Optionally, use \<account_zps\> as
     a boolean variable to  determine whether or not zeropoints should be adjusted for in magnitude.
     Input a \<dataroot\> that is a directory to the fits images for the selected Block object passed
-    as \<block\>. If needed, specify an \<aperture_radius\>.If not passed, function will default to
+    as \<block\>. If needed, specify an \<aperture_radius\> (arcseconds).If not passed, function will default to
     2.5*full width half max for the aperture radius of a particular frame. Function always assumes
     background subtraction is done in advance and need not be done inside the routine."""
     e93_frameset, banzai_count,  neox_count = find_frames(block, frametype = Frame.NEOX_SUB_FRAMETYPE)
@@ -5032,19 +5032,19 @@ def perform_aper_photometry(block, dataroot, account_zps = True, aperture_radius
             filter.append(aper_photometry_of_ephem['filter'][0])
             aperture_radii.append(aper_photometry_of_ephem['aperture_radius'][0])
         else:
-            ras.append(None)
-            decs.append(None)
-            xcenters.append(None)
-            ycenters.append(None)
-            aperture_sums.append(None)
-            aperture_sum_errs.append(None)
-            fwhms.append(None)
-            zps.append(None)
-            zp_errs.append(None)
-            mags.append(None)
-            magerrs.append(None)
-            filter.append(None)
-            aperture_radii.append(None)
+            ras.append("")
+            decs.append("")
+            xcenters.append("")
+            ycenters.append("")
+            aperture_sums.append("")
+            aperture_sum_errs.append("")
+            fwhms.append("")
+            zps.append("")
+            zp_errs.append("")
+            mags.append("")
+            magerrs.append("")
+            filter.append("")
+            aperture_radii.append("")
 
     results = Table()
     results['path to frame'] = paths_to_e93_frames
@@ -5064,10 +5064,14 @@ def perform_aper_photometry(block, dataroot, account_zps = True, aperture_radius
     results['aperture radius'] = aperture_radii
     return results
 
-def generate_ecsv_file_post_photomet(block, dataroot, overwrite, account_zps = True, aperture_radius = None):
+def generate_ecsv_file_post_photomet(block, dataroot, overwrite, savepath = None, account_zps = True, aperture_radius = None):
     """Writes the aperture photometry table generated in perform_aper_photometry to a ascii.ecsv file for data storage
     and accessibility. Input \<block\> on which to perform photometry, \<dataroot\> as the directory pointing to the FITS
-    files for frames in the block, and a boolean \<overwrite\> for whether this should replace old data on the same block. """
+    files for frames in the block, and a boolean \<overwrite\> for whether this should replace old data on the same block.
+    Optionally, add a \<savepath\> as a directory for saving the file; otherwise will default to saving to \<dataroot\>.
+      """
+    if savepath is None:
+        savepath = dataroot
     results_table = perform_aper_photometry(block, dataroot, account_zps = account_zps, aperture_radius = aperture_radius)
     times = results_table['times']
     stringified_times = []
@@ -5083,9 +5087,9 @@ def generate_ecsv_file_post_photomet(block, dataroot, overwrite, account_zps = T
     else:
         aper_rad_label = aperture_radius
     if account_zps == True:
-        results_table_filename = os.path.join(dataroot, f"aperture_photometry_table_{block_date_str}_aper_radius_{aper_rad_label}_zps_included.ecsv")
+        results_table_filename = os.path.join(savepath, f"aperture_photometry_table_{block_date_str}_aper_radius_{aper_rad_label}_zps_included.ecsv")
     if account_zps == False:
-        results_table_filename = os.path.join(dataroot, f"aperture_photometry_table_{block_date_str}_aper_radius_{aper_rad_label}_zps_excluded.ecsv")
+        results_table_filename = os.path.join(savepath, f"aperture_photometry_table_{block_date_str}_aper_radius_{aper_rad_label}_zps_excluded.ecsv")
     results_table.write(results_table_filename, format='ascii.ecsv', overwrite = overwrite)
     return results_table_filename
 
