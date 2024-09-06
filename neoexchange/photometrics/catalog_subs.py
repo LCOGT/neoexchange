@@ -2131,8 +2131,8 @@ def make_source_measurements_from_table(phot_table):
                       'frame' : frame,
                       # XXX These need to be either added to the table or converted
                       # from x/ycenter via Frame.wcs
-                      # 'obs_ra' : row['obs_ra'],
-                      # 'obs_dec' : row['obs_dec'],
+                      'obs_ra' : row['RA'],
+                      'obs_dec' : row['DEC'],
                       'obs_mag' : row['mag'],
                       'err_obs_ra' : None,      # No idea what to use for this on aperture photometry... Don't think photutils produces moments
                       'err_obs_dec' : None,

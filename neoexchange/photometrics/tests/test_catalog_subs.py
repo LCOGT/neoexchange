@@ -4638,15 +4638,15 @@ class TestMakeSourceMeasurementsFromTable(ExternalCodeUnitTest):
     def setUp(self):
 
         super(TestMakeSourceMeasurementsFromTable, self).setUp()
-        self.test_table = Table(names=( 'path to frame', 'times', 'filters',
+        self.test_table = Table(names=( 'path to frame', 'times', 'filters', 'RA', 'DEC',
                                         'xcenter', 'ycenter', 'aperture sum',
                                         'aperture sum err', 'FWHM', 'ZP', 'ZP_sig',
                                         'mag', 'magerr', 'aperture radius'),
-                                        dtype=('U65', 'U26', 'U2', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8' )
+                                        dtype=('U65', 'U26', 'U2', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8' )
                                       )
-        #                                               path_to_frame                                  times                  filters x/ycenter   apersum apsum_err,fwhm,ZP, ZPerr, mag   magerr, ap rad
-        self.test_table.add_row([os.path.join(self.test_dir, 'coj2m002-ep07-20240610-0093-e93.fits'), '2024-06-10 11:17:10.0', 'rp', 512.5, 512.5, 1234.0, 12.0, 1.23, 23.70, 0.03, 18.701, 0.004, 3.0])
-        self.test_table.add_row([os.path.join(self.test_dir, 'coj2m002-ep07-20240610-0094-e93.fits'), '2024-06-10 11:19:09.9', 'rp', 515.2, 515.2, 1245.0, 13.0, 1.21, 23.72, 0.03, 18.698, 0.003, 3.0])
+        #                                               path_to_frame                                  times                  filters RA DEC  x/ycenter   apersum apsum_err,fwhm,ZP, ZPerr, mag   magerr, ap rad
+        self.test_table.add_row([os.path.join(self.test_dir, 'coj2m002-ep07-20240610-0093-e93.fits'), '2024-06-10 11:17:10.0', 'rp', 69, -42,  512.5, 512.5, 1234.0, 12.0, 1.23, 23.70, 0.03, 18.701, 0.004, 3.0])
+        self.test_table.add_row([os.path.join(self.test_dir, 'coj2m002-ep07-20240610-0094-e93.fits'), '2024-06-10 11:19:09.9', 'rp', 69, -42,  515.2, 515.2, 1245.0, 13.0, 1.21, 23.72, 0.03, 18.698, 0.003, 3.0])
 
         # Create test body
         params = {
@@ -4774,5 +4774,7 @@ class TestMakeSourceMeasurementsFromTable(ExternalCodeUnitTest):
             self.assertEqual(Frame.NEOX_SUB_FRAMETYPE, sm.frame.frametype)
             self.assertAlmostEqual(18.7, sm.obs_mag, 2)
             self.assertAlmostEqual(0.003, sm.err_obs_mag, 2)
+            self.assertAlmostEqual(69.0, sm.obs_ra, 4)
+            self.assertAlmostEqual(-42.0, sm.obs_dec, 4)
         self.assertAlmostEqual(250.0, sms[0].snr, 4)
         self.assertAlmostEqual(333.3333, sms[1].snr, 4)
