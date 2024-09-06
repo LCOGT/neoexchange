@@ -2124,7 +2124,7 @@ def make_source_measurements_from_table(phot_table):
     for row in phot_table:
         frame_filename = os.path.basename(row['path to frame'])
         frames = Frame.objects.filter(filename=frame_filename, frametype=Frame.NEOX_SUB_FRAMETYPE)
-        if frames.count() == 1:
+        if frames.count() == 1 and row['RA'] is not None:
             frame = frames[0]
             body = frame.block.body
             source_params = { 'body' : body,
@@ -2144,7 +2144,7 @@ def make_source_measurements_from_table(phot_table):
                       'flags' : frame.quality # Inherit Frame's quality in absence of anything better
                     }
             source, created = SourceMeasurement.objects.get_or_create(**source_params)
-            if created:
+            if created is True:
                 num_created += 1
     return num_created
 
