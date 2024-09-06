@@ -30,6 +30,7 @@ import astropy.units as u
 from astropy.io import fits
 from astropy.wcs import WCS
 from astropy.table import QTable
+from photutils.aperture import CircularAperture, SkyCircularAperture
 from numpy.testing import assert_allclose
 
 from neox.tests.mocks import MockDateTime, mock_check_request_status, mock_check_for_images, \
@@ -47,7 +48,7 @@ from photometrics.tests.test_external_codes import ExternalCodeUnitTest
 from astrometrics.ephem_subs import compute_ephem, determine_darkness_times
 from astrometrics.sources_subs import parse_mpcorbit, parse_mpcobs, \
     fetch_flux_standards, read_solar_standards
-from photometrics.catalog_subs import open_fits_catalog, get_catalog_header
+from photometrics.catalog_subs import open_fits_catalog, get_catalog_header, get_header
 from photometrics.gf_movie import make_gif
 from core.frames import block_status, create_frame
 from core.models import Body, Proposal, Block, SourceMeasurement, Frame, Candidate,\
@@ -9314,6 +9315,9 @@ class TestPerformAperPhotometry(TestCase):
         self.remove = True
         self.debug_print = True
         self.maxDiff = None
+        self.row_2_test_file = '/tmp/tmp_neox_fjody5q5/20240610/coj2m002-ep07-20240610-0125-e93.fits'
+        self.header, cattype = get_header(self.row_2_test_file)
+        self.wcs = self.header['wcs']
 
     def tearDown(self):
         # Generate an example test dir to compare root against and then remove it
@@ -9342,19 +9346,14 @@ class TestPerformAperPhotometry(TestCase):
         for i in range(0, num_to_check+1):
             self.assertAlmostEqual(expected_table[column][i], table[column][i], precision)
             print(f'{column} OK')
-        # for i in range(0, num_to_check+1):
-        #     try:
-        #         self.assertAlmostEqual(expected_table[column][i], table[column][i], precision)
-        #     except TypeError:
-        #         print(f"TYPERROR {expected_table[column][i], table[column][i][0], precision}")
-        #         self.assertAlmostEqual(expected_table[column][i], table[column][i][0], precision)
-    def compare_tables_with_strings(self, expected_table, table, column, num_to_check=6, precision=6):
+
+    def compare_tables_with_strings(self, expected_table, table, column, num_to_check=6):
         for i in range(0, num_to_check+1):
-            self.assertEqual(expected_table[column][i], table[column][i], precision)
+            self.assertEqual(expected_table[column][i], table[column][i])
             print(f'{column} OK')
 
-    def compare_rows(self, expected_table, table, column):
-        self.assertEqual(expected_table[column], table[column])
+    def compare_table_item(self, expected_table, row, column, precision = 6):
+        self.assertAlmostEqual(expected_table[column][0], row[column], precision)
         print(f'{column} OK')
 
     def test_perform_aperture_photometry_default(self):
@@ -9364,14 +9363,17 @@ class TestPerformAperPhotometry(TestCase):
         expected_results['path to frame'] = ['/tmp/tmp_neox_fjody5q5/20240610/coj2m002-ep07-20240610-0065-e93.fits', '/tmp/tmp_neox_fjody5q5/20240610/coj2m002-ep07-20240610-0095-e93.fits', '/tmp/tmp_neox_fjody5q5/20240610/coj2m002-ep07-20240610-0125-e93.fits']
         expected_results['times'] = [datetime(2024, 6, 10, 17, 2, 0), datetime(2024, 6, 10, 17, 4, 0), datetime(2024, 6, 10, 17, 6, 0)]
 
-        file_for_pix2world = WCS('/tmp/tmp_neox_fjody5q5/20240610/coj2m002-ep07-20240610-0095-e93.fits')
+
+        arbitrary_radius_to_extract_positions = 4.2
+        pix_source_aperture = CircularAperture((48.76999999999983, 48.2699999999529), arbitrary_radius_to_extract_positions)
+        sky_source_aperture = pix_source_aperture.to_sky(self.wcs)
 
         expected_row2 = QTable()
         expected_row2['path to frame'] = [os.path.join(self.test_output_dir, self.e93_frame.filename)]
         expected_row2['times'] = [self.e93_frame.midpoint]
         expected_row2['filters'] = [np.str_(self.e93_frame.filter)]
-        expected_row2['RA'] = [file_for_pix2world.all_pix2world(48.76999999999983, 48.2699999999529, 1)[0]]
-        expected_row2['DEC'] = [file_for_pix2world.all_pix2world(48.76999999999983, 48.2699999999529, 1)[1]]
+        expected_row2['RA'] = [sky_source_aperture.positions.ra.value]
+        expected_row2['DEC'] = [sky_source_aperture.positions.dec.value]
         expected_row2['xcenter'] = [48.76999999999983] #*u.pix
         expected_row2['ycenter'] = [48.2699999999529] #* u.pix
         expected_row2['aperture sum'] = [135.68437393971408]
@@ -9384,7 +9386,6 @@ class TestPerformAperPhotometry(TestCase):
         expected_row2['aperture radius'] = [2.5*self.e93_frame.fwhm]
         dataroot = self.test_output_dir
         results = perform_aper_photometry(self.test_block, dataroot)
-
         exp_dtypes = expected_row2.dtype
         dtypes = results.dtype
         expected_table_length = len(Frame.objects.filter(block = self.test_block, filename__contains = 'e93.fits'))
@@ -9392,20 +9393,20 @@ class TestPerformAperPhotometry(TestCase):
         self.assertEqual(expected_row2.colnames, results.colnames)
         self.assertEqual(len(expected_results), len(results))
         self.assertEqual(len(results), expected_table_length)
-        self.compare_tables_with_strings(expected_results, results, column = 'path to frame',num_to_check= 2, precision=6)
-        self.compare_tables_with_strings(expected_results, results, column = 'times',num_to_check= 2, precision=6)
-        self.compare_rows(expected_row2, results[:][2], column = 'path to frame')
-        self.compare_rows(expected_row2, results[:][2], column = 'times')
-        self.compare_rows(expected_row2, results[:][2], column = 'filters')
-        self.assertAlmostEqual(expected_row2['RA'][0], results[:][2]['RA'], 3)
-        self.assertAlmostEqual(expected_row2['DEC'][0], results[:][2]['DEC'], 3)
-        self.compare_rows(expected_row2, results[:][2], column = 'xcenter')
-        self.compare_rows(expected_row2, results[:][2], column = 'ycenter')
-        self.compare_rows(expected_row2, results[:][2], column = 'aperture sum')
-        self.compare_rows(expected_row2, results[:][2], column = 'aperture sum err')
-        self.compare_rows(expected_row2, results[:][2], column = 'mag')
-        self.compare_rows(expected_row2, results[:][2], column = 'magerr')
-        self.compare_rows(expected_row2, results[:][2], column = 'aperture radius')
+        self.compare_tables_with_strings(expected_results, results, column = 'path to frame',num_to_check= 2)
+        self.compare_tables_with_strings(expected_results, results, column = 'times',num_to_check= 2)
+        self.compare_table_item(expected_row2, results[:][2], column = 'path to frame')
+        self.compare_table_item(expected_row2, results[:][2], column = 'times')
+        self.compare_table_item(expected_row2, results[:][2], column = 'filters')
+        self.compare_table_item(expected_row2, results[:][2], column = 'RA')
+        self.compare_table_item(expected_row2, results[:][2], column = 'DEC')
+        self.compare_table_item(expected_row2, results[:][2], column = 'xcenter')
+        self.compare_table_item(expected_row2, results[:][2], column = 'ycenter')
+        self.compare_table_item(expected_row2, results[:][2], column = 'aperture sum')
+        self.compare_table_item(expected_row2, results[:][2], column = 'aperture sum err')
+        self.compare_table_item(expected_row2, results[:][2], column = 'mag')
+        self.compare_table_item(expected_row2, results[:][2], column = 'magerr')
+        self.compare_table_item(expected_row2, results[:][2], column = 'aperture radius')
 
     def test_perform_aperture_photometry_default_ap_ignore_zp(self):
         FLUX2MAG = 2.5/np.log(10)
@@ -9413,14 +9414,16 @@ class TestPerformAperPhotometry(TestCase):
         expected_results['path to frame'] = ['/tmp/tmp_neox_fjody5q5/20240610/coj2m002-ep07-20240610-0065-e93.fits', '/tmp/tmp_neox_fjody5q5/20240610/coj2m002-ep07-20240610-0095-e93.fits', '/tmp/tmp_neox_fjody5q5/20240610/coj2m002-ep07-20240610-0125-e93.fits']
         expected_results['times'] = [datetime(2024, 6, 10, 17, 2, 0), datetime(2024, 6, 10, 17, 4, 0), datetime(2024, 6, 10, 17, 6, 0)]
 
-        file_for_pix2world = WCS('/tmp/tmp_neox_fjody5q5/20240610/coj2m002-ep07-20240610-0095-e93.fits')
+        arbitrary_radius_to_extract_positions = 4.2
+        pix_source_aperture = CircularAperture((48.76999999999983, 48.2699999999529), arbitrary_radius_to_extract_positions)
+        sky_source_aperture = pix_source_aperture.to_sky(self.wcs)
 
         expected_row2 = QTable()
         expected_row2['path to frame'] = [os.path.join(self.test_output_dir, self.e93_frame.filename)]
         expected_row2['times'] = [self.e93_frame.midpoint]
         expected_row2['filters'] = [np.str_(self.e93_frame.filter)]
-        expected_row2['RA'] = [file_for_pix2world.all_pix2world(48.76999999999983, 48.2699999999529, 1)[0]]
-        expected_row2['DEC'] = [file_for_pix2world.all_pix2world(48.76999999999983, 48.2699999999529, 1)[1]]
+        expected_row2['RA'] = [sky_source_aperture.positions.ra.value]
+        expected_row2['DEC'] = [sky_source_aperture.positions.dec.value]
         expected_row2['xcenter'] = [48.76999999999983] #*u.pix
         expected_row2['ycenter'] = [48.2699999999529] #* u.pix
         expected_row2['aperture sum'] = [135.68437393971408]
@@ -9443,20 +9446,20 @@ class TestPerformAperPhotometry(TestCase):
         self.assertEqual(expected_row2.colnames, results.colnames)
         self.assertEqual(len(expected_results), len(results))
         self.assertEqual(len(results), expected_table_length)
-        self.compare_tables_with_strings(expected_results, results, column = 'path to frame',num_to_check= 2, precision=6)
-        self.compare_tables_with_strings(expected_results, results, column = 'times',num_to_check= 2, precision=6)
-        self.compare_rows(expected_row2, results[:][2], column = 'path to frame')
-        self.compare_rows(expected_row2, results[:][2], column = 'times')
-        self.compare_rows(expected_row2, results[:][2], column = 'filters')
-        self.assertAlmostEqual(expected_row2['RA'][0], results[:][2]['RA'], 3)
-        self.assertAlmostEqual(expected_row2['DEC'][0], results[:][2]['DEC'], 3)
-        self.compare_rows(expected_row2, results[:][2], column = 'xcenter')
-        self.compare_rows(expected_row2, results[:][2], column = 'ycenter')
-        self.compare_rows(expected_row2, results[:][2], column = 'aperture sum')
-        self.compare_rows(expected_row2, results[:][2], column = 'aperture sum err')
-        self.compare_rows(expected_row2, results[:][2], column = 'mag')
-        self.compare_rows(expected_row2, results[:][2], column = 'magerr')
-        self.compare_rows(expected_row2, results[:][2], column = 'aperture radius')
+        self.compare_tables_with_strings(expected_results, results, column = 'path to frame',num_to_check= 2)
+        self.compare_tables_with_strings(expected_results, results, column = 'times',num_to_check= 2)
+        self.compare_table_item(expected_row2, results[:][2], column = 'path to frame')
+        self.compare_table_item(expected_row2, results[:][2], column = 'times')
+        self.compare_table_item(expected_row2, results[:][2], column = 'filters')
+        self.compare_table_item(expected_row2, results[:][2], column = 'RA')
+        self.compare_table_item(expected_row2, results[:][2], column = 'DEC')
+        self.compare_table_item(expected_row2, results[:][2], column = 'xcenter')
+        self.compare_table_item(expected_row2, results[:][2], column = 'ycenter')
+        self.compare_table_item(expected_row2, results[:][2], column = 'aperture sum')
+        self.compare_table_item(expected_row2, results[:][2], column = 'aperture sum err')
+        self.compare_table_item(expected_row2, results[:][2], column = 'mag')
+        self.compare_table_item(expected_row2, results[:][2], column = 'magerr')
+        self.compare_table_item(expected_row2, results[:][2], column = 'aperture radius')
 
     def test_perform_aperture_photometry_manual_ap_ignore_zp(self):
         FLUX2MAG = 2.5/np.log(10)
@@ -9464,14 +9467,16 @@ class TestPerformAperPhotometry(TestCase):
         expected_results['path to frame'] = ['/tmp/tmp_neox_fjody5q5/20240610/coj2m002-ep07-20240610-0065-e93.fits', '/tmp/tmp_neox_fjody5q5/20240610/coj2m002-ep07-20240610-0095-e93.fits', '/tmp/tmp_neox_fjody5q5/20240610/coj2m002-ep07-20240610-0125-e93.fits']
         expected_results['times'] = [datetime(2024, 6, 10, 17, 2, 0), datetime(2024, 6, 10, 17, 4, 0), datetime(2024, 6, 10, 17, 6, 0)]
 
-        file_for_pix2world = WCS('/tmp/tmp_neox_fjody5q5/20240610/coj2m002-ep07-20240610-0095-e93.fits')
+        arbitrary_radius_to_extract_positions = 4.2
+        pix_source_aperture = CircularAperture((48.76999999999983, 48.2699999999529), arbitrary_radius_to_extract_positions)
+        sky_source_aperture = pix_source_aperture.to_sky(self.wcs)
 
         expected_row2 = QTable()
         expected_row2['path to frame'] = [os.path.join(self.test_output_dir, self.e93_frame.filename)]
         expected_row2['times'] = [self.e93_frame.midpoint]
         expected_row2['filters'] = [np.str_(self.e93_frame.filter)]
-        expected_row2['RA'] = [file_for_pix2world.all_pix2world(48.76999999999983, 48.2699999999529, 1)[0]]
-        expected_row2['DEC'] = [file_for_pix2world.all_pix2world(48.76999999999983, 48.2699999999529, 1)[1]]
+        expected_row2['RA'] = [sky_source_aperture.positions.ra.value]
+        expected_row2['DEC'] = [sky_source_aperture.positions.dec.value]
         expected_row2['xcenter'] = [48.76999999999983] #*u.pix
         expected_row2['ycenter'] = [48.2699999999529] #* u.pix
         expected_row2['aperture sum'] = [99.9718286829744]
@@ -9494,20 +9499,20 @@ class TestPerformAperPhotometry(TestCase):
         self.assertEqual(expected_row2.colnames, results.colnames)
         self.assertEqual(len(expected_results), len(results))
         self.assertEqual(len(results), expected_table_length)
-        self.compare_tables_with_strings(expected_results, results, column = 'path to frame',num_to_check= 2, precision=6)
-        self.compare_tables_with_strings(expected_results, results, column = 'times',num_to_check= 2, precision=6)
-        self.compare_rows(expected_row2, results[:][2], column = 'path to frame')
-        self.compare_rows(expected_row2, results[:][2], column = 'times')
-        self.compare_rows(expected_row2, results[:][2], column = 'filters')
-        self.assertAlmostEqual(expected_row2['RA'][0], results[:][2]['RA'], 3)
-        self.assertAlmostEqual(expected_row2['DEC'][0], results[:][2]['DEC'], 3)
-        self.compare_rows(expected_row2, results[:][2], column = 'xcenter')
-        self.compare_rows(expected_row2, results[:][2], column = 'ycenter')
-        self.compare_rows(expected_row2, results[:][2], column = 'aperture sum')
-        self.compare_rows(expected_row2, results[:][2], column = 'aperture sum err')
-        self.compare_rows(expected_row2, results[:][2], column = 'mag')
-        self.compare_rows(expected_row2, results[:][2], column = 'magerr')
-        self.compare_rows(expected_row2, results[:][2], column = 'aperture radius')
+        self.compare_tables_with_strings(expected_results, results, column = 'path to frame',num_to_check= 2)
+        self.compare_tables_with_strings(expected_results, results, column = 'times',num_to_check= 2)
+        self.compare_table_item(expected_row2, results[:][2], column = 'path to frame')
+        self.compare_table_item(expected_row2, results[:][2], column = 'times')
+        self.compare_table_item(expected_row2, results[:][2], column = 'filters')
+        self.compare_table_item(expected_row2, results[:][2], column = 'RA')
+        self.compare_table_item(expected_row2, results[:][2], column = 'DEC')
+        self.compare_table_item(expected_row2, results[:][2], column = 'xcenter')
+        self.compare_table_item(expected_row2, results[:][2], column = 'ycenter')
+        self.compare_table_item(expected_row2, results[:][2], column = 'aperture sum')
+        self.compare_table_item(expected_row2, results[:][2], column = 'aperture sum err')
+        self.compare_table_item(expected_row2, results[:][2], column = 'mag')
+        self.compare_table_item(expected_row2, results[:][2], column = 'magerr')
+        self.compare_table_item(expected_row2, results[:][2], column = 'aperture radius')
 
     def test_perform_aperture_photometry_manual_ap_include_zp(self):
         FLUX2MAG = 2.5/np.log(10)
@@ -9515,14 +9520,16 @@ class TestPerformAperPhotometry(TestCase):
         expected_results['path to frame'] = ['/tmp/tmp_neox_fjody5q5/20240610/coj2m002-ep07-20240610-0065-e93.fits', '/tmp/tmp_neox_fjody5q5/20240610/coj2m002-ep07-20240610-0095-e93.fits', '/tmp/tmp_neox_fjody5q5/20240610/coj2m002-ep07-20240610-0125-e93.fits']
         expected_results['times'] = [datetime(2024, 6, 10, 17, 2, 0), datetime(2024, 6, 10, 17, 4, 0), datetime(2024, 6, 10, 17, 6, 0)]
 
-        file_for_pix2world = WCS('/tmp/tmp_neox_fjody5q5/20240610/coj2m002-ep07-20240610-0095-e93.fits')
+        arbitrary_radius_to_extract_positions = 4.2
+        pix_source_aperture = CircularAperture((48.76999999999983, 48.2699999999529), arbitrary_radius_to_extract_positions)
+        sky_source_aperture = pix_source_aperture.to_sky(self.wcs)
 
         expected_row2 = QTable()
         expected_row2['path to frame'] = [os.path.join(self.test_output_dir, self.e93_frame.filename)]
         expected_row2['times'] = [self.e93_frame.midpoint]
         expected_row2['filters'] = [np.str_(self.e93_frame.filter)]
-        expected_row2['RA'] = [file_for_pix2world.all_pix2world(48.76999999999983, 48.2699999999529, 1)[0]]
-        expected_row2['DEC'] = [file_for_pix2world.all_pix2world(48.76999999999983, 48.2699999999529, 1)[1]]
+        expected_row2['RA'] = [sky_source_aperture.positions.ra.value]
+        expected_row2['DEC'] = [sky_source_aperture.positions.dec.value]
         expected_row2['xcenter'] = [48.76999999999983] #*u.pix
         expected_row2['ycenter'] = [48.2699999999529] #* u.pix
         expected_row2['aperture sum'] = [99.9718286829744]
@@ -9545,20 +9552,20 @@ class TestPerformAperPhotometry(TestCase):
         self.assertEqual(expected_row2.colnames, results.colnames)
         self.assertEqual(len(expected_results), len(results))
         self.assertEqual(len(results), expected_table_length)
-        self.compare_tables_with_strings(expected_results, results, column = 'path to frame',num_to_check= 2, precision=6)
-        self.compare_tables_with_strings(expected_results, results, column = 'times',num_to_check= 2, precision=6)
-        self.compare_rows(expected_row2, results[:][2], column = 'path to frame')
-        self.compare_rows(expected_row2, results[:][2], column = 'times')
-        self.compare_rows(expected_row2, results[:][2], column = 'filters')
-        self.assertAlmostEqual(expected_row2['RA'][0], results[:][2]['RA'], 3)
-        self.assertAlmostEqual(expected_row2['DEC'][0], results[:][2]['DEC'], 3)
-        self.compare_rows(expected_row2, results[:][2], column = 'xcenter')
-        self.compare_rows(expected_row2, results[:][2], column = 'ycenter')
-        self.compare_rows(expected_row2, results[:][2], column = 'aperture sum')
-        self.compare_rows(expected_row2, results[:][2], column = 'aperture sum err')
-        self.compare_rows(expected_row2, results[:][2], column = 'mag')
-        self.compare_rows(expected_row2, results[:][2], column = 'magerr')
-        self.compare_rows(expected_row2, results[:][2], column = 'aperture radius')
+        self.compare_tables_with_strings(expected_results, results, column = 'path to frame',num_to_check= 2)
+        self.compare_tables_with_strings(expected_results, results, column = 'times',num_to_check= 2)
+        self.compare_table_item(expected_row2, results[:][2], column = 'path to frame')
+        self.compare_table_item(expected_row2, results[:][2], column = 'times')
+        self.compare_table_item(expected_row2, results[:][2], column = 'filters')
+        self.compare_table_item(expected_row2, results[:][2], column = 'RA')
+        self.compare_table_item(expected_row2, results[:][2], column = 'DEC')
+        self.compare_table_item(expected_row2, results[:][2], column = 'xcenter')
+        self.compare_table_item(expected_row2, results[:][2], column = 'ycenter')
+        self.compare_table_item(expected_row2, results[:][2], column = 'aperture sum')
+        self.compare_table_item(expected_row2, results[:][2], column = 'aperture sum err')
+        self.compare_table_item(expected_row2, results[:][2], column = 'mag')
+        self.compare_table_item(expected_row2, results[:][2], column = 'magerr')
+        self.compare_table_item(expected_row2, results[:][2], column = 'aperture radius')
 
     def test_generate_ecsv_file_post_photomet_default(self):
         block_date_str = f"{self.test_block.block_start}"[:-9]

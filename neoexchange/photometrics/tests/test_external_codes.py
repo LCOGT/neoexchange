@@ -2034,21 +2034,26 @@ class TestFrameAperturePhotometry(ExternalCodeUnitTest):
 
     def compare_tables(self, expected_table, table, column, num_to_check, precision=6):
         for i in range(0, num_to_check+1):
-            self.assertAlmostEqual(expected_table[column][i], table[column][i], precision)
+            try:
+                self.assertAlmostEqual(expected_table[column][i], table[column][i], precision)
+            except TypeError:
+                self.assertEqual(expected_table[column][i], table[column][i], precision)
 
     def test_single_frame_aperture_photometry_default_settings(self):
         header, cattype = photometrics.catalog_subs.get_header(self.test_hotpants_file_COPIED)
         right_ascension = self.ephem_ra * u.deg
         declination = self.ephem_dec * u.deg
         positions = SkyCoord(right_ascension, declination, frame = "icrs")
-        source_aperture = SkyCircularAperture(positions, r = 2.5*self.test_e93_frame.fwhm*u.arcsec)
         wcs = header['wcs']
+        source_aperture = SkyCircularAperture(positions, r = 2.5*self.test_e93_frame.fwhm*u.arcsec)
         pix_source_aperture = source_aperture.to_pixel(wcs)
+        results = single_frame_aperture_photometry(self.test_hotpants_file_COPIED, self.ephem_ra, self.ephem_dec, account_zps=True, aperture_radius= None, background_subtract= False)
         FLUX2MAG = 2.5/np.log(10)
         expected_results = QTable()
         expected_results['id'] = [1]
         expected_results['xcenter'] = [48.45815299066739] *u.pix
         expected_results['ycenter'] = [48.576667811450456] * u.pix
+        expected_results['sky_center'] = [source_aperture.positions]
         expected_results['aperture_sum'] = [135.01533390388389]
         expected_results['aperture_sum_err'] = [10.514787835583155]
         expected_results['FWHM'] = self.test_e93_frame.fwhm
@@ -2069,6 +2074,7 @@ class TestFrameAperturePhotometry(ExternalCodeUnitTest):
         self.compare_tables(expected_results, results, column = 'id',num_to_check= 0)
         self.compare_tables(expected_results, results, column = 'xcenter',num_to_check= 0)
         self.compare_tables(expected_results, results, column = 'ycenter',num_to_check= 0)
+        self.compare_tables(expected_results, results, column = 'sky_center',num_to_check= 0)
         self.compare_tables(expected_results, results, column = 'aperture_sum',num_to_check= 0)
         self.compare_tables(expected_results, results, column = 'aperture_sum_err',num_to_check= 0)
         self.compare_tables(expected_results, results, column = 'FWHM',num_to_check= 0)
@@ -2092,6 +2098,7 @@ class TestFrameAperturePhotometry(ExternalCodeUnitTest):
         expected_results['id'] = [1]
         expected_results['xcenter'] = [48.45815299066739] *u.pix
         expected_results['ycenter'] = [48.576667811450456] * u.pix
+        expected_results['sky_center'] = [source_aperture.positions]
         expected_results['aperture_sum'] = [135.01533390388389]
         expected_results['aperture_sum_err'] = [10.514787835583155]
         expected_results['FWHM'] = self.test_e93_frame.fwhm
@@ -2112,6 +2119,7 @@ class TestFrameAperturePhotometry(ExternalCodeUnitTest):
         self.compare_tables(expected_results, results, column = 'id',num_to_check= 0)
         self.compare_tables(expected_results, results, column = 'xcenter',num_to_check= 0)
         self.compare_tables(expected_results, results, column = 'ycenter',num_to_check= 0)
+        self.compare_tables(expected_results, results, column = 'sky_center',num_to_check= 0)
         self.compare_tables(expected_results, results, column = 'aperture_sum',num_to_check= 0)
         self.compare_tables(expected_results, results, column = 'aperture_sum_err',num_to_check= 0)
         self.compare_tables(expected_results, results, column = 'FWHM',num_to_check= 0)
@@ -2135,6 +2143,7 @@ class TestFrameAperturePhotometry(ExternalCodeUnitTest):
         expected_results['id'] = [1]
         expected_results['xcenter'] = [48.45815299066739] *u.pix
         expected_results['ycenter'] = [48.576667811450456] * u.pix
+        expected_results['sky_center'] = [source_aperture.positions]
         expected_results['aperture_sum'] = [104.841575893131]
         expected_results['aperture_sum_err'] = [5.258561331253688]
         expected_results['FWHM'] = self.test_e93_frame.fwhm
@@ -2155,6 +2164,7 @@ class TestFrameAperturePhotometry(ExternalCodeUnitTest):
         self.compare_tables(expected_results, results, column = 'id',num_to_check= 0)
         self.compare_tables(expected_results, results, column = 'xcenter',num_to_check= 0)
         self.compare_tables(expected_results, results, column = 'ycenter',num_to_check= 0)
+        self.compare_tables(expected_results, results, column = 'sky_center',num_to_check= 0)
         self.compare_tables(expected_results, results, column = 'aperture_sum',num_to_check= 0)
         self.compare_tables(expected_results, results, column = 'aperture_sum_err',num_to_check= 0)
         self.compare_tables(expected_results, results, column = 'FWHM',num_to_check= 0)
@@ -2178,6 +2188,7 @@ class TestFrameAperturePhotometry(ExternalCodeUnitTest):
         expected_results['id'] = [1]
         expected_results['xcenter'] = [48.45815299066739] *u.pix
         expected_results['ycenter'] = [48.576667811450456] * u.pix
+        expected_results['sky_center'] = [source_aperture.positions]
         expected_results['aperture_sum'] = [104.841575893131]
         expected_results['aperture_sum_err'] = [5.258561331253688]
         expected_results['FWHM'] = self.test_e93_frame.fwhm
@@ -2198,6 +2209,7 @@ class TestFrameAperturePhotometry(ExternalCodeUnitTest):
         self.compare_tables(expected_results, results, column = 'id',num_to_check= 0)
         self.compare_tables(expected_results, results, column = 'xcenter',num_to_check= 0)
         self.compare_tables(expected_results, results, column = 'ycenter',num_to_check= 0)
+        self.compare_tables(expected_results, results, column = 'sky_center',num_to_check= 0)
         self.compare_tables(expected_results, results, column = 'aperture_sum',num_to_check= 0)
         self.compare_tables(expected_results, results, column = 'aperture_sum_err',num_to_check= 0)
         self.compare_tables(expected_results, results, column = 'FWHM',num_to_check= 0)

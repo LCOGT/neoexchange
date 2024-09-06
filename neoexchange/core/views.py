@@ -5017,8 +5017,8 @@ def perform_aper_photometry(block, dataroot, account_zps = True, aperture_radius
     ras, decs, xcenters, ycenters, aperture_sums, aperture_sum_errs, fwhms, zps, zp_errs, mags, magerrs, filter, aperture_radii = [],[],[],[],[],[],[],[],[],[],[],[],[]
     for i in range (0, len(paths_to_e93_frames)):
         aper_photometry_of_ephem = single_frame_aperture_photometry(paths_to_e93_frames[i], interpolated_ephem[0][i], interpolated_ephem[1][i], aperture_radius= aperture_radius, account_zps = account_zps, background_subtract= False)
-        ras.append(interpolated_ephem[0][i])
-        decs.append(interpolated_ephem[1][i])
+        ras.append(aper_photometry_of_ephem['sky_center'][0].ra.value)
+        decs.append(aper_photometry_of_ephem['sky_center'][0].dec.value)
         xcenters.append(aper_photometry_of_ephem['xcenter'][0])
         ycenters.append(aper_photometry_of_ephem['ycenter'][0])
         aperture_sums.append(aper_photometry_of_ephem['aperture_sum'][0])
@@ -5059,7 +5059,7 @@ def generate_ecsv_file_post_photomet(block, dataroot, overwrite, account_zps = T
     for i in range (0, len(times)):
         stringified_times.append(f"{times[i]}")
     results_table['times'] = stringified_times
-    new_order = ['path to frame','times','filters','RA', 'DEC', 'xcenter','ycenter','aperture sum','aperture sum err','FWHM','ZP','ZP_sig','mag','magerr','aperture radius']
+    new_order = ['path to frame','times','filters','RA','DEC','xcenter','ycenter','aperture sum','aperture sum err','FWHM','ZP','ZP_sig','mag','magerr','aperture radius']
     results_table = results_table[new_order]
     block_date_str = f"{block.block_start}"[:-9]
     if aperture_radius == None:

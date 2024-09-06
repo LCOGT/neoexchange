@@ -1886,18 +1886,17 @@ def single_frame_aperture_photometry(fits_filepath, ra, dec, account_zps, apertu
     positions = SkyCoord(right_ascension, declination, frame = "icrs")
     source_aperture = SkyCircularAperture(positions, r = aperture_radius*u.arcsec)
     wcs = header['wcs']
-    pix_source_aperture = source_aperture.to_pixel(wcs)
     if background_subtract == True:
         background_annulus = CircularAnnulus((ra, dec), aperture_radius, annulus_outer_radius)
         background_annulus_mask = background_annulus.to_mask(method = 'exact')
         background_annulus_data_for_photomet = background_annulus_mask.get_values(source_data_for_photomet)
         background_flux_per_pixel = background_annulus_data_for_photomet/background_annulus.area
         background_subtracted_data_for_photomet = source_data_for_photomet - background_flux_per_pixel
-        source_flux = aperture_photometry(background_subtracted_data_for_photomet, pix_source_aperture)
+        source_flux = aperture_photometry(background_subtracted_data_for_photomet, source_aperture, wcs = wcs)
         #needs: add SNR formula
     else:
         FLUX2MAG = 2.5/np.log(10)
-        source_flux = aperture_photometry(source_data_for_photomet, pix_source_aperture, error = rms_data)
+        source_flux = aperture_photometry(source_data_for_photomet, source_aperture, wcs = wcs, error = rms_data)
         source_flux['FWHM'] = FWHM
         source_flux['ZP'] = frame.zeropoint
         source_flux['ZP_sig'] = frame.zeropoint_err
