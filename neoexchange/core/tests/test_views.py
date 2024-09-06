@@ -9144,7 +9144,7 @@ class TestPerformAperPhotometry(TestCase):
         self.test_file_path_rms = os.path.join(self.framedir, self.test_file)
 
 #       self.test_dir = '/tmp/tmp_neox_wibble'
-        self.test_dir =  '/tmp/tmp_neox_fjody5q5' #tempfile.mkdtemp(prefix='tmp_neox_')
+        self.test_dir =  tempfile.mkdtemp(prefix='tmp_neox_')
 
         self.test_output_dir = os.path.join(self.test_dir, '20240610')
         os.makedirs(self.test_output_dir, exist_ok=True)
@@ -9315,7 +9315,7 @@ class TestPerformAperPhotometry(TestCase):
         self.remove = True
         self.debug_print = True
         self.maxDiff = None
-        self.row_2_test_file = '/tmp/tmp_neox_fjody5q5/20240610/coj2m002-ep07-20240610-0125-e93.fits'
+        self.row_2_test_file = os.path.join(self.test_output_dir, 'coj2m002-ep07-20240610-0125-e93.fits')
         self.header, cattype = get_header(self.row_2_test_file)
         self.wcs = self.header['wcs']
 
@@ -9360,7 +9360,7 @@ class TestPerformAperPhotometry(TestCase):
 
         FLUX2MAG = 2.5/np.log(10)
         expected_results = QTable()
-        expected_results['path to frame'] = ['/tmp/tmp_neox_fjody5q5/20240610/coj2m002-ep07-20240610-0065-e93.fits', '/tmp/tmp_neox_fjody5q5/20240610/coj2m002-ep07-20240610-0095-e93.fits', '/tmp/tmp_neox_fjody5q5/20240610/coj2m002-ep07-20240610-0125-e93.fits']
+        expected_results['path to frame'] = [os.path.join(self.test_output_dir, 'coj2m002-ep07-20240610-0065-e93.fits'), os.path.join(self.test_output_dir, 'coj2m002-ep07-20240610-0095-e93.fits'), os.path.join(self.test_output_dir,'coj2m002-ep07-20240610-0125-e93.fits')]
         expected_results['times'] = [datetime(2024, 6, 10, 17, 2, 0), datetime(2024, 6, 10, 17, 4, 0), datetime(2024, 6, 10, 17, 6, 0)]
 
 
@@ -9411,7 +9411,7 @@ class TestPerformAperPhotometry(TestCase):
     def test_perform_aperture_photometry_default_ap_ignore_zp(self):
         FLUX2MAG = 2.5/np.log(10)
         expected_results = QTable()
-        expected_results['path to frame'] = ['/tmp/tmp_neox_fjody5q5/20240610/coj2m002-ep07-20240610-0065-e93.fits', '/tmp/tmp_neox_fjody5q5/20240610/coj2m002-ep07-20240610-0095-e93.fits', '/tmp/tmp_neox_fjody5q5/20240610/coj2m002-ep07-20240610-0125-e93.fits']
+        expected_results['path to frame'] = [os.path.join(self.test_output_dir, 'coj2m002-ep07-20240610-0065-e93.fits'), os.path.join(self.test_output_dir, 'coj2m002-ep07-20240610-0095-e93.fits'), os.path.join(self.test_output_dir,'coj2m002-ep07-20240610-0125-e93.fits')]
         expected_results['times'] = [datetime(2024, 6, 10, 17, 2, 0), datetime(2024, 6, 10, 17, 4, 0), datetime(2024, 6, 10, 17, 6, 0)]
 
         arbitrary_radius_to_extract_positions = 4.2
@@ -9464,7 +9464,7 @@ class TestPerformAperPhotometry(TestCase):
     def test_perform_aperture_photometry_manual_ap_ignore_zp(self):
         FLUX2MAG = 2.5/np.log(10)
         expected_results = QTable()
-        expected_results['path to frame'] = ['/tmp/tmp_neox_fjody5q5/20240610/coj2m002-ep07-20240610-0065-e93.fits', '/tmp/tmp_neox_fjody5q5/20240610/coj2m002-ep07-20240610-0095-e93.fits', '/tmp/tmp_neox_fjody5q5/20240610/coj2m002-ep07-20240610-0125-e93.fits']
+        expected_results['path to frame'] = [os.path.join(self.test_output_dir, 'coj2m002-ep07-20240610-0065-e93.fits'), os.path.join(self.test_output_dir, 'coj2m002-ep07-20240610-0095-e93.fits'), os.path.join(self.test_output_dir,'coj2m002-ep07-20240610-0125-e93.fits')]
         expected_results['times'] = [datetime(2024, 6, 10, 17, 2, 0), datetime(2024, 6, 10, 17, 4, 0), datetime(2024, 6, 10, 17, 6, 0)]
 
         arbitrary_radius_to_extract_positions = 4.2
@@ -9517,7 +9517,7 @@ class TestPerformAperPhotometry(TestCase):
     def test_perform_aperture_photometry_manual_ap_include_zp(self):
         FLUX2MAG = 2.5/np.log(10)
         expected_results = QTable()
-        expected_results['path to frame'] = ['/tmp/tmp_neox_fjody5q5/20240610/coj2m002-ep07-20240610-0065-e93.fits', '/tmp/tmp_neox_fjody5q5/20240610/coj2m002-ep07-20240610-0095-e93.fits', '/tmp/tmp_neox_fjody5q5/20240610/coj2m002-ep07-20240610-0125-e93.fits']
+        expected_results['path to frame'] = [os.path.join(self.test_output_dir, 'coj2m002-ep07-20240610-0065-e93.fits'), os.path.join(self.test_output_dir, 'coj2m002-ep07-20240610-0095-e93.fits'), os.path.join(self.test_output_dir,'coj2m002-ep07-20240610-0125-e93.fits')]
         expected_results['times'] = [datetime(2024, 6, 10, 17, 2, 0), datetime(2024, 6, 10, 17, 4, 0), datetime(2024, 6, 10, 17, 6, 0)]
 
         arbitrary_radius_to_extract_positions = 4.2
