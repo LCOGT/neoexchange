@@ -777,7 +777,7 @@ def create_dart_lightcurve(input_dir_or_block, output_dir, block, match='photome
                     photometry_files = []
             for photometry_file in photometry_files:
                 fits_bintable = False
-                if type(photometry_file) != Block:
+                if hasattr(photometry_file, 'request_number') is False:
                     if photometry_file.endswith('.fits') is True:
                         print("Multi-aperture FITS BINTABLE")
                         fits_bintable = True
