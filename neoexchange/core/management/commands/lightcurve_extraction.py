@@ -218,9 +218,10 @@ class Command(BaseCommand):
         # Set up Axes/Titles
         ax2.set_ylabel('FWHM (")')
         # ax2.set_title('FWHM')
-        fig2.suptitle('Conditions for obs: '+title)
+        fig2.suptitle('Conditions for obs: ' + title)
         ax2.set_title(sub_title)
-        ax3.plot(alltimes, air_mass, marker='.', color=colors[0], linestyle=' ')
+        #ax3.plot(alltimes, air_mass, marker='.', color=colors[0], linestyle=' ')
+        ax3.plot(alltimes, air_mass, marker='.', color='k', linestyle=' ')
         ax4.legend(temp_lines, temp_labels, loc='best', fontsize='xx-small')
         ax3.set_xlabel('Time')
         ax3.set_ylabel('Airmass')

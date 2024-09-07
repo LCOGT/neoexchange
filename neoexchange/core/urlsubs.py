@@ -107,6 +107,9 @@ def get_seeing_for_site(site, start_time=None):
         site, enc_id, tel_id = MPC_site_code_to_domes(site_code)
 
     dark_start, dark_end = determine_darkness_times(site_code, utc_date=start_time, sun_zd=96)
+    if (start_time-dark_start).days >= 1:
+        logger.debug("Adding 1 day, redetermining")
+        dark_start, dark_end = determine_darkness_times(site_code, utc_date=start_time+timedelta(days=1), sun_zd=96)
     logger.debug(f"Darkness times {dark_start} -> {dark_end}")
 
     sourcecolumns = ['site', 'measure_time', 'seeing']
