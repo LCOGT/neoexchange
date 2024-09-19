@@ -76,7 +76,7 @@ class Command(BaseCommand):
         parser.add_argument('-ap', '--maxapsize', default=None, help='Max. aperture size')
         parser.add_argument('--horizons', action="store_true", default=False, help='Whether to use HORIZONS to predict positions')
 
-    def generate_expected_fwhm(self, times, airmasses, fwhm_0=2.0, obs_filter='w', tel_diameter=0.4*u.m):
+    def generate_expected_fwhm(self, times, airmasses, fwhm_0=2.0, obs_filter='w', tel_diameter=1.0*u.m):
         """Compute the expected FWHM and the variation with airmass and observing
         wavelength. Assumes the first value of FWHM (fwhm_0, in arcsec) is
         representative and converts it to seeing.
@@ -102,7 +102,7 @@ class Command(BaseCommand):
 
         return expected_fwhm
 
-    def plot_timeseries(self, times, alltimes, mags, mag_errs, zps, zp_errs, fwhm, air_mass, temps, seeing, colors='r,gray', title='', sub_title='', datadir='./', filename='tmp_', diameter=0.4*u.m, temp_keyword="FOCTEMP"):
+    def plot_timeseries(self, times, alltimes, mags, mag_errs, zps, zp_errs, fwhms, air_mass, temps, seeing, colors='r,gray', title='', sub_title='', datadir='./', filename='tmp_', diameter=1.0*u.m, temp_keyword="FOCTEMP"):
         """Uses matplotlib to create and save a quick LC plot png as well as a sky conditions plot png.
 
         Parameters
@@ -189,10 +189,27 @@ class Command(BaseCommand):
         # Build Conditions plot
         fig2, (ax2, ax3) = plt.subplots(nrows=2, sharex=True)
         ax4 = ax3.twinx()
-        ax2.plot(alltimes, fwhm, marker='.', color=colors[0], linestyle=' ')
-        fwhm_0_median = fwhm[0]
-        if len(fwhm) > 3:
-            fwhm_0_median = np.median(fwhm[0:3])
+        # Sort out/Plot good FWHMs
+        fwhm_times = [alltimes[i] for i, fwhm in enumerate(fwhms) if fwhm > 0]
+        fwhms_good = [fwhm for i, fwhm in enumerate(fwhms) if fwhm > 0]
+        ax2.plot(fwhm_times, fwhms_good, marker='.', color=colors[0], linestyle=' ')
+        ylims = ax2.get_ylim()
+        if len(seeing) > 0:
+            ylims = (min(ylims[0]-0.1, 0.5), ylims[1])
+        else:
+            ylims = (ylims[0]-0.1, ylims[1])
+
+        # Sort out/Plot bad FWHMs
+        fwhm_times = [alltimes[i] for i, fwhm in enumerate(fwhms) if fwhm <= 0]
+        fwhms_bad = [ylims[0]+0.25 for fwhm in fwhms if fwhm <= 0]
+        ax2.scatter(fwhm_times, fwhms_bad, marker=matplotlib.markers.CARETDOWNBASE, color='k', linestyle='--')
+        ax2.set_ylim(ylims[0], ylims[1])
+
+        # Old plotting line
+        #ax2.plot(alltimes, fwhm, marker='.', color=colors[0], linestyle=' ')
+        fwhm_0_median = fwhms[0]
+        if len(fwhms) > 3:
+            fwhm_0_median = np.median(fwhms[0:3])
         expected_fwhm = self.generate_expected_fwhm(alltimes, air_mass, fwhm_0=fwhm_0_median, tel_diameter=diameter)
         if (times[-1] - times[0]) < timedelta(hours=12):
             ax2.plot(alltimes, expected_fwhm, color='black', linestyle='--', linewidth=0.75, label="Predicted")
@@ -232,6 +249,7 @@ class Command(BaseCommand):
         ax4.set_ylabel(temp_label)
         ax2.minorticks_on()
         ax3.minorticks_on()
+        ax4.minorticks_on()
         ax3.invert_yaxis()
         ax2.xaxis.set_major_formatter(DateFormatter(date_string))
         ax2.fmt_xdata = DateFormatter(date_string)
