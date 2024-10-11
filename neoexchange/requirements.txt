@@ -1,5 +1,3 @@
---extra-index-url=http://buildsba.lco.gtn/python/
---trusted-host buildsba.lco.gtn
 numpy==1.22.4; sys_platform != 'win32'
 numpy==1.22.4+mkl; sys_platform == 'win32'
 Django>=4.2.10,<5.0
@@ -8,7 +6,7 @@ psycopg2-binary
 astropy==4.2.1
 astroquery>=0.4.4.dev7007
 photutils==1.3.0  # Higher versions need astropy>=5.0
-pyslalib
+pySLALIB
 beautifulsoup4
 django-reversion
 html5lib
