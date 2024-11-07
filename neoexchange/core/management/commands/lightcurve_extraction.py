@@ -32,12 +32,15 @@ try:
 except ImportError:
     from astropy.timeseries import LombScargle
 from astropy.time import Time
+from astropy.table import QTable, vstack
+import astropy.units as u
+
 from django.conf import settings
 from django.core.files.storage import default_storage
 from django.core.management.base import BaseCommand, CommandError
 from django.forms.models import model_to_dict
+
 from matplotlib.dates import HourLocator, DateFormatter
-import astropy.units as u
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
@@ -144,7 +147,7 @@ class Command(BaseCommand):
         if type(colors) == str:
             colors = colors.split(',')
         # Build Figure
-        fig, (ax0, ax1) = plt.subplots(nrows=2, sharex=True, gridspec_kw={'height_ratios': [15, 4]})
+        fig, (ax0, ax1) = plt.subplots(nrows=2, sharex=True, gridspec_kw={'height_ratios': [15, 4]}, dpi=150)
         # Plot LC
         ax0.errorbar(times, mags, yerr=mag_errs, marker='.', color=colors[0], linestyle=' ')
         # Sort out/Plot good Zero Points
@@ -187,7 +190,7 @@ class Command(BaseCommand):
         fig.savefig(os.path.join(datadir, filename + 'lightcurve.png'))
 
         # Build Conditions plot
-        fig2, (ax2, ax3) = plt.subplots(nrows=2, sharex=True)
+        fig2, (ax2, ax3) = plt.subplots(nrows=2, sharex=True, dpi=150)
         ax4 = ax3.twinx()
         # Sort out/Plot good FWHMs
         fwhm_times = [alltimes[i] for i, fwhm in enumerate(fwhms) if fwhm > 0]
@@ -406,7 +409,9 @@ class Command(BaseCommand):
         total_frame_count = 0
         mpc_site = []
         fwhm = []
+        seeing = QTable(names=['site', 'measure_time', 'seeing'], dtype=['<U32', 'O', '<f8'])
         air_mass = []
+        focus_temps = {}
         output_file_list = []
 
         # build directory path / set permissions
@@ -580,6 +585,12 @@ class Command(BaseCommand):
                     mag_errs += block_mag_errs
                     times += block_times
 
+                    # Fetch seeing (returns a QTable)
+                    block_seeing = get_seeing_for_site(frames_all_zp[0].sitecode, frames_all_zp[0].midpoint)
+                    self.stdout.write(f"Found {len(block_seeing)} seeing records")
+                    if len(block_seeing) > 0:
+                        seeing = vstack([seeing, block_seeing])
+
                     # Create gif of fits files used for LC extraction
                     data_path = make_data_dir(out_path, model_to_dict(frames_all_zp[0]))
                     red_paths = []
@@ -587,7 +598,6 @@ class Command(BaseCommand):
                     # TUBETEMP= Temperature of the telescope tube
                     # FOCTEMP= Focus temperature
                     # REFTEMP= Temperature used in refraction calculation
-                    focus_temps = {}
                     for f in frames_all_zp:
                         fits_filepath = os.path.join(data_path, f.filename.replace('e92', 'e91').replace('-e72', ''))
                         fits_header, fits_table, cattype = open_fits_catalog(fits_filepath, header_only=True)
@@ -743,8 +753,8 @@ class Command(BaseCommand):
 
                 # Make plots
                 if not settings.USE_S3:
-                    seeing = get_seeing_for_site(frames_all_zp[0].sitecode, frames_all_zp[0].midpoint)
-                    self.stdout.write(f"Found {len(seeing)} seeing records")
+                    #seeing = get_seeing_for_site(frames_all_zp[0].sitecode, frames_all_zp[0].midpoint)
+                    self.stdout.write(f"Found total of {len(seeing)} seeing records")
                     self.plot_timeseries(times, alltimes, mags, mag_errs, zps, zp_errs, fwhm, air_mass, \
                         focus_temps, seeing, title=plot_title, sub_title=subtitle, datadir=datadir, filename=base_name, \
                         diameter=tel_diameter)
