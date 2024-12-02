@@ -3,7 +3,7 @@ numpy==1.23.5+mkl; sys_platform == 'win32'
 Django>=4.2.10,<5.0
 #mysqlclient~=1.4.3
 psycopg2-binary
-astropy<=6.0
+astropy<6.0
 astroquery>=0.4.4.dev7007
 photutils==1.11.0  # Higher versions need python>=3.10
 pyslalib>=1.0.9
