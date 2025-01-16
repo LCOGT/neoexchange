@@ -129,7 +129,7 @@ COPY neoexchange/requirements.txt .
 # missing numpy.distutils.core reference because the package's setup.py is broken
 RUN pip3 --no-cache-dir install --upgrade pip \
     && python3 -m pip --no-cache-dir install --upgrade numpy wheel \
-    && python3 -m pip --no-cache-dir install --trusted-host buildsba.lco.gtn -r requirements.txt
+    && python3 -m pip --no-cache-dir install -r requirements.txt
 
 # Add path to findorb
 ENV PATH=/root/bin:$PATH

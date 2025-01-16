@@ -3137,9 +3137,12 @@ def ingest_new_object(orbit_file, obs_file=None, dbg=False):
     if obs_file is None:
         obs_file = orbit_file.replace('neocp', 'dat')
 
-    # If not found, try new-style obs file name
+    # If not found, try new-style obs file names
     if os.path.exists(obs_file) is False:
         obs_file = orbit_file.replace('.neocp', '_mpc.dat')
+    # If still not found, try another new-style obs file name
+    if os.path.exists(obs_file) is False:
+        obs_file = orbit_file.replace('.neocp', '_mpc.txt')
 
     local_discovery = False
     try:
@@ -4655,14 +4658,16 @@ def compare_NEOx_horizons_ephems(body, d, sitecode='500', debug=True):
     if type(body) != Body:
         body = Body.objects.get(name=body)
 
-    neox_emp = compute_ephem(d, model_to_dict(body), sitecode, perturb=True, display=debug)
+    neox_emp = compute_ephem(d, model_to_dict(body), sitecode, perturb=False, display=debug)
+    neox_perturb_emp = compute_ephem(d, model_to_dict(body), sitecode, perturb=True, display=debug)
     horizons_emp = horizons_ephem(body.current_name(), d, d+timedelta(minutes=1), sitecode, '1m')
 
     sep_r = None
     sep_ra = None
     sep_dec = None
-    if len(neox_emp) > 0 and horizons_emp is not None and len(horizons_emp) > 0:
+    if len(neox_emp) > 0 and len(neox_perturb_emp) > 0 and horizons_emp is not None and len(horizons_emp) > 0:
         neox_pos = SkyCoord(neox_emp['ra'], neox_emp['dec'], unit=u.rad)
+        neox_perturb_pos = SkyCoord(neox_perturb_emp['ra'], neox_perturb_emp['dec'], unit=u.rad)
         # Find index of nearest in time ephememeris line
         horizons_index = np.abs(d-horizons_emp['datetime'].datetime).argmin()
         horizons_pos = SkyCoord(horizons_emp['RA'][horizons_index], horizons_emp['DEC'][horizons_index], unit=u.deg)
@@ -4673,7 +4678,10 @@ def compare_NEOx_horizons_ephems(body, d, sitecode='500', debug=True):
         sep_ra, sep_dec = horizons_pos.spherical_offsets_to(neox_pos)
         sep_ra = -sep_ra.to(u.arcsec) / cos(horizons_pos.dec.rad)
         sep_dec = -sep_dec.to(u.arcsec)
-        print(f"At {d:} (HORIZONS@{horizons_emp['datetime'][horizons_index]} , sep= {sep_r:.1f} (RA={sep_ra:.1f}, Dec={sep_dec:.1f})\nNEOX: {neox_pos.to_string('hmsdms', sep=' ', precision=4):} V={neox_emp['mag']:.1f}\n JPL: {horizons_pos.to_string('hmsdms', sep=' ', precision=4):} V={horizons_emp[mag_column][horizons_index]:.1f}")
+        sep_perturb_ra, sep_perturb_dec = horizons_pos.spherical_offsets_to(neox_perturb_pos)
+        sep_perturb_ra = -sep_perturb_ra.to(u.arcsec) / cos(horizons_pos.dec.rad)
+        sep_perturb_dec = -sep_perturb_dec.to(u.arcsec)
+        print(f"At {d:} (HORIZONS@{horizons_emp['datetime'][horizons_index]} , sep= {sep_r:.1f} (RA={sep_ra:.1f}, Dec={sep_dec:.1f})\nNEOX(P): {neox_perturb_pos.to_string('hmsdms', sep=' ', precision=4):} V={neox_perturb_emp['mag']:.1f}\nNEOX(U): {neox_pos.to_string('hmsdms', sep=' ', precision=4):} V={neox_emp['mag']:.1f}\n    JPL: {horizons_pos.to_string('hmsdms', sep=' ', precision=4):} V={horizons_emp[mag_column][horizons_index]:.1f}")
 
     return neox_emp, horizons_emp, sep_r, sep_ra, sep_dec
 
