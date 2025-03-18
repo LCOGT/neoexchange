@@ -128,7 +128,7 @@ COPY neoexchange/requirements.txt .
 # numpy needs to be explicitly installed first otherwise pySLALIB fails with a
 # missing numpy.distutils.core reference because the package's setup.py is broken
 RUN pip3 --no-cache-dir install --upgrade pip \
-    && python3 -m pip --no-cache-dir install --upgrade numpy wheel \
+    && python3 -m pip --no-cache-dir install --upgrade numpy==1.22.4 wheel \
     && python3 -m pip --no-cache-dir install --trusted-host buildsba.lco.gtn -r requirements.txt
 
 # Add path to findorb
