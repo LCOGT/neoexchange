@@ -6,6 +6,9 @@ Portal for scheduling observations of NEOs (and other Solar System objects) usin
 
 ## History
 
+### 3.15.3
+* Allow use of CN narrowband filters.
+
 ### 3.15.2
 * Add suport for disabling SSL verification in data pulls for emergency use e.g. for the recent MPC website issues. (Issue #646)
 
