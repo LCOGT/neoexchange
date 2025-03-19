@@ -2368,6 +2368,17 @@ def funpack_fits_file(fpack_file, all_hdus=False):
     hdu.header.insert("NAXIS2", ("BSCALE", 1.0), after=True)
     hdu.header.remove("BZERO", ignore_missing=True)
     hdu.header.insert("BSCALE", ("BZERO", 0.0), after=True)
+    ccdsum = header.get('CCDSUM', None)
+    if ccdsum:
+        chunks = ccdsum.split(' ')
+        if len(chunks) == 2:
+            try:
+                xbinning = int(chunks[0])
+                hdu.header.insert("CCDSUM", ("XBINNING", xbinning, 'Binning in X direction'), after=True)
+                ybinning = int(chunks[0])
+                hdu.header.insert("XBINNING", ("YBINNING", ybinning, 'Binning in Y direction'), after=True)
+            except ValueError:
+                pass
     new_hdulist = fits.HDUList([hdu,])
 
     if all_hdus:
