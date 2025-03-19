@@ -2452,6 +2452,8 @@ def get_fits_files(fits_path, match_pattern='*e91.fits'):
 
         fpacked_files = sorted(glob(fits_path + match_pattern+'.fz'))
         for fpack_file in fpacked_files:
+            # For DIA processing
+            # funpack_fits_file(fpack_file, all_hdus=True)
             funpack_fits_file(fpack_file)
 
         sorted_fits_files = sorted(glob(fits_path + match_pattern))
