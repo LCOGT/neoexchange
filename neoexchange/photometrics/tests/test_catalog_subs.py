@@ -4778,3 +4778,45 @@ class TestMakeSourceMeasurementsFromTable(ExternalCodeUnitTest):
             self.assertAlmostEqual(-42.0, sm.obs_dec, 4)
         self.assertAlmostEqual(250.0, sms[0].snr, 4)
         self.assertAlmostEqual(333.3333, sms[1].snr, 4)
+
+
+class TestRoboMean(SimpleTestCase):
+
+    def setUp(self):
+        self.null_results = { 'mean' : 0.0, 'stddev' : 0.0, 'skewness' : 0.0, 'kurtosis' : 0.0, 'nfinal' : 0 }
+
+    def compare_dict(self, expected_params, params, tolerance=6):
+        self.assertEqual(len(expected_params), len(params))
+        for i in expected_params:
+            if isinstance(i, int):
+                self.assertEqual(expected_params[i], params[i])
+            else:
+                self.assertAlmostEqual(expected_params[i], params[i], tolerance)
+
+    def test_all_nonfinite(self):
+        data = np.array([ np.nan, np.inf, -np.inf ])
+
+        results = robomean(data)
+
+        self.assertEquals(self.null_results, results)
+
+    def test_chatgpt(self):
+        expected_results = {'mean': 5.0, 'stddev': 2.1380898952484, 'skewness': 0.5371324419975,
+                            'kurtosis': -0.8706057071686, 'nfinal' : 8}
+
+        data = np.array([2, 4, 4, 4, 5, 5, 7, 9])
+
+        results = robomean(data)
+
+        self.compare_dict(expected_results, results)
+
+    def test_outlier(self):
+        expected_results = {'mean': 4.4285712, 'stddev': 1.5118578672409,
+                            'skewness':  0.1164269447327,
+                            'kurtosis': -0.8447067737579, 'nfinal' : 7}
+
+        data = np.array([2, 4, 4, 4, 5, 5, 7, 90])
+
+        results = robomean(data, 2.0, 0.5)
+
+        self.compare_dict(expected_results, results)

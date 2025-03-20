@@ -18,7 +18,6 @@ GNU General Public License for more details.
 import logging
 import os
 from glob import glob
-import numpy as np
 from datetime import datetime, timedelta
 from math import sqrt, log10, log, degrees, cos
 from collections import OrderedDict
@@ -27,6 +26,9 @@ from requests.exceptions import ReadTimeout, ConnectTimeout, ConnectionError
 import re
 import warnings
 
+import numpy as np
+from scipy.stats import skew, kurtosis
+from astropy.stats import sigma_clipped_stats
 from astropy.utils.exceptions import AstropyDeprecationWarning
 from astropy.io import fits
 from astropy.table import Table
@@ -2598,3 +2600,57 @@ def create_initial_MRO_wcs(fits_file):
     del w
     hdulist.close()
     return status
+
+def robomean(data, sigma=3, eps=0.5, idl_math=True):
+    """
+    Calculates the mean, standard deviation, skewness, and kurtosis of a dataset.
+
+    Args:
+    data: A list or NumPy array of numerical data.
+    sigma: The number of standard deviations from the mean to clip (<thresh> in original IDL)
+    eps: Smallest significant change in mean in units of the standard deviation.
+
+    Returns:
+    A dictionary containing the calculated statistics.
+    """
+
+    if isinstance(data, np.ndarray) is False:
+        data = np.array(data)
+    num_finite = np.sum(np.isfinite(data))
+    good = np.isfinite(data)
+
+    if num_finite == 0:
+        mean_val = std_dev_val = skew_val = kurt_val = 0.0
+        nfinal = 0
+    elif num_finite == 1:
+        mean_val = data[good][0]
+        std_dev_val = skew_val = kurt_val = 0.0
+        nfinal = 1
+    else:
+        mean_val = np.mean(data[good], dtype=np.float64)
+        std_dev_val = np.std(data[good], ddof=1,  dtype=np.float64)
+        if idl_math:
+            skew_val = (1.0/len(data[good]))* np.sum(((data[good]-mean_val)/std_dev_val)**3)
+            kurt_val = (1.0/len(data[good]))* np.sum(((data[good]-mean_val)/std_dev_val)**4)-3.0
+        else:
+            skew_val = skew(data[good])
+            kurt_val = kurtosis(data[good])
+        nfinal = len(data[good])
+
+    # Number that pass clip threshold
+    new_good = (np.abs( data[good] - mean_val ) / std_dev_val <= sigma)
+    num_good = np.sum(new_good)
+    if num_good > 0:
+        mean_val, median, std_dev_val = sigma_clipped_stats(data[good], std_ddof=1)
+        good = good & new_good
+        skew_val = (1.0/len(data[good]))* np.sum(((data[good]-mean_val)/std_dev_val)**3)
+        kurt_val = (1.0/len(data[good]))* np.sum(((data[good]-mean_val)/std_dev_val)**4)-3.0
+        nfinal = num_good
+
+    return {
+      "mean": mean_val,
+      "stddev": std_dev_val,
+      "skewness": skew_val,
+      "kurtosis": kurt_val,
+      "nfinal" : nfinal
+    }
