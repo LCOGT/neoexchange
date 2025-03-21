@@ -19,6 +19,7 @@ from math import sqrt, log10, log
 import os
 from glob import glob
 import tempfile
+import random
 import shutil
 import stat
 
@@ -4818,5 +4819,30 @@ class TestRoboMean(SimpleTestCase):
         data = np.array([2, 4, 4, 4, 5, 5, 7, 90])
 
         results = robomean(data, 2.0, 0.5)
+
+        self.compare_dict(expected_results, results)
+
+class TestSkysclim(SimpleTestCase):
+
+    def setUp(self):
+        self.test_dir = tempfile.mkdtemp(prefix='tmp_neox_')
+        self.test_banzaifilename = os.path.join('photometrics', 'tests', 'banzai_test_frame.fits')
+        self.data =fits.getdata(self.test_banzaifilename)
+        random.seed(42)
+
+        return super().setUp()
+
+    def compare_dict(self, expected_params, params, tolerance=6):
+        self.assertEqual(len(expected_params), len(params))
+        for i in expected_params:
+            if isinstance(i, int):
+                self.assertEqual(expected_params[i], params[i])
+            else:
+                self.assertAlmostEqual(expected_params[i], params[i], tolerance)
+
+    def test1(self):
+        expected_results = {'lowval' : 301.641754, 'hival' : 571.155273, 'mean' : 402.709320, 'stddev' : 33.689190}
+
+        results = skysclim(self.data)
 
         self.compare_dict(expected_results, results)

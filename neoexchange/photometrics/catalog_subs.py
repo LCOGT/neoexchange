@@ -24,6 +24,7 @@ from collections import OrderedDict
 import time
 from requests.exceptions import ReadTimeout, ConnectTimeout, ConnectionError
 import re
+import random
 import warnings
 
 import numpy as np
@@ -2654,3 +2655,69 @@ def robomean(data, sigma=3, eps=0.5, idl_math=True):
       "kurtosis": kurt_val,
       "nfinal" : nfinal
     }
+
+def skysclim(image, npts=601, lowclip=0.0, hiclip=1.0, sigma=3.0):
+    """
+    Calculates the low and high values in data numbers (DN) of a image to provide a good stretch.
+
+    Args:
+    npts - Maximum number of points to grab at random from image for scaling
+           information.  Default=601.
+    lowclip - fraction of random sample to clip at the low end of the signal.
+              If lowclip=.1 and npts=100, then the 10 lowest values in the
+              random sample are excluded BEFORE the robust mean is computed
+              for the stretch range.  This option will probably be just a bit
+              slower if invoked.  This option will likely be more robust against
+              extreme values in the image.  Default=0.0 (no clipping)
+    hiclip  - fraction of random sample to clip at the high end of the signal.
+              If hiclip=.9 and npts=100, then the 10 highest values in the
+              random sample are excluded BEFORE the robust mean is computed
+              for the stretch range.  This option will probably be just a bit
+              slower if invoked.  This option will likely be more robust against
+              extreme values in the image.  Default=1.0 (no clipping)
+    sigma: The number of standard deviations from the mean to clip (<thresh> in original IDL)
+
+    Returns:
+    A dictionary containing the calculated statistics.
+      lowval - Low DN value for sky stretch  (meanval-3.0*sigma)
+      hival  - High DN value for sky stretch (meanval+5.0*sigma)
+      meanval - Mean of random sample
+      sigma   - standard deviation of random sample
+    """
+
+    stats = {'lowval' : 0.0, 'hival' : 0.0, 'meanval' : 0.0, 'stddev' : 0.0}
+
+    # Check the image is at least as big as npts
+    cnpts = min(npts, image.size)
+
+    # generate random indicies to get a random sample of the image
+    idx = random.sample(range(0, image.size-1), cnpts)
+
+    # extract portion
+    sample = image.flatten(order='C')[idx]
+
+    if lowclip > 0.0 or hiclip < 1.0:
+        pass
+    #   ; sort
+    #   s = sort( sample )
+
+    #   ; get index bounds of clipped region
+    #   t1 = long(lowclip * cnpts) > 0L
+    #   t2 = long(hiclip * cnpts) < long(cnpts-1)
+
+    #   tmpbad = bad[s[t1:t2]]
+    #   bad[*] = 1B
+    #   robomean,sample[s[t1:t2]],thresh,0.5,meanval,dummy,sigma, $
+    #      bad=tmpbad,stdmean=stdmean
+    #   bad[s[t1:t2]] = tmpbad
+    else:
+
+        results = robomean(sample, sigma, 0.5)
+        stats['meanval'] = results['mean']
+        stats['stddev'] = results['stddev']
+
+
+    stats['lowval'] = stats['meanval'] - 3.0*stats['stddev']
+    stats['hival'] = stats['meanval'] + 5.0*stats['stddev']
+
+    return stats
