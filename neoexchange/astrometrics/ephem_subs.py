@@ -145,6 +145,11 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False)
         logger.warning("No epoch of perihelion (epochofperih) found for this comet, cannot compute ephemeris")
         return {}
 
+    if dbg is True:
+        # Store original log level to restore at the end
+        original_log_level = logger.getEffectiveLevel()
+        logger.setLevel(logging.DEBUG)
+
 # Compute MJD for UTC
     mjd_utc = datetime2mjd_utc(d)
 
@@ -448,6 +453,10 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False)
                 'ltt'           : ltt,
                 'sun_obj_dist'  : r,
                 }
+
+    if dbg is True:
+        # Restore original log level to restore at the end
+        logger.setLevel(original_log_level)
 
     return emp_dict
 

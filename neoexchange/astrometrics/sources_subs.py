@@ -1254,7 +1254,8 @@ def parse_goldstone_page(page, dbg=False):
     for line in page.text.split("\n"):
         if len(line.strip()) == 0:
             continue
-        if 'Target      Astrometry?  Observations?' in line:
+        if 'Target      Astrometry?  Observations?' in line \
+          or 'Target      Astrometry?   H (mag)' in line:
             logger.debug("Found start of table")
             in_objects = True
         else:
