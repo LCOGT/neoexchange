@@ -4485,7 +4485,7 @@ class TestMakeObjectDirectory(ExternalCodeUnitTest):
 
     def test_regular_object_noblock(self):
         object_name = 'N999q0q'
-        expected_object_dir = os.path.join(self.test_dir, object_name)
+        expected_object_dir = os.path.join(self.test_dir, object_name, '')
 
         object_dir = make_object_directory(self.test_filepath, object_name, '')
 
@@ -4494,7 +4494,7 @@ class TestMakeObjectDirectory(ExternalCodeUnitTest):
     def test_regular_object(self):
         object_name = 'N999q0q'
         block_id = '12345'
-        expected_object_dir = os.path.join(self.test_dir, object_name+'_'+block_id)
+        expected_object_dir = os.path.join(self.test_dir, object_name+'_'+block_id, '')
 
         object_dir = make_object_directory(self.test_filepath, object_name, block_id)
 
@@ -4503,7 +4503,7 @@ class TestMakeObjectDirectory(ExternalCodeUnitTest):
     def test_object_with_space(self):
         object_name = '2020 BR10'
         block_id = '12345'
-        expected_object_dir = os.path.join(self.test_dir, object_name.replace(' ', '')+'_'+block_id)
+        expected_object_dir = os.path.join(self.test_dir, object_name.replace(' ', '')+'_'+block_id, '')
 
         object_dir = make_object_directory(self.test_filepath, object_name, block_id)
 
@@ -4512,7 +4512,8 @@ class TestMakeObjectDirectory(ExternalCodeUnitTest):
     def test_comet(self):
         object_name = 'C/2019 Y4'
         block_id = '12345'
-        expected_object_dir = os.path.join(self.test_dir, object_name.replace(' ', '').replace('/', '_')+'_'+block_id)
+        new_object_name = object_name.replace(' ', '').replace('/', '_')
+        expected_object_dir = os.path.join(self.test_dir, new_object_name+'_'+block_id, '')
 
         object_dir = make_object_directory(self.test_filepath, object_name, block_id)
 

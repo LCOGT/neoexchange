@@ -41,7 +41,7 @@ from astropy import __version__ as astropyversion
 
 from astrometrics.ephem_subs import LCOGT_domes_to_site_codes, determine_darkness_times
 from astrometrics.time_subs import timeit
-from core.models import CatalogSources, Frame, SourceMeasurement
+from core.models import CatalogSources, Frame, Block, SourceMeasurement
 from core.utils import NeoException
 
 logger = logging.getLogger(__name__)
@@ -2487,12 +2487,21 @@ def sanitize_object_name(object_name):
     return clean_object_name
 
 
-def make_object_directory(filepath, object_name, block_id):
+def make_object_directory(filepath, object_name_or_block, block_id_or_block):
 
+    if isinstance(object_name_or_block, Block):
+        filepath = os.path.join(filepath, object_name_or_block.get_blockdayobs, '')
+        object_name = object_name_or_block.current_name()
+    else:
+        object_name = object_name_or_block
     object_directory = sanitize_object_name(object_name)
+    if isinstance(block_id_or_block, Block):
+        block_id = block_id_or_block.get_blockuid[0]
+    else:
+        block_id = block_id_or_block
     if block_id != '':
         object_directory = object_directory + '_' + str(block_id)
-    object_directory = os.path.join(os.path.dirname(filepath), object_directory)
+    object_directory = os.path.join(os.path.dirname(filepath), object_directory, '')
     if not os.path.exists(object_directory):
         oldumask = os.umask(0o002)
         os.makedirs(object_directory)
