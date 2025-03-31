@@ -178,22 +178,25 @@ def ephem_interpolate(times, table, extra_quantity=None):
     '''
     Returns a list of interpolated values for both RA and DEC given a
     horizons_ephem <table> and a list of times(TimeJD or datetime)
+    [extra_quantity] can be set to the name or an iterable of extra column
+    names to also interpolate over.
     '''
 
+    extra_arrays = {}
+    if extra_quantity is not None and isinstance(extra_quantity, str):
+        extra_quantity = [extra_quantity, ]
     try:
         arr1 = table['datetime_jd']
         arr2 = table['RA']
         arr3 = table['DEC']
-        if extra_quantity is not None:
-            arr4 = table[extra_quantity]
     except KeyError:
         # sbpy Ephem object ?  let's try...
         arr1 = table['epoch'].jd
         arr2 = table['RA'].value
         arr3 = table['DEC'].value
-        if extra_quantity is not None:
-            extra_arrays = {}
-            for column in extra_quantity:
+    if extra_quantity is not None:
+        for column in extra_quantity:
+            if column in table.colnames:
                 extra_arrays[column] = table[column].value
 
     start_time = arr1[0]
