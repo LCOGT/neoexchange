@@ -667,7 +667,7 @@ def horizons_ephem(obj_name, start, end, site_code, ephem_step_size='1h', alt_li
     """
 
     # Define quantities we want back from HORIZONS
-    horizons_quantities = '1,3,4,9,19,20,23,24,38,42,33'
+    horizons_quantities = '1,3,4,9,19,20,23,24,38,42,33,47'
 
     eph = Horizons(id=obj_name, id_type='smallbody', epochs={'start' : start.strftime("%Y-%m-%d %H:%M"),
             'stop' : end.strftime("%Y-%m-%d %H:%M"), 'step' : ephem_step_size}, location=site_code)
