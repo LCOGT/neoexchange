@@ -17,7 +17,7 @@ import logging
 import os
 import re
 import numpy as np
-from math import floor
+from math import floor, ceil
 from datetime import datetime, timedelta
 
 from subprocess import call, PIPE, Popen, TimeoutExpired
