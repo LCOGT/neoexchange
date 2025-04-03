@@ -34,7 +34,6 @@ from astropy.utils.exceptions import AstropyDeprecationWarning
 from astropy.io import fits
 from astropy.table import Table
 from astropy.coordinates import Angle
-warnings.simplefilter('ignore', category = AstropyDeprecationWarning)
 from astroquery.vizier import Vizier
 import astropy.units as u
 import astropy.coordinates as coord
@@ -47,6 +46,7 @@ from astrometrics.time_subs import timeit
 from core.models import CatalogSources, Frame, Block, SourceMeasurement
 from core.utils import NeoException
 
+warnings.simplefilter('ignore', category = AstropyDeprecationWarning)
 logger = logging.getLogger(__name__)
 
 
@@ -2730,3 +2730,35 @@ def skysclim(image, npts=601, lowclip=0.0, hiclip=1.0, sigma=3.0):
     stats['hival'] = stats['meanval'] + 5.0*stats['stddev']
 
     return stats
+
+def trim_catalog(catalog, data=None, max_dist=30, max_saturate=70000):
+    good=[]
+    x_column = 'XWIN_IMAGE'
+    y_column = 'YWIN_IMAGE'
+    flags_column = 'FLAGS'
+    flux_column = 'FLUX_MAX'
+    if x_column not in catalog.colnames and y_column not in catalog.colnames:
+        # NEOx renamed columns
+        x_column = 'ccd_x'
+        y_column = 'ccd_y'
+        flags_column = 'flags'
+        flux_column = 'flux_max'
+    for i in range(len(catalog[x_column])):
+        try:
+            a = int(catalog[x_column][i])
+            b = int(catalog[y_column][i])
+            if data:
+                m = np.max(data[b-4:b+5,a-4:a+5])
+            else:
+                m = catalog[flux_column][i]
+        except:
+            pass
+        dist = np.sort(((catalog[x_column]-catalog[x_column][i])**2+(catalog[y_column]-catalog[y_column][i])**2)**0.5)
+        d = dist[1]
+        if catalog[flags_column][i]==0 and d > max_dist and m < max_saturate:
+            good.append(True)
+        else:
+            good.append(False)
+    good = np.array(good)
+    outcatalog = catalog[good]
+    return outcatalog

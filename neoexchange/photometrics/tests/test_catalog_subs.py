@@ -4847,3 +4847,21 @@ class TestSkysclim(SimpleTestCase):
         results = skysclim(self.data)
 
         self.compare_dict(expected_results, results)
+
+class TestTrimCatalog(FITSUnitTest):
+
+    def setUp(self):
+        super().setUp()
+        self.test_ldac_header, self.test_ldac_catalog = extract_catalog(self.test_ldacfilename)
+        return
+
+    def test1(self):
+        expected_result = 489
+        expected_row3_xwin = 913.8963183909042
+        expected_row3_ywin = 2013.7001412377094
+
+        result = trim_catalog(self.test_ldac_catalog)
+
+        self.assertEqual(expected_result, len(result))
+        self.assertAlmostEqual(expected_row3_xwin, result[3]['ccd_x'])
+        self.assertAlmostEqual(expected_row3_ywin, result[3]['ccd_y'])
