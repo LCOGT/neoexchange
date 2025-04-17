@@ -5002,7 +5002,7 @@ def perform_aper_photometry(block, dataroot, account_zps = True, aperture_radius
     fwhms = []
     times = []
     filters = []
-    paths_to_e93_frames = [] 
+    paths_to_e93_frames = []
     for i in range (0, len(e93_frameset)):
         current_e93_filename = os.path.join(dataroot, e93_frameset[i].filename)
         if os.path.exists(current_e93_filename) == True:

@@ -5,7 +5,7 @@ from datetime import datetime
 from django.core.management.base import BaseCommand, CommandError
 from dramatiq import pipeline
 
-from core.tasks import run_pipeline, send_task
+from core.tasks import run_pipeline
 from core.models import PipelineProcess
 from core.views import determine_images_and_catalogs
 
