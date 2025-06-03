@@ -1,7 +1,10 @@
 nbclient
 nbconvert
 jupyter
-trippy
+scikit-image
+#trippy
+# Fork version until fixes are incorporated upstream
+git+https://github.com/talister/trippy@master
 emcee
 numba
 # Copied over from requirements.txt to prevent stompage
