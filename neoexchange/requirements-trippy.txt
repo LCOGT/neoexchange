@@ -1,0 +1,6 @@
+nbclient
+nbconvert
+jupyter
+trippy
+emcee
+numba
