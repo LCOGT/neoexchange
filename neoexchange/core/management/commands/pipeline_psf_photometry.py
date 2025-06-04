@@ -173,7 +173,7 @@ class Command(BaseCommand):
             fwhm_moffat = goodPSF.FWHM(fromMoffatProfile=True) ###this is the pure moffat FWHM.
 
             self.stdout.write(f"Full width at half maximum {fwhm:5.3f}, pure Moffat {fwhm_moffat:5.3f} (in pix).")
-            aperture_radius=fwhm*1.4
+            aperture_radius = fwhm*1.4
 
 
             roundAperCorr = goodPSF.roundAperCorr(aperture_radius)
@@ -201,7 +201,7 @@ class Command(BaseCommand):
             #example of a trailed source
             phot(xt, yt, radius=aperture_radius, l=(exptime/3600.)*rate/pixscale, a=angle,
                  skyRadius=4*fwhm, width=6*fwhm,
-                 zpt=img_header['L1ZP'], exptime=exptime, enableBGSelection=False,display=False,
+                 zpt=img_header['L1ZP'], exptime=exptime, enableBGSelection=False, display=False,
                  backupMode="smart", trimBGHighPix=3.)
 
             phot.SNR(gain=img_header['GAIN'], readNoise=img_header['RDNOISE'], verbose=True)
