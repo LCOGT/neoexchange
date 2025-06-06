@@ -10,3 +10,9 @@ numba
 # Copied over from requirements.txt to prevent stompage
 MarkupSafe<2.0
 Jinja2<3.0
+# For TrailedSourceCentering package
+--extra-index-url=https://download.pytorch.org/whl/cpu
+torch
+torchvision
+torchaudio
+git+https://github.com/Astrometry-JNU/TrailedSourceCentering.git
