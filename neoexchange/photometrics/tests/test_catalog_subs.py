@@ -4865,3 +4865,133 @@ class TestTrimCatalog(FITSUnitTest):
         self.assertEqual(expected_result, len(result))
         self.assertAlmostEqual(expected_row3_xwin, result[3]['ccd_x'])
         self.assertAlmostEqual(expected_row3_ywin, result[3]['ccd_y'])
+
+
+class TestMakeObjectDirectoryFromBlock(TestCase):
+
+    def setUp(self):
+        # Add trailing directory seperator
+        self.test_dir = tempfile.mkdtemp(prefix='tmp_neox_')
+        self.test_data_root = os.path.join(self.test_dir, '')
+
+        # Create test body
+        params = {  'provisional_name' : 'N999r0q',
+                    'abs_mag'       : 21.0,
+                    'slope'         : 0.15,
+                    'epochofel'     : '2015-03-19 00:00:00',
+                    'meananom'      : 325.2636,
+                    'argofperih'    : 85.19251,
+                    'longascnode'   : 147.81325,
+                    'orbinc'        : 8.34739,
+                    'eccentricity'  : 0.1896865,
+                    'meandist'      : 1.2176312,
+                    'source_type'   : 'U',
+                    'elements_type' : 'MPC_MINOR_PLANET',
+                    'active'        : True,
+                    'origin'        : 'M',
+                    }
+        self.test_body, created = Body.objects.get_or_create(**params)
+
+        # Create test proposal
+        neo_proposal_params = { 'code'  : 'LCO2015A-009',
+                                'title' : 'LCOGT NEO Follow-up Network'
+                              }
+        self.neo_proposal, created = Proposal.objects.get_or_create(**neo_proposal_params)
+
+        # Create test SuperBlock and two Blocks, one observed, one not
+        sblock_params = {
+                         'body'     : self.test_body,
+                         'proposal' : self.neo_proposal,
+                         'groupid'  : self.test_body.current_name() + '_LSC_20170308-20170309',
+                         'block_start' : '2017-03-08 05:05:00',
+                         'block_end'   : '2017-03-09 05:22:36',
+                         'tracking_number' : '0000358587',
+                         'active'   : False
+                       }
+        self.test_sblock = SuperBlock.objects.create(**sblock_params)
+        block_params = { 'telclass' : '1m0',
+                         'site'     : 'LSC',
+                         'body'     : self.test_body,
+                         'superblock' : self.test_sblock,
+                         'block_start' : '2017-03-08 05:05:00',
+                         'block_end'   : '2017-03-08 05:22:36',
+                         'request_number' : '0001358587',
+                         'num_exposures' : 6,
+                         'exp_length' : 120.0,
+                         'active'   : False,
+                         'num_observed' : 1,
+                         'when_observed' : '2017-03-08 05:15:00'
+                       }
+        self.test_block1 = Block.objects.create(**block_params)
+        block_params['block_start'] = block_params['block_start'].replace('-08', '-09')
+        block_params['block_end'] = block_params['block_end'].replace('-08', '-09')
+        block_params['request_number'] = '0001358591'
+        block_params['num_observed'] = None
+        block_params['when_observed'] = None
+        self.test_block2 = Block.objects.create(**block_params)
+
+        # Create test frames
+        frame_params = {    'sitecode': 'W85',
+                            'instrument': 'fl15',
+                            'filter': 'w',
+                            'filename': 'lsc1m005-fl15-20170307-0121-e91.fits',
+                            'exptime': 120.0,
+                            'midpoint': datetime(2017, 3, 8, 5, 6, 40),
+                            'block': self.test_block1,
+                            'zeropoint': -99,
+                            'zeropoint_err': -99,
+                            'fwhm': 1.9080,
+                            'frametype': Frame.BANZAI_RED_FRAMETYPE,
+                            'rms_of_fit': None,
+                            'nstars_in_fit': None,
+                            'frameid' : '-1234',
+                            'astrometric_catalog': ' ',
+                            'photometric_catalog': ' '
+                        }
+        self.test_frame1, created = Frame.objects.get_or_create(**frame_params)
+        frame_params['filename'] = frame_params['filename'].replace('0121', '0122')
+        frame_params['midpoint'] += timedelta(seconds=120+30)
+        frame_params['frameid'] = '-1235'
+        self.test_frame2, created = Frame.objects.get_or_create(**frame_params)
+
+        self.blockuid = "123456"
+        self.expected_directory = os.path.join(self.test_data_root, '20170307',
+                                          self.test_body.current_name() + '_' + self.blockuid, '')
+
+
+    def tearDown(self) -> None:
+        try:
+            os.removedirs(self.expected_directory)
+        except FileNotFoundError:
+            pass
+        finally:
+            try:
+                os.rmdir(self.test_data_root)
+            except FileNotFoundError:
+                pass
+
+    def mock_header(self):
+        header = {
+            "DAY_OBS" : "2017-03-07",
+            "BLKUID" : "123456"
+            }
+        return header
+
+    def test_basics(self):
+        self.assertEqual(2, Block.objects.count())
+        self.assertEqual(1, Block.objects.filter(num_observed__gte=1).count())
+        self.assertEqual(1, Block.objects.exclude(num_observed=1).count())
+        self.assertEqual(2, Frame.objects.count())
+
+    @patch('core.models.blocks.lco_api_call', mock_header)
+    def test_observed_block(self):
+
+        directory = make_object_directory_from_block(self.test_data_root, self.test_block1)
+
+        self.assertEqual(self.expected_directory, directory)
+
+    def test_unobserved_block(self):
+
+        directory = make_object_directory_from_block(self.test_data_root, self.test_block2)
+
+        self.assertEqual(None, directory)
