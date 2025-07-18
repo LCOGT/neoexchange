@@ -16,7 +16,7 @@ from photometrics.catalog_subs import sanitize_object_name
 from photometrics.lineticks import LineTicks
 
 logger = logging.getLogger(__name__)
-
+plot_dpi = 100
 
 def make_targetname(target_name):
     """Strip bad characters out of the target name so it can be used in plot
@@ -73,7 +73,7 @@ def plot_ra_dec(ephem, title=None, base_dir=''):
 
     # Generate the figure **without using pyplot**.
     # https://matplotlib.org/faq/howto_faq.html#matplotlib-in-a-web-application-server
-    fig = Figure()
+    fig = Figure(dpi=plot_dpi)
     ax = fig.subplots()
 
     # Look for RA wraparound at RA=360/0 deg and plot in two parts
@@ -156,7 +156,7 @@ def plot_gal_long_lat(ephem, title=None, base_dir=''):
 
     # Generate the figure **without using pyplot**.
     # https://matplotlib.org/faq/howto_faq.html#matplotlib-in-a-web-application-server
-    fig = Figure()
+    fig = Figure(dpi=plot_dpi)
     ax = fig.subplots()
 
     # Look for longitude wraparound at l=360/0 deg and plot in two parts
@@ -250,7 +250,7 @@ def plot_helio_geo_dist(ephem, title=None, base_dir=''):
     ca_color = '#4700c3'
 
     # Generate the figure **without using pyplot**.
-    fig = Figure()
+    fig = Figure(dpi=plot_dpi)
     ax = fig.subplots()
     dates = ephem['datetime'].datetime
     ax.plot(dates, ephem['r'], color=hel_color, linestyle='-')
@@ -318,7 +318,7 @@ def plot_brightness(ephem, title=None, base_dir=''):
         mag_column = 'Tmag'
 
     # Generate the figure **without using pyplot**.
-    fig = Figure()
+    fig = Figure(dpi=plot_dpi)
     ax = fig.subplots()
     ax2 = ax.twinx()
 
@@ -465,10 +465,10 @@ def plot_hoursup(ephem_ca, site_code, title=None, add_altitude=False, add_rate=T
     # Generate the figure **without using pyplot**.
     if add_rate:
 #        fig = Figure(figsize=(10,8))
-        fig = Figure()
+        fig = Figure(dpi=plot_dpi)
         axes = fig.subplots(2, 1, sharex=True)
     else:
-        fig = Figure()
+        fig = Figure(dpi=plot_dpi)
         axes = fig.subplots(1, 1)
         ax = axes
     fig.subplots_adjust(hspace=0.1)
@@ -565,7 +565,7 @@ def plot_uncertainty(ephem, title=None, base_dir=''):
         close_approach = dates[ca_idx]
 
     # Generate the figure **without using pyplot**.
-    fig = Figure()
+    fig = Figure(dpi=plot_dpi)
     ax = fig.subplots()
 
     unc_line = ax.plot(dates, ephem['RSS_3sigma'], 'k-')
