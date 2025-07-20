@@ -31,16 +31,18 @@ def summarize_observations(target_name='65803', start_date='2022-07-15', proposa
     if end_date is not None:
         blocks = blocks.filter(block_end__lt=end_date)
     filt_width = 6
-    # if blocks.filter(site='ogg', telclass='2m0').count() > 0:
-        # # Set wider width for MuSCAT blocks
-        # filt_width = 14
+    filt_space = ''
+    if blocks.filter(site__in=['ogg', 'coj'], telclass='2m0').count() > 0:
+        # Set wider width for MuSCAT blocks
+        filt_width = 8
+        filt_space = '  '
     # Determine frame types to search for
     frame_types = [Frame.BANZAI_RED_FRAMETYPE, ]
     try:
         frame_types.append(Frame.SWOPE_RED_FRAMETYPE)
     except AttributeError:
         pass
-    print(f'#Track# Rquest# Site(MPC)  Block start         Block end       Block length Obs details       Filter #raw #good_zp/#num all frames   FWHM   DPs')
+    print(f'#Track# Rquest# Site(MPC)  Block start         Block end       Block length Obs details       Filter{filt_space} #raw #good_zp/#num all frames   FWHM   DPs')
     for block in blocks.order_by('block_start'):
 
         all_raw_frames = Frame.objects.filter(block=block, frametype__in=frame_types)
@@ -67,6 +69,10 @@ def summarize_observations(target_name='65803', start_date='2022-07-15', proposa
                 block_length = block_end - block_start
                 block_length_hrs = block_length.total_seconds() / 3600.0
                 exp_length_hms = time.strftime('%H:%M:%S', time.gmtime(block.exp_length))
+                # Examine the instrument of `first_frame`; if its a MuSCAT frame,
+                # add instrument into the filter string
+                if first_frame.instrument.startswith('ep'):
+                    filter_str += f'({first_frame.instrument})'
                 srcs_snr = srcs.filter(frame__filter=obs_filter).values_list('snr',flat=True)
                 snr = -999
                 if len(srcs_snr) > 0:
