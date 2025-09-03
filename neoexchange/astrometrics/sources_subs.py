@@ -3144,4 +3144,31 @@ def store_jpl_sourcetypes(code, obj, body):
     body.save()
 
 
+def make_jpl_sbobs_query(obs_date, site_code='W86', max_objects=100):
+    """
+    Make a query for the JPL SBobs API from the passed parameters
+    """
+    base_url = 'https://ssd-api.jpl.nasa.gov/sbwobs.api'
+    if site_code != '500':
+        url = f"{base_url}?mpc-code={site_code}&obs-time={obs_date.strftime('%Y-%m-%d')}"
+        url += f"&maxoutput={max_objects}&output-sort=vmag"
+    else:
+        logger.warning("Site code cannot be geocenter (500)")
+        url = ''
+    return url
 
+def fetch_jpl_sbobs(obs_date, site_code='W86', max_objects=100):
+
+    results = {}
+    query_url = make_jpl_sbobs_query(obs_date, site_code, max_objects)
+    #print(f"query_url={query_url}")
+    if query_url:
+        resp = requests.get(query_url)
+        if resp.ok:
+            data = resp.json()
+            #print(data['total_objects'])
+            if 'signature' in data and data['signature']['version'] == '1.0':
+                results = data
+            else:
+                logger.warning("Unexpected version signature found")
+    return results
