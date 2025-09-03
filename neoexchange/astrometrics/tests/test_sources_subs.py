@@ -7279,8 +7279,10 @@ class TestBoxSpiral(TestCase):
 
 class TestMakeJPLSBobsQuery(SimpleTestCase):
     def setUp(self):
-        self.base_url = 'https://ssd-api.jpl.nasa.gov/sbwobs.api?mpc-code=K92&obs-time=2025-09-03&maxoutput=100&output-sort=vmag&sb-group=neo&elong-min=45&glat-min=10'
+        self.base_url = 'https://ssd-api.jpl.nasa.gov/sbwobs.api?mpc-code=K92&obs-time=2025-09-03&maxoutput=100&output-sort=vmag&sb-group=neo&elong-min=45&glat-min=10&vmag-min=12.0&vmag-max=19.0'
         self.obs_date = datetime(2025, 9, 3, 20, 0, 0)
+
+        self.maxDiff = None
 
     def test_defaults(self):
         expected_url = self.base_url.replace('K92', 'W86')
@@ -7307,6 +7309,20 @@ class TestMakeJPLSBobsQuery(SimpleTestCase):
         expected_url = self.base_url.replace('100', '10')
 
         url = make_jpl_sbobs_query(self.obs_date, site_code='K92', max_objects=10)
+
+        self.assertEqual(expected_url, url)
+
+    def test_DeltaRho(self):
+        expected_url = self.base_url.replace('K92', 'Q59').replace('12.0&vmag-max=19.0', '10.0&vmag-max=17.0')
+
+        url = make_jpl_sbobs_query(self.obs_date, site_code='Q59')
+
+        self.assertEqual(expected_url, url)
+
+    def test_DeltaRho_mag_limits(self):
+        expected_url = self.base_url.replace('K92', 'Q59').replace('12.0&vmag-max=19.0', '9.1&vmag-max=12.5')
+
+        url = make_jpl_sbobs_query(self.obs_date, site_code='Q59', min_Vmag=9.12, max_Vmag=12.54)
 
         self.assertEqual(expected_url, url)
 

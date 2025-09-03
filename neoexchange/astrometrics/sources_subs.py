@@ -3144,7 +3144,7 @@ def store_jpl_sourcetypes(code, obj, body):
     body.save()
 
 
-def make_jpl_sbobs_query(obs_date, site_code='W86', max_objects=100):
+def make_jpl_sbobs_query(obs_date, site_code='W86', max_objects=100, min_Vmag=None, max_Vmag=None):
     """
     Make a query for the JPL SBobs API from the passed parameters
     """
@@ -3155,15 +3155,28 @@ def make_jpl_sbobs_query(obs_date, site_code='W86', max_objects=100):
         # Restrict targets to only NEOs with elongation>45 and galactic lat.>10
         # These could potentially be made adjustable args later
         url += "&sb-group=neo&elong-min=45&glat-min=10"
+        # Try and decode the site code into a LCO telescope class and then use
+        # this to set mag limits
+        if min_Vmag is None or max_Vmag is None:
+            # No or bad magnitude limits given, determine new ones. First define
+            # suitable 1m0 defaults
+            min_Vmag = 12 # At least this bright
+            max_Vmag = 19
+            _, _, tel_class = MPC_site_code_to_domes(site_code)
+            if '0m4' in tel_class:
+                # Shallower limits for DeltaRhos
+                min_Vmag = 10
+                max_Vmag = 17
+        url += f"&vmag-min={min_Vmag:.1f}&vmag-max={max_Vmag:.1f}"
     else:
         logger.warning("Site code cannot be geocenter (500)")
         url = ''
     return url
 
-def fetch_jpl_sbobs(obs_date, site_code='W86', max_objects=100):
+def fetch_jpl_sbobs(obs_date, site_code='W86', max_objects=100, min_Vmag=None, max_Vmag=None):
 
     results = {}
-    query_url = make_jpl_sbobs_query(obs_date, site_code, max_objects)
+    query_url = make_jpl_sbobs_query(obs_date, site_code, max_objects, min_Vmag, max_Vmag)
     print(f"query_url={query_url}")
     if query_url:
         resp = requests.get(query_url)
