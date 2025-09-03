@@ -7279,7 +7279,7 @@ class TestBoxSpiral(TestCase):
 
 class TestMakeJPLSBobsQuery(SimpleTestCase):
     def setUp(self):
-        self.base_url = 'https://ssd-api.jpl.nasa.gov/sbwobs.api?mpc-code=K92&obs-time=2025-09-03&maxoutput=100&output-sort=vmag'
+        self.base_url = 'https://ssd-api.jpl.nasa.gov/sbwobs.api?mpc-code=K92&obs-time=2025-09-03&maxoutput=100&output-sort=vmag&sb-group=neo&elong-min=45&glat-min=10'
         self.obs_date = datetime(2025, 9, 3, 20, 0, 0)
 
     def test_defaults(self):

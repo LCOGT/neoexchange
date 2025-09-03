@@ -3152,6 +3152,9 @@ def make_jpl_sbobs_query(obs_date, site_code='W86', max_objects=100):
     if site_code != '500':
         url = f"{base_url}?mpc-code={site_code}&obs-time={obs_date.strftime('%Y-%m-%d')}"
         url += f"&maxoutput={max_objects}&output-sort=vmag"
+        # Restrict targets to only NEOs with elongation>45 and galactic lat.>10
+        # These could potentially be made adjustable args later
+        url += "&sb-group=neo&elong-min=45&glat-min=10"
     else:
         logger.warning("Site code cannot be geocenter (500)")
         url = ''
@@ -3161,7 +3164,7 @@ def fetch_jpl_sbobs(obs_date, site_code='W86', max_objects=100):
 
     results = {}
     query_url = make_jpl_sbobs_query(obs_date, site_code, max_objects)
-    #print(f"query_url={query_url}")
+    print(f"query_url={query_url}")
     if query_url:
         resp = requests.get(query_url)
         if resp.ok:
