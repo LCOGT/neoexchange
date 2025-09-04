@@ -16,3 +16,7 @@ torch
 torchvision
 torchaudio
 git+https://github.com/Astrometry-JNU/TrailedSourceCentering.git
+# For Piff
+# For Piff documentation
+sphinx
+sphinx_rtd_theme
