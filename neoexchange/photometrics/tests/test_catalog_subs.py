@@ -357,6 +357,30 @@ class ZeropointUnitTest(TestCase):
         self.assertEqual(expected_flags_first_source, flags_first_source)
         self.assertEqual(expected_len_cat_table, len(cat_table))
 
+    def test_get_cat_ra_dec_GAIA_DR3(self):
+
+        expected_ra_first_source = 299.84644076951
+        expected_dec_first_source = 34.96403366138
+        expected_rmag_first_source = 14.710151
+        expected_e_rmag_first_source = 0.002764
+        expected_flags_first_source = 0
+        expected_len_cat_table = 581
+
+        cat_table, cat_name = get_vizier_catalog_table(299.590, 35.201, "30m", "30m", "GAIA-DR3")
+
+        ra_first_source = cat_table['RAJ2000'][0]
+        dec_first_source = cat_table['DEJ2000'][0]
+        rmag_first_source = cat_table['Gmag'][0]
+        e_rmag_first_source = cat_table['e_Gmag'][0]
+        flags_first_source = cat_table['Dup'][0]
+
+        self.assertAlmostEqual(expected_ra_first_source, ra_first_source, 8)
+        self.assertAlmostEqual(expected_dec_first_source, dec_first_source, 8)
+        self.assertAlmostEqual(expected_rmag_first_source, rmag_first_source, 5)
+        self.assertAlmostEqual(expected_e_rmag_first_source, e_rmag_first_source, 5)
+        self.assertEqual(expected_flags_first_source, flags_first_source)
+        self.assertEqual(expected_len_cat_table, len(cat_table))
+
     def test_cross_match_UCAC4_longerThan_testFITS(self):
         # test with cat 1 as longer UCAC4 table values and cat 2 as shorter test FITS table values
 
@@ -926,7 +950,7 @@ class TestGetReferenceCatalog(TestCase):
                         'width': '4.5m',
                         'height': '3.0m',
                       }
-        self.expected_ref_catalog = os.path.join(self.temp_dir, 'GAIA-DR2_228.33+38.40_6.7500mx4.5000m.cat')
+        self.expected_ref_catalog = os.path.join(self.temp_dir, 'GAIA-DR3_228.33+38.40_6.7500mx4.5000m.cat')
 
         self.remove = True
         self.debug_print = False
@@ -1062,7 +1086,7 @@ class TestExistingCatalogCoverage(TestCase):
                         'width': '4.5m',
                         'height': '3.0m',
                       }
-        self.expected_ref_catalog = os.path.join(self.temp_dir, 'GAIA-DR2_228.25+38.40_6.7500mx4.5000m.cat')
+        self.expected_ref_catalog = os.path.join(self.temp_dir, 'GAIA-DR3_228.25+38.40_6.7500mx4.5000m.cat')
 
         self.remove = True
         self.debug_print = False
@@ -1129,7 +1153,7 @@ class TestExistingCatalogCoverage(TestCase):
 
     def test_2cat_lhs(self):
         self.touch(self.expected_ref_catalog)
-        second_cat = os.path.join(self.temp_dir, 'GAIA-DR2_228.14+38.40_6.7500mx4.500m.cat')
+        second_cat = os.path.join(self.temp_dir, 'GAIA-DR3_228.14+38.40_6.7500mx4.500m.cat')
         self.touch(second_cat)
 
         ra = self.header['ra'] + 0.01
@@ -1140,7 +1164,7 @@ class TestExistingCatalogCoverage(TestCase):
 
     def test_2cat_rhs(self):
         self.touch(self.expected_ref_catalog)
-        second_cat = os.path.join(self.temp_dir, 'GAIA-DR2_228.14+38.40_6.7500mx4.500m.cat')
+        second_cat = os.path.join(self.temp_dir, 'GAIA-DR3_228.14+38.40_6.7500mx4.500m.cat')
         self.touch(second_cat)
 
         ra = self.header['ra'] - 0.10
@@ -1150,7 +1174,7 @@ class TestExistingCatalogCoverage(TestCase):
         self.assertEqual(second_cat, existing_catalog)
 
     def test_1cat_SH(self):
-        ref_catalog = os.path.join(self.temp_dir, 'GAIA-DR2_120.55-59.00_40.000mx40.000m.cat')
+        ref_catalog = os.path.join(self.temp_dir, 'GAIA-DR3_120.55-59.00_40.000mx40.000m.cat')
 
         self.touch(ref_catalog)
 
@@ -1169,7 +1193,7 @@ class TestConvertCatfileToCorners(TestCase):
         expected_tl = (228.5, 38.65)
         expected_br = (228.0, 38.15)
 
-        cat_file = 'GAIA-DR2_228.25+38.40_30.0000mx30.0000m.cat'
+        cat_file = 'GAIA-DR3_228.25+38.40_30.0000mx30.0000m.cat'
 
         top_left, bottom_right = convert_catfile_to_corners(cat_file)
 
@@ -1180,7 +1204,7 @@ class TestConvertCatfileToCorners(TestCase):
         expected_tl = (28.5, -38.15)
         expected_br = (28.0, -38.65)
 
-        cat_file = 'GAIA-DR2_28.25-38.40_30.0000mx30.0000m.cat'
+        cat_file = 'GAIA-DR3_28.25-38.40_30.0000mx30.0000m.cat'
 
         top_left, bottom_right = convert_catfile_to_corners(cat_file)
 
@@ -1191,7 +1215,7 @@ class TestConvertCatfileToCorners(TestCase):
         expected_tl = (328.503525, -38.229465)
         expected_br = (327.996475, -38.570535)
 
-        cat_file = 'GAIA-DR2_328.25-38.40_30.4230mx20.4642m.cat'
+        cat_file = 'GAIA-DR3_328.25-38.40_30.4230mx20.4642m.cat'
 
         top_left, bottom_right = convert_catfile_to_corners(cat_file)
 
@@ -1202,7 +1226,7 @@ class TestConvertCatfileToCorners(TestCase):
         expected_tl = (228.5, 38.65)
         expected_br = (228.0, 38.15)
 
-        cat_file = os.path.join('/tmp', 'tmp_neox_cucumber', 'GAIA-DR2_228.25+38.40_30.0000mx30.0000m.cat')
+        cat_file = os.path.join('/tmp', 'tmp_neox_cucumber', 'GAIA-DR3_228.25+38.40_30.0000mx30.0000m.cat')
 
         top_left, bottom_right = convert_catfile_to_corners(cat_file)
 
@@ -1213,7 +1237,7 @@ class TestConvertCatfileToCorners(TestCase):
         expected_tl = (120.8, -58.75)
         expected_br = (120.3, -59.25)
 
-        cat_file = os.path.join('/tmp', 'tmp_neox_cucumber', 'GAIA-DR2_120.55-59.00_30.0000mx30.0000m.cat')
+        cat_file = os.path.join('/tmp', 'tmp_neox_cucumber', 'GAIA-DR3_120.55-59.00_30.0000mx30.0000m.cat')
 
         top_left, bottom_right = convert_catfile_to_corners(cat_file)
 
@@ -1224,7 +1248,7 @@ class TestConvertCatfileToCorners(TestCase):
         expected_tl = None
         expected_br = None
 
-        cat_file = os.path.join('/tmp', 'tmp_neox_cucumber', 'GAIA-DR2.cat')
+        cat_file = os.path.join('/tmp', 'tmp_neox_cucumber', 'GAIA-DR3.cat')
 
         top_left, bottom_right = convert_catfile_to_corners(cat_file)
 
@@ -1562,7 +1586,7 @@ class TestOpenFITSCatalog(FITSUnitTest):
         hdulist.append(fits.ImageHDU(errdata, name='ERR'))
         hdulist.writeto(test_banzaifilename, overwrite=True, checksum=True)
 
-        expected_hdr_len = 278-24  # Total-compression keywords
+        expected_hdr_len = 278-22  # Total-compression keywords
         expected_tbl_len = {}
         expected_cattype = 'BANZAI'
 
