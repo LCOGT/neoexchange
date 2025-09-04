@@ -14,6 +14,7 @@ GNU General Public License for more details.
 """
 
 import os
+import pprint
 from sys import argv, exit
 from datetime import datetime, timedelta
 
@@ -57,9 +58,11 @@ class Command(BaseCommand):
         # Append date to the data directory
         dataroot = os.path.join(dataroot, obs_date)
 
-        object_dirs = [x[0] for x in os.walk(dataroot) if ('Didymos' in x[0] or '65803' in x[0] or obs_date in x[0][-8:]) and 'Temp_cvc' not in x[0]]
+        #object_dirs = [x[0] for x in os.walk(dataroot) if ('Didymos' in x[0] or '65803' in x[0] or obs_date in x[0][-8:]) and 'Temp_cvc' not in x[0]]
+        #object_dirs = [x[0] for x in os.walk(dataroot) if ('3I' in x[0] or 'C_2025N1' in x[0] or 'c_2025n1' in x[0] or obs_date in x[0][-8:]) and 'Temp_cvc' not in x[0]]
+        object_dirs = [x[0] for x in os.walk(dataroot) if ('P_2016P5' in x[0] or obs_date in x[0][-8:]) and 'Temp_cvc' not in x[0]]
 
-        print(object_dirs)
+        pprint.pprint(object_dirs)
         for rock in object_dirs[1:]:
             datadir = os.path.join(dataroot, rock)
             self.stdout.write('Processing target %s in %s looking for %s' % (rock, datadir, options['fitspattern']))
@@ -79,7 +82,10 @@ class Command(BaseCommand):
                     name = header.get('object_name', None)
                     if name:
                         # Take out any parentheses e.g. (28484)
-                        name = name.rstrip().replace('(', '').replace(')', '').replace('Didymos', '65803')
+                        name = name.rstrip().replace('(', '').replace(')', '')
+                        # Account for the many variations on a theme...
+                        #name.replace('Didymos', '65803')
+                        name = name.replace('C/2025 N1', '3I').replace('c/2025 n1', '3I').replace('c/2025n1', '3I').replace('3IATLAS', '3I').replace('C/2025N1', '3I')
                         # MRO-specific oddities
                         if header.get('site_id', '') == 'MRO':
                             name = name.replace('R', '').replace('V', '').replace('didcomps', 'didymos').replace('comps', 'mos').replace('compc', 'mos').replace('comp', 'mos')
@@ -87,17 +93,24 @@ class Command(BaseCommand):
                     bodies = Body.objects.filter(Q(provisional_name__exact = name )|Q(provisional_packed__exact = name)|Q(name__exact = name))
                     if bodies.count() == 1:
                         body = bodies[0]
+                        try:
+                            proposal_object = Proposal.objects.get(code=header.get('proposal', ''))
+                        except Proposal.DoesNotExist:
+                            self.stdout.write(f"Couldn't find Proposal with code={header.get('proposal', '')}")
+                            raise
                         sblock_params = { 'active': True,
                                           'block_start': header.get('block_start'),
                                           'block_end'  : header.get('block_end'),
                                           'body': body,
                                           'groupid'   : header.get('groupid', ''),
-                                          'proposal' : Proposal.objects.get(code=header.get('proposal', '')),
+                                          'proposal' : proposal_object,
                                           'tracking_number': tracking_num,
                                         }
                         new_sblock, created = SuperBlock.objects.get_or_create(**sblock_params)
                         #created = True
-                        print(sblock_params, created)
+                        print(f"SuperBlock created ? {created}")
+                        if created:
+                            pprint.pprint(sblock_params, indent=4)
                         block_params = { 'superblock' : new_sblock,
                                          'block_start': header.get('block_start'),
                                          'block_end'  : header.get('block_end'),
@@ -112,7 +125,9 @@ class Command(BaseCommand):
                         new_block, created = Block.objects.get_or_create(**block_params)
                         new_block.active = True
                         new_block.save()
-                        print(block_params, created)
+                        print(f"Block created ? {created}")
+                        if created:
+                            pprint.pprint(block_params, indent=4)
                         self.stdout.write("Updating status of new Block %d" % new_block.id)
                         block_status(new_block.id, datadir)
                     else:
@@ -151,7 +166,9 @@ class Command(BaseCommand):
                                      'tracking_rate' : int(header.get('tracrate_frac', 1.0)*100)
                                    }
                             new_block, created = Block.objects.get_or_create(**block_params)
-                            print(new_block, created)
+                            print(f"Block created ? {created}")
+                            if created:
+                                pprint.pprint(new_block, indent=4)
                             self.stdout.write("Updating status of new Block %d" % new_block.id)
                             block_status(new_block.id)
                 elif sblocks.count() >= 2:
