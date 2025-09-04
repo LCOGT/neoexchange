@@ -277,7 +277,7 @@ class Frame(models.Model):
         if self.frametype not in [self.NONLCO_FRAMETYPE, self.SATELLITE_FRAMETYPE]:
             if self.filter == 'solar' or self.filter == 'w' or self.filter == 'LL':
                 new_filter = 'R'
-            if self.photometric_catalog in ['GAIA-DR1', 'GAIA-DR2']:
+            if self.photometric_catalog in ['GAIA-DR1', 'GAIA-DR2', 'GAIA-DR3']:
                 new_filter = 'G'
         return new_filter
 

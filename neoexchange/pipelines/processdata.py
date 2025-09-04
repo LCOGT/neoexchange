@@ -96,7 +96,7 @@ class SExtractorProcessPipeline(PipelineProcess):
             'long_name' : 'Directory for output data'
         },
         'desired_catalog' : {
-            'default' : 'GAIA-DR2',
+            'default' : 'GAIA-DR3',
             'long_name' : 'Type of astrometric catalog desired'
         },
         'overwrite' : {
@@ -246,7 +246,7 @@ class ScampProcessPipeline(PipelineProcess):
             'long_name' : 'Directory for output data'
         },
         'desired_catalog' : {
-            'default' : 'GAIA-DR2',
+            'default' : 'GAIA-DR3',
             'long_name' : 'Type of astrometric catalog desired'
         }
     }
@@ -504,7 +504,7 @@ class ZeropointProcessPipeline(PipelineProcess):
                     fits_filepath = os.path.join(os.path.dirname(catfile), fits_file)
 
                     # update the zeropoint computed above in a new Frame DB entry for the e92 frame
-                    ast_cat_name = 'GAIA-DR2'
+                    ast_cat_name = 'GAIA-DR3'
                     header['astrometric_catalog'] = ast_cat_name
                     header['photometric_catalog'] = phot_cat_name
                     logger.debug("Calling update_frame_zeropoint")
@@ -583,12 +583,12 @@ class ZeropointProcessPipeline(PipelineProcess):
                 refcat = cvc.PanSTARRS1(db_filename, **kwargs)
             elif phot_cat_name == 'REFCAT2':
                 refcat = cvc.RefCat2(db_filename, **kwargs)
-            elif phot_cat_name == 'GAIA-DR2':
+            elif phot_cat_name == 'GAIA-DR2' or phot_cat_name == 'GAIA-DR3':
                 refcat = cvc.Gaia(db_filename, **kwargs)
             elif phot_cat_name == 'SkyMapper':
                 refcat = cvc.SkyMapper(db_filename, **kwargs)
             else:
-                logger.error(f"Unknown reference catalog {phot_cat_name:}. Must be one of PS1, REFCAT2, GAIA-DR2, SkyMapper")
+                logger.error(f"Unknown reference catalog {phot_cat_name:}. Must be one of PS1, REFCAT2, GAIA-DR2, GAIA-DR3, SkyMapper")
         return header, table, refcat
 
     def create_caldb_filename(self, datadir, header, phot_cat_name, dbg=False):

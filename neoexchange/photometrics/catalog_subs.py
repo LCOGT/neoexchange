@@ -100,6 +100,7 @@ def get_vizier_catalog_table(ra, dec, set_width, set_height, cat_name="UCAC4", s
 
     # Mapping of NEOx catalog names to Vizier catalogs
     cat_mapping = { "GAIA-DR2" : "I/345/gaia2",
+                    "GAIA-DR3" : "I/355/gaiadr3",
                     "UCAC4" : "I/322A",
                     "PPMXL" : "I/317"
                   }
@@ -110,6 +111,9 @@ def get_vizier_catalog_table(ra, dec, set_width, set_height, cat_name="UCAC4", s
         if "UCAC4" in cat_name:
             query_service = Vizier(row_limit=set_row_limit, column_filters={"r2mag": rmag_limit, "r1mag": rmag_limit}, columns=['RAJ2000', 'DEJ2000', 'rmag', 'e_rmag'])
         elif "GAIA-DR2" in cat_name:
+            query_service = Vizier(row_limit=set_row_limit, column_filters={"Gmag": rmag_limit, "Plx": ">0"}, columns=['RAJ2000', 'DEJ2000', 'e_RAJ2000', 'e_DEJ2000', 'Gmag', 'e_Gmag', 'Dup'])
+        elif "GAIA-DR3" in cat_name:
+            # An argument could be made for using RA_ICRS/DE_ICRS rather than RA/DEJ2000 to get ICRS positions closer to now (Epoch=2016.0)
             query_service = Vizier(row_limit=set_row_limit, column_filters={"Gmag": rmag_limit, "Plx": ">0"}, columns=['RAJ2000', 'DEJ2000', 'e_RAJ2000', 'e_DEJ2000', 'Gmag', 'e_Gmag', 'Dup'])
         else:
             query_service = Vizier(row_limit=set_row_limit, column_filters={"r2mag": rmag_limit, "r1mag": rmag_limit}, columns=['RAJ2000', 'DEJ2000', 'r2mag', 'fl'])
@@ -139,7 +143,7 @@ def get_vizier_catalog_table(ra, dec, set_width, set_height, cat_name="UCAC4", s
         # the query; if the resulting catalog table is still empty, fill the table with zeros
         if cat_name == "UCAC4":
             rmag = 'rmag'
-        elif cat_name == "GAIA-DR2":
+        elif cat_name == "GAIA-DR2" or cat_name == 'GAIA-DR3':
             rmag = 'Gmag'
         else:
             rmag = 'r2mag'
@@ -174,6 +178,8 @@ def get_vizier_catalog_table(ra, dec, set_width, set_height, cat_name="UCAC4", s
             if "UCAC4" in cat_name:
                 query_service = Vizier(row_limit=set_row_limit, column_filters={"r2mag": rmag_limit, "r1mag": rmag_limit}, columns=['RAJ2000', 'DEJ2000', 'rmag', 'e_rmag'])
             elif "GAIA-DR2" in cat_name:
+                query_service = Vizier(row_limit=set_row_limit, column_filters={"Gmag": rmag_limit, "Plx": ">0"}, columns=['RAJ2000', 'DEJ2000', 'e_RAJ2000', 'e_DEJ2000', 'Gmag', 'e_Gmag', 'Dup'])
+            elif "GAIA-DR3" in cat_name:
                 query_service = Vizier(row_limit=set_row_limit, column_filters={"Gmag": rmag_limit, "Plx": ">0"}, columns=['RAJ2000', 'DEJ2000', 'e_RAJ2000', 'e_DEJ2000', 'Gmag', 'e_Gmag', 'Dup'])
             else:
                 query_service = Vizier(row_limit=set_row_limit, column_filters={"r2mag": rmag_limit, "r1mag": rmag_limit}, columns=['RAJ2000', 'DEJ2000', 'r2mag', 'fl'])
@@ -224,6 +230,11 @@ def cross_match(FITS_table, cat_table, cat_name="UCAC4", cross_match_diff_thresh
             rmag_table_1 = table_1['Gmag']
             rmag_err_table_1 = table_1['e_Gmag']
             flags_table_1 = table_1['Dup']
+        elif "GAIA-DR3" in cat_name:
+            # Separate from DR2 (for now) in case of switch from Gmag to BPmag
+            rmag_table_1 = table_1['Gmag']
+            rmag_err_table_1 = table_1['e_Gmag']
+            flags_table_1 = table_1['Dup']
         else:
             rmag_table_1 = table_1['rmag']
             flags_table_1 = table_1['RAJ2000'] * 0  # UCAC4 does not have flags, so copy RA table column and turn values all to zeros
@@ -245,6 +256,10 @@ def cross_match(FITS_table, cat_table, cat_name="UCAC4", cross_match_diff_thresh
             flags_table_2 = table_2['fl']
             rmag_err_table_2 = table_2['RAJ2000'] * 0  # PPMXL does not have r mag errors, so copy RA table column and turn values all to zeros
         elif "GAIA-DR2" in cat_name:
+            rmag_table_2 = table_2['Gmag']
+            rmag_err_table_2 = table_2['e_Gmag']
+            flags_table_2 = table_2['Dup']
+        elif "GAIA-DR3" in cat_name:
             rmag_table_2 = table_2['Gmag']
             rmag_err_table_2 = table_2['e_Gmag']
             flags_table_2 = table_2['Dup']
@@ -466,7 +481,7 @@ def convert_catfile_to_corners(cat_file, cat_type='*.cat'):
     return top_left, bottom_right
 
 
-def existing_catalog_coverage(dest_dir, ra, dec, width, height, cat_name="GAIA-DR2", cat_type='*.cat', dbg=False):
+def existing_catalog_coverage(dest_dir, ra, dec, width, height, cat_name="GAIA-DR3", cat_type='*.cat', dbg=False):
     """Search in <dest_dir> for catalogs of type [cat_name] that cover the
     pointing specified by <ra, dec> and with area <width, height>. The first
     match that covers the area is returned otherwise None is returned"""
@@ -514,8 +529,8 @@ def existing_catalog_coverage(dest_dir, ra, dec, width, height, cat_name="GAIA-D
     return cat_file
 
 
-def get_reference_catalog(dest_dir, ra, dec, set_width, set_height, cat_name="GAIA-DR2", set_row_limit=10000, rmag_limit="<=18.0", dbg=False):
-    """Download and save a catalog from [cat_name] (defaults to 'GAIA-DR2') into
+def get_reference_catalog(dest_dir, ra, dec, set_width, set_height, cat_name="GAIA-DR3", set_row_limit=10000, rmag_limit="<=18.0", dbg=False):
+    """Download and save a catalog from [cat_name] (defaults to 'GAIA-DR3') into
     the passed <dest_dir> around the passed (ra, dec) co-ordinates and width and
     height. The catalog file will be of the form <dest_dir/<cat_name>.cat, with
     any hyphens removed.

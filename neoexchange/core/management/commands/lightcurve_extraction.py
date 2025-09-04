@@ -469,7 +469,7 @@ class Command(BaseCommand):
                         air_mass.append(S.sla_airmas(zenith_distance))
                         obs_site = frame.sitecode
                         catalog = frame.photometric_catalog
-                        if catalog == 'GAIA-DR2':
+                        if catalog == 'GAIA-DR2' or catalog == 'GAIA-DR3':
                             outmag = 'GG'
                         elif catalog == 'UCAC4':
                             outmag = 'SR'

@@ -29,11 +29,11 @@ class Command(BaseCommand):
         parser.add_argument('--date', action="store", default=datetime.utcnow(), help='Date of the data to process (YYYYMMDD)')
         parser.add_argument('--datadir', action="store", default=default_path, help='Path for processed data (e.g. /data/eng/rocks)')
         parser.add_argument('--refcat',
-                    default='GAIA-DR2',
-                    const='GAIA-DR2',
+                    default='GAIA-DR3',
+                    const='GAIA-DR3',
                     nargs='?',
-                    choices=['GAIA-DR2', 'PS1', 'REFCAT2', 'SkyMapper'],
-                    help='Reference catalog: choice of GAIA-DR2, PS1, REFCAT2, SkyMapper (default: %(default)s)')
+                    choices=['GAIA-DR3', 'GAIA-DR2', 'PS1', 'REFCAT2', 'SkyMapper'],
+                    help='Reference catalog: choice of GAIA-DR3, GAIA-DR2, PS1, REFCAT2, SkyMapper (default: %(default)s)')
         parser.add_argument('--tempdir', action="store", default=default_tempdir, help=f'Temporary processing directory name (e.g. {default_tempdir}')
         parser.add_argument('--zp_tolerance', type=float, default=0.1, help='Tolerance on zeropoint std.dev for a good fit (default: %(default)s) mag')
         parser.add_argument('--overwrite', default=False, action='store_true', help='Whether to ignore existing files/DB entries and overwrite')

@@ -1,6 +1,6 @@
 """
 NEO exchange: NEO observing portal for Las Cumbres Observatory
-Copyright (C) 2016-2019 LCO
+Copyright (C) 2016-2025 LCO
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -101,7 +101,7 @@ class Command(BaseCommand):
             # Step 1: Determine if astrometric fit in catalog is good and
             # if not, refit using SExtractor and SCAMP.
             self.stdout.write("Processing %s" % catalog)
-            new_catalog_or_status, num_new_frames_created = check_catalog_and_refit(configs_dir, temp_dir, catalog, desired_catalog='GAIA-DR2')
+            new_catalog_or_status, num_new_frames_created = check_catalog_and_refit(configs_dir, temp_dir, catalog, desired_catalog='GAIA-DR3')
 
             catalog_type = 'LCOGT'
             try:
@@ -124,7 +124,7 @@ class Command(BaseCommand):
 
             num_sources_created, num_in_catalog = store_catalog_sources(new_catalog, catalog_type,
                                                                         std_zeropoint_tolerance=0.1,
-                                                                        phot_cat_name='GAIA-DR2')
+                                                                        phot_cat_name='GAIA-DR3')
             if num_sources_created >= 0 and num_in_catalog > 0:
                 self.stdout.write("Created/updated %d sources from %d in catalog" % (num_sources_created, num_in_catalog))
             else:

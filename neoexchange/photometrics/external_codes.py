@@ -65,11 +65,13 @@ def default_mtdlink_config_files():
     return config_files
 
 
-def default_scamp_config_files():
+def default_scamp_config_files(refcatalog='GAIA-DR3.cat'):
     """Return a list of the needed files for SCAMP. The config file should be in
     element 0"""
 
-    config_files = ['scamp_neox_gaiadr2.cfg']
+    config_files = ['scamp_neox_gaiadr3.cfg']
+    if 'DR2' in refcatalog.upper()
+        config_files = ['scamp_neox_gaiadr2.cfg']
 
     return config_files
 
@@ -123,11 +125,11 @@ def setup_mtdlink_dir(source_dir, dest_dir):
     return return_value
 
 
-def setup_scamp_dir(source_dir, dest_dir):
+def setup_scamp_dir(source_dir, dest_dir, refcatalog='GAIA-DR3.cat'):
     """Setup a temporary working directory for running SCAMP in <dest_dir>. The
     needed config files are symlinked from <source_dir>"""
 
-    scamp_config_files = default_scamp_config_files()
+    scamp_config_files = default_scamp_config_files(refcatalog)
 
     return_value = setup_working_dir(source_dir, dest_dir, scamp_config_files)
 
@@ -792,7 +794,7 @@ def determine_mtdlink_options(num_fits_files, param_file, pa_rate_dict):
     return options
 
 
-def determine_scamp_options(fits_catalog, external_cat_name='GAIA-DR2.cat', distort_degrees=None):
+def determine_scamp_options(fits_catalog, external_cat_name='GAIA-DR3.cat', distort_degrees=None):
     """Assemble the command line options for SCAMP.
     Focal plane distortions are turned on by default if the filename contains
     '1m0' - this can be overridden by setting [distort_degrees].
@@ -1166,13 +1168,13 @@ def run_swarp_align(ref, sci, source_dir, dest_dir, outname, binary=None, dbg=Fa
     return retcode_or_cmdline
 
 @timeit
-def run_scamp(source_dir, dest_dir, fits_catalog_path, refcatalog='GAIA-DR2.cat', binary=None, dbg=False, distort_degrees=None):
+def run_scamp(source_dir, dest_dir, fits_catalog_path, refcatalog='GAIA-DR3.cat', binary=None, dbg=False, distort_degrees=None):
     """Run SCAMP (using either the binary specified by [binary] or by
     looking for 'scamp' in the PATH) on the passed <fits_catalog_path> with the
     results and any temporary files created in <dest_dir>. <source_dir> is the
     path to the required config files."""
 
-    status = setup_scamp_dir(source_dir, dest_dir)
+    status = setup_scamp_dir(source_dir, dest_dir, refcatalog)
     if status != 0:
         return status
 

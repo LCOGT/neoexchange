@@ -3772,9 +3772,9 @@ def check_catalog_and_refit(configs_dir, dest_dir, catfile, dbg=False, desired_c
         logger.error("Execution of SExtractor failed")
         return -4, 0
 
-    # If desired catalog is GAIA-DR2, need to grab it ourselves as SCAMP does
-    # not support it
-    if desired_catalog == 'GAIA-DR2':
+    # If desired catalog is GAIA-DR2 or -DR3, need to grab it ourselves as SCAMP does
+    # not support it (Actually scamp>=2.13.1 would but we have 2.0.4)
+    if desired_catalog == 'GAIA-DR2' or desired_catalog == 'GAIA-DR3':
         refcat, num_ref_srcs = get_reference_catalog(dest_dir, header['field_center_ra'],
             header['field_center_dec'], header['field_width'], header['field_height'],
             cat_name=desired_catalog)
