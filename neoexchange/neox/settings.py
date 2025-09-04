@@ -206,10 +206,10 @@ rollbar.init(**ROLLBAR)
 
 LOGGING = {
     'version': 1,
-    'disable_existing_loggers': True,
+    'disable_existing_loggers': False,
     'formatters': {
         'verbose': {
-            'format' : "[%(asctime)s] %(levelname)s %(message)s",
+            'format' : "%(levelname)s [%(asctime)s] %(message)s",
             'datefmt' : "%d/%b/%Y %H:%M:%S"
         },
         'simple': {
@@ -234,31 +234,35 @@ LOGGING = {
         }
     },
     'loggers': {
-        'django.request': {
-            'handlers':['console'],
-            'propagate': True,
-            'level':'ERROR',
+        '' : {
+            'handlers' : ['console'],
+            'level' : 'WARNING',
+            'propogate' : False,
         },
         'core' : {
-            'handlers' : ['console'],
             'level'    : 'INFO',
+            'propogate' : False,
         },
         'astrometrics' : {
-            'handlers' : ['console'],
             'level'    : 'ERROR',
+            'propogate' : False,
         },
         'photometrics' : {
-            'handlers' : ['console'],
             'level'    : 'ERROR',
+            'propogate' : False,
         },
         'neox': {
-            'handlers': ['console'],
-            'level' : 'ERROR'
+            'level' : 'ERROR',
+            'propogate' : False,
         },
         'pipelines': {
-            'handlers': ['console'],
-            'level' : 'INFO'
-        }
+            'level' : 'INFO',
+            'propogate' : False,
+        },
+        'django.request': {
+            'propogate' : False,
+            'level':'ERROR',
+        },
     }
 }
 
