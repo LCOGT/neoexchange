@@ -70,7 +70,7 @@ def default_scamp_config_files(refcatalog='GAIA-DR3.cat'):
     element 0"""
 
     config_files = ['scamp_neox_gaiadr3.cfg']
-    if 'DR2' in refcatalog.upper()
+    if 'DR2' in refcatalog.upper():
         config_files = ['scamp_neox_gaiadr2.cfg']
 
     return config_files

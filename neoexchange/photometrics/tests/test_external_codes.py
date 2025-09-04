@@ -378,11 +378,20 @@ class TestSCAMPRunner(ExternalCodeUnitTest):
         status = setup_scamp_dir(self.source_dir, self.test_dir)
 
         self.assertEqual(expected_status, status)
+        self.assertTrue(os.path.exists(os.path.join(self.test_dir, 'scamp_neox_gaiadr3.cfg')))
+
+    def test_setup_scamp_dir_dr2(self):
+
+        expected_status = 0
+
+        status = setup_scamp_dir(self.source_dir, self.test_dir, 'gaia-dr2.cat')
+
+        self.assertEqual(expected_status, status)
         self.assertTrue(os.path.exists(os.path.join(self.test_dir, 'scamp_neox_gaiadr2.cfg')))
 
     def test_scamp_options(self):
 
-        expected_options = '-ASTREF_CATALOG FILE -ASTREFCAT_NAME GAIA-DR2.cat -XML_NAME foo.xml'
+        expected_options = '-ASTREF_CATALOG FILE -ASTREFCAT_NAME GAIA-DR3.cat -XML_NAME foo.xml'
 
         options = determine_scamp_options('foo.ldac')
 
@@ -390,7 +399,7 @@ class TestSCAMPRunner(ExternalCodeUnitTest):
 
     def test_scamp_options_0m4_no_distortion(self):
 
-        expected_options = '-ASTREF_CATALOG FILE -ASTREFCAT_NAME GAIA-DR2.cat -XML_NAME foo_0m4.xml'
+        expected_options = '-ASTREF_CATALOG FILE -ASTREFCAT_NAME GAIA-DR3.cat -XML_NAME foo_0m4.xml'
 
         options = determine_scamp_options('foo_0m4.ldac')
 
@@ -398,7 +407,7 @@ class TestSCAMPRunner(ExternalCodeUnitTest):
 
     def test_scamp_options_2m0_no_distortion(self):
 
-        expected_options = '-ASTREF_CATALOG FILE -ASTREFCAT_NAME GAIA-DR2.cat -POSANGLE_MAXERR 1 -MATCH_FLIPPED N -XML_NAME foo_2m0.xml'
+        expected_options = '-ASTREF_CATALOG FILE -ASTREFCAT_NAME GAIA-DR3.cat -POSANGLE_MAXERR 1 -MATCH_FLIPPED N -XML_NAME foo_2m0.xml'
 
         options = determine_scamp_options('foo_2m0.ldac')
 
@@ -406,7 +415,7 @@ class TestSCAMPRunner(ExternalCodeUnitTest):
 
     def test_scamp_options_1m0_distortion(self):
 
-        expected_options = '-ASTREF_CATALOG FILE -ASTREFCAT_NAME GAIA-DR2.cat -DISTORT_DEGREES 3 -PROJECTION_TYPE TPV -XML_NAME test1m0-fa##-date.xml'
+        expected_options = '-ASTREF_CATALOG FILE -ASTREFCAT_NAME GAIA-DR3.cat -DISTORT_DEGREES 3 -PROJECTION_TYPE TPV -XML_NAME test1m0-fa##-date.xml'
 
         options = determine_scamp_options('test1m0-fa##-date.ldac')
 
@@ -414,7 +423,7 @@ class TestSCAMPRunner(ExternalCodeUnitTest):
 
     def test_scamp_options_1m0_distortion_4th_order(self):
 
-        expected_options = '-ASTREF_CATALOG FILE -ASTREFCAT_NAME GAIA-DR2.cat -DISTORT_DEGREES 4 -PROJECTION_TYPE TPV -XML_NAME test1m0-fa##-date.xml'
+        expected_options = '-ASTREF_CATALOG FILE -ASTREFCAT_NAME GAIA-DR3.cat -DISTORT_DEGREES 4 -PROJECTION_TYPE TPV -XML_NAME test1m0-fa##-date.xml'
 
         options = determine_scamp_options('test1m0-fa##-date.ldac', distort_degrees=4)
 
@@ -422,7 +431,7 @@ class TestSCAMPRunner(ExternalCodeUnitTest):
 
     def test_scamp_options_0m4_distortion_5th_order(self):
 
-        expected_options = '-ASTREF_CATALOG FILE -ASTREFCAT_NAME GAIA-DR2.cat -DISTORT_DEGREES 5 -PROJECTION_TYPE TPV -XML_NAME test1m0-fa##-date.xml'
+        expected_options = '-ASTREF_CATALOG FILE -ASTREFCAT_NAME GAIA-DR3.cat -DISTORT_DEGREES 5 -PROJECTION_TYPE TPV -XML_NAME test1m0-fa##-date.xml'
 
         options = determine_scamp_options('test1m0-fa##-date.ldac', distort_degrees=5)
 
@@ -430,7 +439,7 @@ class TestSCAMPRunner(ExternalCodeUnitTest):
 
     def test_scamp_options_1m0_no_distortion(self):
 
-        expected_options = '-ASTREF_CATALOG FILE -ASTREFCAT_NAME GAIA-DR2.cat -XML_NAME test1m0-fa##-date.xml'
+        expected_options = '-ASTREF_CATALOG FILE -ASTREFCAT_NAME GAIA-DR3.cat -XML_NAME test1m0-fa##-date.xml'
 
         options = determine_scamp_options('test1m0-fa##-date.ldac', distort_degrees=1)
 
