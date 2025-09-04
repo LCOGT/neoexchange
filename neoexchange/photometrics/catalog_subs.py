@@ -114,7 +114,7 @@ def get_vizier_catalog_table(ra, dec, set_width, set_height, cat_name="UCAC4", s
         else:
             query_service = Vizier(row_limit=set_row_limit, column_filters={"r2mag": rmag_limit, "r1mag": rmag_limit}, columns=['RAJ2000', 'DEJ2000', 'r2mag', 'fl'])
 
-        vizier_servers_list = ['vizier.cfa.harvard.edu', 'vizier.hia.nrc.ca', 'vizier.cds.unistra.fr', ] # Preferred first
+        vizier_servers_list = [ 'vizier.cds.unistra.fr', 'vizier.nao.ac.jp', 'vizier.cfa.harvard.edu', 'vizier.hia.nrc.ca'] # Preferred first
         query_service.VIZIER_SERVER = vizier_servers_list[0]
 
         query_service.TIMEOUT = 60
