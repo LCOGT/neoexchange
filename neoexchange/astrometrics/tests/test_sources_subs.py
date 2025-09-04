@@ -7279,7 +7279,10 @@ class TestBoxSpiral(TestCase):
 
 class TestMakeJPLSBobsQuery(SimpleTestCase):
     def setUp(self):
-        self.base_url = 'https://ssd-api.jpl.nasa.gov/sbwobs.api?mpc-code=K92&obs-time=2025-09-03&maxoutput=100&output-sort=vmag&sb-group=neo&elong-min=45&glat-min=10&vmag-min=12.0&vmag-max=19.0'
+        # Split the very long string; Python will automatically concatenate all within the ()s
+        self.base_url = ('https://ssd-api.jpl.nasa.gov/sbwobs.api?mpc-code=K92&obs-time=2025-09-03&maxoutput=100'
+                         '&output-sort=vmag&fmt-ra-dec=false&mag-required=true&sb-group=neo&elong-min=45&glat-min=10'
+                         '&time-min=30&vmag-min=12.0&vmag-max=19.0')
         self.obs_date = datetime(2025, 9, 3, 20, 0, 0)
 
         self.maxDiff = None
