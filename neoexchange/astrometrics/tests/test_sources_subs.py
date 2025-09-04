@@ -23,6 +23,7 @@ from dateutil.relativedelta import relativedelta
 from unittest import skipIf
 from math import radians, ceil
 from copy import deepcopy
+from urllib.parse import quote
 
 import astropy.units as u
 from bs4 import BeautifulSoup
@@ -7329,6 +7330,14 @@ class TestMakeJPLSBobsQuery(SimpleTestCase):
 
         self.assertEqual(expected_url, url)
 
+    def test_DeltaRho_period_limit(self):
+        expected_url = self.base_url.replace('K92', 'Q59').replace('12.0&vmag-max=19.0', '10.0&vmag-max=17.0')
+        constraint_str = '{"AND":["rot_per|DF","rot_per|LE|4"]}'
+        expected_url += f"&sb-cdata={quote(constraint_str)}"
+
+        url = make_jpl_sbobs_query(self.obs_date, site_code='Q59', max_rotper=4)
+
+        self.assertEqual(expected_url, url)
 
 class TestFetchJPLSBobs(SimpleTestCase):
     @patch('requests.get')
