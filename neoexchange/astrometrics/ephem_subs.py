@@ -686,7 +686,7 @@ def horizons_ephem(obj_name, start, end, site_code, ephem_step_size='1h', alt_li
     try:
         ephem = eph.ephemerides(quantities=horizons_quantities,
             skip_daylight=should_skip_daylight, airmass_lessthan=airmass_limit,
-            max_hour_angle=ha_limit)
+            max_hour_angle=ha_limit, cache=False)
         ephem = convert_horizons_table(ephem, include_moon)
     except ConnectionError as e:
         logger.error("Unable to connect to HORIZONS")
