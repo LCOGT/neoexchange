@@ -1,0 +1,69 @@
+{% extends 'base.html' %}
+{% load static basic_tags %}
+
+{% block css-content %}<link rel="stylesheet" href="{% static "core/css/forms.css" %}">{% endblock %}
+
+{% block header %}NEOs for PTR{% endblock %}
+
+{% block bodyclass %}page{% endblock %}
+
+{% block extramenu %}
+    <div class="headingleft">
+        <h1>NEOs for PTR for {{obs_date}} for {{site_code}} Overview</h1>
+    </div>
+{% endblock%}
+
+{% block main-content %}
+    <div id="main" class="fullwidth">
+        <div id="potential_targets">
+        <div class="row">
+          <div class="six columns">
+              <h3>Potential Targets</h3>
+          </div>
+        </div>
+            <table id="potential_targets" class="datatable" cellpadding="0" cellspacing="0">
+                <thead>
+                    <tr>
+                        <th class="list_title">
+                            <span class="sortable" id="name_id">Target Name</span><br>
+                        </th>
+                        <th>
+                            <span class="sortable" id="ra">R.A.</span><br>
+                        </th>
+                        <th>
+                            <span class="sortable" id="dec">Dec.</span><br>
+                        </th>
+                        <th>
+                            <span class="sortable" id="Vmag">V Mag.</span><br>
+                        </th>
+                        <th>
+                            <span class="sortable" id="helio_dist">Heliocentric Distance (AU)</span><br>
+                        </th>
+                        <th>
+                            <span class="sortable" id="obsdate">Observation Window</span><br>
+                            <span style="font-size:75%" > (in UTC) </span>
+                        </th>
+                        <th>
+                            <span class="sortable" id="obsdate">Time visible</span><br>
+                        </th>
+                    </tr>
+                </thead>
+                <tbody id="char_table">
+                    {% for body in data %}
+                    <tr class="{% cycle 'odd' 'even' %}">
+                        <td data-label="Name">{{body.1}}</td>
+                        <td data-label="RA">{{body.6|degreestohms:" "}}</td>
+                        <td data-label="Dec">{{body.7|degreestodms:" "}}</td>
+                        <td data-label="Vmag">{{body.8|floatformat:1 }}</td>
+                        <td data-label="helio_dist">{{body.9|floatformat:1}}</td>
+                        <td data-label="Observation Window">>{{body.2}}-{{body.4}}</a>  </td>
+                        <td data-label="Time Visible">>{{body.5}}</a>  </td>
+                    </tr>
+                    {% empty%}
+                        <tr><td colspan=7> No new targets</td></tr>
+                    {% endfor%}
+                </tbody>
+            </table>
+        </div>
+    </div>
+{% endblock %}

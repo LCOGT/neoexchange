@@ -3144,17 +3144,19 @@ def store_jpl_sourcetypes(code, obj, body):
     body.save()
 
 
-def make_jpl_sbobs_query(obs_date, site_code='W86', max_objects=100, min_Vmag=None, max_Vmag=None):
+def make_jpl_sbobs_query(obs_date, site_code='W86', max_objects=100, min_obs_time=30, min_Vmag=None, max_Vmag=None):
     """
     Make a query for the JPL SBobs API from the passed parameters
     """
     base_url = 'https://ssd-api.jpl.nasa.gov/sbwobs.api'
     if site_code != '500':
         url = f"{base_url}?mpc-code={site_code}&obs-time={obs_date.strftime('%Y-%m-%d')}"
-        url += f"&maxoutput={max_objects}&output-sort=vmag"
+        url += f"&maxoutput={max_objects}&output-sort=vmag&fmt-ra-dec=false&mag-required=true"
         # Restrict targets to only NEOs with elongation>45 and galactic lat.>10
         # These could potentially be made adjustable args later
         url += "&sb-group=neo&elong-min=45&glat-min=10"
+        # Need to be visible for at least time time (in minutes)
+        url += f"&time-min={int(min_obs_time)}"
         # Try and decode the site code into a LCO telescope class and then use
         # this to set mag limits
         if min_Vmag is None or max_Vmag is None:
@@ -3176,13 +3178,13 @@ def make_jpl_sbobs_query(obs_date, site_code='W86', max_objects=100, min_Vmag=No
 def fetch_jpl_sbobs(obs_date, site_code='W86', max_objects=100, min_Vmag=None, max_Vmag=None):
 
     results = {}
-    query_url = make_jpl_sbobs_query(obs_date, site_code, max_objects, min_Vmag, max_Vmag)
+    query_url = make_jpl_sbobs_query(obs_date, site_code, max_objects, min_Vmag=min_Vmag, max_Vmag=max_Vmag)
     print(f"query_url={query_url}")
     if query_url:
         resp = requests.get(query_url)
         if resp.ok:
             data = resp.json()
-            #print(data['total_objects'])
+            print(data['total_objects'], data['shown_objects'])
             if 'signature' in data and data['signature']['version'] == '1.0':
                 results = data
             else:

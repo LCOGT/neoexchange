@@ -74,7 +74,7 @@ from astrometrics.sources_subs import fetchpage_and_make_soup, packed_to_normal,
     fetch_mpcdb_page, parse_mpcorbit, submit_block_to_scheduler, parse_mpcobs,\
     fetch_NEOCP_observations, PackedError, fetch_filter_list, fetch_mpcobs, validate_text,\
     read_mpcorbit_file, fetch_jpl_physparams_altdes, store_jpl_sourcetypes, store_jpl_desigs,\
-    store_jpl_physparams
+    store_jpl_physparams, fetch_jpl_sbobs
 from astrometrics.time_subs import extract_mpc_epoch, parse_neocp_date, \
     parse_neocp_decimal_date, get_semester_dates, jd_utc2datetime, datetime2st
 from photometrics.external_codes import run_sextractor, run_scamp, updateFITSWCS,\
@@ -2193,6 +2193,21 @@ def look_project(request):
     params['form'] = AddTargetForm()
     return render(request, 'core/lookproject.html', params)
 
+def ptr_neos(request, site_code, obs_date):
+
+    try:
+        obs_date = datetime.strptime(obs_date, "%Y-%m-%d")
+    except ValueError:
+        raise Http404("Could not parse observation date")
+
+    data = fetch_jpl_sbobs(obs_date, site_code)
+
+    params = {
+        'obs_date': obs_date,
+        'site_code': site_code,
+        'data': data['data']
+    }
+    return render(request, 'core/ptrneos.html', params)
 
 def check_for_block(form_data, params, new_body):
     """Checks if a block with the given name exists in the Django DB.
