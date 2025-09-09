@@ -41,12 +41,13 @@ class TestReadSpectra(TestCase):
         self.spectradir = os.path.abspath(os.path.join('photometrics', 'tests', 'test_spectra'))
 
         self.fitsfile = 'test_2df_ex.fits'
+        self.banzai_fitsfile = 'test_1d.fits'
         self.asciifile = 'test_ascii.ascii'
         self.txtfile = 'a001981.4.txt'
         self.datfile = 'ctiostan.fhr9087.dat'
         datfilepath = os.path.join(self.spectradir, 'cdbs', 'ctiostan', 'fhr9087.dat')
 
-        files_to_copy = [self.fitsfile, self.asciifile, self.txtfile, datfilepath, 'aaareadme.ctio']
+        files_to_copy = [self.fitsfile, self.banzai_fitsfile, self.asciifile, self.txtfile, datfilepath, 'aaareadme.ctio']
 
         self.tolerance = 1
 
@@ -56,6 +57,7 @@ class TestReadSpectra(TestCase):
             shutil.copy(test_file_path, self.test_dir)
 
         self.fitsfile = os.path.join(self.test_dir, self.fitsfile)
+        self.banzai_fitsfile = os.path.join(self.test_dir, self.banzai_fitsfile)
         self.asciifile = os.path.join(self.test_dir, self.asciifile)
         self.txtfile = os.path.join(self.test_dir, self.txtfile)
         self.datfile = os.path.join(self.test_dir, self.datfile)
@@ -99,6 +101,30 @@ class TestReadSpectra(TestCase):
 
         with self.settings(MEDIA_ROOT=self.test_dir):
             y_data = pull_data_from_spectrum(self.fitsfile)[1]
+
+        self.assertEqual(exp_y_len, len(y_data))
+        self.assertAlmostEqual(exp_y, y_data[-1].value, self.tolerance)
+        self.assertEqual(exp_y_units, y_data[-1].unit)
+
+    def test_read_banzai_fits_x(self):
+        exp_x = 3103.14013672
+        exp_x_units = u.AA
+        exp_x_len = 4560
+
+        with self.settings(MEDIA_ROOT=self.test_dir):
+            x_data = pull_data_from_spectrum(self.banzai_fitsfile)[0]
+
+        self.assertEqual(exp_x_len, len(x_data))
+        self.assertAlmostEqual(exp_x, x_data[0].value, self.tolerance)
+        self.assertEqual(exp_x_units, x_data[0].unit)
+
+    def test_read_banzai_fits_y(self):
+        exp_y = 10.494265/10**20
+        exp_y_units = u.erg/(u.cm**2)/u.s/u.AA
+        exp_y_len = 4560
+
+        with self.settings(MEDIA_ROOT=self.test_dir):
+            y_data = pull_data_from_spectrum(self.banzai_fitsfile)[1]
 
         self.assertEqual(exp_y_len, len(y_data))
         self.assertAlmostEqual(exp_y, y_data[-1].value, self.tolerance)
