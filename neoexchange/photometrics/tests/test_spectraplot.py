@@ -107,9 +107,9 @@ class TestReadSpectra(TestCase):
         self.assertEqual(exp_y_units, y_data[-1].unit)
 
     def test_read_banzai_fits_x(self):
-        exp_x = 3103.14013672
+        exp_x = 3349.6803855
         exp_x_units = u.AA
-        exp_x_len = 4560
+        exp_x_len = 2367
 
         with self.settings(MEDIA_ROOT=self.test_dir):
             x_data = pull_data_from_spectrum(self.banzai_fitsfile)[0]
@@ -121,7 +121,7 @@ class TestReadSpectra(TestCase):
     def test_read_banzai_fits_y(self):
         exp_y = 10.494265/10**20
         exp_y_units = u.erg/(u.cm**2)/u.s/u.AA
-        exp_y_len = 4560
+        exp_y_len = 2367
 
         with self.settings(MEDIA_ROOT=self.test_dir):
             y_data = pull_data_from_spectrum(self.banzai_fitsfile)[1]

@@ -138,13 +138,24 @@ def pull_data_from_spectrum(spectra):
         logger.warning(e)
         return None, None, None, None
 
-    data = hdul[0].data
-    hdr = hdul[0].header
+    if len(hdul) == 1:
+        # Old style FLOYDS
+        data = hdul[0].data
+        hdr = hdul[0].header
 
-    yyy = data[0][0]
-    err = data[3][0]
-    w = WCS(hdr, naxis=1, relax=False, fix=False)
-    lam = w.wcs_pix2world(np.arange(len(yyy)), 0)[0]
+        yyy = data[0][0]
+        err = data[3][0]
+        w = WCS(hdr, naxis=1, relax=False, fix=False)
+        lam = w.wcs_pix2world(np.arange(len(yyy)), 0)[0]
+    elif len(hdul) == 5:
+        # New style FLOYDS-BANZAI
+        banzai_spectrum = hdul['SPECTRUM'].data
+        hdr = hdul['PRIMARY'].header
+
+        yyy = banzai_spectrum['flux']
+        err = banzai_spectrum['fluxerror']
+        lam = banzai_spectrum['wavelength']
+
 
     wavelength = get_x_units(lam)
     flux, error = get_y_units(yyy, spectra, err)
