@@ -72,8 +72,12 @@ def get_y_units(y_data, filename, y_error=[]):
     elif .001 < np.median(y_data) < 10:  # Probably Normalized
         y_units = u.def_unit("Normalized_Reflectance", u.dimensionless_unscaled)
 
-    elif '_2df_ex.fits' in filename:  # from FLOYDS
+    elif '_2df_ex.fits' in filename:  # from FLOYDS-IRAF
         y_factor = 10**20
+        y_units = u.erg/(u.cm**2)/u.s/u.AA
+
+    elif '-1d.fits' in filename:  # from FLOYDS-BANZAI
+        y_factor = 1
         y_units = u.erg/(u.cm**2)/u.s/u.AA
 
     else:

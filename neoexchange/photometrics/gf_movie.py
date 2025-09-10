@@ -405,7 +405,11 @@ def make_movie(date_obs, obj, req, base_dir, out_path, prop, tarfile=None):
     logger.info('BODY: {}, DATE: {}, REQNUM: {}, PROP: {}'.format(obj, date_obs, req, prop))
     logger.debug('DIR: {}'.format(path))  # where it thinks an unpacked tar is at
 
-    filename = glob(os.path.join(path, '*2df_ex.fits'))  # checking if unpacked
+    # Look for new style BANZAI-FLOYDS in `base_dir` first
+    filename = glob(os.path.join(base_dir, '*e91-1d.fits.fz'))
+    if len(filename) == 0:
+        # Try old style
+        filename = glob(os.path.join(path, '*2df_ex.fits'))  # checking if unpacked
     frames = []
     if not filename:
         unpack_path = os.path.join(base_dir, obj+'_'+req)
@@ -436,7 +440,7 @@ def make_movie(date_obs, obj, req, base_dir, out_path, prop, tarfile=None):
             else:
                 logger.error("Could not find Guide Frames or Guide Frame tarball for request: %s" % req)
                 return None
-        frames = glob(os.path.join(movie_dir, "*.fits"))
+        frames = glob(os.path.join(movie_dir, "*.fits.fz")) # Should be OK to just make from the compressed files
     else:
         logger.error("Could not find spectrum data or tarball for request: %s" % req)
         return None
