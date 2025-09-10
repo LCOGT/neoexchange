@@ -32,6 +32,7 @@ import logging
 import tempfile
 import bokeh
 from bs4 import BeautifulSoup
+
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -39,6 +40,7 @@ from django.contrib.messages.views import SuccessMessageMixin
 from django.core.exceptions import ObjectDoesNotExist, ValidationError, FieldDoesNotExist
 from django.core.files.storage import default_storage
 from django.core.paginator import Paginator
+from django.core import serializers
 from django.db.models import Q, Prefetch
 from django.forms.models import model_to_dict
 from django.http import Http404, HttpResponse, HttpResponseRedirect
@@ -2207,6 +2209,25 @@ def ptr_neos(request, site_code, obs_date):
         'site_code': site_code,
         'data': data['data']
     }
+    if request.GET.get('format', '') == 'json':
+            datanames =  [
+                "Designation",
+                "Full name",
+                "Rise time",
+                "Transit time",
+                "Set time",
+                "Max. time observable",
+                "R.A.",
+                "Dec.",
+                "Vmag",
+                "Helio. range (au)",
+                "Topo.range (au)",
+                "Object-Observer-Sun (deg)",
+                "Object-Observer-Moon (deg)",
+                "Galactic latitude (deg)"
+            ]
+            jsonparams = {'obs_date': obs_date.strftime("%Y-%m-%d"), 'site_code': site_code, 'data': data['data'], 'colnames': datanames}
+            return HttpResponse(json.dumps(jsonparams), content_type='application/json')
     return render(request, 'core/ptrneos.html', params)
 
 def check_for_block(form_data, params, new_body):
