@@ -89,7 +89,7 @@ urlpatterns = [
     path('calibsources/<int:pk>/', StaticSourceDetailView.as_view(model=StaticSource), name='calibsource'),
     path('characterization/', characterization, name='characterization'),
     path('lookproject/', look_project, name='look_project'),
-    re_path(r'^ptrneos/(?P<site_code>[A-Z,0-9]{3})/(?P<obs_date>\d{4}-\d{2}-\d{2})', ptr_neos, name='ptr_neos'),
+    re_path(r'^ptrneos/site/(?P<site_code>[A-Z,0-9]{3})/date/(?P<obs_date>\d{4}-\d{2}-\d{2})/', ptr_neos, name='ptr_neos'),
     path('feasibility/<int:pk>/', SpectroFeasibility.as_view(), name='feasibility'),
     path('feasibility/calib/<int:pk>/', CalibSpectroFeasibility.as_view(), name='feasibility-calib'),
     path('schedule/<int:pk>/confirm/', ScheduleSubmit.as_view(), name='schedule-confirm'),
