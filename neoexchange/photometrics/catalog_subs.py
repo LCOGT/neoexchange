@@ -40,6 +40,7 @@ import astropy.coordinates as coord
 from astropy.wcs import WCS, FITSFixedWarning, InvalidTransformError
 from astropy.wcs.utils import proj_plane_pixel_scales
 from astropy import __version__ as astropyversion
+from django.db import transaction
 
 from astrometrics.ephem_subs import LCOGT_domes_to_site_codes, determine_darkness_times
 from astrometrics.time_subs import timeit
