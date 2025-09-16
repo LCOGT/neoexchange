@@ -664,6 +664,9 @@ class ZeropointProcessPipeline(PipelineProcess):
                 avg_zeropoint, C, std_zeropoint, r, gmi = refcat.cal_constant(objids, inst_mag, cal_filter, gmi_lim=gmi_limits)
                 cal_color = 'g-i' # Fixed/held constant
             else:
+                if cal_filter == 'g':
+                    logger.debug("Resetting cal_filter to r")
+                    cal_filter = 'r'
                 cal_color = 'g-' + cal_filter
                 if obs_filter == 'w' and solar is False:
                     gmi_limits = [0.5, 1.5]
