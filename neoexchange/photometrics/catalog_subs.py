@@ -1886,6 +1886,40 @@ def make_object_directory(filepath, object_name, block_id):
     return object_directory
 
 
+def make_object_directory_from_block(dataroot, block):
+    """Construct a path to data from the <dataroot> (normally settings.DATA_ROOT)
+    and the Block <block>. The name of the object is retrieved from the
+    Block (using `block.current_name()`) and this is joined to the BLOCKUID(s)
+    and the directory(ies) paths are created (if they don't already exist).
+    The created directory paths are returned in a list. In the case of a single
+    directory this is flattened down to a string. In the case of an unobserved
+    Block with no related Frames (or a failure in the archive call in
+    `Block.get_blockdayobs` - hopefully rare), None is returned."""
+
+    object_name = sanitize_object_name(block.current_name())
+    object_directory_root = os.path.dirname(dataroot)
+
+    dayobs = block.get_blockdayobs
+    if dayobs is None:
+        logger.warning("No DAYOBS found - unobserved Block?")
+        return None
+    if dayobs not in object_directory_root:
+        object_directory_root = os.path.join(object_directory_root, dayobs)
+    object_directories = []
+    for block_id in block.get_blockuid:
+        object_directory = os.path.join(object_directory_root, object_name + '_' + str(block_id), '')
+        if not os.path.exists(object_directory):
+            oldumask = os.umask(0o002)
+            os.makedirs(object_directory)
+            os.umask(oldumask)
+        object_directories.append(object_directory)
+
+    # If only a single item, flatten back down
+    if len(object_directories) == 1:
+        object_directories = object_directories[0]
+    return object_directories
+
+
 def sort_rocks(fits_files):
     """Takes a list of FITS files and creates directories for each asteroid
     object and unique block number (i.e. if an object is observed more than

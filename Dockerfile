@@ -66,7 +66,7 @@ RUN yum -y install gcc gcc-gfortran make  \
 
 # Build all of damit's components. No need to clean up, as this is a builder container.
 # The contents will be discarded from the final image.
-RUN curl -fsSL --cacert /root/troja-mff-cuni-cz.pem https://astro.troja.mff.cuni.cz/projects/damit/files/${DAMIT_VERSION}.tar.gz | tar xzf - \
+RUN curl -fsSL --insecure https://astro.troja.mff.cuni.cz/projects/damit/files/${DAMIT_VERSION}.tar.gz | tar xzf - \
         && cd ${DAMIT_VERSION} \
         && cd convexinv \
         && make \
