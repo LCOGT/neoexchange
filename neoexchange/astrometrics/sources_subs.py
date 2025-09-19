@@ -17,10 +17,11 @@ GNU General Public License for more details.
 
 import logging
 import os
+import json
 from copy import deepcopy
 import urllib.request
 import urllib.error
-from urllib.parse import urljoin
+from urllib.parse import urljoin, quote
 import imaplib
 import email
 from re import sub, compile
@@ -3143,5 +3144,163 @@ def store_jpl_sourcetypes(code, obj, body):
     body.source_subtype_2 = source_subtype_2
     body.save()
 
+def translate_constraints(constraints):
+    """Translate "human readable" constraints e.g. 'q<=1.3', 'rot_per<4' into the
+    JPL SBDB Constraint Format Specification (https://ssd-api.jpl.nasa.gov/doc/sbdb_filter.html#format)
+    e.g. 'q|LE|1.3', 'rot_per|LT|4' which are then ANDed together, converted to JSON and urlencoded.
+    Unlike the FOMO original version of this routine, the later stages are handled here.
 
+    Parameters
+    ----------
+    constraints : list
+        A list of constraint strings to be applied
 
+    Returns
+    -------
+    translated : str
+        urlencoded JSON constraint string
+
+    Raises
+    ------
+    ValueError
+        Raised in the case of an unrecognized constraint
+    """
+    translated = []
+    for c in constraints:
+        # Handle range (e.g. 6<=H<=7)
+        if "<=" in c and c.count("<=") == 2:
+            parts = c.split("<=")
+            min_val = parts[0].strip()
+            field = parts[1].strip()
+            max_val = parts[2].strip()
+            translated.append(f"{field}|RG|{min_val}|{max_val}")
+            continue
+
+        # Handle <, <=, >, >=
+        if "<=" in c:
+            field, value = c.split("<=")
+            translated.append(f"{field.strip()}|LE|{value.strip()}")
+        elif ">=" in c:
+            field, value = c.split(">=")
+            translated.append(f"{field.strip()}|GE|{value.strip()}")
+        elif "<" in c:
+            field, value = c.split("<")
+            translated.append(f"{field.strip()}|LT|{value.strip()}")
+        elif ">" in c:
+            field, value = c.split(">")
+            translated.append(f"{field.strip()}|GT|{value.strip()}")
+        elif "IS DEFINED" in c:
+            field, value = c.split("IS DEFINED")
+            translated.append(f"{field.strip()}|DF")
+        else:
+            raise ValueError(f"Unsupported constraint format: {c}")
+
+    constraint_obj = {"AND": translated}
+    json_str = json.dumps(constraint_obj, separators=(',', ':'))
+
+    return quote(json_str)
+
+def make_jpl_sbobs_query(obs_date, site_code='W86', max_objects=100, min_obs_time=30, min_Vmag=None, max_Vmag=None, max_rotper=None):
+    """
+    Make a query URL for the JPL SBobs API (https://ssd-api.jpl.nasa.gov/doc/sbwobs.html). The following constraints are
+    applied in addition to those from the passed parameters:
+    * Object must be a NEO
+    * Solar elongation >=45 degrees
+    * Galactic latitude >=10 degrees
+    * Magnitude parameters (H,G) are defined
+    If the magnitude limits `min_Vmag` and `max_Vmag` are `None`, defaults of 12 and 19 respectively are substituted
+    unless the `site_code` resolves to a LCO 0m4 class of telescope. In this case, shallower limits of V=10...17 are used.
+
+    Parameters
+    ----------
+    obs_date : datetime
+        date/time of observation used to determine the corresponding night at the specified observer location.
+        The time (hh:mm:ss) is not necessary in most cases although it may be convenient to specify hours to ensure
+        selection of the desired night.
+    site_code : str
+        MPC site code
+    max_objects : int
+        Maximum number of objects to return
+    min_obs_time : int/float
+        Minimum number of minutes needed for observing (truncated to integer)
+    min_Vmag : float or None
+        Objects must be fainter than this V band magnitude
+    max_Vmag : float or None
+        Objects must be brigher than this V band magnitude
+    max_rotper : float
+        Objects must have a defined rotation period less than this in hours
+
+    Returns
+    -------
+    url : str
+        Query url for use with the SB Observability API or null string if the geocenter (`site_code=500`) is specified
+    """
+
+    base_url = 'https://ssd-api.jpl.nasa.gov/sbwobs.api'
+    if site_code != '500':
+        url = f"{base_url}?mpc-code={site_code}&obs-time={obs_date.strftime('%Y-%m-%d')}"
+        url += f"&maxoutput={max_objects}&output-sort=vmag&fmt-ra-dec=false&mag-required=true"
+        # Restrict targets to only NEOs with elongation>45 and galactic lat.>10
+        # These could potentially be made adjustable args later
+        url += "&sb-group=neo&elong-min=45&glat-min=10"
+        # Need to be visible for at least time time (in minutes)
+        url += f"&time-min={int(min_obs_time)}"
+        # Try and decode the site code into a LCO telescope class and then use
+        # this to set mag limits
+        if min_Vmag is None or max_Vmag is None:
+            # No or bad magnitude limits given, determine new ones. First define
+            # suitable 1m0 defaults
+            min_Vmag = 12 # At least this bright
+            max_Vmag = 19
+            _, _, tel_class = MPC_site_code_to_domes(site_code)
+            if '0m4' in tel_class:
+                # Shallower limits for DeltaRhos
+                min_Vmag = 10
+                max_Vmag = 17
+        url += f"&vmag-min={min_Vmag:.1f}&vmag-max={max_Vmag:.1f}"
+        if max_rotper is not None and max_rotper > 0:
+            sbdb_constraints = translate_constraints(['rot_per IS DEFINED', f'rot_per<={max_rotper}'])
+            url += f"&sb-cdata={sbdb_constraints}"
+    else:
+        logger.warning("Site code cannot be geocenter (500)")
+        url = ''
+    return url
+
+def fetch_jpl_sbobs(obs_date, site_code='W86', max_objects=100, min_Vmag=None, max_Vmag=None, max_rotper=8):
+    """Fetch NEOs that are visible on `obs_date` from MPC site code `site_code` (defaults to 'W86' (LCO CTIO Dome B))
+    from the JPL Small Body Observability Service
+
+    Parameters
+    ----------
+    obs_date : datetime
+        Date of observations to fetch for (hours part may be necessary to select correct day at certain sites)
+    site_code : str, optional
+        MPC site code, by default 'W86'
+    max_objects : int, optional
+        Maximum number of observable NEOs to return, by default 100
+    min_Vmag : _type_, optional
+        brightest V magnitude of object to return, by default None (determine limits in `make_jpl_sbobs_query()`)
+    max_Vmag : _type_, optional
+        faintest V magnitude of object to return, by default None (determine limits in `make_jpl_sbobs_query()`)
+    max_rotper : int, optional
+        maximum rotation period (in hours), by default 8
+
+    Returns
+    -------
+    dict
+        dictionary of results as described in https://ssd-api.jpl.nasa.gov/doc/sbwobs.html#data-output
+    """
+
+    results = {}
+    query_url = make_jpl_sbobs_query(obs_date, site_code, max_objects, min_Vmag=min_Vmag, max_Vmag=max_Vmag, max_rotper=max_rotper)
+    #print(f"query_url={query_url}")
+    if query_url:
+        resp = requests.get(query_url)
+        if resp.ok:
+            data = resp.json()
+            #print(data['total_objects'], data['shown_objects'])
+            if 'signature' in data and data['signature']['version'] == '1.0':
+                results = data
+            else:
+                logger.warning("Unexpected version signature found")
+    return results

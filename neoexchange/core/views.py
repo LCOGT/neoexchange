@@ -32,6 +32,7 @@ import logging
 import tempfile
 import bokeh
 from bs4 import BeautifulSoup
+
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -39,6 +40,7 @@ from django.contrib.messages.views import SuccessMessageMixin
 from django.core.exceptions import ObjectDoesNotExist, ValidationError, FieldDoesNotExist
 from django.core.files.storage import default_storage
 from django.core.paginator import Paginator
+from django.core import serializers
 from django.db.models import Q, Prefetch
 from django.forms.models import model_to_dict
 from django.http import Http404, HttpResponse, HttpResponseRedirect
@@ -74,7 +76,7 @@ from astrometrics.sources_subs import fetchpage_and_make_soup, packed_to_normal,
     fetch_mpcdb_page, parse_mpcorbit, submit_block_to_scheduler, parse_mpcobs,\
     fetch_NEOCP_observations, PackedError, fetch_filter_list, fetch_mpcobs, validate_text,\
     read_mpcorbit_file, fetch_jpl_physparams_altdes, store_jpl_sourcetypes, store_jpl_desigs,\
-    store_jpl_physparams
+    store_jpl_physparams, fetch_jpl_sbobs
 from astrometrics.time_subs import extract_mpc_epoch, parse_neocp_date, \
     parse_neocp_decimal_date, get_semester_dates, jd_utc2datetime, datetime2st
 from photometrics.external_codes import run_sextractor, run_scamp, updateFITSWCS,\
@@ -2193,6 +2195,40 @@ def look_project(request):
     params['form'] = AddTargetForm()
     return render(request, 'core/lookproject.html', params)
 
+def ptr_neos(request, site_code, obs_date):
+
+    try:
+        obs_date = datetime.strptime(obs_date, "%Y-%m-%d")
+    except ValueError:
+        raise Http404("Could not parse observation date")
+
+    data = fetch_jpl_sbobs(obs_date, site_code)
+
+    params = {
+        'obs_date': obs_date,
+        'site_code': site_code,
+        'data': data['data']
+    }
+    if request.GET.get('format', '') == 'json':
+            datanames =  [
+                "Designation",
+                "Full name",
+                "Rise time",
+                "Transit time",
+                "Set time",
+                "Max. time observable",
+                "R.A.",
+                "Dec.",
+                "Vmag",
+                "Helio. range (au)",
+                "Topo.range (au)",
+                "Object-Observer-Sun (deg)",
+                "Object-Observer-Moon (deg)",
+                "Galactic latitude (deg)"
+            ]
+            jsonparams = {'obs_date': obs_date.strftime("%Y-%m-%d"), 'site_code': site_code, 'data': data['data'], 'colnames': datanames}
+            return HttpResponse(json.dumps(jsonparams), content_type='application/json')
+    return render(request, 'core/ptrneos.html', params)
 
 def check_for_block(form_data, params, new_body):
     """Checks if a block with the given name exists in the Django DB.
