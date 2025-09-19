@@ -385,6 +385,7 @@ def degreestodms(value, sep):
     if ":" in str(value):
         return value
     try:
+        value = float(value)
         if value < 0:
             sign = "-"
         else:

@@ -23,6 +23,7 @@ from dateutil.relativedelta import relativedelta
 from unittest import skipIf
 from math import radians, ceil
 from copy import deepcopy
+from urllib.parse import quote
 
 import astropy.units as u
 from bs4 import BeautifulSoup
@@ -7275,3 +7276,113 @@ class TestBoxSpiral(TestCase):
             if k == 25:
                 self.assertEqual((1, 0), b_next)
                 break
+
+
+class TestMakeJPLSBobsQuery(SimpleTestCase):
+    def setUp(self):
+        # Split the very long string; Python will automatically concatenate all within the ()s
+        self.base_url = ('https://ssd-api.jpl.nasa.gov/sbwobs.api?mpc-code=K92&obs-time=2025-09-03&maxoutput=100'
+                         '&output-sort=vmag&fmt-ra-dec=false&mag-required=true&sb-group=neo&elong-min=45&glat-min=10'
+                         '&time-min=30&vmag-min=12.0&vmag-max=19.0')
+        self.obs_date = datetime(2025, 9, 3, 20, 0, 0)
+
+        self.maxDiff = None
+
+    def test_defaults(self):
+        expected_url = self.base_url.replace('K92', 'W86')
+
+        url = make_jpl_sbobs_query(self.obs_date)
+
+        self.assertEqual(expected_url, url)
+
+    def test_bad_geocenter(self):
+        expected_url = ''
+
+        url = make_jpl_sbobs_query(self.obs_date, '500')
+
+        self.assertEqual(expected_url, url)
+
+    def test_K92(self):
+        expected_url = self.base_url
+
+        url = make_jpl_sbobs_query(self.obs_date, 'K92')
+
+        self.assertEqual(expected_url, url)
+
+    def test_K92_10objs(self):
+        expected_url = self.base_url.replace('100', '10')
+
+        url = make_jpl_sbobs_query(self.obs_date, site_code='K92', max_objects=10)
+
+        self.assertEqual(expected_url, url)
+
+    def test_DeltaRho(self):
+        expected_url = self.base_url.replace('K92', 'Q59').replace('12.0&vmag-max=19.0', '10.0&vmag-max=17.0')
+
+        url = make_jpl_sbobs_query(self.obs_date, site_code='Q59')
+
+        self.assertEqual(expected_url, url)
+
+    def test_DeltaRho_mag_limits(self):
+        expected_url = self.base_url.replace('K92', 'Q59').replace('12.0&vmag-max=19.0', '9.1&vmag-max=12.5')
+
+        url = make_jpl_sbobs_query(self.obs_date, site_code='Q59', min_Vmag=9.12, max_Vmag=12.54)
+
+        self.assertEqual(expected_url, url)
+
+    def test_DeltaRho_period_limit(self):
+        expected_url = self.base_url.replace('K92', 'Q59').replace('12.0&vmag-max=19.0', '10.0&vmag-max=17.0')
+        constraint_str = '{"AND":["rot_per|DF","rot_per|LE|4"]}'
+        expected_url += f"&sb-cdata={quote(constraint_str)}"
+
+        url = make_jpl_sbobs_query(self.obs_date, site_code='Q59', max_rotper=4)
+
+        self.assertEqual(expected_url, url)
+
+class TestFetchJPLSBobs(SimpleTestCase):
+    @patch('requests.get')
+    def test_query(self, mocked_get):
+        mocked_get.return_value = Mock(status_code=200, json=lambda : {'signature' : {'source' : 'NASA/JPL Small-Body Observability API', 'version': '1.0'},
+            'obs_constraints' : {'obs-time': '2025-09-03',
+                                'output-sort': 'vmag',
+                                'mpc-code': 'K92',
+                                'maxoutput': '100'},
+            'location' : 'foo',
+            'fields' : ['Designation', 'Rise time', 'R.A.', 'Dec.'],
+            'sort_by' : 'V-magnitude (asc).',
+            'data': [['4',
+                      '4 Vesta (A807 FA)',
+                      '08:40*',
+                      '15:22*',
+                      '22:05',
+                      '04:24',
+                      '15:34:15',
+                      '-16 31\'20"',
+                      '7.59',
+                      '2.15',
+                      '2.19',
+                      '74.55',
+                      '45.07',
+                      '31.44'],
+                     ['6',
+                      '6 Hebe (A847 NA)',
+                      '15:26*',
+                      '22:15',
+                      '05:05*',
+                      '09:48',
+                      '22:28:13',
+                      '-19 04\'18"',
+                      '7.62',
+                      '2.02',
+                      '1.03',
+                      '167.44',
+                      '51.73',
+                      '-55.95']],
+            'total_objects' : '4242',
+            'shown_objects' : '100'}
+        )
+
+        expected_keys = ['signature', 'obs_constraints', 'location', 'fields', 'sort_by', 'data', 'total_objects', 'shown_objects']
+        resp = fetch_jpl_sbobs(obs_date=datetime(2025,9,3))
+
+        self.assertEqual(expected_keys, list(resp.keys()))
