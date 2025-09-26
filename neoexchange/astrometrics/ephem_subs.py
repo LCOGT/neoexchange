@@ -2441,10 +2441,25 @@ def convert_findorb_elements(elements_json, now=None):
                 comet = True
             else:
                 raise
+    # Make an additional check to see if we actually have a comet
+    provisional_comets = r'([C,P,A,D]/\d{4} [A-H,J-Y]{1,2}\d+)'
+    numbered_comets = r'(\d+)P\s*$'
+    if re.match(provisional_comets, neox_elements['name']) or re.match(numbered_comets, neox_elements['name']):
+        comet = True
+
     if comet is True:
         neox_elements['elements_type'] = 'MPC_COMET'
-        neox_elements['meandist'] = None
-        neox_elements['meananom'] = None
+        # Some objects like P/2016 P5 seem to do better with asteroid elements rather than comet ones.
+        # Switching back is easier if we don't wipe out the fields we need (except for e>=1.0 where these
+        # quantities aren't defined and for e>=0.9 where we can't swap to MPC_MINOR_PLANET without SLALIB breaking)
+        if neox_elements['eccentricity'] >= 0.9:
+            neox_elements['meandist'] = None
+            neox_elements['meananom'] = None
+        # Reset default asteroid slope of 0.15 to default comet k1=10 (divided by 2.5
+        # since that's how NEOx does the comet mags)
+        if neox_elements['slope'] == 0.15:
+            neox_elements['slope'] = 10.0
+        neox_elements['slope'] /= 2.5
     else:
         # Asteroid, Remove cometary fields
         neox_elements['epochofperih'] = None

@@ -50,7 +50,12 @@ class Command(BaseCommand):
                 if body:
                     # Overwrite origin with original or LCO
                     new_elements['origin'] = body.origin or 'L'
-                    self.stdout.write(f"Updating Body # {body.id} ({obj_id}/{body.current_name()})")
+                    self.stdout.write(f"Updating Body # {body.id} ({obj_id}-> {body.current_name()})")
+                    # Avoid clobbering non-default magnitude parameters
+                    if (new_elements['elements_type'] == 'MPC_MINOR_PLANET' and new_elements['slope'] == 0.15 and body.slope != 0.15) or \
+                        (new_elements['elements_type'] == 'MPC_COMET' and new_elements['slope'] == 4.0 and body.slope != 4.0):
+                            new_elements['abs_mag'] = body.abs_mag
+                            new_elements['slope'] = body.slope
                     # Show elements that are being changed
                     self.stdout.write("{")
                     for key, new_value in new_elements.items():

@@ -13,7 +13,7 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 """
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from math import radians, degrees, floor
 import os
 import tempfile
@@ -4103,6 +4103,9 @@ class TestConvertFOElements(SimpleTestCase):
         with open(os.path.join('astrometrics', 'tests', 'test_fo_elements_comet.json'), 'r') as fp:
             self.test_comet_json = json.load(fp)
             self.test_comet_obs = self.test_comet_json['objects'][self.test_comet_json['ids'][0]]['observations']
+        with open(os.path.join('astrometrics', 'tests', 'test_fo_elements_numcomet.json'), 'r') as fp:
+            self.test_num_comet_json = json.load(fp)
+            self.test_num_comet_obs = self.test_num_comet_json['objects'][self.test_num_comet_json['ids'][0]]['observations']
 
         self.maxDiff = None
         self.tolerance = 5
@@ -4183,6 +4186,78 @@ class TestConvertFOElements(SimpleTestCase):
                           }
 
         new_elements = convert_findorb_elements(self.test_comet_json, now=self.now)
+
+        self.assertEqual(expected_keys, list(new_elements.keys()))
+        self.assertEqual(len(expected_types), len(list(new_elements.keys())))
+        for expected_type, key in zip(expected_types, list(new_elements.keys())):
+            if expected_type is None:
+                self.assertTrue(new_elements[key] is None, msg="Failure on " + key)
+            else:
+                self.assertEqual(expected_type, type(new_elements[key]), msg="Failure on " + key)
+        for key, expected_value in expected_values.items():
+            if type(expected_value) == float:
+                self.assertAlmostEqual(expected_value, new_elements[key], self.tolerance)
+            else:
+                self.assertEqual(expected_value, new_elements[key])
+
+    def test_num_comet_keys_high_e(self):
+        expected_keys = ['name', 'origin', 'elements_type', 'epochofel',
+                         'epochofperih', 'arc_length', 'not_seen',
+                         'num_obs', 'meananom', 'meandist', 'eccentricity', 'perihdist',
+                         'orbinc', 'argofperih', 'longascnode', 'abs_mag',
+                         'slope', 'orbit_rms', 'updated', 'update_time']
+        expected_types = [str, str, str, datetime, datetime, float, float, int,
+            None, None, float, float, float, float, float, float, float, float, bool, datetime]
+        expected_values = { 'elements_type' : 'MPC_COMET',
+                            'epochofel' : datetime(2025, 4, 29),
+                            'epochofperih' : datetime(2024, 4, 21, 3, 15, 7, int(1e6 * 0.918)),
+                            'meandist' : None,
+                            'meananom' : None,
+                            'perihdist' : 0.7810770828706,
+                            'arc_length': self.test_num_comet_obs["latest_used"] - self.test_num_comet_obs["earliest_used"],
+                            'num_obs' : 6197,
+                            'not_seen' : 9.334276666,
+                            'update_time' : self.now + timedelta(days=300) # Add time so we don't get -ve not_seen
+                          }
+
+        new_elements = convert_findorb_elements(self.test_num_comet_json, now=self.now + timedelta(days=300))
+
+        self.assertEqual(expected_keys, list(new_elements.keys()))
+        self.assertEqual(len(expected_types), len(list(new_elements.keys())))
+        for expected_type, key in zip(expected_types, list(new_elements.keys())):
+            if expected_type is None:
+                self.assertTrue(new_elements[key] is None, msg="Failure on " + key)
+            else:
+                self.assertEqual(expected_type, type(new_elements[key]), msg="Failure on " + key)
+        for key, expected_value in expected_values.items():
+            if type(expected_value) == float:
+                self.assertAlmostEqual(expected_value, new_elements[key], self.tolerance, msg="Failure on " + key)
+            else:
+                self.assertEqual(expected_value, new_elements[key])
+
+    def test_num_comet_keys_low_e(self):
+        expected_keys = ['name', 'origin', 'elements_type', 'epochofel',
+                         'epochofperih', 'arc_length', 'not_seen',
+                         'num_obs', 'meananom', 'meandist', 'eccentricity', 'perihdist',
+                         'orbinc', 'argofperih', 'longascnode', 'abs_mag',
+                         'slope', 'orbit_rms', 'updated', 'update_time']
+        expected_types = [str, str, str, datetime, datetime, float, float, int,
+            float, float, float, float, float, float, float, float, float, float, bool, datetime]
+        expected_values = { 'elements_type' : 'MPC_COMET',
+                            'epochofel' : datetime(2025, 4, 29),
+                            'epochofperih' : datetime(2024, 4, 21, 3, 15, 7, int(1e6 * 0.918)),
+                            'meandist' : 17.2250603931667,
+                            'meananom' : 5.1406018828607,
+                            'perihdist' : 0.7810770828706,
+                            'arc_length': self.test_num_comet_obs["latest_used"] - self.test_num_comet_obs["earliest_used"],
+                            'num_obs' : 6197,
+                            'not_seen' : 9.334276666,
+                            'update_time' : self.now + timedelta(days=300)
+                          }
+
+        # Hack the eccentricity to be below the e=0.9 cutoff
+        self.test_num_comet_json['objects']['12P']['elements']['e'] = 0.42
+        new_elements = convert_findorb_elements(self.test_num_comet_json, now=self.now + timedelta(days=300))
 
         self.assertEqual(expected_keys, list(new_elements.keys()))
         self.assertEqual(len(expected_types), len(list(new_elements.keys())))
