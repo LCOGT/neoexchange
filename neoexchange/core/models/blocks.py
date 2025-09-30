@@ -13,6 +13,7 @@ GNU General Public License for more details.
 from collections import Counter, OrderedDict
 from datetime import datetime
 import warnings
+import logging
 
 from django.conf import settings
 from django.contrib.auth.models import User
@@ -53,6 +54,7 @@ SITE_CHOICES = (
                     ('qhy', 'QHY cameras')
     )
 
+logger = logging.getLogger(__name__)
 
 class SuperBlock(models.Model):
 
@@ -229,7 +231,7 @@ class Block(models.Model):
         if frames_qs.count() > 1:
             frame = frames_qs.earliest('midpoint')
             frames = [frame, ]
-            if self.num_observed >= 2:
+            if self.num_observed and self.num_observed >= 2:
                 if self.num_observed > 2:
                     logger.warning(f"More than 2 observations of Block id={self.id} - cannot retrieve all BLKUIDs")
                 last_frame = Frame.objects.filter(block=self, frametype=Frame.BANZAI_RED_FRAMETYPE, frameid__isnull=False).latest('midpoint')

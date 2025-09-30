@@ -73,12 +73,12 @@ def summarize_observations(target_name='65803', start_date='2022-07-15', proposa
                 # add instrument into the filter string
                 if first_frame.instrument.startswith('ep'):
                     filter_str += f'({first_frame.instrument})'
-                srcs_snr = srcs.filter(frame__filter=obs_filter).values_list('snr',flat=True)
+                srcs_snr = srcs.filter(frame__filter=obs_filter).exclude(snr__isnull=True).values_list('snr',flat=True)
                 snr = -999
                 if len(srcs_snr) > 0:
                     snr = np.mean(srcs_snr)
                 fwhm = -99
-                srcs_fwhm = frames.filter(fwhm__gt=0).values_list('fwhm', flat=True)
+                srcs_fwhm = frames.filter(fwhm__gt=0).exclude(fwhm__isnull=True).values_list('fwhm', flat=True)
                 num_dp = DataProduct.objects.filter(filetype=DataProduct.DART_TXT, object_id=block.superblock.pk).count()
                 if len(srcs_fwhm) > 0:
                     fwhm = np.mean(srcs_fwhm)

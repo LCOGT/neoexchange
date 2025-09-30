@@ -2391,16 +2391,31 @@ def get_planetary_elements(planet=None):
         return_elements = planet_elements
     return return_elements
 
-def convert_findorb_elements(elements_json):
+def convert_findorb_elements(elements_json, now=None):
     """Converts JSON elements output from find_orb in the elem_short.json file
     to NEOexchange format"""
 
+    datetime_now = now or datetime.utcnow()
+    fsec_str = '%Y-%m-%dT%H:%M:%S.%fZ'
+
+    if 'objects' not in elements_json or 'ids' not in elements_json:
+        return {}
     obj = elements_json['objects'][elements_json['ids'][0]]
     elements = obj['elements']
+    obs = obj['observations']
+    td = datetime_now - datetime.strptime(obs['latest_used iso'], fsec_str)
+    td_days = td.total_seconds() / 86400.0
+    arc_length = datetime.strptime(obs['latest_used iso'], fsec_str) - datetime.strptime(obs['earliest_used iso'], fsec_str)
+    arc_length_days = arc_length.total_seconds() / 86400.0
+
     neox_elements = { 'name' : obj['object'].replace('(', '').replace(')', ''),
                       'origin' : 'F',
                       'elements_type' : 'MPC_MINOR_PLANET',
                       'epochofel' : datetime.strptime(elements['epoch_iso'], '%Y-%m-%dT%H:%M:%SZ'),
+                      'epochofperih' : datetime.strptime(elements['Tp_iso'], fsec_str),
+                      'arc_length' : arc_length_days,
+                      'not_seen' : td_days,
+                      'num_obs' : obs['used']
                     }
     # Mapping from find_orb -> NEOx element sets for direct values
     mapping = {
@@ -2411,13 +2426,45 @@ def convert_findorb_elements(elements_json):
                 'i' : 'orbinc',
                 'arg_per' : 'argofperih',
                 'asc_node' : 'longascnode',
-                'Tp' : 'epochofperih',
                 'H' : 'abs_mag',
                 'G' :  'slope',
                 'rms_residual' : 'orbit_rms'
             }
 
+    comet = False
     for fo_key, neox_key in mapping.items():
-        neox_elements[neox_key] = elements[fo_key]
+        try:
+            neox_elements[neox_key] = elements[fo_key]
+        except KeyError:
+            if fo_key == 'M':
+                # Likely we have a comet so need to flip somethings afterwards
+                comet = True
+            else:
+                raise
+    # Make an additional check to see if we actually have a comet
+    provisional_comets = r'([C,P,A,D]/\d{4} [A-H,J-Y]{1,2}\d+)'
+    numbered_comets = r'(\d+)P\s*$'
+    if re.match(provisional_comets, neox_elements['name']) or re.match(numbered_comets, neox_elements['name']):
+        comet = True
+
+    if comet is True:
+        neox_elements['elements_type'] = 'MPC_COMET'
+        # Some objects like P/2016 P5 seem to do better with asteroid elements rather than comet ones.
+        # Switching back is easier if we don't wipe out the fields we need (except for e>=1.0 where these
+        # quantities aren't defined and for e>=0.9 where we can't swap to MPC_MINOR_PLANET without SLALIB breaking)
+        if neox_elements['eccentricity'] >= 0.9:
+            neox_elements['meandist'] = None
+            neox_elements['meananom'] = None
+        # Reset default asteroid slope of 0.15 to default comet k1=10 (divided by 2.5
+        # since that's how NEOx does the comet mags)
+        if neox_elements['slope'] == 0.15:
+            neox_elements['slope'] = 10.0
+        neox_elements['slope'] /= 2.5
+    else:
+        # Asteroid, Remove cometary fields
+        neox_elements['epochofperih'] = None
+        neox_elements['perihdist'] = None
+    neox_elements['updated'] = True
+    neox_elements['update_time'] = datetime_now
 
     return neox_elements
