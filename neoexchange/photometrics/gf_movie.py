@@ -410,6 +410,12 @@ def make_movie(date_obs, obj, req, base_dir, out_path, prop, tarfile=None):
     if len(filename) == 0:
         # Try old style
         filename = glob(os.path.join(path, '*2df_ex.fits'))  # checking if unpacked
+    else:
+        # Check if we have a movie file already
+        movie_file = os.path.join(base_dir, sanitize_object_name(obj) + '_' + req + '_guidemovie.gif')
+        if os.path.exists(movie_file):
+            return movie_file
+
     frames = []
     if not filename:
         unpack_path = os.path.join(base_dir, obj+'_'+req)

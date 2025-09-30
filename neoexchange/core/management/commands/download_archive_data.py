@@ -135,19 +135,32 @@ class Command(BaseCommand):
                             self.stdout.write("Downloaded %d guide frames" % (len(dl_frames)))
                             # Symlink guide frames into where make_movie() would expect them to be
                             # (We don't move them otherwise they will get redownloaded the next time this
-                            # this script runs...)
+                            # this script runs...) We know also need to check whether the object name
+                            # in the entries in `guide_frames` from `check_for_archive_images` match
+                            # as that will download all guider frames for the Request for both the target
+                            # and spectral standard.
                             guide_path = os.path.join(tar_path, obj + '_' + req_num, 'Guide_frames')
-                            for guide_framepath in dl_frames:
-                                dest_filepath = os.path.join(guide_path, os.path.basename(guide_framepath))
-                                if os.path.exists(dest_filepath) is False:
+                            if not os.path.exists(guide_path):
+                                try:
+                                    oldumask = os.umask(0o002)
+                                    os.makedirs(guide_path)
+                                    os.umask(oldumask)
+                                except OSError:
+                                    msg = "Error creating output path %s" % guide_path
+                                    raise CommandError(msg)
+                            os.makedirs(guide_path, exist_ok=True)
+                            for guide_frame in guide_frames:
+                                guide_framepath = os.path.join(tar_path, guide_frame['filename'])
+                                dest_filepath = os.path.join(guide_path, guide_frame['filename'])
+                                guide_obj = sanitize_object_name(guide_frame['target_name'])
+                                if os.path.exists(dest_filepath) is False and guide_obj == obj:
                                     os.symlink(guide_framepath, dest_filepath)
-                            movie_file = make_movie(frame['DATE_OBS'], obj, req_num, tar_path, out_path, frame['PROPID'], tarfile=None)
-                        # Need a new movie maker
+                            movie_file = make_movie(frame['DATE_OBS'], obj, req_num, tar_path, tar_path, frame['PROPID'], tarfile=None)
                         blocks = Block.objects.filter(request_number=req_num)
                         for block in blocks:
                             if block.current_name() == frame['OBJECT']:
                                 save_dataproduct(obj=block, filepath=movie_file, filetype=DataProduct.GUIDER_GIF)
-                                filename = frame['filename']
+                                filename = os.path.join(tar_path, frame['filename'])
                                 save_dataproduct(obj=block, filepath=filename, filetype=DataProduct.FITS_SPECTRA)
                                 break
             self.stdout.write("Done")
