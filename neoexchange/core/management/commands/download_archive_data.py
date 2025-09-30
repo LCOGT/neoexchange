@@ -136,7 +136,7 @@ class Command(BaseCommand):
                             # Symlink guide frames into where make_movie() would expect them to be
                             # (We don't move them otherwise they will get redownloaded the next time this
                             # this script runs...)
-                            guide_path = os.path.join(tar_path, obj + '_' + req, 'Guide_frames')
+                            guide_path = os.path.join(tar_path, obj + '_' + req_num, 'Guide_frames')
                             for guide_framepath in dl_frames:
                                 dest_filepath = os.path.join(guide_path, os.path.basename(guide_framepath))
                                 if os.path.exists(dest_filepath) is False:
