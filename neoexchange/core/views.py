@@ -3980,11 +3980,12 @@ def plot_floyds_spec(block):
         data_spec = []
         for spec_file in spec_files:
             raw_label, raw_spec, ast_wav, spec_err = spectrum_plot(spec_file.product.name)
-            data_spec.append({'label': raw_label,
-                              'spec': raw_spec,
-                              'wav': ast_wav,
-                              'err': spec_err,
-                              'filename': spec_file.product.name})
+            if raw_spec is not None and ast_wav is not None:
+                data_spec.append({'label': raw_label,
+                                'spec': raw_spec,
+                                'wav': ast_wav,
+                                'err': spec_err,
+                                'filename': spec_file.product.name})
     except IndexError:
         data_spec = None
 
@@ -3992,11 +3993,12 @@ def plot_floyds_spec(block):
     offset = 2  # Arbitrary offset to minimize analog/target plotting overlap
     for analog in analogs:
         analog_label, analog_spec, star_wav, spec_err = spectrum_plot(analog.product.name, offset=offset)
-        analog_data.append({'label': analog_label,
-                            'spec': analog_spec,
-                            'wav': star_wav,
-                            'err': spec_err,
-                            'filename': analog.product.name})
+        if analog_spec is not None and star_wav is not None:
+            analog_data.append({'label': analog_label,
+                                'spec': analog_spec,
+                                'wav': star_wav,
+                                'err': spec_err,
+                                'filename': analog.product.name})
 
     if data_spec and data_spec[0]['spec'] is not None:
         script, div = spec_plot(data_spec, analog_data)

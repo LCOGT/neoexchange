@@ -129,7 +129,7 @@
                               {% if blk.obstype == blk.OPT_SPECTRA or blk.obstype == blk.OPT_SPECTRA_CALIB %}
                                 <div class="block-control">{{blk.num_spectro_frames}}</div>
                                 <div class="block-control">Target: {{blk.current_name}}</div>
-                                {% if "TAR" in blk.num_spectro_frames %}
+                                {% if "TAR" in blk.num_spectro_frames or "1D SPECTRUM" in blk.num_spectro_frames %}
                                     <div class="block-control"><a href="{% url 'blockspec' blk.pk %}">Spectrum Plot</a></div>
                                 {% endif %}
                               {% else %}

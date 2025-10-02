@@ -159,8 +159,9 @@ def check_for_archive_images(request_id=None, obstype='EXPOSE', obj='', limit=30
     for datum in data:
         headers_url = u'%s%d/headers' % (settings.ARCHIVE_FRAMES_URL, datum['id'])
         datum[u'headers'] = headers_url
-        if (datum['RLEVEL'] == 91 and obstype == 'EXPOSE') or (datum['RLEVEL'] in [90, 0] and obstype in ['SPECTRUM', '', 'GUIDE']):
-            reduced_data.append(datum)
+        if (datum['RLEVEL'] == 91 and obstype == 'EXPOSE') or (datum['RLEVEL'] in [90, 0] and obstype in ['SPECTRUM', '', 'GUIDE']) \
+            or (datum['RLEVEL'] == 91 and datum['OBSTYPE'] == 'SPECTRUM' and obstype == ''):
+                reduced_data.append(datum)
         elif datum['RLEVEL'] == 11:
             quicklook_data.append(datum)
     num_total_frames = len(quicklook_data) + len(reduced_data)
