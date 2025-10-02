@@ -72,7 +72,7 @@ class Command(BaseCommand):
 
         archive_token = settings.ARCHIVE_TOKEN
         if archive_token is not None:
-            auth_headers = archive_login()
+            auth_header = archive_login()
             start_date, end_date = determine_archive_start_end(obs_date)
             end_date = end_date + timedelta(days=options['numdays'])
             for proposal in proposals:
@@ -88,14 +88,14 @@ class Command(BaseCommand):
                     else:
                         # '' seems to be needed to get the tarball of FLOYDS products
                         redlevel = ['0', '']
-                    frames = get_frame_data(start_date, end_date, auth_headers, obstype, proposal, red_lvls=redlevel)
+                    frames = get_frame_data(start_date, end_date, auth_header, obstype, proposal, red_lvls=redlevel)
                     for red_lvl in frames.keys():
                         if red_lvl in all_frames:
                             all_frames[red_lvl] = all_frames[red_lvl] + frames[red_lvl]
                         else:
                             all_frames[red_lvl] = frames[red_lvl]
                     if 'CATALOG' in obstype or obstype == '':
-                        catalogs = get_catalog_data(frames, auth_headers)
+                        catalogs = get_catalog_data(frames, auth_header)
                         for red_lvl in frames.keys():
                             if red_lvl in all_frames:
                                 all_frames[red_lvl] = all_frames[red_lvl] + catalogs[red_lvl]
