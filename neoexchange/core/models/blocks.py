@@ -13,6 +13,7 @@ GNU General Public License for more details.
 from collections import Counter, OrderedDict
 from datetime import datetime
 import warnings
+import logging
 
 from django.conf import settings
 from django.contrib.auth.models import User
@@ -53,6 +54,7 @@ SITE_CHOICES = (
                     ('qhy', 'QHY cameras')
     )
 
+logger = logging.getLogger(__name__)
 
 class SuperBlock(models.Model):
 
@@ -229,7 +231,7 @@ class Block(models.Model):
         if frames_qs.count() > 1:
             frame = frames_qs.earliest('midpoint')
             frames = [frame, ]
-            if self.num_observed >= 2:
+            if self.num_observed and self.num_observed >= 2:
                 if self.num_observed > 2:
                     logger.warning(f"More than 2 observations of Block id={self.id} - cannot retrieve all BLKUIDs")
                 last_frame = Frame.objects.filter(block=self, frametype=Frame.BANZAI_RED_FRAMETYPE, frameid__isnull=False).latest('midpoint')
@@ -304,7 +306,22 @@ class Block(models.Model):
         num_moltypes_string = 'No data'
         data, num_frames = check_for_archive_images(self.request_number, obstype='', obj=self.current_name())
         if num_frames > 0:
-            moltypes = [x['OBSTYPE'] if x['RLEVEL'] != 90 else "TAR" for x in data]
+            moltypes = []
+            for x in data:
+                if x['RLEVEL'] == 90:
+                    obstype = "TAR"
+                else:
+                    # Look for new stype BANZAI-FLOYDS products
+                    if x['RLEVEL'] == 91 and x['OBSTYPE'] == 'SPECTRUM':
+                        if 'e91-1d' in x['filename']:
+                            obstype = "1D SPECTRUM"
+                        elif 'e91-2d' in x['filename']:
+                            obstype = "2D SPECTRUM"
+                        else:
+                            obstype = "UNKNOWN SPECTRUM TYPE"
+                    else:
+                        obstype = x['OBSTYPE']
+                moltypes.append(obstype)
             num_moltypes = {x: moltypes.count(x) for x in set(moltypes)}
             num_moltypes_sort = OrderedDict(sorted(num_moltypes.items(), reverse=True))
             num_moltypes_string = ", ".join([x+": "+str(num_moltypes_sort[x]) for x in num_moltypes_sort])
@@ -315,7 +332,22 @@ class Block(models.Model):
         num_spectra = 0
         data, num_frames = check_for_archive_images(self.request_number, obstype='')
         if num_frames > 0:
-            moltypes = [x['OBSTYPE'] if x['RLEVEL'] != 90 else "TAR" for x in data]
+            moltypes = []
+            for x in data:
+                if x['RLEVEL'] == 90:
+                    obstype = "TAR"
+                else:
+                    # Look for new stype BANZAI-FLOYDS products
+                    if x['RLEVEL'] == 91 and x['OBSTYPE'] == 'SPECTRUM':
+                        if 'e91-1d' in x['filename']:
+                            obstype = "1D SPECTRUM"
+                        elif 'e91-2d' in x['filename']:
+                            obstype = "2D SPECTRUM"
+                        else:
+                            obstype = "UNKNOWN SPECTRUM TYPE"
+                    else:
+                        obstype = x['OBSTYPE']
+                moltypes.append(obstype)
             num_spectra = moltypes.count('SPECTRUM')
         return num_spectra
 

@@ -159,8 +159,9 @@ def check_for_archive_images(request_id=None, obstype='EXPOSE', obj='', limit=30
     for datum in data:
         headers_url = u'%s%d/headers' % (settings.ARCHIVE_FRAMES_URL, datum['id'])
         datum[u'headers'] = headers_url
-        if (datum['RLEVEL'] == 91 and obstype == 'EXPOSE') or (datum['RLEVEL'] in [90, 0] and obstype in ['SPECTRUM', '', 'GUIDE']):
-            reduced_data.append(datum)
+        if (datum['RLEVEL'] == 91 and obstype == 'EXPOSE') or (datum['RLEVEL'] in [90, 0] and obstype in ['SPECTRUM', '', 'GUIDE']) \
+            or (datum['RLEVEL'] == 91 and datum['OBSTYPE'] == 'SPECTRUM' and obstype == ''):
+                reduced_data.append(datum)
         elif datum['RLEVEL'] == 11:
             quicklook_data.append(datum)
     num_total_frames = len(quicklook_data) + len(reduced_data)
@@ -202,6 +203,7 @@ def check_for_existing_file(filename, archive_md5=None, dbg=False, verbose=False
     uncomp_filepath = os.path.splitext(filename)[0]
     output_file = os.path.splitext(os.path.basename(filename))[0]
     extension = os.path.splitext(os.path.basename(filename))[1]
+    logger.debug("dash count={}".format(output_file.count('-')))
     if output_file.count('-') == 4:
         # LCOGT format files will have 4 hyphens
         chunks = output_file.split('-')
@@ -248,13 +250,16 @@ def check_for_existing_file(filename, archive_md5=None, dbg=False, verbose=False
                     if verbose:
                         print("Uncompressed -91 level reduction file already exists.")
                     return True
-    elif ".tar.gz" in filename:  # check for existing tarballs
+    elif ".tar.gz" in filename or 'e91-1d' in filename or 'e91-2d' in filename:  # check for existing tarballs/BANZAI-FLOYDS products
         if os.path.exists(filename) and archive_md5 is not None:
                 md5sum = md5(open(filename, 'rb').read()).hexdigest()
                 logger.debug("{} {} {}".format(filename, md5sum, archive_md5))
                 if md5sum == archive_md5:
                     if verbose:
-                        print("Tarball exists with correct MD5 sum")
+                        if ".tar" in filename:
+                            print("Tarball exists with correct MD5 sum")
+                        else:
+                            print("Product exists with correct MD5 sum")
                     return True
 
     return False

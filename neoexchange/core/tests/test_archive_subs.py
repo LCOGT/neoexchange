@@ -13,13 +13,14 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 """
 
+import os
 from datetime import datetime, timedelta
 from unittest import skipIf
 from hashlib import md5
 import tempfile
 
 from mock import patch
-from django.test import TestCase
+from django.test import TestCase, SimpleTestCase
 from django.conf import settings
 
 from neox.tests.mocks import MockDateTime, mock_fetch_archive_frames, mock_lco_api_fail
@@ -108,7 +109,7 @@ class Test_Determine_Archive_Start_End(TestCase):
         self.assertEqual(expected_end, end)
 
 
-class TestCheckForExistingFile(TestCase):
+class TestCheckForExistingFile(SimpleTestCase):
 
     def create_temp(self, filename):
 
@@ -126,9 +127,15 @@ class TestCheckForExistingFile(TestCase):
         self.test_red_file_uncomp = os.path.join(tempfile.gettempdir(), 'cpt1m010-fl16-20170111-0211-e91.fits')
         self.test_FLOYDS_comp_tarball = os.path.join(tempfile.gettempdir(), 'LCOEngineering_0001651275_ftn_20181005_58397.tar.gz')
         self.test_FLOYDS_uncomp_tarball = os.path.join(tempfile.gettempdir(), 'LCOEngineering_0001651275_ftn_20181005_58397.tar')
+        self.test_FLOYDS_1d_product_comp = os.path.join(tempfile.gettempdir(), 'ogg2m001-en06-20250929-0008-e91-1d.fits.fz')
+        self.test_FLOYDS_1d_product_uncomp = os.path.join(tempfile.gettempdir(), 'ogg2m001-en06-20250929-0008-e91-1d.fits')
+        self.test_FLOYDS_2d_product_comp = os.path.join(tempfile.gettempdir(), 'ogg2m001-en06-20250929-0008-e91-2d.fits.fz')
+        self.test_FLOYDS_2d_product_uncomp = os.path.join(tempfile.gettempdir(), 'ogg2m001-en06-20250929-0008-e91-2d.fits')
         self.test_files = [ self.test_ql_file_comp, self.test_ql_file_uncomp,
                             self.test_red_file_comp, self.test_red_file_uncomp,
-                            self.test_FLOYDS_comp_tarball, self.test_FLOYDS_uncomp_tarball
+                            self.test_FLOYDS_comp_tarball, self.test_FLOYDS_uncomp_tarball,
+                            self.test_FLOYDS_1d_product_comp, self.test_FLOYDS_1d_product_uncomp,
+                            self.test_FLOYDS_2d_product_comp, self.test_FLOYDS_2d_product_uncomp
                           ]
 
     def tearDown(self):
@@ -195,6 +202,22 @@ class TestCheckForExistingFile(TestCase):
     def test_FLOYDS_uncomp_tarball(self):
         md5sum = self.create_temp(self.test_FLOYDS_uncomp_tarball)
         self.assertFalse(check_for_existing_file(self.test_FLOYDS_uncomp_tarball, md5sum), "Wrong result")
+
+    def test_FLOYDS_comp_1d_product(self):
+        md5sum = self.create_temp(self.test_FLOYDS_1d_product_comp)
+        self.assertTrue(check_for_existing_file(self.test_FLOYDS_1d_product_comp, md5sum), "Wrong result")
+
+    def test_FLOYDS_uncomp_1d_product(self):
+        md5sum = self.create_temp(self.test_FLOYDS_1d_product_uncomp)
+        self.assertTrue(check_for_existing_file(self.test_FLOYDS_1d_product_uncomp, md5sum), "Wrong result")
+
+    def test_FLOYDS_comp_2d_product(self):
+        md5sum = self.create_temp(self.test_FLOYDS_2d_product_comp)
+        self.assertTrue(check_for_existing_file(self.test_FLOYDS_2d_product_comp, md5sum), "Wrong result")
+
+    def test_FLOYDS_uncomp_2d_product(self):
+        md5sum = self.create_temp(self.test_FLOYDS_2d_product_uncomp)
+        self.assertTrue(check_for_existing_file(self.test_FLOYDS_2d_product_uncomp, md5sum), "Wrong result")
 
     def test_badfile(self):
         self.assertFalse(check_for_existing_file('wibble'), "Wrong result")

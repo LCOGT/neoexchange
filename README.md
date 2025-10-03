@@ -6,6 +6,9 @@ Portal for scheduling observations of NEOs (and other Solar System objects) usin
 
 ## History
 
+### 3.16.1
+* Add command line management command to update a Body from find_orb elements (Issue #649)
+
 ### 3.16.0
 * Add ability to query the JPL Small Body Observability API applying various filters (Issue #655)
 * Add endpoint for PTR use to fetch visible NEOs for a given site and date returning either a templated table or JSON (Issue #654)
