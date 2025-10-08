@@ -6,6 +6,9 @@ Portal for scheduling observations of NEOs (and other Solar System objects) usin
 
 ## History
 
+### 3.16.2
+* Add CORS header support via `corsheaders` package and middleware
+
 ### 3.16.1
 * Add command line management command to update a Body from find_orb elements (Issue #649)
 
