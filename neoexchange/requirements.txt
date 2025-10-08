@@ -36,3 +36,4 @@ awscli
 lxml
 freezegun
 tenacity
+django-cors-headers
