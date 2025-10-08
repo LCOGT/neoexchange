@@ -92,6 +92,7 @@ STATICFILES_FINDERS = (
  )
 
 MIDDLEWARE = (
+    "corsheaders.middleware.CorsMiddleware",
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -149,6 +150,8 @@ LOGIN_REDIRECT_URL = '/'
 
 # GRAPPELLI_INDEX_DASHBOARD = 'neox.dashboard.CustomIndexDashboard'
 
+CORS_ORIGIN_ALLOW_ALL=True
+
 INSTALLED_APPS = (
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -158,6 +161,7 @@ INSTALLED_APPS = (
     'django.contrib.admin',
     'django.contrib.messages',
     'reversion',
+    "corsheaders",
     'core.apps.CoreConfig',
     'analyser.apps.AstrometerConfig',
 )
