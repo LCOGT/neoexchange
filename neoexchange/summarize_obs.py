@@ -92,6 +92,7 @@ def summarize_observations(target_name='65803', start_date='2022-07-15', proposa
         return blocks
 
 def examine_multiap():
+    from photometrics.lightcurve_subs import read_photompipe_file
     for aprad in np.arange(2,12):
         phot_file = os.path.join(input_dir, f"photometry_65803_Didymos__1996_GT_ap{aprad}.dat")
         table = read_photompipe_file(phot_file)
