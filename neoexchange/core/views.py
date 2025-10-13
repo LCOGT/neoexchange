@@ -2196,19 +2196,28 @@ def look_project(request):
     return render(request, 'core/lookproject.html', params)
 
 def ptr_neos(request, site_code, obs_date):
-
     try:
         obs_date = datetime.strptime(obs_date, "%Y-%m-%d")
     except ValueError:
         raise Http404("Could not parse observation date")
 
     data = fetch_jpl_sbobs(obs_date, site_code)
-
     params = {
         'obs_date': obs_date,
         'site_code': site_code,
-        'data': data['data']
+        'errors' : None,
+        'data' : []
     }
+    if len(data) == 0:
+        # Check for no data at all before checking for no objects
+        params['data'] = []
+        params['errors'] = 'No data returned from JPL SBOBS endpoint'
+    else:
+        if len(data.get('data', [])) == 0:
+            params['errors'] = 'No valid objects returned from JPL SBOBS endpoint'
+        else:
+            params['data'] = data['data']
+
     if request.GET.get('format', '') == 'json':
             datanames =  [
                 "Designation",
@@ -2226,7 +2235,8 @@ def ptr_neos(request, site_code, obs_date):
                 "Object-Observer-Moon (deg)",
                 "Galactic latitude (deg)"
             ]
-            jsonparams = {'obs_date': obs_date.strftime("%Y-%m-%d"), 'site_code': site_code, 'data': data['data'], 'colnames': datanames}
+            jsonparams = {'obs_date': obs_date.strftime("%Y-%m-%d"), 'site_code': site_code,
+                          'errors' : params['errors'], 'data': params['data'], 'colnames': datanames}
             return HttpResponse(json.dumps(jsonparams), content_type='application/json')
     return render(request, 'core/ptrneos.html', params)
 

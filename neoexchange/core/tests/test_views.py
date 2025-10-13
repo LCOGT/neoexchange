@@ -21,7 +21,7 @@ import tempfile
 from glob import glob
 from math import degrees
 
-from django.test import TestCase, SimpleTestCase, override_settings, RequestFactory
+from django.test import TestCase, SimpleTestCase, override_settings, RequestFactory, tag
 from django.forms.models import model_to_dict
 from django.conf import settings
 from django.http import Http404
@@ -9218,16 +9218,75 @@ class TestPtrneos(TestCase):
 
     def setUp(self):
         self.factory = RequestFactory()
+        self.site_code = 'Z24'
+        self.obs_date = '2025-10-10'
+
+        self.maxDiff = None
 
     @patch('core.views.fetch_jpl_sbobs')
     def test_null_response(self, mocked_fetch):
         mocked_fetch.return_value = {}
         # Call sequence     re_path(r'^ptrneos/site/(?P<site_code>[A-Z,0-9]{3})/date/(?P<obs_date>\d{4}-\d{2}-\d{2})/', ptr_neos, name='ptr_neos'),
-        site_code = 'Z24'
-        obs_date = '2025-10-10'
 
-        request = self.factory.get('/ptrneos/site/{site_code}/date/{obs_date}/')
+        request = self.factory.get('/ptrneos/site/{self.site_code}/date/{self.obs_date}/')
 
-        response = ptr_neos(request, site_code, obs_date)
+        response = ptr_neos(request, self.site_code, self.obs_date)
 
         self.assertEqual(response.status_code, 200)
+
+    @patch('core.views.fetch_jpl_sbobs')
+    def test_fake_json_api_response(self, mocked_fetch):
+        mocked_fetch.return_value = {}
+        request = self.factory.get('/ptrneos/site/{self.site_code}/date/{self.obs_date}/?format=json')
+
+        response = ptr_neos(request, self.site_code, self.obs_date)
+
+        self.assertEqual(response.status_code, 200)
+        expected_data = {'obs_date': self.obs_date, 'site_code': self.site_code, 'errors': 'No data returned from JPL SBOBS endpoint',
+                         'data': [], 'colnames' :  [
+                            "Designation",
+                            "Full name",
+                            "Rise time",
+                            "Transit time",
+                            "Set time",
+                            "Max. time observable",
+                            "R.A.",
+                            "Dec.",
+                            "Vmag",
+                            "Helio. range (au)",
+                            "Topo.range (au)",
+                            "Object-Observer-Sun (deg)",
+                            "Object-Observer-Moon (deg)",
+                            "Galactic latitude (deg)"
+                        ] }
+        self.assertJSONEqual(response.content.decode('utf-8'), expected_data)
+
+    @patch('core.views.fetch_jpl_sbobs')
+    def test_fake_json_api_response_no_objs(self, mocked_fetch):
+        mocked_fetch.return_value = {'signature' : {'version': '1.0', 'source': 'NASA/JPL Small-Body Observability API'},
+                                     'data' : [],
+                                     'total_objects' : '0'}
+        request = self.factory.get('/ptrneos/site/{self.site_code}/date/{self.obs_date}/?format=json')
+
+        response = ptr_neos(request, self.site_code, self.obs_date)
+
+        self.assertEqual(response.status_code, 200)
+        expected_data = {'obs_date': self.obs_date, 'site_code': self.site_code,
+                         'errors': 'No valid objects returned from JPL SBOBS endpoint',
+                         'data': [], 'colnames' :  [
+                            "Designation",
+                            "Full name",
+                            "Rise time",
+                            "Transit time",
+                            "Set time",
+                            "Max. time observable",
+                            "R.A.",
+                            "Dec.",
+                            "Vmag",
+                            "Helio. range (au)",
+                            "Topo.range (au)",
+                            "Object-Observer-Sun (deg)",
+                            "Object-Observer-Moon (deg)",
+                            "Galactic latitude (deg)"
+                        ] }
+        self.assertJSONEqual(response.content.decode('utf-8'), expected_data)
