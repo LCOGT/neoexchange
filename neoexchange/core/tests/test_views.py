@@ -21,12 +21,12 @@ import tempfile
 from glob import glob
 from math import degrees
 
-from django.test import TestCase, SimpleTestCase, override_settings
+from django.test import TestCase, SimpleTestCase, override_settings, RequestFactory
 from django.forms.models import model_to_dict
 from django.conf import settings
 from django.http import Http404
 from bs4 import BeautifulSoup
-from mock import patch
+from mock import patch, Mock
 from astropy.wcs import WCS
 from numpy.testing import assert_allclose
 
@@ -9212,3 +9212,22 @@ class TestDisplayDataproduct(TestCase):
         dp = DataProduct.objects.filter(filetype=DataProduct.ALCDEF_TXT)
         response = display_textfile(request, dp[0].id)
         self.assertEqual(b"some text here", response.content)
+
+
+class TestPtrneos(TestCase):
+
+    def setUp(self):
+        self.factory = RequestFactory()
+
+    @patch('core.views.fetch_jpl_sbobs')
+    def test_null_response(self, mocked_fetch):
+        mocked_fetch.return_value = {}
+        # Call sequence     re_path(r'^ptrneos/site/(?P<site_code>[A-Z,0-9]{3})/date/(?P<obs_date>\d{4}-\d{2}-\d{2})/', ptr_neos, name='ptr_neos'),
+        site_code = 'Z24'
+        obs_date = '2025-10-10'
+
+        request = self.factory.get('/ptrneos/site/{site_code}/date/{obs_date}/')
+
+        response = ptr_neos(request, site_code, obs_date)
+
+        self.assertEqual(response.status_code, 200)
