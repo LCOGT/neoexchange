@@ -3295,12 +3295,19 @@ def fetch_jpl_sbobs(obs_date, site_code='W86', max_objects=100, min_Vmag=None, m
     query_url = make_jpl_sbobs_query(obs_date, site_code, max_objects, min_Vmag=min_Vmag, max_Vmag=max_Vmag, max_rotper=max_rotper)
     #print(f"query_url={query_url}")
     if query_url:
-        resp = requests.get(query_url)
-        if resp.ok:
-            data = resp.json()
-            #print(data['total_objects'], data['shown_objects'])
-            if 'signature' in data and data['signature']['version'] == '1.0':
-                results = data
+        try:
+            resp = requests.get(query_url, timeout=60)
+            if resp.ok:
+                data = resp.json()
+                #print(data['total_objects'], data['shown_objects'])
+                if 'signature' in data and data['signature']['version'] == '1.0':
+                    results = data
+                else:
+                    logger.warning("Unexpected version signature found")
             else:
-                logger.warning("Unexpected version signature found")
+                logger.warning(f"Got status code: {resp.status_code}")
+        except requests.exceptions.Timeout:
+            logger.warning(f"Request timed out with url= {query_url}")
+        except requests.exceptions.RequestException as e:
+            logger.warning(f"Request caused error: {e}")
     return results
