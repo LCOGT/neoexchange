@@ -6,6 +6,10 @@ Portal for scheduling observations of NEOs (and other Solar System objects) usin
 
 ## History
 
+### 3.16.3
+* Add ability to update NEOexchange with new targets from the JPL SBObs endpoint in ptr_neos() method.
+* Add timeout and various failure modes catches for the JPL SBObs endpoint (Issue #661)
+
 ### 3.16.2
 * Add CORS header support via `corsheaders` package and middleware
 
