@@ -49,7 +49,7 @@ from bokeh.util.compiler import TypeScript
 from .models import Body, CatalogSources, StaticSource, Block, model_to_dict, PreviousSpectra
 from astrometrics.ephem_subs import horizons_ephem, call_compute_ephem, determine_darkness_times, get_sitepos,\
     moon_ra_dec, target_rise_set, moonphase, dark_and_object_up, compute_dark_and_up_time, get_visibility,\
-    compute_ephem, orbital_pos_from_true_anomaly, get_planetary_elements
+    compute_ephem, orbital_pos_from_true_anomaly, get_planetary_elements, round_datetime
 from astrometrics.time_subs import jd_utc2datetime
 from photometrics.obsgeomplot import plot_ra_dec, plot_brightness, plot_helio_geo_dist, \
     plot_uncertainty, plot_hoursup, plot_gal_long_lat
@@ -644,6 +644,68 @@ def lin_vis_plot(body):
 
     return script, div
 
+
+def bar_vis_plot(body, d=None):
+    site_code = ['LSC', 'CPT', 'COJ', 'ELP', 'TFN', 'OGG']
+    site_list = ['W85', 'K91', 'Q63', 'V37', 'Z21', 'F65']
+    color_list = ['darkviolet', 'forestgreen', 'saddlebrown', 'coral', 'darkslategray', 'dodgerblue']
+    d = d or datetime.utcnow()
+    step_size = '10 m'
+    alt_limit = 30
+    body_elements = model_to_dict(body)
+
+    data = []
+    for site_name, site in zip(site_code, site_list):
+        bonus_day = 0
+        # dark_start, dark_end = determine_darkness_times(site, d)
+        # while dark_start < d:
+            # bonus_day += 1
+            # dark_start, dark_end = determine_darkness_times(site, d + timedelta(days=bonus_day))
+
+        dark_and_up_time, max_alt, up_time, down_time = get_visibility(None, None, d + timedelta(days=bonus_day), site, step_size, alt_limit, False, body_elements)
+        data.append((up_time, down_time, site_name))
+
+    starts = [item[0] for item in data]
+    ends = [item[1] for item in data]
+    labels = [item[2] for item in data]
+    durations = [timedelta(seconds=(end - start).total_seconds()) for start, end in zip(starts, ends)] # in hours
+
+    start_dt = round_datetime(min(starts), 15, False)
+    end_dt = round_datetime(max(ends), 15, True)
+
+    # Create plot
+    fig, ax = plt.subplots(dpi=150, figsize=(10, 6))
+
+    # Plot times of visibility per site with horizontal bars
+    y_pos = range(len(labels))
+    ax.barh(y_pos, durations, left=starts, height=0.6, color=color_list) # 'left' for starting point of horizontal bars
+    ax.set_yticks(y_pos)
+    ax.set_yticklabels(labels)
+    ax.set_xlabel('Time (UTC)')
+    ax.set_title(f'Hours of visibility for {body.current_name()}')
+    ax.set_xlim(start_dt, end_dt)
+
+    # Add 'HH:MM' labels at start and end of bars
+    for start, end, y, in zip(starts, ends, y_pos):
+        ax.text(start, y-0.5, start.strftime("%H:%M"), ha='center')
+        ax.text(end, y-0.5, end.strftime("%H:%M"), ha='center')
+
+    # Format the x-axis to display dates and times appropriately
+    ax.xaxis.set_major_formatter(matplotlib.dates.DateFormatter('%H:%M'))
+    fig.autofmt_xdate() # Automatically formats x-axis labels for better readability
+
+    # buffer = io.BytesIO()
+    # plt.savefig(buffer, format='png')
+    # plt.close()
+
+    # return HttpResponse(buffer.getvalue(), content_type="Image/png")
+    save_file = f'{body.id}_barvis_{start_dt.strftime("%Y%m%d")}.png'
+    fig_file = default_storage.open(save_file, "wb+")
+    fig.savefig(fig_file, format='png')
+    fig_file.close()
+    plt.close()
+
+    return save_file
 
 def get_name(meta_dat):
     """Pulls an object name from the ALCDEF metadata."""
