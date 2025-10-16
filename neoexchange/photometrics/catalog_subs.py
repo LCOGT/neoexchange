@@ -1738,7 +1738,7 @@ def get_catalog_items_new(header_items, table, catalog_type='LCOGT', flag_filter
         scale = header_items['pixel_scale'] * header_items['pixel_scale']
         new_table['threshold'] = np.power(10, (new_table['threshold']/-2.5)) * scale
     if header_items.get('zeropoint', -99) != -99 and 'obs_mag' in new_table.colnames:
-        print(f"Applying zeropoint of {header_items['zeropoint']}")
+#        print(f"Applying zeropoint of {header_items['zeropoint']}")
         new_table['obs_mag'] += header_items['zeropoint']
 
     return new_table
