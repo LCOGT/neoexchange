@@ -295,10 +295,10 @@ class BodySearchView(ListView):
                     'type': getattr(body, 'source_type', None),
                     'active': getattr(body, 'active', None),
                     'provisional_name': getattr(body, 'provisional_name', None),
-                    'absolute_magnitude': getattr(body, 'abs_mag', None),
                     'schema': getattr(body, 'elements_type', None),
+                    'absolute_magnitude': getattr(body, 'abs_mag', None),
+                    'slope': getattr(body, 'slope', 0.15),
                     'epochofel': body.epochofel_mjd(),
-                    'orbit_rms': getattr(body, 'orbit_rms', None),
                     'orbinc': getattr(body, 'orbinc', None),
                     'longascnode': getattr(body, 'longascnode', None),
                     'argofperih': getattr(body, 'argofperih', None),
@@ -307,6 +307,9 @@ class BodySearchView(ListView):
                     'meananom': getattr(body, 'meananom', None),
                     'perihdist': getattr(body, 'perihdist', None),
                     'epochofperih': getattr(body, 'epochofperih', None),
+                    'orbit_rms': getattr(body, 'orbit_rms', None),
+                    'num_obs': getattr(body, 'num_obs', None),
+                    'arc_length': getattr(body, 'arc_length', None),
                 }
                 data.append(target)
             return JsonResponse(data, status=200, safe=False) 
