@@ -43,7 +43,7 @@ from django.core.paginator import Paginator
 from django.core import serializers
 from django.db.models import Q, Prefetch
 from django.forms.models import model_to_dict
-from django.http import Http404, HttpResponse, HttpResponseRedirect
+from django.http import Http404, HttpResponse, HttpResponseRedirect, JsonResponse
 from django.shortcuts import render, redirect
 from django.template.loader import get_template
 from django.urls import reverse, reverse_lazy
@@ -78,7 +78,7 @@ from astrometrics.sources_subs import fetchpage_and_make_soup, packed_to_normal,
     read_mpcorbit_file, fetch_jpl_physparams_altdes, store_jpl_sourcetypes, store_jpl_desigs,\
     store_jpl_physparams, fetch_jpl_sbobs
 from astrometrics.time_subs import extract_mpc_epoch, parse_neocp_date, \
-    parse_neocp_decimal_date, get_semester_dates, jd_utc2datetime, datetime2st
+    parse_neocp_decimal_date, get_semester_dates, jd_utc2datetime, datetime2st, datetime2mjd_utc
 from photometrics.external_codes import run_sextractor, run_scamp, updateFITSWCS,\
     read_mtds_file, unpack_tarball, run_findorb
 from photometrics.catalog_subs import open_fits_catalog, get_catalog_header, \
@@ -283,6 +283,34 @@ class BodySearchView(ListView):
         object_list = list(set(object_list))
         standard_list = list(set(standard_list))
         return object_list + standard_list
+    
+    def get(self, request, *args, **kwargs):
+        format = self.request.GET.get("format", "")
+        if format == 'json':
+            queryset = self.get_queryset()
+            data = []
+            for d in queryset:
+                target  = {
+                    'name': d.current_name(),
+                    'type': getattr(d, 'source_type', None),
+                    'active': getattr(d, 'active', None),
+                    'provisional_name': getattr(d, 'provisional_name', None),
+                    'absolute_magnitude': getattr(d, 'abs_mag', None),
+                    'schema': getattr(d, 'elements_type', None),
+                    'epochofel': datetime2mjd_utc(getattr(d, 'epochofel', 0)),
+                    'orbit_rms': getattr(d, 'orbit_rms', None),
+                    'orbinc': getattr(d, 'orbinc', None),
+                    'longascnode': getattr(d, 'longascnode', None),
+                    'argofperih': getattr(d, 'argofperih', None),
+                    'eccentricity': getattr(d, 'eccentricity', None),
+                    'meandist': getattr(d, 'meandist', None),
+                    'meananom': getattr(d, 'meananom', None),
+                    'perihdist': getattr(d, 'perihdist', None),
+                    'epochofperih': getattr(d, 'epochofperih', None),
+                }
+                data.append(target)
+            return JsonResponse(data, status=200, safe=False) 
+        return super(BodySearchView, self).get(request, *args, **kwargs)
 
 
 class BodyVisibilityView(DetailView):
@@ -827,12 +855,21 @@ def ephemeris(request):
             body_elements, dark_start, dark_end, data['site_code'], 900, data['alt_limit'])
     else:
         return render(request, 'core/home.html', {'form': form})
+    if request.GET.get('format','') == 'json':
+        data = { 
+            'target': data['target'].current_name(),
+            'site_code': form['site_code'].value(),
+            'ephemeris': ephem_lines
+            }
+        data['colnames'] = ['datetime_utc', 'ra', 'dec', 'mag', 'sky_motion', 'sky_motion_pa', 'altitude', 'moon_phase', 'moon_obj_sep', 'moon_alt', 'slot_score', 'ha']
+        return JsonResponse(data, status=200, safe=False) 
     return render(request, 'core/ephem.html',
-                  {'target': data['target'],
-                   'ephem_lines': ephem_lines,
-                   'site_code': form['site_code'].value(),
-                   }
-                  )
+            {
+                'target': data['target'],
+                'ephem_lines': ephem_lines,
+                'site_code': form['site_code'].value(),
+            }
+        )
 
 
 class LookUpBodyMixin(object):
