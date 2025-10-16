@@ -76,7 +76,7 @@ from astrometrics.sources_subs import fetchpage_and_make_soup, packed_to_normal,
     fetch_mpcdb_page, parse_mpcorbit, submit_block_to_scheduler, parse_mpcobs,\
     fetch_NEOCP_observations, PackedError, fetch_filter_list, fetch_mpcobs, validate_text,\
     read_mpcorbit_file, fetch_jpl_physparams_altdes, store_jpl_sourcetypes, store_jpl_desigs,\
-    store_jpl_physparams, fetch_jpl_sbobs
+    store_jpl_physparams, fetch_jpl_sbobs, random_delay
 from astrometrics.time_subs import extract_mpc_epoch, parse_neocp_date, \
     parse_neocp_decimal_date, get_semester_dates, jd_utc2datetime, datetime2st
 from photometrics.external_codes import run_sextractor, run_scamp, updateFITSWCS,\
@@ -2236,19 +2236,57 @@ def look_project(request):
     return render(request, 'core/lookproject.html', params)
 
 def ptr_neos(request, site_code, obs_date):
+    """Endpoint for PTR to fetch observable NEOs
 
+    Args:
+        request (HttpRequest): Request object from url router in neox/urls.py
+        site_code (str): MPC site code to query for (e.g. 'Z24')
+        obs_date (str): Date string to search for in the form 'YYYY-MM-DD'
+
+        Two optional parameters can be given in the url:
+        * format: If this is set to 'format=json' then a JSON version of
+                  the results is returned instead of the rendered template.
+        * update_neox: If this is set to 'update_neox=true', then it will fetch
+                       any new objects returned from the fetch_jpl_sbobs() that
+                       are in NEOx. This will take ~6 seconds x no. of new objects
+    Raises:
+        Http404: Error page.
+
+    Returns:
+        HttpResponse: Either the rendered template with the `params` dict or a JSON version.
+    """
     try:
         obs_date = datetime.strptime(obs_date, "%Y-%m-%d")
     except ValueError:
         raise Http404("Could not parse observation date")
 
     data = fetch_jpl_sbobs(obs_date, site_code)
-
     params = {
         'obs_date': obs_date,
         'site_code': site_code,
-        'data': data['data']
+        'errors' : None,
+        'data' : []
     }
+    if len(data) == 0:
+        # Check for no data at all before checking for no objects
+        params['data'] = []
+        params['errors'] = 'No data returned from JPL SBOBS endpoint'
+    else:
+        if len(data.get('data', [])) == 0:
+            params['errors'] = 'No valid objects returned from JPL SBOBS endpoint'
+        else:
+            params['data'] = data['data']
+            # Check if downloading new objects is desired
+            if request.GET.get('update_neox', 'false') == 'true':
+                objects = [x[0] for x in data['data']]
+                known_objects = Body.objects.filter(name__in=objects).values_list('name', flat=True)
+                new_objects = list(set(objects) - set(known_objects))
+                for new_object in new_objects:
+                    # Get new object from MPC, wait 1..3 seconds between requests
+                    updated = update_MPC_orbit(new_object)
+                    random_delay(1, 3)
+                logger.info(f"Downloaded {len(new_objects)} new objects from MPC")
+
     if request.GET.get('format', '') == 'json':
             datanames =  [
                 "Designation",
@@ -2266,7 +2304,8 @@ def ptr_neos(request, site_code, obs_date):
                 "Object-Observer-Moon (deg)",
                 "Galactic latitude (deg)"
             ]
-            jsonparams = {'obs_date': obs_date.strftime("%Y-%m-%d"), 'site_code': site_code, 'data': data['data'], 'colnames': datanames}
+            jsonparams = {'obs_date': obs_date.strftime("%Y-%m-%d"), 'site_code': site_code,
+                          'errors' : params['errors'], 'data': params['data'], 'colnames': datanames}
             return HttpResponse(json.dumps(jsonparams), content_type='application/json')
     return render(request, 'core/ptrneos.html', params)
 
