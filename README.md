@@ -6,6 +6,9 @@ Portal for scheduling observations of NEOs (and other Solar System objects) usin
 
 ## History
 
+### 3.16.4
+* Add ability to return JSON versions of targets and ephemerides from the search and ephem endpoints for PTR support.
+
 ### 3.16.3
 * Add ability to update NEOexchange with new targets from the JPL SBObs endpoint in ptr_neos() method.
 * Add timeout and various failure modes catches for the JPL SBObs endpoint (Issue #661)
