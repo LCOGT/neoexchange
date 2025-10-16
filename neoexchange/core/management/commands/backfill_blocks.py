@@ -73,6 +73,10 @@ class Command(BaseCommand):
                 continue
             first_file = fits_files[0]
             fits_header, dummy_table, cattype = open_fits_catalog(first_file, header_only=True)
+            if cattype is None:
+                self.stdout.write(f"Couldn't read header from {first_file}")
+                self.stdout.write("Skipping to next rock")
+                continue
             header = get_catalog_header(fits_header, cattype)
             tracking_num = header.get('tracking_number', None)
             if tracking_num and tracking_num!='UNSPECIFIED':
