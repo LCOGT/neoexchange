@@ -78,7 +78,7 @@ from astrometrics.sources_subs import fetchpage_and_make_soup, packed_to_normal,
     read_mpcorbit_file, fetch_jpl_physparams_altdes, store_jpl_sourcetypes, store_jpl_desigs,\
     store_jpl_physparams, fetch_jpl_sbobs
 from astrometrics.time_subs import extract_mpc_epoch, parse_neocp_date, \
-    parse_neocp_decimal_date, get_semester_dates, jd_utc2datetime, datetime2st, datetime2mjd_utc
+    parse_neocp_decimal_date, get_semester_dates, jd_utc2datetime, datetime2st
 from photometrics.external_codes import run_sextractor, run_scamp, updateFITSWCS,\
     read_mtds_file, unpack_tarball, run_findorb
 from photometrics.catalog_subs import open_fits_catalog, get_catalog_header, \
@@ -289,24 +289,24 @@ class BodySearchView(ListView):
         if format == 'json':
             queryset = self.get_queryset()
             data = []
-            for d in queryset:
+            for body in queryset:
                 target  = {
-                    'name': d.current_name(),
-                    'type': getattr(d, 'source_type', None),
-                    'active': getattr(d, 'active', None),
-                    'provisional_name': getattr(d, 'provisional_name', None),
-                    'absolute_magnitude': getattr(d, 'abs_mag', None),
-                    'schema': getattr(d, 'elements_type', None),
-                    'epochofel': datetime2mjd_utc(getattr(d, 'epochofel', 0)),
-                    'orbit_rms': getattr(d, 'orbit_rms', None),
-                    'orbinc': getattr(d, 'orbinc', None),
-                    'longascnode': getattr(d, 'longascnode', None),
-                    'argofperih': getattr(d, 'argofperih', None),
-                    'eccentricity': getattr(d, 'eccentricity', None),
-                    'meandist': getattr(d, 'meandist', None),
-                    'meananom': getattr(d, 'meananom', None),
-                    'perihdist': getattr(d, 'perihdist', None),
-                    'epochofperih': getattr(d, 'epochofperih', None),
+                    'name': body.current_name(),
+                    'type': getattr(body, 'source_type', None),
+                    'active': getattr(body, 'active', None),
+                    'provisional_name': getattr(body, 'provisional_name', None),
+                    'absolute_magnitude': getattr(body, 'abs_mag', None),
+                    'schema': getattr(body, 'elements_type', None),
+                    'epochofel': body.epochofel_mjd(),
+                    'orbit_rms': getattr(body, 'orbit_rms', None),
+                    'orbinc': getattr(body, 'orbinc', None),
+                    'longascnode': getattr(body, 'longascnode', None),
+                    'argofperih': getattr(body, 'argofperih', None),
+                    'eccentricity': getattr(body, 'eccentricity', None),
+                    'meandist': getattr(body, 'meandist', None),
+                    'meananom': getattr(body, 'meananom', None),
+                    'perihdist': getattr(body, 'perihdist', None),
+                    'epochofperih': getattr(body, 'epochofperih', None),
                 }
                 data.append(target)
             return JsonResponse(data, status=200, safe=False) 
