@@ -38,7 +38,7 @@ logger = logging.getLogger('core')
 
 def measurements_from_block(blockid, bodyid=None):
     block = Block.objects.get(pk=blockid)
-    frames = Frame.objects.filter(block=block, frametype__in=(Frame.BANZAI_QL_FRAMETYPE, Frame.BANZAI_RED_FRAMETYPE, Frame.STACK_FRAMETYPE)).values_list('id', flat=True)
+    frames = Frame.objects.filter(block=block, frametype__in=(Frame.NEOX_RED_FRAMETYPE, Frame.BANZAI_RED_FRAMETYPE, Frame.STACK_FRAMETYPE)).values_list('id', flat=True)
     measures = SourceMeasurement.objects.filter(frame__in=frames, obs_mag__gt=0.0).order_by('-body', 'frame__midpoint')
     if bodyid:
         measures = measures.filter(body__id=bodyid)
