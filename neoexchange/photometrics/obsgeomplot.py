@@ -335,6 +335,8 @@ def plot_brightness(ephem, title=None, base_dir=''):
         lines.append(line_moon[0])
         labels.append('Moon-Obj Sep')
         rhs_ylabel = 'Separation/' + rhs_ylabel
+        xlower, xupper = ax.get_xlim()
+        ax2.hlines(30, xlower, xupper, color=moon_color, linestyle='--')
 
     perihelion = dates[ephem['r'].argmin()]
     close_approach = dates[ephem['delta'].argmin()]
