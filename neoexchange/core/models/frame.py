@@ -248,7 +248,7 @@ class Frame(models.Model):
                      'aperture' : onem_aperture, 'fRatio' : onem_fRatio, 'detector' : detector }
 
         twom_aperture = 2.0
-        twom_fRatio = 10.0
+        twom_fRatio = 5.20
         twom_design = 'Ritchey-Chretien'
         twom_string = '{:.1f}-m f/{:2d} {} + {}'.format(twom_aperture, int(twom_fRatio), twom_design, detector)
         twom_dict = {'full' : twom_string, 'design' : twom_design,
