@@ -11,6 +11,7 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 """
 from astropy.wcs import WCS
+from astropy import units as u
 from django.db import models
 from django.utils.translation import ugettext_lazy as _
 from django.utils.encoding import force_str
@@ -152,6 +153,21 @@ class Frame(models.Model):
         except AttributeError:
             pass
         return y_size
+
+    def get_pixel_scale(self):
+        pixel_scale = None
+        try:
+            scales = self.wcs.proj_plane_pixel_scales()
+            if len(scales) == 2:
+                try:
+                    x_scale = scales[0].to(u.arcsec)
+                    y_scale = scales[1].to(u.arcsec)
+                    pixel_scale = (x_scale + y_scale) / 2.0
+                except u.UnitConversionError:
+                    pass
+        except AttributeError:
+            pass
+        return pixel_scale
 
     def is_catalog(self):
         is_catalog = False

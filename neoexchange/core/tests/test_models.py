@@ -2027,6 +2027,54 @@ class TestFrame(TestCase):
         self.assertEqual(self.w.pixel_shape[0], frame.wcs.pixel_shape[0])
         self.assertEqual(self.w.pixel_shape[1], frame.wcs.pixel_shape[1])
 
+    def test_WCS_get_xy_size(self):
+        params = {  'sitecode'      : 'K93',
+                    'instrument'    : 'kb75',
+                    'filter'        : 'w',
+                    'filename'      : 'cpt1m012-kb75-20150713-0130-e10.fits',
+                    'exptime'       : 40.0,
+                    'midpoint'      : '2015-07-13 21:09:51',
+                    'block'         : self.test_block,
+                    'wcs'           : self.w
+                 }
+        frame = Frame.objects.create(**params)
+        frame.refresh_from_db()     # Ensure pickling happens
+
+        self.assertEqual(self.w.naxis, frame.wcs.naxis)
+        self.assertEqual(self.w.pixel_shape[0], frame.get_x_size())
+        self.assertEqual(self.w.pixel_shape[1], frame.get_y_size())
+
+    def test_WCS_get_pixel_scale(self):
+        params = {  'sitecode'      : 'K93',
+                    'instrument'    : 'kb75',
+                    'filter'        : 'w',
+                    'filename'      : 'cpt1m012-kb75-20150713-0130-e10.fits',
+                    'exptime'       : 40.0,
+                    'midpoint'      : '2015-07-13 21:09:51',
+                    'block'         : self.test_block,
+                    'wcs'           : self.w
+                 }
+        frame = Frame.objects.create(**params)
+        frame.refresh_from_db()     # Ensure pickling happens
+
+        self.assertEqual(self.w.naxis, frame.wcs.naxis)
+        assert_allclose(0.469, frame.get_pixel_scale().value, rtol=1e-5)
+
+    def test_WCS_get_pixel_scale_no_wcs(self):
+        params = {  'sitecode'      : 'K93',
+                    'instrument'    : 'kb75',
+                    'filter'        : 'w',
+                    'filename'      : 'cpt1m012-kb75-20150713-0130-e10.fits',
+                    'exptime'       : 40.0,
+                    'midpoint'      : '2015-07-13 21:09:51',
+                    'block'         : self.test_block,
+                    'wcs'           : None
+                 }
+        frame = Frame.objects.create(**params)
+        frame.refresh_from_db()     # Ensure pickling happens
+
+        self.assertEqual(None, frame.get_pixel_scale())
+
     def test_set_quality(self):
         params = { 'sitecode': 'E10',
                    'instrument': 'ep07',
