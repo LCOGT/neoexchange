@@ -173,13 +173,28 @@ class SourceMeasurement(models.Model):
             num_dp = ceil(1-log10(value))
         return num_dp
 
-    def format_psv_header(self):
+    def format_psv_header(self, high_precision_mag=False):
+        """Generates the ADES PSV column headers.
+        Depending on whether self.err_obs_ra and self.err_obs_dec and self.err_obs_mag are
+        set i.e. are errors are present, the returned ADES PSV header is of one of two
+        forms.
+
+        Parameters
+        ----------
+        high_precision_mag : bool, optional
+            Whether to turn on additional digits of precision in the magnitude column, by default False
+
+        Returns
+        -------
+        str
+            ADES PSV format header string
+        """
 
         tbl_hdr = ""
-        rms_available = False
         if self.err_obs_ra and self.err_obs_dec and self.err_obs_mag:
-            rms_available = True
             rms_tbl_fmt = '%-7s|%-11s|%-8s|%-4s|%-4s|%-23s|%-11s|%-11s|%-5s|%-6s|%-8s|%-5s|%-6s|%-4s|%-8s|%-6s|%-6s|%-6s|%-5s|%-s'
+            if high_precision_mag is True:                                            #^-mag-v
+                rms_tbl_fmt = '%-7s|%-11s|%-8s|%-4s|%-4s|%-23s|%-11s|%-11s|%-5s|%-6s|%-8s|%-6s|%-6s|%-4s|%-8s|%-6s|%-6s|%-6s|%-5s|%-s'
             tbl_hdr = rms_tbl_fmt % ('permID ', 'provID', 'trkSub  ', 'mode', 'stn', 'obsTime', \
                 'ra', 'dec', 'rmsRA', 'rmsDec', 'astCat', 'mag', 'rmsMag', 'band', 'photCat', \
                 'photAp', 'logSNR', 'seeing', 'notes', 'remarks')
@@ -189,7 +204,19 @@ class SourceMeasurement(models.Model):
                 'ra'.ljust(11), 'dec'.ljust(11), 'astCat', 'mag', 'band', 'photCat', 'notes', 'remarks')
         return tbl_hdr
 
-    def format_psv_line(self):
+    def format_psv_line(self, high_precision_mag=False):
+        """Generate a line of measurements in ADES PSV format from the SourceMeasurement.
+
+        Parameters
+        ----------
+        high_precision_mag : bool, optional
+            Whether to turn on additional digits of precision in the magnitude column, by default False
+
+        Returns
+        -------
+        str
+            ADES PSV format line
+        """
         psv_line = ""
 
         rms_available = False
@@ -247,14 +274,24 @@ class SourceMeasurement(models.Model):
         fmt_dec, width, dpos = psv_padding(fmt_dec, 11, 'D', 4)
         fmt_filter = " "
         if self.obs_mag is not None:
-            fmt_mag = "{:4.1f}".format(float(self.obs_mag))
-            fmt_filter = self.frame.map_filter()
+            if high_precision_mag is True:
+                fmt_mag = "{:6.3f}".format(float(self.obs_mag))
+            else:
+                fmt_mag = "{:4.1f}".format(float(self.obs_mag))
+            # XXX This needs more careful handling since there is now a `filt` as well as a `band`
+            # with the former being the observed-in filter (but whose inclusion silently breaks MPC
+            # submissions and loses the `rmsRA/Dec` values) and the latter what is being calibrated
+            # to based on the self.photometric_catalog
+            #fmt_filter = self.frame.map_filter(ades=True)
+            fmt_filter = self.frame.map_filter(ades=False)
         else:
             fmt_mag = " "*5
             phot_catalog_code = " "
 
         tbl_fmt     = '%7s|%-11s|%8s|%4s|%-4s|%-23s|%11s|%11s|%8s|%-5s|%4s|%8s|%-5s|%-s'
-        rms_tbl_fmt = '%7s|%-11s|%8s|%4s|%-4s|%-23s|%11s|%11s|%5s|%6s|%8s|%-5s|%6s|%4s|%8s|%6s|%6s|%6s|%-5s|%-s'
+        rms_tbl_fmt = '%7s|%-11s|%8s|%4s|%-4s|%-23s|%11s|%11s|%5s|%6s|%8s|%-5s|%6s|%4s|%8s|%6s|%-6s|%6s|%-5s|%-s'
+        if high_precision_mag is True:
+            rms_tbl_fmt = '%7s|%-11s|%8s|%4s|%-4s|%-23s|%11s|%11s|%5s|%6s|%8s|%-6s|%6s|%4s|%8s|%-6s|%-6s|%6s|%-5s|%-s'
         if rms_available:
             rms_ra = "{value:.{prec}f}".format(prec=self._numdp(err_obs_ra * 3600.0), value=err_obs_ra * 3600.0)
             rms_dec = "{value:.{prec}f}".format(prec=self._numdp(err_obs_dec * 3600.0), value=err_obs_dec * 3600.0)
@@ -269,7 +306,10 @@ class SourceMeasurement(models.Model):
                 phot_ap = "{:6.2f}".format(self.aperture_size)
             log_snr = " "*6
             if self.snr and self.snr > 0:
-                log_snr = "{:6.4f}".format(log10(self.snr))
+                if log10(self.snr) > 0.0:
+                    log_snr = "{:5.3f}".format(log10(self.snr))
+                else:
+                    log_snr = "{:+5.3f}".format(log10(self.snr))
             fwhm = " "*6
             if self.frame.fwhm:
                 fwhm = "{:6.4f}".format(self.frame.fwhm)

@@ -284,7 +284,7 @@ class Frame(models.Model):
 
         return tel_string
 
-    def map_filter(self):
+    def map_filter(self, ades=False):
         """Maps somewhat odd observed filters (e.g. 'solar') into the filter
         (e.g. 'R') that would be used for the photometric calibration"""
 
@@ -295,6 +295,15 @@ class Frame(models.Model):
                 new_filter = 'R'
             if self.photometric_catalog in ['GAIA-DR1', 'GAIA-DR2', 'GAIA-DR3']:
                 new_filter = 'G'
+            if ades:
+                if self.filter in ['gp', 'rp', 'ip', 'zs', 'w']:
+                    # PanSTARRS or SDSS depending on instrument
+                    suffix = self.filter[0]
+                    prefix = 'P'
+                    if self.instrument.startswith('ep'):
+                        # MuSCAT instrument, SDSS not PanSTARRS
+                        prefix = 'S'
+                    new_filter = prefix + suffix
         return new_filter
 
     def ALCDEF_filter_format(self):
