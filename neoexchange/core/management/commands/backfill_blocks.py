@@ -60,7 +60,9 @@ class Command(BaseCommand):
 
         #object_dirs = [x[0] for x in os.walk(dataroot) if ('Didymos' in x[0] or '65803' in x[0] or obs_date in x[0][-8:]) and 'Temp_cvc' not in x[0]]
         #object_dirs = [x[0] for x in os.walk(dataroot) if ('3I' in x[0] or 'C_2025N1' in x[0] or 'c_2025n1' in x[0] or obs_date in x[0][-8:]) and 'Temp_cvc' not in x[0]]
-        object_dirs = [x[0] for x in os.walk(dataroot) if ('P_2016P5' in x[0] or obs_date in x[0][-8:]) and 'Temp_cvc' not in x[0]]
+        #object_dirs = [x[0] for x in os.walk(dataroot) if ('P_2016P5' in x[0] or obs_date in x[0][-8:]) and 'Temp_cvc' not in x[0]]
+        #object_dirs = [x[0] for x in os.walk(dataroot) if ('C_2025K1' in x[0] or obs_date in x[0][-8:]) and 'Temp_cvc' not in x[0]]
+        object_dirs = [x[0] for x in os.walk(dataroot) if ('C_2013C2' in x[0] or obs_date in x[0][-8:]) and 'Temp_cvc' not in x[0]]
 
         pprint.pprint(object_dirs)
         for rock in object_dirs[1:]:
@@ -79,7 +81,7 @@ class Command(BaseCommand):
                 continue
             header = get_catalog_header(fits_header, cattype)
             tracking_num = header.get('tracking_number', None)
-            if tracking_num and tracking_num!='UNSPECIFIED':
+            if tracking_num and tracking_num != 'UNSPECIFIED':
                 tracking_num_nopad = tracking_num.lstrip('0')
                 sblocks = SuperBlock.objects.filter(Q(tracking_number=tracking_num)|Q(tracking_number=tracking_num_nopad))
                 if sblocks.count() == 0:
