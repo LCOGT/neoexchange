@@ -60,7 +60,7 @@ class SourceMeasurement(models.Model):
         warnings.simplefilter('ignore', FITSFixedWarning)
         pixel_scale = 1.0
         if self.frame.wcs:
-            pixel_scale = proj_plane_pixel_scales(self.frame.wcs).mean()*3600.0
+            pixel_scale = self.frame.get_pixel_scale().value
         else:
             sitecode = self.frame.sitecode
             telcode = cfg.valid_telescope_codes.get(sitecode, 'XXX')
