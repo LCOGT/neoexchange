@@ -12,7 +12,6 @@ GNU General Public License for more details.
 """
 from datetime import datetime
 
-from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.db import models
