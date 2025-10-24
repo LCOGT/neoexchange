@@ -1,4 +1,4 @@
-# version=2017
+# version=2022
 # observatory
 ! mpcCode {{measures.0.frame.sitecode}}
 # submitter
@@ -6,6 +6,7 @@
 ! institution LCO, 6740 Cortona Drive Suite 102, Goleta, CA 93117
 # observers
 ! name T. Lister
+! name C. Holt
 ! name E. Gomez
 ! name J. Chatelain
 ! name S. Greenstreet
@@ -17,6 +18,8 @@
 ! aperture {{measures.0.frame.return_tel_string.aperture}}
 ! detector {{measures.0.frame.return_tel_string.detector}}
 ! fRatio {{measures.0.frame.return_tel_string.fRatio}}
+! arraySize {{measures.0.frame.get_x_size}}x{{measures.0.frame.get_y_size}}
+! pixelScale {{measures.0.frame.get_pixel_scale.value|floatformat:4}}
 {{measures.0.format_psv_header}}
 {% for line in measures %}{{line.format_psv_line}}
 {% endfor %}
