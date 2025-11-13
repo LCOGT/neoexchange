@@ -645,13 +645,12 @@ def lin_vis_plot(body):
     return script, div
 
 
-def bar_vis_plot(body, d=None):
+def bar_vis_plot(body, d=None, step_size = '10 m', alt_limit = 30):
     site_code = ['LSC', 'CPT', 'COJ', 'ELP', 'TFN', 'OGG']
     site_list = ['W85', 'K91', 'Q63', 'V37', 'Z21', 'F65']
     color_list = ['darkviolet', 'forestgreen', 'saddlebrown', 'coral', 'darkslategray', 'dodgerblue']
     d = d or datetime.utcnow()
-    step_size = '10 m'
-    alt_limit = 30
+
     body_elements = model_to_dict(body)
 
     data = []
@@ -668,10 +667,15 @@ def bar_vis_plot(body, d=None):
     starts = [item[0] for item in data]
     ends = [item[1] for item in data]
     labels = [item[2] for item in data]
-    durations = [timedelta(seconds=(end - start).total_seconds()) for start, end in zip(starts, ends)] # in hours
+    durations = []
+    for start, end in zip(starts, ends):
+        duration = 0.0
+        if start is not None and end is not None:
+            duration = timedelta(seconds=(end - start).total_seconds()) # in hours
+        durations.append(duration)
 
-    start_dt = round_datetime(min(starts), 15, False)
-    end_dt = round_datetime(max(ends), 15, True)
+    start_dt = round_datetime(min(starts), 5, False)
+    end_dt = round_datetime(max(ends), 5, True)
 
     # Create plot
     fig, ax = plt.subplots(dpi=150, figsize=(10, 6))
