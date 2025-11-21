@@ -3673,6 +3673,22 @@ class TestDetermineHorizonsId(SimpleTestCase):
 
         self.assertEqual(expected_id, horizons_id)
 
+    def test_C_2025K1c(self):
+        expected_id = 90004911
+        lines = ['Ambiguous target name; provide unique id:',
+                 '    Record #  Epoch-yr  >MATCH DESIG<  Primary Desig  Name  ',
+                 '    --------  --------  -------------  -------------  -------------------------',
+                 '    90004909    2025    C/2025 K1      C/2025 K1       ATLAS',
+                 '    90004910    2025    C/2025 K1-B    C/2025 K1-B     ATLAS',
+                 '    90004911    2025    C/2025 K1-C    C/2025 K1-C     ATLAS',
+                 '']
+        now = datetime(2025, 5, 11, 17, 20, 42)
+        obj_name = 'C/2025 K1-C'
+
+        horizons_id = determine_horizons_id(lines, obj_name, now)
+
+        self.assertEqual(expected_id, horizons_id)
+
     def test_P_2025K1(self):
         expected_id = 90004909
         lines = ['Ambiguous target name; provide unique id:',
