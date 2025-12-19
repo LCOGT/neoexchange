@@ -19,4 +19,4 @@ if [[ $# -eq 1 ]]; then
 fi
 
 cd $PYTHONPATH
-python3 manage.py download_archive_data --datadir ${dataroot} --spectraonly ${date_options}
+python3.11 manage.py download_archive_data --datadir ${dataroot} --spectraonly ${date_options}
