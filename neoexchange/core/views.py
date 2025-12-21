@@ -4005,7 +4005,7 @@ def plot_all_spec(source):
         obj = sanitize_object_name(calibsource.name.lower())
         spec_file = os.path.join(base_dir, "f{}.dat".format(obj))
         wav, flux, err = pull_data_from_text(spec_file)
-        if wav != []:
+        if len(wav) != 0:
             label = calibsource.name
             new_spec = {'label': label,
                         'spec': flux,
