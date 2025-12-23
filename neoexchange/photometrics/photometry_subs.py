@@ -145,14 +145,14 @@ def sky_brightness_model(params, dbg=False):
     # Assume a value of 60.0 in S10 units for the zodiacal light if the
     # latitude wasn't given or calculable
     q_zodi = 60.0
-    if ecliptic_lat:
+    if ecliptic_lat is not None:
         if type(ecliptic_lat) == float:
             ecliptic_lat = ecliptic_lat * u.deg
         if ecliptic_lat.to(u.deg).value < 60.0:
             q_zodi = 140.0 - 90.0 * sin(radians(ecliptic_lat.value))
 
     q_stars = 0.0
-    if galactic_lat:
+    if galactic_lat is not None:
         if type(galactic_lat) == float:
             galactic_lat = galactic_lat * u.deg
         q_stars = 100.0 * exp(-abs(galactic_lat.to(u.deg).value/10.0))

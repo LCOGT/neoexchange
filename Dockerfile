@@ -1,7 +1,7 @@
 ################################################################################
 # Findorb Builder Container
 ################################################################################
-FROM rockylinux:8 AS findorbbuilder
+FROM rockylinux:9 AS findorbbuilder
 
 # Choose specific release versions of each piece of software
 ENV LUNAR_VERSION=016b82f80bd509929e0d55136ed6882e61831dfb \
@@ -10,8 +10,8 @@ ENV LUNAR_VERSION=016b82f80bd509929e0d55136ed6882e61831dfb \
     FIND_ORB_VERSION=e45ba9f0b92eb783848711d69c33e20c607124d4
 
 # This software requires GCC >= 7.0 to build
-RUN yum -y install gcc gcc-c++ make git ncurses-devel \
-        && yum -y clean all
+RUN dnf -y install gcc gcc-c++ make git ncurses-devel \
+        && dnf -y clean all
 
 # Build "lunar". No need to clean up, as this is a builder container.
 # The contents will be discarded from the final image.
@@ -55,14 +55,14 @@ COPY neoexchange/photometrics/configs/environ.def /root/.find_orb/
 ################################################################################
 # damit Builder Container
 ################################################################################
-FROM rockylinux:8 AS damitbuilder
+FROM rockylinux:9 AS damitbuilder
 
 # Choose specific release versions of each piece of software
 ENV DAMIT_VERSION="version_0.2.1"
 
 # This software requires GCC and gfortran to build
-RUN yum -y install gcc gcc-gfortran make  \
-        && yum -y clean all
+RUN dnf -y install gcc gcc-gfortran make  \
+        && dnf -y clean all
 
 # Build all of damit's components. No need to clean up, as this is a builder container.
 # The contents will be discarded from the final image.
@@ -90,7 +90,7 @@ RUN cd ${DAMIT_VERSION} \
 ################################################################################
 # Production Container
 ################################################################################
-FROM rockylinux:8
+FROM rockylinux:9
 
 # Copy findorb from builder container
 COPY --from=findorbbuilder /root /root
@@ -105,17 +105,17 @@ COPY docker/etc/yum.repos.d/lcogt.repo /etc/yum.repos.d/lcogt.repo
 # Install build dependencies for Python packages
 # XXX Need to install powertools repo
 # 'glibc-langpack-en' is needed to prevent locale complaints (https://www.tecmint.com/fix-failed-to-set-locale-defaulting-to-c-utf-8-in-centos/)
-RUN yum -y install epel-release glibc-langpack-en\
-        && yum -y install \
+RUN dnf -y install epel-release glibc-langpack-en\
+        && dnf -y install \
             gcc \
             gcc-c++ \
             gcc-gfortran \
-            python39 \
-            python39-devel \
+            python3.11 \
+            python3.11-devel \
+            python3.11-pip \
             libffi-devel \
             libjpeg-devel \
             libpng-devel \
-            mariadb-devel \
             freetype-devel \
             make diffutils file traceroute
 
@@ -127,9 +127,9 @@ COPY neoexchange/requirements.txt .
 # Then the LCO packages which have to be installed after the normal pip install
 # numpy needs to be explicitly installed first otherwise pySLALIB fails with a
 # missing numpy.distutils.core reference because the package's setup.py is broken
-RUN pip3 --no-cache-dir install --upgrade pip \
-    && python3 -m pip --no-cache-dir install --upgrade numpy==1.22.4 wheel \
-    && python3 -m pip --no-cache-dir install --trusted-host buildsba.lco.gtn -r requirements.txt
+RUN python3.11 -m pip --no-cache-dir install --upgrade pip \
+    && python3.11 -m pip --no-cache-dir install --upgrade numpy==1.26.4 wheel \
+    && python3.11 -m pip --no-cache-dir install -r requirements.txt
 
 # Add path to findorb
 ENV PATH=/root/bin:$PATH
@@ -150,22 +150,16 @@ RUN curl -fsSLO "$SUPERCRONIC_URL" \
         && ln -s "/usr/local/bin/${SUPERCRONIC}" /usr/local/bin/supercronic
 
 # Install Node.JS
-RUN dnf -y module install nodejs:14
+RUN dnf -y install nodejs
 
 # Install packages and update base system
 # XXX Need to install powertools repo
-RUN yum -y install \
-            cdsclient \
+RUN dnf -y install \
             ImageMagick \
             less \
-            mtdlink \
-            plplot \
-            scamp \
-            sextractor \
-            tcsh \
             wget \
             which \
-        && yum -y clean all
+        && dnf -y clean all
 
 # Copy operating system configuration files
 COPY docker/ /

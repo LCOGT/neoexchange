@@ -369,13 +369,13 @@ def create_image_filter(header, nsmap):
     etree.SubElement(optical_filter, etree.QName(img_ns, "filter_name")).text = obs_filter
 
     obs_filter_bwidth = map_filter_to_bandwidth(obs_filter)
-    if obs_filter_bwidth:
+    if obs_filter_bwidth is not None:
         obs_filter_bwidth_str = "{:.1f}".format(obs_filter_bwidth.value)
         obs_filter_bwidth_unit = str(obs_filter_bwidth.unit)
         etree.SubElement(optical_filter, etree.QName(img_ns, "bandwidth"), attrib={'unit' : obs_filter_bwidth_unit}).text = obs_filter_bwidth_str
 
     obs_filter_cwave = map_filter_to_wavelength(obs_filter)
-    if obs_filter_cwave:
+    if obs_filter_cwave is not None:
         obs_filter_cwave_str = "{:.1f}".format(obs_filter_cwave.value)
         obs_filter_cwave_unit = str(obs_filter_cwave.unit)
         etree.SubElement(optical_filter, etree.QName(img_ns, "center_filter_wavelength"), attrib={'unit' : obs_filter_cwave_unit}).text = obs_filter_cwave_str

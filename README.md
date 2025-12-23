@@ -6,6 +6,9 @@ Portal for scheduling observations of NEOs (and other Solar System objects) usin
 
 ## History
 
+### 3.17.0
+* Long-term maintenance update to Rocky Linux 9 for the base Docker container image, Python 3.11 and Astropy 5.3.x.
+
 ### 3.16.4
 * Add ability to return JSON versions of targets and ephemerides from the search and ephem endpoints for PTR support.
 
