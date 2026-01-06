@@ -4412,6 +4412,35 @@ class TestConfigureDefaults(TestCase):
 
         params = configure_defaults(test_params)
 
+    def test_elp_point4m_num2(self):
+        test_params = self.obs_params
+        test_params['site_code'] = 'V98'
+
+        expected_params = { 'instrument':  '0M4-SCICAM-QHY600',
+                            'pondtelescope': '0m4',
+                            'observatory': 'aqwb',
+                            'site': 'ELP',
+                            'binning': 1}
+        expected_params.update(test_params)
+
+        params = configure_defaults(test_params)
+
+        self.assertEqual(expected_params, params)
+
+
+    def test_elp_point4m_num3(self):
+        test_params = self.obs_params
+        test_params['site_code'] = 'V99'
+
+        expected_params = { 'instrument':  '0M4-SCICAM-QHY600',
+                            'pondtelescope': '0m4',
+                            'observatory': 'aqwb',
+                            'site': 'ELP',
+                            'binning': 1}
+        expected_params.update(test_params)
+
+        params = configure_defaults(test_params)
+
         self.assertEqual(expected_params, params)
 
     def test_lsc_point4m_num1(self):
