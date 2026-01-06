@@ -1121,7 +1121,7 @@ def get_mag_mapping(site_code):
     # Disabled by TAL 2018/8/10 after mirror recoating
 #    bad_onem_site_codes = ['Q63', 'Q64']
     bad_onem_site_codes = ['BAD1M']
-    point4m_site_codes = ['Z21', 'Z17', 'W89', 'W79', 'T04', 'T03', 'Q58', 'Q59', 'V38', 'L09', '0M4']
+    point4m_site_codes = ['Z21', 'Z17', 'W89', 'W79', 'T04', 'T03', 'Q58', 'Q59', 'V38', 'L09', 'V98', 'V99', '0M4']
 
 # Magnitudes represent upper bin limits
     site_code = site_code.upper()
@@ -1463,6 +1463,18 @@ def get_sitepos(site_code, dbg=False):
         site_long = -site_long
         site_hgt = 2027.0
         site_name = 'LCO ELP Node 0m4a Aqawan A at McDonald Observatory'
+    elif site_code == 'ELP-AQWB-0M4A' or site_code == 'V98':
+        (site_lat, status) = S.sla_daf2r(30, 40, 48.15)
+        (site_long, status) = S.sla_daf2r(104, 0., 54.24)
+        site_long = -site_long
+        site_hgt = 2027.0
+        site_name = 'LCO ELP Node 0m4a Aqawan B at McDonald Observatory'
+    elif site_code == 'ELP-AQWB-0M4B' or site_code == 'V99':
+        (site_lat, status) = S.sla_daf2r(30, 40, 48.15)
+        (site_long, status) = S.sla_daf2r(104, 0., 54.24)
+        site_long = -site_long
+        site_hgt = 2027.0
+        site_name = 'LCO ELP Node 0m4b Aqawan B at McDonald Observatory'
     elif site_code == 'BPL':
         (site_lat, status) = S.sla_daf2r(34, 25, 57)
         (site_long, status) = S.sla_daf2r(119, 51, 46)
@@ -1917,7 +1929,7 @@ def get_mountlimits(site_code_or_name):
         ha_pos_limit = 4.5 * 15.0
         ha_neg_limit = -4.5 * 15.0
         alt_limit = 30.0
-    elif '-AQWA' in site or '-AQWB' in site or 'CLMA-0M4' in site or site in ['Z17', 'Z21', 'Q58', 'Q59', 'T03', 'T04', 'W89', 'W79', 'V38', 'L09']:
+    elif '-AQWA' in site or '-AQWB' in site or 'CLMA-0M4' in site or site in ['Z17', 'Z21', 'Q58', 'Q59', 'T03', 'T04', 'W89', 'W79', 'V38', 'L09', 'V98', 'V99']:
         ha_pos_limit = 4.46 * 15.0
         ha_neg_limit = -4.5 * 15.0
         alt_limit = 15.0
@@ -1961,7 +1973,7 @@ def get_sitecam_params(site, bin_mode=None):
     unrecognized site."""
 
     valid_site_codes = LCOGT_site_codes()
-    valid_point4m_codes = ['Z17', 'Z21', 'W89', 'W79', 'T03', 'T04', 'Q58', 'Q59', 'V38', 'L09', '0M4']
+    valid_point4m_codes = ['W89', 'W79', '0M4', 'Z17', 'Z21', 'T04', 'T03', 'Q58', 'Q59', 'V38', 'L09', 'V98', 'V99']
 
     site = site.upper()
     if site == '2M0':
@@ -2086,7 +2098,7 @@ def determine_sites_to_schedule(sched_date=datetime.utcnow()):
         S_point4m_sites = ['L09', ]
         S_onem_sites = ['K93', 'K92', 'K91']
     elif sched_date.hour >= 23 or (0 <= sched_date.hour < 8):
-        N_point4m_sites = ['T04', 'T03', 'V38']
+        N_point4m_sites = ['T04', 'T03', 'V38', 'V98', 'V99']
         N_onem_sites = ['V37', ]
         S_point4m_sites = ['W89', 'W79']
         S_onem_sites = ['W87', 'W85']

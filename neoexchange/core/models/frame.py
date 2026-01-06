@@ -225,6 +225,8 @@ class Frame(models.Model):
                         'W89' : 'LCO LSC Node Aqawan A 0m4a at Cerro Tololo, Chile',
                         'W79' : 'LCO LSC Node Aqawan B 0m4a at Cerro Tololo, Chile',
                         'V38' : 'LCO ELP Node Aqawan A 0m4a at McDonald Observatory, Texas',
+                        'V98' : 'LCO ELP Node Aqawan B 0m4a at McDonald Observatory, Texas',
+                        'V99' : 'LCO ELP Node Aqawan B 0m4b at McDonald Observatory, Texas',
                         'L09' : 'LCO CPT Node Aqawan A 0m4a at Sutherland, South Africa',
                         'G51' : 'LCO Byrne Observatory at Sedgwick Reserve'
                         }
