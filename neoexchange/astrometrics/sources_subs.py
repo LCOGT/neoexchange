@@ -27,7 +27,7 @@ import email
 from re import sub, compile
 from math import degrees, sqrt, copysign, ceil
 from time import sleep
-from datetime import date, datetime, timedelta
+from datetime import datetime, timedelta
 from socket import error, timeout
 from random import randint
 import requests
@@ -1729,6 +1729,12 @@ def make_location(params):
     elif params['site_code'] == 'V39':
         location['telescope'] = '1m0a'
         location['enclosure'] = 'domb'
+    elif params['site_code'] == 'V98':
+        location['telescope'] = '0m4a'
+        location['enclosure'] = 'aqwb'
+    elif params['site_code'] == 'V99':
+        location['telescope'] = '0m4b'
+        location['enclosure'] = 'aqwb'
     elif params['site_code'] == 'Z31':
         location['telescope'] = '1m0a'
         location['enclosure'] = 'doma'
@@ -2214,7 +2220,9 @@ def configure_defaults(params):
                   'T04' : 'OGG',
                   'Q58' : 'COJ',  # Code for 0m4a
                   'Q59' : 'COJ',
-                  'V38' : 'ELP',
+                  'V38' : 'ELP',  # Code for aqwa-0m4a
+                  'V98' : 'ELP',  # Code for aqwb-0m4a
+                  'V99' : 'ELP',  # Code for aqwb-0m4b
                   'L09' : 'CPT'}  # Code for 0m4a
 
     params['pondtelescope'] = '1m0'
@@ -2239,7 +2247,7 @@ def configure_defaults(params):
             if params.get('filter', None):
                 del(params['filter'])
             params['spectra_slit'] = 'slit_6.0as'
-    elif params['site_code'] in ['Z17', 'Z21', 'T04', 'T03', 'Q58', 'Q59', 'V38', 'L09', 'W89', 'W79', '0M4']:
+    elif params['site_code'] in ['Z17', 'Z21', 'T04', 'T03', 'Q58', 'Q59', 'V38', 'L09', 'W89', 'W79', 'V98', 'V99' '0M4']:
         params['instrument'] = '0M4-SCICAM-QHY600'
         params['pondtelescope'] = '0m4'
         params['binning'] = 1
@@ -2252,6 +2260,12 @@ def configure_defaults(params):
         if params['site_code'] == 'V38':
             # elp-aqwa-0m4a kb80
             params['observatory'] = 'aqwa'
+        elif params['site_code'] == 'V98':
+            # elp-aqwb-0m4a sq44
+            params['observatory'] = 'aqwb'
+        elif params['site_code'] == 'V99':
+            # elp-aqwb-0m4b sq46
+            params['observatory'] = 'aqwb'
     elif params.get('bin_mode', None) == '2k_2x2':
         params['binning'] = 2
 
