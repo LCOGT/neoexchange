@@ -3203,9 +3203,18 @@ def translate_constraints(constraints):
         elif ">" in c:
             field, value = c.split(">")
             translated.append(f"{field.strip()}|GT|{value.strip()}")
+        elif "==" in c:
+            field, value = c.split("==")
+            translated.append(f"{field.strip()}|EQ|{value.strip()}")
+        elif "!=" in c:
+            field, value = c.split("!=")
+            translated.append(f"{field.strip()}|NE|{value.strip()}")
         elif "IS DEFINED" in c:
             field, value = c.split("IS DEFINED")
             translated.append(f"{field.strip()}|DF")
+        elif "NOT DEFINED" in c:
+            field, value = c.split("NOT DEFINED")
+            translated.append(f"{field.strip()}|ND")
         else:
             raise ValueError(f"Unsupported constraint format: {c}")
 
