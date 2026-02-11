@@ -3223,7 +3223,7 @@ def translate_constraints(constraints):
 
     return quote(json_str)
 
-def make_jpl_sbobs_query(obs_date, site_code='W86', max_objects=100, min_obs_time=30, min_Vmag=None, max_Vmag=None, max_rotper=None):
+def make_jpl_sbobs_query(obs_date, site_code='W86', max_objects=100, min_obs_time=30, min_alt=30, min_Vmag=None, max_Vmag=None, max_rotper=None):
     """
     Make a query URL for the JPL SBobs API (https://ssd-api.jpl.nasa.gov/doc/sbwobs.html). The following constraints are
     applied in addition to those from the passed parameters:
@@ -3246,6 +3246,8 @@ def make_jpl_sbobs_query(obs_date, site_code='W86', max_objects=100, min_obs_tim
         Maximum number of objects to return
     min_obs_time : int/float
         Minimum number of minutes needed for observing (truncated to integer)
+    min_alt : int/float
+        Minimum altitude/elevation that the object must reach (default: 30)
     min_Vmag : float or None
         Objects must be fainter than this V band magnitude
     max_Vmag : float or None
@@ -3268,6 +3270,8 @@ def make_jpl_sbobs_query(obs_date, site_code='W86', max_objects=100, min_obs_tim
         url += "&sb-group=neo&elong-min=45&glat-min=10"
         # Need to be visible for at least time time (in minutes)
         url += f"&time-min={int(min_obs_time)}"
+        # Need to be above this altitude
+        url += f"&elev-min={min_alt}"
         # Try and decode the site code into a LCO telescope class and then use
         # this to set mag limits
         if min_Vmag is None or max_Vmag is None:
