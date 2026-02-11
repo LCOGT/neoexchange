@@ -23,7 +23,7 @@ import shutil
 from django.contrib.staticfiles.testing import StaticLiveServerTestCase
 from django.conf import settings
 from contextlib import contextmanager
-from numpy import ndarray, long
+from numpy import ndarray
 from selenium import webdriver
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.common.by import By
@@ -387,7 +387,7 @@ def assertDeepAlmostEqual(test_case, expected, actual, *args, **kwargs):
     is_root = not '__trace' in kwargs
     trace = kwargs.pop('__trace', 'ROOT')
     try:
-        if isinstance(expected, (int, float, long, complex)):
+        if isinstance(expected, (int, float, complex)):
             test_case.assertAlmostEqual(expected, actual, *args, **kwargs)
         elif isinstance(expected, (list, tuple, ndarray)):
             test_case.assertEqual(len(expected), len(actual))
