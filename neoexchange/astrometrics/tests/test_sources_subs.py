@@ -4418,7 +4418,7 @@ class TestConfigureDefaults(TestCase):
 
     def test_elp_point4m_num2(self):
         test_params = self.obs_params
-        test_params['site_code'] = 'V98'
+        test_params['site_code'] = 'V45'
 
         expected_params = { 'instrument':  '0M4-SCICAM-QHY600',
                             'pondtelescope': '0m4',

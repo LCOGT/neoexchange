@@ -1729,7 +1729,7 @@ def make_location(params):
     elif params['site_code'] == 'V39':
         location['telescope'] = '1m0a'
         location['enclosure'] = 'domb'
-    elif params['site_code'] == 'V98':
+    elif params['site_code'] == 'V45':
         location['telescope'] = '0m4a'
         location['enclosure'] = 'aqwb'
     elif params['site_code'] == 'V99':
@@ -2221,7 +2221,7 @@ def configure_defaults(params):
                   'Q58' : 'COJ',  # Code for 0m4a
                   'Q59' : 'COJ',
                   'V38' : 'ELP',  # Code for aqwa-0m4a
-                  'V98' : 'ELP',  # Code for aqwb-0m4a
+                  'V45' : 'ELP',  # Code for aqwb-0m4a
                   'V99' : 'ELP',  # Code for aqwb-0m4b
                   'L09' : 'CPT'}  # Code for 0m4a
 
@@ -2247,7 +2247,7 @@ def configure_defaults(params):
             if params.get('filter', None):
                 del(params['filter'])
             params['spectra_slit'] = 'slit_6.0as'
-    elif params['site_code'] in ['Z17', 'Z21', 'T04', 'T03', 'Q58', 'Q59', 'V38', 'L09', 'W89', 'W79', 'V98', 'V99', '0M4']:
+    elif params['site_code'] in ['Z17', 'Z21', 'T04', 'T03', 'Q58', 'Q59', 'V38', 'L09', 'W89', 'W79', 'V45', 'V99', '0M4']:
         params['instrument'] = '0M4-SCICAM-QHY600'
         params['pondtelescope'] = '0m4'
         params['binning'] = 1
@@ -2260,7 +2260,7 @@ def configure_defaults(params):
         if params['site_code'] == 'V38':
             # elp-aqwa-0m4a kb80
             params['observatory'] = 'aqwa'
-        elif params['site_code'] == 'V98':
+        elif params['site_code'] == 'V45':
             # elp-aqwb-0m4a sq44
             params['observatory'] = 'aqwb'
         elif params['site_code'] == 'V99':

@@ -115,7 +115,7 @@ valid_telescope_serials = {  '1m008' : 'V37',
                              '0m409' : 'W89',
                              '0m412' : 'W79',
                              '0m411' : 'V38',
-                             '0m400' : 'V98', # LCOGT   elp-aqwb-0m4a (sq44)
+                             '0m400' : 'V45', # LCOGT   elp-aqwb-0m4a (sq44)
                              '0m473' : 'V99', # LCOGT   elp-aqwb-0m4b (sq46)
                              '0m407' : 'L09', # LCOGT   cpt-aqwa-0m4a
                              '0m420' : 'XXX'  # ASAS-SN cpt-aqwa-0m4b

@@ -37,7 +37,7 @@ SITES = (('1M0', '------------ Any 1.0m ------------'),
          ('0M4', '------------ Any 0.4m ------------'),
          ('W89', 'LSC 0.4m - W89,W79; (CTIO, Chile)'),
          ('V38', 'ELP 0.4m - V38; (McDonald, Texas)'),
-         ('V98', 'ELP 0.4m - V98; (TEMP; McDonald, Texas)'),
+         ('V45', 'ELP 0.4m - V45; (McDonald, Texas)'),
          ('V99', 'ELP 0.4m - V99; (TEMP; McDonald, Texas)'),
          ('T04', 'OGG 0.4m - T03-04; (Maui, Hawaii)'),
          ('Q58', 'COJ 0.4m - Q58-59; (Siding Spring, Aust.)'),
@@ -63,7 +63,7 @@ MOON = (('G', 'Grey',),
         ('D', 'Dark'))
 
 SITES_1M0 = ('W86', 'V37', 'Q63', 'K92', 'Z24', '1M0')
-SITES_0M4 = ('W89', 'V38', 'V98', 'V99', 'T04', 'Q58', 'L09', 'Z21', '0M4')
+SITES_0M4 = ('W89', 'V38', 'V45', 'V99', 'T04', 'Q58', 'L09', 'Z21', '0M4')
 
 BIN_MODES = {'0M4' : 
              (('central30_1x1', "Central 30'x30', 1x1"),
