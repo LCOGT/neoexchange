@@ -82,7 +82,7 @@ class MockDate(date, metaclass=MockDateTimeType):
         return cls(cls.year, cls.month, cls.day)
 
 
-def mock_fetchpage_and_make_soup(url, fakeagent=False, dbg=False, parser="html.parser"):
+def mock_fetchpage_and_make_soup(url, fakeagent=False, dbg=False, parser="html.parser", ssl_verify=True):
     page = None
     if '191P' in url:
         with open(os.path.join('astrometrics', 'tests', 'test_mpcdb_Comet191P.html'), 'r') as test_fh:
@@ -92,7 +92,7 @@ def mock_fetchpage_and_make_soup(url, fakeagent=False, dbg=False, parser="html.p
     return page
 
 
-def mock_fetchpage_and_make_soup_pccp(url, fakeagent=False, dbg=False, parser="html.parser"):
+def mock_fetchpage_and_make_soup_pccp(url, fakeagent=False, dbg=False, parser="html.parser", ssl_verify=True):
 
         table_header = '''<table class="tablesorter">
           <thead>
