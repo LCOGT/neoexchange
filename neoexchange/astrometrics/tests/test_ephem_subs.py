@@ -2714,7 +2714,7 @@ class TestDetermineSitesToSchedule(TestCase):
         should be schedulable for Northern targets, OGG for bright targets'''
         d = datetime(2017, 3,  9,  23, 27, 5)
 
-        expected_sites = { 'north' : { '0m4' : ['T04', 'T03', 'V38', 'V45', 'V99'], '1m0' : ['V37',] },
+        expected_sites = { 'north' : { '0m4' : ['T04', 'T03', 'V38', 'V45', 'V47'], '1m0' : ['V37',] },
                            'south' : { '0m4' : ['W89', 'W79'], '1m0' : ['W87', 'W85'] }
                          }
 
@@ -2728,7 +2728,7 @@ class TestDetermineSitesToSchedule(TestCase):
 
         d = datetime(2017, 3, 10,  00, 2, 5)
 
-        expected_sites = { 'north' : { '0m4' : ['T04', 'T03', 'V38', 'V45', 'V99'], '1m0' : ['V37',] },
+        expected_sites = { 'north' : { '0m4' : ['T04', 'T03', 'V38', 'V45', 'V47'], '1m0' : ['V37',] },
                            'south' : { '0m4' : ['W89', 'W79']       , '1m0' : ['W87', 'W85'] }
                          }
 
@@ -3728,7 +3728,7 @@ class TestLCOGT_tels_to_sitecode(SimpleTestCase):
 
     def test_elp_aqwb_0m4b(self):
 
-        expected_sitecode = 'V99'
+        expected_sitecode = 'V47'
         sitecode = LCOGT_telserial_to_site_codes('0m4-73')
 
         self.assertEqual(expected_sitecode, sitecode)
