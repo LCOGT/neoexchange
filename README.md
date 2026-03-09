@@ -6,6 +6,12 @@ Portal for scheduling observations of NEOs (and other Solar System objects) usin
 
 ## History
 
+### 3.17.1
+* Add MPC codes for the new ELP 0.35m Delta Rho telescopes in Aqawan B.
+* Update MPC strings for telescope design and detector for the Delta Rho + QHY600 telescope + camera (Reported by @carrholt)
+* Specify and allow minimum elevation for the JPL SBObs frontend, which eliminates the non-visible objects previously returned (The default min_elev specified in the JPL API docs doesn't seem to be actually applied)
+* Fix `neox/tests/base.by` for removal of Numpy `long` which was breaking all the functional tests
+
 ### 3.17.0
 * Long-term maintenance update to Rocky Linux 9 for the base Docker container image, Python 3.11 and Astropy 5.3.x.
 
