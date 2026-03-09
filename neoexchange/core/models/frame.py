@@ -187,8 +187,8 @@ class Frame(models.Model):
                         'W89' : 'LCO LSC Node Aqawan A 0m4a at Cerro Tololo, Chile',
                         'W79' : 'LCO LSC Node Aqawan B 0m4a at Cerro Tololo, Chile',
                         'V38' : 'LCO ELP Node Aqawan A 0m4a at McDonald Observatory, Texas',
-                        'V98' : 'LCO ELP Node Aqawan B 0m4a at McDonald Observatory, Texas',
-                        'V99' : 'LCO ELP Node Aqawan B 0m4b at McDonald Observatory, Texas',
+                        'V45' : 'LCO ELP Node Aqawan B 0m4a at McDonald Observatory, Texas',
+                        'V47' : 'LCO ELP Node Aqawan B 0m4b at McDonald Observatory, Texas',
                         'L09' : 'LCO CPT Node Aqawan A 0m4a at Sutherland, South Africa',
                         'G51' : 'LCO Byrne Observatory at Sedgwick Reserve'
                         }
@@ -196,14 +196,15 @@ class Frame(models.Model):
 
     def return_tel_string(self):
 
-        detector = 'CCD'
-        point4m_aperture = 0.4
-        point4m_fRatio = 8.0
-        point4m_design = 'Schmidt-Cassegrain'
-        point4m_string = '{:.1f}-m f/{:1d} {} + {}'.format(point4m_aperture, int(point4m_fRatio), point4m_design, detector)
+        detector = 'CMOS'
+        point4m_aperture = 0.35
+        point4m_fRatio = 3.0
+        point4m_design = 'Corrected Dall-Kirkham'
+        point4m_string = '{:.2f}-m f/{:1d} {} + {}'.format(point4m_aperture, int(point4m_fRatio), point4m_design, detector)
         point4m_dict = {'full' : point4m_string, 'design' : point4m_design,
                      'aperture' : point4m_aperture, 'fRatio' : point4m_fRatio, 'detector' : detector }
 
+        detector = 'CCD'
         onem_aperture = 1.0
         onem_fRatio = 8.0
         onem_design = 'Ritchey-Chretien'
@@ -242,6 +243,8 @@ class Frame(models.Model):
                         'W89' : point4m_dict,
                         'W79' : point4m_dict,
                         'V38' : point4m_dict,
+                        'V45' : point4m_dict,
+                        'V47' : point4m_dict,
                         'L09' : point4m_dict,
                         }
         tel_string = tels_strings.get(self.sitecode, {'full:' : 'Unknown LCO telescope'})
