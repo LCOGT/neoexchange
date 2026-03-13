@@ -35,6 +35,7 @@ from astropy.coordinates import Angle
 import astropy.units as u
 from numpy import where, array
 from numpy.testing import assert_allclose
+from dateutil.parser import parse
 
 from core.models import Body, Proposal, Block, Frame, SuperBlock
 from neox.tests.mocks import mock_get_vizier_catalog_table
@@ -3577,8 +3578,8 @@ class UpdateFrameZeropointTest(FITSUnitTest):
                          'body'     : self.body_with_provname,
                          'proposal' : self.neo_proposal,
                          'groupid'  : self.body_with_provname.current_name() + '_CPT-20150420',
-                         'block_start' : '2017-03-08 05:05:00',
-                         'block_end'   : '2017-03-08 05:22:36',
+                         'block_start' : parse('2017-03-08 05:05:00'),
+                         'block_end'   : parse('2017-03-08 05:22:36'),
                          'tracking_number' : '0000358587',
                          'active'   : False
                        }
@@ -3587,8 +3588,8 @@ class UpdateFrameZeropointTest(FITSUnitTest):
                          'site'     : 'LSC',
                          'body'     : self.body_with_provname,
                          'superblock' : self.test_sblock,
-                         'block_start' : '2017-03-08 05:05:00',
-                         'block_end'   : '2017-03-08 05:22:36',
+                         'block_start' : parse('2017-03-08 05:05:00'),
+                         'block_end'   : parse('2017-03-08 05:22:36'),
                          'request_number' : '0001358587',
                          'num_exposures' : 6,
                          'exp_length' : 120.0,
@@ -4927,8 +4928,8 @@ class TestMakeObjectDirectoryFromBlock(TestCase):
                          'body'     : self.test_body,
                          'proposal' : self.neo_proposal,
                          'groupid'  : self.test_body.current_name() + '_LSC_20170308-20170309',
-                         'block_start' : '2017-03-08 05:05:00',
-                         'block_end'   : '2017-03-09 05:22:36',
+                         'block_start' : parse('2017-03-08 05:05:00'),
+                         'block_end'  : parse('2017-03-09 05:22:36'),
                          'tracking_number' : '0000358587',
                          'active'   : False
                        }
@@ -4937,8 +4938,8 @@ class TestMakeObjectDirectoryFromBlock(TestCase):
                          'site'     : 'LSC',
                          'body'     : self.test_body,
                          'superblock' : self.test_sblock,
-                         'block_start' : '2017-03-08 05:05:00',
-                         'block_end'   : '2017-03-08 05:22:36',
+                         'block_start' : parse('2017-03-08 05:05:00'),
+                         'block_end'  : parse('2017-03-08 05:22:36'),
                          'request_number' : '0001358587',
                          'num_exposures' : 6,
                          'exp_length' : 120.0,
@@ -4947,8 +4948,8 @@ class TestMakeObjectDirectoryFromBlock(TestCase):
                          'when_observed' : '2017-03-08 05:15:00'
                        }
         self.test_block1 = Block.objects.create(**block_params)
-        block_params['block_start'] = block_params['block_start'].replace('-08', '-09')
-        block_params['block_end'] = block_params['block_end'].replace('-08', '-09')
+        block_params['block_start'] = block_params['block_start'] + timedelta(days=1)
+        block_params['block_end'] = block_params['block_end'] + timedelta(days=1)
         block_params['request_number'] = '0001358591'
         block_params['num_observed'] = None
         block_params['when_observed'] = None
@@ -4982,10 +4983,18 @@ class TestMakeObjectDirectoryFromBlock(TestCase):
         self.expected_directory = os.path.join(self.test_data_root, '20170307',
                                           self.test_body.current_name() + '_' + self.blockuid, '')
 
+        self.expected_old_directory = os.path.join(self.test_data_root, '2017', '20170307',
+                                          self.test_body.current_name() + '_' + self.blockuid, '')
+        self.time_now = datetime(2017, 3, 9, 5, 0)
+        self.oldblock_time_now = datetime(2025, 3, 9, 5, 0)
 
     def tearDown(self) -> None:
         try:
             os.removedirs(self.expected_directory)
+        except FileNotFoundError:
+            pass
+        try:
+            os.removedirs(self.expected_old_directory)
         except FileNotFoundError:
             pass
         finally:
@@ -5010,12 +5019,25 @@ class TestMakeObjectDirectoryFromBlock(TestCase):
     @patch('core.models.blocks.lco_api_call', mock_header)
     def test_observed_block(self):
 
-        directory = make_object_directory_from_block(self.test_data_root, self.test_block1)
+        directory = make_object_directory_from_block(self.test_data_root, self.test_block1, self.time_now)
 
         self.assertEqual(self.expected_directory, directory)
 
     def test_unobserved_block(self):
 
-        directory = make_object_directory_from_block(self.test_data_root, self.test_block2)
+        directory = make_object_directory_from_block(self.test_data_root, self.test_block2, self.time_now)
+
+        self.assertEqual(None, directory)
+
+    @patch('core.models.blocks.lco_api_call', mock_header)
+    def test_older_observed_block(self):
+
+        directory = make_object_directory_from_block(self.test_data_root, self.test_block1, self.oldblock_time_now)
+
+        self.assertEqual(self.expected_old_directory, directory)
+
+    def test_older_unobserved_block(self):
+
+        directory = make_object_directory_from_block(self.test_data_root, self.test_block2, self.oldblock_time_now)
 
         self.assertEqual(None, directory)
