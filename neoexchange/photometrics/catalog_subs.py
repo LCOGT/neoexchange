@@ -19,7 +19,7 @@ import logging
 import os
 from glob import glob
 import numpy as np
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, UTC
 from math import sqrt, log10, log, degrees, cos
 from collections import OrderedDict
 import time
@@ -31,7 +31,6 @@ from astropy.utils.exceptions import AstropyDeprecationWarning
 from astropy.io import fits
 from astropy.table import Table
 from astropy.coordinates import Angle
-warnings.simplefilter('ignore', category = AstropyDeprecationWarning)
 from astroquery.vizier import Vizier
 import astropy.units as u
 import astropy.coordinates as coord
@@ -43,6 +42,7 @@ from astrometrics.ephem_subs import LCOGT_domes_to_site_codes
 from astrometrics.time_subs import timeit
 from core.models import CatalogSources, Frame
 
+warnings.simplefilter('ignore', category = AstropyDeprecationWarning)
 logger = logging.getLogger(__name__)
 
 
@@ -1886,7 +1886,7 @@ def make_object_directory(filepath, object_name, block_id):
     return object_directory
 
 
-def make_object_directory_from_block(dataroot, block):
+def make_object_directory_from_block(dataroot, block, time_now=None):
     """Construct a path to data from the <dataroot> (normally settings.DATA_ROOT)
     and the Block <block>. The name of the object is retrieved from the
     Block (using `block.current_name()`) and this is joined to the BLOCKUID(s)
@@ -1894,15 +1894,26 @@ def make_object_directory_from_block(dataroot, block):
     The created directory paths are returned in a list. In the case of a single
     directory this is flattened down to a string. In the case of an unobserved
     Block with no related Frames (or a failure in the archive call in
-    `Block.get_blockdayobs` - hopefully rare), None is returned."""
+    `Block.get_blockdayobs` - hopefully rare), None is returned.
+    If the Block is older than 2 years, the year is added to the path to avoid
+    too many directories in a single directory. This is determined by comparing
+    the Block end time to the current time (or a passed `time_now` value for testing).
+    """
 
     object_name = sanitize_object_name(block.current_name())
     object_directory_root = os.path.dirname(dataroot)
+    old_data_cutoff = 2 * 365 # 2 years
+    if time_now is None:
+        time_now = datetime.now(UTC).replace(tzinfo=None)
 
     dayobs = block.get_blockdayobs
     if dayobs is None:
         logger.warning("No DAYOBS found - unobserved Block?")
         return None
+    if block.block_end < time_now - timedelta(days=old_data_cutoff):
+        year = block.block_end.year
+        if str(year) + os.sep not in object_directory_root:
+            object_directory_root = os.path.join(object_directory_root, str(year), '')
     if dayobs not in object_directory_root:
         object_directory_root = os.path.join(object_directory_root, dayobs)
     object_directories = []
