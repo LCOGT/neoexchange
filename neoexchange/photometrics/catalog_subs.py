@@ -261,7 +261,10 @@ def cross_match(FITS_table, cat_table, cat_name="UCAC4", cross_match_diff_thresh
             start = time.time()
             for source in Dec_table_2:
                 if flags_table_2[z] < 1:
-                    rmag_table_2_temp = rmag_table_2[z]
+                    if not np.ma.is_masked(rmag_table_2[z]):
+                        rmag_table_2_temp = rmag_table_2[z]
+                    else:
+                        rmag_table_2_temp = None
                     if abs(source - value) < dec_min_diff:
                         dec_min_diff = abs(source - value)
                         ra_table_1_temp = RA_table_1[y]
@@ -292,7 +295,17 @@ def cross_match(FITS_table, cat_table, cat_name="UCAC4", cross_match_diff_thresh
             if y <= 10:
                 logger.debug("TIME: inner loop took {:.2f} seconds".format(end-start))
         if ra_min_diff < cross_match_diff_threshold and dec_min_diff < cross_match_diff_threshold:
-            cross_match_list.append((ra_cat_1, ra_cat_2, ra_min_diff, dec_cat_1, dec_cat_2, dec_min_diff, rmag_cat_1, rmag_cat_2, rmag_error, rmag_diff))
+            cross_match_list.append((
+                ra_cat_1, ra_cat_2, ra_min_diff,
+                dec_cat_1, dec_cat_2, dec_min_diff,
+                rmag_cat_1 if rmag_cat_1 is not None else np.nan,
+                rmag_cat_2 if rmag_cat_2 is not None else np.nan,
+                rmag_error if rmag_error is not None else np.nan,
+                rmag_diff if rmag_diff is not None else np.nan,
+            ))
+            # Original line below, above is the same but with None values converted to np.nan for the output table and 
+            # to avoid warning errors from Table (produced by Claude)
+            # cross_match_list.append((ra_cat_1, ra_cat_2, ra_min_diff, dec_cat_1, dec_cat_2, dec_min_diff, rmag_cat_1, rmag_cat_2, rmag_error, rmag_diff))
         y += 1
         ra_min_diff = ra_min_diff_threshold
         dec_min_diff = dec_min_diff_threshold
