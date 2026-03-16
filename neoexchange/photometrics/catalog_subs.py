@@ -19,7 +19,11 @@ import logging
 import os
 from glob import glob
 import numpy as np
-from datetime import datetime, timedelta, UTC
+try:
+    from datetime import datetime, timedelta, UTC
+except ImportError:
+    from datetime import datetime, timedelta, timezone
+    UTC = timezone.utc
 from math import sqrt, log10, log, degrees, cos
 from collections import OrderedDict
 import time
