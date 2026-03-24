@@ -584,6 +584,8 @@ class ZeropointProcessPipeline(PipelineProcess):
             elif phot_cat_name == 'REFCAT2':
                 refcat = cvc.RefCat2(db_filename, **kwargs)
             elif phot_cat_name == 'GAIA-DR2' or phot_cat_name == 'GAIA-DR3':
+                if phot_cat_name == 'GAIA-DR3':
+                    kwargs['dr'] = 'dr3'
                 refcat = cvc.Gaia(db_filename, **kwargs)
             elif phot_cat_name == 'SkyMapper':
                 refcat = cvc.SkyMapper(db_filename, **kwargs)
@@ -618,7 +620,7 @@ class ZeropointProcessPipeline(PipelineProcess):
             created = True
 
         prefix = "Created" if created else "Retrieved"
-        self.log("{prefix:} DB file {refcat_filename:}")
+        self.log(f"{prefix:} DB file {refcat_filename:}")
         return db_filename
 
     def cross_match_and_zp(self, table, refcat, std_zeropoint_tolerance, cal_filter, obs_filter, color_const=True, solar=True):
@@ -662,17 +664,17 @@ class ZeropointProcessPipeline(PipelineProcess):
 
             if color_const is True:
                 avg_zeropoint, C, std_zeropoint, r, gmi = refcat.cal_constant(objids, inst_mag, cal_filter, gmi_lim=gmi_limits)
-                cal_color = 'g-i' # Fixed/held constant
+                cal_color_term = 'g-i' # Fixed/held constant
             else:
                 if cal_filter == 'g':
                     logger.debug("Resetting cal_filter to r")
                     cal_filter = 'r'
-                cal_color = 'g-' + cal_filter
+                cal_color_term = 'g-' + cal_filter
                 if obs_filter == 'w' and solar is False:
                     gmi_limits = [0.5, 1.5]
-                avg_zeropoint, C, std_zeropoint, r, gmr, gmi = refcat.cal_color(objids, inst_mag, cal_filter, cal_color, gmi_lim=gmi_limits)
+                avg_zeropoint, C, std_zeropoint, r, gmr, gmi = refcat.cal_color(objids, inst_mag, cal_filter, cal_color_term, gmi_lim=gmi_limits)
             end = time.time()
         logger.debug(f"TIME: compute_zeropoint took {end-start:.1f} seconds")
         logger.debug(f"New zp={avg_zeropoint:} +/- {std_zeropoint:} {r.count():} {C:}")
 
-        return avg_zeropoint, std_zeropoint, C, cal_color
+        return avg_zeropoint, std_zeropoint, C, cal_color_term
