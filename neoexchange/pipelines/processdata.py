@@ -620,7 +620,7 @@ class ZeropointProcessPipeline(PipelineProcess):
             created = True
 
         prefix = "Created" if created else "Retrieved"
-        self.log(f"{prefix:} DB file {refcat_filename:}")
+        self.log(f"{prefix:} DB file {db_filename:}")
         return db_filename
 
     def cross_match_and_zp(self, table, refcat, std_zeropoint_tolerance, cal_filter, obs_filter, color_const=True, solar=True):
