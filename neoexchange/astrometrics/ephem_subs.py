@@ -22,7 +22,7 @@ from socket import timeout
 
 try:
     import pyslalib.slalib as S
-except:
+except ImportError:
     pass
 
 from numpy import array, concatenate, zeros
