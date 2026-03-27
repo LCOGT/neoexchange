@@ -42,7 +42,8 @@ def summarize_observations(target_name='65803', start_date='2022-07-15', proposa
         frame_types.append(Frame.SWOPE_RED_FRAMETYPE)
     except AttributeError:
         pass
-    print(f'#Track# Rquest# Site(MPC)  Block start         Block end       Block length Obs details       Filter{filt_space} #raw #good_zp/#num all frames   FWHM   DPs')
+    print(f'#Track# Rquest# Blockuid# Site(MPC)  Block start         Block end       Block length Obs details       Filter{filt_space} #raw #good_zp/#num all frames   FWHM   DPs')
+
     for block in blocks.order_by('block_start'):
 
         all_raw_frames = Frame.objects.filter(block=block, frametype__in=frame_types)
@@ -55,7 +56,7 @@ def summarize_observations(target_name='65803', start_date='2022-07-15', proposa
         username = block.superblock.proposal.pi
         if num_raw_frames > min_frames:
             filters = all_raw_frames.values_list('filter',flat=True).distinct()
-            for obs_filter in filters:
+            for filter_count, obs_filter in enumerate(filters):
                 filter_str = obs_filter #", ".join(list(filters))
                 raw_frames = all_raw_frames.filter(filter=obs_filter)
                 num_raw_frames = raw_frames.count()
@@ -82,12 +83,20 @@ def summarize_observations(target_name='65803', start_date='2022-07-15', proposa
                 num_dp = DataProduct.objects.filter(filetype=DataProduct.DART_TXT, object_id=block.superblock.pk).count()
                 if len(srcs_fwhm) > 0:
                     fwhm = np.mean(srcs_fwhm)
-                print(f'{block.superblock.tracking_number} {block.request_number} {block.site} ({first_frame.sitecode}) {block_start.strftime("%Y-%m-%d %H:%M")} -> {block_end.strftime("%Y-%m-%d %H:%M")} ({block_length_hrs:>4.2f} hrs) {block.get_obsdetails().replace(" secs", "s"):10s}({exp_length_hms}) {filter_str:{filt_width}s} {num_raw_frames:>3d}(e91)->{num_good_zp:>3d}/{num_all_frames:>3d} SNR= {snr:>6.1f} {fwhm:>5.1f} DPs={num_dp} {block.superblock.proposal.code}')
+                blockuid_str = ','.join(block.get_blockuid)
+                block_details = f'{block.superblock.tracking_number} {block.request_number} {blockuid_str}'
+                if filter_count >= 1:
+                    # For multi-filter blocks, blank out the Block details after the first iteration
+                    block_details =  ' '*len(block_details)
+                print(f'{block_details} {block.site} ({first_frame.sitecode}) {block_start.strftime("%Y-%m-%d %H:%M")} -> {block_end.strftime("%Y-%m-%d %H:%M")} ({block_length_hrs:>4.2f} hrs) {block.get_obsdetails().replace(" secs", "s"):10s}({exp_length_hms}) {filter_str:{filt_width}s} {num_raw_frames:>3d}(e91)->{num_good_zp:>3d}/{num_all_frames:>3d} SNR= {snr:>6.1f} {fwhm:>6.2f}  {num_dp} {block.superblock.proposal.code}')
+# Original
+#                print(f'{block.superblock.tracking_number} {block.request_number} {block.site} ({first_frame.sitecode}) {block_start.strftime("%Y-%m-%d %H:%M")} -> {block_end.strftime("%Y-%m-%d %H:%M")} ({block_length_hrs:>4.2f} hrs) {block.get_obsdetails().replace(" secs", "s"):10s}({exp_length_hms}) {filter_str:{filt_width}s} {num_raw_frames:>3d}(e91)->{num_good_zp:>3d}/{num_all_frames:>3d} SNR= {snr:>6.1f} {fwhm:>5.1f} DPs={num_dp} {block.superblock.proposal.code}')
 #                print(f'{block.superblock.tracking_number} {block.request_number} {block.site} ({first_frame.sitecode}) {block_start.strftime("%Y-%m-%d %H:%M")} -> {block_end.strftime("%Y-%m-%d %H:%M")} ({block_length_hrs:>4.2f} hrs) {block.get_obsdetails().replace(" secs", "s"):10s}{filter_str:{filt_width}s} {num_raw_frames:>3d}(e91)->{num_good_zp:>3d}/{num_all_frames:>3d} SNR= {snr:>6.1f} {fwhm:>5.1f} {username:.26s}')
     if return_blocks:
         return blocks
 
 def examine_multiap():
+    from photometrics.lightcurve_subs import read_photompipe_file
     for aprad in np.arange(2,12):
         phot_file = os.path.join(input_dir, f"photometry_65803_Didymos__1996_GT_ap{aprad}.dat")
         table = read_photompipe_file(phot_file)
