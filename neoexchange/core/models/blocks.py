@@ -13,6 +13,7 @@ GNU General Public License for more details.
 from collections import Counter, OrderedDict
 from datetime import datetime
 import warnings
+import logging
 
 from django.conf import settings
 from django.contrib.auth.models import User
@@ -52,6 +53,7 @@ SITE_CHOICES = (
                     ('spc', 'Spectral cameras')
     )
 
+logger = logging.getLogger(__name__)
 
 class SuperBlock(models.Model):
 
