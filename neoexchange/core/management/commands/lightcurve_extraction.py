@@ -159,12 +159,14 @@ class Command(BaseCommand):
         # Sort out/Plot bad Zero Points
         zp_times = [alltimes[i] for i, zp in enumerate(zps) if zp <= 0 or zp_errs[i] <= 0]
         zps_bad = [zp for i, zp in enumerate(zps) if zp <= 0 or zp_errs[i] <= 0]
-        zp_errs_bad = [zp_errs[i]-ylims[0] for i, zp in enumerate(zps) if zp <= 0 or zp_errs[i] <= 0]
-        ax1.errorbar(zp_times, zps_bad, yerr=zp_errs_bad, uplims=True, marker='d', color=colors[0], linestyle='--')
+#        zp_errs_bad = [zp_errs[i]-ylims[0] for i, zp in enumerate(zps) if zp <= 0 or zp_errs[i] <= 0]
+        zp_errs_bad = [ylims[0]+0.1 for i, zp in enumerate(zps) if zp <= 0 or zp_errs[i] <= 0]
+        #ax1.errorbar(zp_times, zps_bad, yerr=zp_errs_bad, uplims=True, marker='d', color=colors[0], linestyle='--')
+        ax1.plot(zp_times, zp_errs_bad, marker='d', color=colors[0])
         ax1.set_ylim(ylims[0]-0.1, ylims[1])
         # Make copy of ax1 ZP Axis sharing the same x axis for plotting cloud
         ax2 = ax1.twinx()
-        ax2.plot(alltimes, temps['WMSCLOUD'], color=colors[1], marker='.', alpha=0.5)
+        ax2.plot(alltimes, temps['WMSCLOUD'], color=colors[1], marker='.', alpha=0.5, linestyle=None)
         # Set up Axes/Titles
         ax0.invert_yaxis()
         #ax1.invert_yaxis()
