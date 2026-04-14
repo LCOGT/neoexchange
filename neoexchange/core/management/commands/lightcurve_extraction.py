@@ -71,13 +71,13 @@ class Command(BaseCommand):
         parser.add_argument('--title', type=str, default=None, help='plot title')
         parser.add_argument('--persist', action="store_true", default=False, help='Whether to store cross-matches as SourceMeasurements for the body')
         parser.add_argument('--single', action="store_true", default=False, help='Whether to only analyze a single SuperBlock')
-        parser.add_argument('--nogif', action="store_true", default=False, help='Whether to create a gif movie of the extraction')
+        parser.add_argument('--nogif', '--no-gif', action="store_true", default=False, help='Whether to create a gif movie of the extraction')
         parser.add_argument('--date', action="store", default=None, help='Date of the blocks to extract (YYYYMMDD)')
         parser.add_argument('--overwrite', action="store_true", default=False, help='Force overwrite and store robust data products')
         base_dir = os.path.join(settings.DATA_ROOT, 'Reduction')
         parser.add_argument('--datadir', default=base_dir, help='Place to save data (e.g. %s)' % base_dir)
         parser.add_argument('-ap', '--maxapsize', default=None, help='Max. aperture size')
-        parser.add_argument('--horizons', action="store_true", default=False, help='Whether to use HORIZONS to predict positions')
+        parser.add_argument('--horizons', '--use-horizons', '--usehorizons', action="store_true", default=False, help='Whether to use HORIZONS to predict positions')
 
     def generate_expected_fwhm(self, times, airmasses, fwhm_0=2.0, obs_filter='w', tel_diameter=1.0*u.m):
         """Compute the expected FWHM and the variation with airmass and observing
@@ -514,7 +514,7 @@ class Command(BaseCommand):
                         # Find list of frame sources within search region of predicted coordinates
                         sources = search_box(frame, ra, dec, options['boxwidth'], max_ap_size=options['maxapsize'])
                         midpoint_string = frame.midpoint.strftime('%Y-%m-%d %H:%M:%S')
-                        self.stdout.write("%s %s %s V=%.1f %s (%d) %s" % (midpoint_string, ra_string, dec_string, mag_estimate, frame.sitecode, len(sources), frame.filename))
+                        self.stdout.write("%s %s %s V=%.1f %2s %s (%d) %s" % (midpoint_string, ra_string, dec_string, mag_estimate, frame.filter, frame.sitecode, len(sources), frame.filename))
                         best_source = None
                         # Find source most likely to be target (Could Use Some Work)
                         if len(sources) != 0 and frame.zeropoint is not None:
