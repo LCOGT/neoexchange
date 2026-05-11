@@ -9,13 +9,13 @@ from django.conf import settings
 def banner():
 
     # The raw banner split into lines.
-    lines = ("""
+    lines = (r"""
 .__   __.  _______   ______   ___   ___
 |  \ |  | |   ____| /  __  \  \  \ /  /
 |   \|  | |  |__   |  |  |  |  \  V  /
 |  . `  | |   __|  |  |  |  |   >   <
-|  |\   | |  |____ |  `--'  |  /  .  \\
-|__| \__| |_______| \______/  /__/ \__\\
+|  |\   | |  |____ |  `--'  |  /  .  \
+|__| \__| |_______| \______/  /__/ \__\
 
 
 * Django %(django_version)s
