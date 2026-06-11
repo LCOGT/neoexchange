@@ -719,7 +719,7 @@ def horizons_ephem(obj_name, start, end, site_code, ephem_step_size='1h', alt_li
 
 def convert_horizons_table(ephem, include_moon=False):
     """Modifies a passed table <ephem> from the `astroquery.jplhorizons.ephemerides()
-    to add a 'datetime' column, rate columns and adss moon phase and separation
+    to add a 'datetime' column, rate columns and adds moon phase and separation
     columns (if [include_moon] is True).
     The modified Astropy Table is returned"""
 
