@@ -968,6 +968,7 @@ def run_swarp(source_dir, dest_dir, images, outname='reference.fits', binary=Non
                         'FWHMMAX'  : (max_fwhm, 'Maximum FWHM in the stack'),
                         'FWHMMDIN' : (median_fwhm, 'Median FWHM in the stack')
                       }
+    print("FWHMs", min_fwhm, median_fwhm, max_fwhm)
     normalize_status = normalize(images, swarp_zp_key)
     if normalize_status != 0:
         return normalize_status
@@ -1373,8 +1374,8 @@ def updateFITSWCS(fits_file, scamp_file, scamp_xml_file, fits_file_output):
 
     # Check goodness of fit
     good_fit = True
-    if scamp_info['xy_contrast'] < 1.4 or scamp_info['num_match'] < 4:
-#    if scamp_info['xy_contrast'] < 0.95 or scamp_info['num_match'] < 4: # More lax constraint for efXX data
+#    if scamp_info['xy_contrast'] < 1.4 or scamp_info['num_match'] < 4:
+    if scamp_info['xy_contrast'] < 0.95 or scamp_info['num_match'] < 4: # More lax constraint for efXX/epXX data
         # Bad fit
         logger.warning(f"Bad fit for {os.path.basename(fits_file)} detected. Nmatch={scamp_info['num_match']} XY_contrast={scamp_info['xy_contrast']} AS_contrast={scamp_info['as_contrast']}")
         good_fit = False

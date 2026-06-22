@@ -101,7 +101,8 @@ class Command(BaseCommand):
                         'inputs' : {'fits_file':fits_filepath,
                                    'datadir': os.path.join(dataroot, options['tempdir']),
                                    'overwrite' : options['overwrite'],
-                                   'catalog_type' : catalog_type}
+                                   'catalog_type' : catalog_type,
+                                   'dia' : options['dia']}
                     },
                     {
                         'name'   : 'proc-astromfit',
@@ -115,7 +116,8 @@ class Command(BaseCommand):
                         'inputs' : {'fits_file': os.path.join(dataroot, options['tempdir'], fits_file.replace(mapping['proc-extract'][0], mapping['proc-extract'][1])),
                                    'datadir': os.path.join(dataroot, options['tempdir']),
                                    'overwrite' : options['overwrite'],
-                                   'catalog_type' : catalog_type}
+                                   'catalog_type' : catalog_type,
+                                   'dia' : options['dia']}
                     },
                     {
                         'name'   : 'proc-zeropoint',
