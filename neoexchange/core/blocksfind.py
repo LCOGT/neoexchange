@@ -206,13 +206,13 @@ def ephem_interpolate(times, table, extra_quantity=None):
     if isinstance(end_time, Time):
         end_time = end_time.jd
 
-    if isinstance(times, list) is False:
+    if isinstance(times, list) is False and isinstance(times, Time) is False:
         times = [times,]
 
     if isinstance(times[0], datetime):
         times = Time(times).jd
     elif isinstance(times[0], Time):
-        times = np.array([t.jd for t in times])
+        times = times.jd # np.array([t.jd for t in times])
 
     if min(times) < start_time or max(times) > end_time:
         return [],[]

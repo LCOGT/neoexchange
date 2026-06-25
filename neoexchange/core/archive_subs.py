@@ -188,9 +188,14 @@ def fetch_observations(tracking_num):
     data = lco_api_call(data_url)
     if data is None or data.get('requests', '') == 'Not found.' or data.get('requests', '') == '':
         return []
+    images = []
+    total_frames = 0
     for r in data['requests']:
-        images = check_for_archive_images(request_id=r['id'])
-    return images
+        req_images, req_total_frames = check_for_archive_images(request_id=r['id'])
+        if req_total_frames > 0:
+            images += req_images
+            total_frames += req_total_frames
+    return (images, total_frames)
 
 
 def fetch_archive_frames(auth_header, archive_url, frames):
