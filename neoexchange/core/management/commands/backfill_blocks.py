@@ -15,8 +15,8 @@ GNU General Public License for more details.
 
 import os
 import pprint
-from sys import argv, exit
-from datetime import datetime, timedelta
+from sys import argv
+from datetime import datetime
 
 from django.core.management.base import BaseCommand, CommandError
 from django.db.models import Q
@@ -40,7 +40,7 @@ class Command(BaseCommand):
         usage = "Incorrect usage. Usage: %s --date [YYYYMMDD] --datadir [path] --fitspattern [pattern]" % ( argv[1] )
 
 
-        if type(options['date']) != datetime:
+        if not isinstance(options['date'], datetime):
             try:
                 obs_date = datetime.strptime(options['date'], '%Y%m%d')
             except ValueError:
@@ -92,8 +92,9 @@ class Command(BaseCommand):
                         # Take out any parentheses e.g. (28484)
                         name = name.rstrip().replace('(', '').replace(')', '')
                         # Account for the many variations on a theme...
-                        #name.replace('Didymos', '65803')
-                        name = name.replace('C/2025 N1', '3I').replace('c/2025 n1', '3I').replace('c/2025n1', '3I').replace('3IATLAS', '3I').replace('C/2025N1', '3I')
+                        # name.replace('Didymos', '65803')
+                        # name = name.replace('C/2025 N1', '3I').replace('c/2025 n1', '3I').replace('c/2025n1', '3I').replace('3IATLAS', '3I').replace('C/2025N1', '3I')
+                        name = name.replace('C/2025 k1', 'C/2025 K1').replace('C/2025K1', 'C/2025 K1').replace('C/2025k1', 'C/2025 K1')
                         # MRO-specific oddities
                         if header.get('site_id', '') == 'MRO':
                             name = name.replace('R', '').replace('V', '').replace('didcomps', 'didymos').replace('comps', 'mos').replace('compc', 'mos').replace('comp', 'mos')
@@ -193,7 +194,7 @@ class Command(BaseCommand):
                         header['DATE_OBS'] = header['DATE-OBS']
                         group_id = header.get('groupid', None)
                         block = Block.objects.get(groupid=group_id)
-                        frame = create_frame(header, block)
+                        frame = create_frame(header, block)  # noqa: F841
                 if header != {}:
                     block.when_observed = datetime.strptime(header['DATE-OBS'][:19],'%Y-%m-%dT%H:%M:%S')
                     block.num_observed = 1
