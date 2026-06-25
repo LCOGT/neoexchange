@@ -13,7 +13,6 @@ GNU General Public License for more details.
 from astropy.wcs import WCS
 from astropy import units as u
 from django.db import models
-from django.utils.translation import ugettext_lazy as _
 from django.utils.encoding import force_str
 try:
     # cpython 2.x
@@ -112,6 +111,7 @@ class Frame(models.Model):
     QUALITY_GOOD = ' '
     QUALITY_BADSUBTRACTION = 'B'
     QUALITY_INVOLVED_WITH_STAR = 'I'
+    QUALITY_STREAKED = 's'
 
     sitecode    = models.CharField('MPC site code', max_length=4, blank=False)
     instrument  = models.CharField('instrument code', max_length=4, blank=True, null=True)
@@ -332,8 +332,8 @@ class Frame(models.Model):
         return self.quality
 
     class Meta:
-        verbose_name = _('Observed Frame')
-        verbose_name_plural = _('Observed Frames')
+        verbose_name = 'Observed Frame'
+        verbose_name_plural = 'Observed Frames'
         db_table = 'ingest_frame'
 
     def __str__(self):
