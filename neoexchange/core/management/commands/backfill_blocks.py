@@ -62,7 +62,9 @@ class Command(BaseCommand):
         #object_dirs = [x[0] for x in os.walk(dataroot) if ('3I' in x[0] or 'C_2025N1' in x[0] or 'c_2025n1' in x[0] or obs_date in x[0][-8:]) and 'Temp_cvc' not in x[0]]
         #object_dirs = [x[0] for x in os.walk(dataroot) if ('P_2016P5' in x[0] or obs_date in x[0][-8:]) and 'Temp_cvc' not in x[0]]
         #object_dirs = [x[0] for x in os.walk(dataroot) if ('C_2025K1' in x[0] or obs_date in x[0][-8:]) and 'Temp_cvc' not in x[0]]
-        object_dirs = [x[0] for x in os.walk(dataroot) if ('C_2013C2' in x[0] or obs_date in x[0][-8:]) and 'Temp_cvc' not in x[0]]
+        # object_dirs = [x[0] for x in os.walk(dataroot) if ('C_2013C2' in x[0] or obs_date in x[0][-8:]) and 'Temp_cvc' not in x[0]]
+        object_dirs = [x[0] for x in os.walk(dataroot) if ('2026AZ17' in x[0] or obs_date in x[0][-8:]) and 'Temp_cvc' not in x[0]]
+        # object_dirs = [x[0] for x in os.walk(dataroot) if 'C_' not in x[0] and 'Temp_cvc' not in x[0]]
 
         pprint.pprint(object_dirs)
         for rock in object_dirs[1:]:
