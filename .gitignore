@@ -100,5 +100,7 @@ core/fixtures/
 gps_*
 *sp3*
 
+dart_mro_20*py
+
 # Mac OS
 .DS_Store
