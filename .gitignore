@@ -81,6 +81,7 @@ phasecurve*png
 *radec_*.png
 *mag_*.png
 *dist_*.png
+mcmc*.p*
 ALCDEF*.txt
 mpc_positions.txt
 *.json
