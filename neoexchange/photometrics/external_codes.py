@@ -412,7 +412,9 @@ def determine_hotpants_options(ref, sci, source_dir, dest_dir, dbgOptions=False)
         logger.error(f"Error occurred in SWarp while aligning images.")
         return -9
 
-    output_diff_image = os.path.join(dest_dir, os.path.basename(sci).replace('.fits', '.subtracted.fits'))
+    # XXX replace with proper call to increment_red_level if red level present in filename
+    #output_diff_image = os.path.join(dest_dir, os.path.basename(sci).replace('.fits', '.subtracted.fits'))
+    output_diff_image = os.path.join(dest_dir, os.path.basename(sci).replace('e92.fits', 'e93.fits'))
     output_noise_image = output_diff_image.replace('.fits', '.rms.fits')
 
     # Get the relevant header and data information
@@ -821,6 +823,7 @@ def determine_scamp_options(fits_catalog, external_cat_name='GAIA-DR3.cat', dist
         xml_file = 'scamp.xml'
 
     options += " -XML_NAME {}".format(xml_file)
+    #options += " -VERBOSE_TYPE NORMAL -XML_NAME {}".format(xml_file)
 
     return options
 
@@ -1423,8 +1426,8 @@ def updateFITSWCS(fits_file, scamp_file, scamp_xml_file, fits_file_output):
 
     # Check goodness of fit
     good_fit = True
-    if scamp_info['xy_contrast'] < 1.4 or scamp_info['num_match'] < 4:
-#    if scamp_info['xy_contrast'] < 0.95 or scamp_info['num_match'] < 4: # More lax constraint for efXX data
+#    if scamp_info['xy_contrast'] < 1.4 or scamp_info['num_match'] < 4:
+    if scamp_info['xy_contrast'] < 0.95 or scamp_info['num_match'] < 4: # More lax constraint for efXX/epXX (MuSCAT) data
         # Bad fit
         logger.warning(f"Bad fit for {os.path.basename(fits_file)} detected. Nmatch={scamp_info['num_match']} XY_contrast={scamp_info['xy_contrast']} AS_contrast={scamp_info['as_contrast']}")
         good_fit = False
