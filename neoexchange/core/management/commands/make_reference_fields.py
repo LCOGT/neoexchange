@@ -29,7 +29,7 @@ from astropy.wcs import FITSFixedWarning
 from core.models import StaticSource, Block, Frame
 from core.views import run_swarp_make_reference, determine_images_and_catalogs
 from photometrics.image_subs import get_reference_name, find_reference_images
-from photometrics.catalog_subs import funpack_fits_file, make_object_directory
+from photometrics.catalog_subs import funpack_fits_file, make_object_directory, read_reference_frame_header
 
 class Command(BaseCommand):
     help = "Make a reference field. Created reference fields are copied to <datadir>/reference_library/"
@@ -191,10 +191,16 @@ class Command(BaseCommand):
                             run_swarp_make_reference(dest_dir, configs_dir, dest_dir, ref_files=ref_images)
                             #Move the finished reference image and rms image to the reference library.
                             if os.path.exists(os.path.join(dest_dir, "reference.fits")):
-                                shutil.move(os.path.join(dest_dir, "reference.fits"), os.path.join(reference_dir, ref_frame_name))
+                                new_reffile_path = os.path.join(reference_dir, ref_frame_name)
+                                shutil.move(os.path.join(dest_dir, "reference.fits"), new_reffile_path)
+                                # Create Frame for reference frame
+                                frame_kwargs = read_reference_frame_header(new_reffile_path)
+                                frame_kwargs['block'] = obs_block
+                                ref, created = Frame.objects.get_or_create(**frame_kwargs)
                             if os.path.exists(os.path.join(dest_dir, "reference.rms.fits")):
                                 ref_rmsframe_name = ref_frame_name.replace('.fits', '.rms.fits')
                                 shutil.move(os.path.join(dest_dir, "reference.rms.fits"), os.path.join(reference_dir, ref_rmsframe_name))
+
 
                         else:
                             self.stdout.write(f"Not all reduced products found for this field & filter (Found {len(ref_images)}, expected {filtered_frames.count()})")

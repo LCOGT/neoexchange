@@ -31,6 +31,7 @@ from astropy.wcs import WCS
 from astropy.tests.helper import assert_quantity_allclose
 from astropy.wcs.utils import proj_plane_pixel_scales
 from astropy.table import Table, QTable
+from astropy.time import Time
 from astropy.coordinates import Angle
 import astropy.units as u
 from numpy import where, array
@@ -5041,3 +5042,39 @@ class TestMakeObjectDirectoryFromBlock(TestCase):
         directory = make_object_directory_from_block(self.test_data_root, self.test_block2, self.oldblock_time_now)
 
         self.assertEqual(None, directory)
+
+
+class TestReadReferenceFrameHeader(SimpleTestCase):
+
+    def setUp(self) -> None:
+        super().setUp()
+
+
+        self.test_dir = tempfile.mkdtemp(prefix='tmp_neox_')
+        self.test_reffilename = os.path.join('photometrics', 'tests', 'reference_test_frame.fits')
+        self.header = fits.getheader(self.test_reffilename)
+
+    def tearDown(self) -> None:
+        try:
+            os.removedirs(self.test_dir)
+        except FileNotFoundError:
+            pass
+
+    def test_1(self):
+        expected_params =  { 
+                            'sitecode' : 'E10',
+                            'instrument' : 'ep09',
+                            'filter' : 'zs',
+                            'filename' : os.path.basename(self.test_reffilename),
+                            'exptime' : self.header['EXPTIME'],
+                            'midpoint' : Time(6.121553867270E+04, format='mjd').to_datetime() + timedelta(seconds=self.header['EXPTIME']) / 2.0,
+                            'zeropoint' : 25.0,
+                            'zeropoint_err' : None,
+                            'zeropoint_src' : None,
+                            'fwhm' : self.header['FWHMMDIN'],
+                            'frametype': Frame.REFERENCE_FRAMETYPE,
+        }
+
+        params = read_reference_frame_header(self.test_reffilename)
+
+        self.assertEqual(expected_params, params)

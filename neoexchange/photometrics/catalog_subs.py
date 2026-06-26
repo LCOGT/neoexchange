@@ -48,7 +48,7 @@ from astropy import __version__ as astropyversion
 from django.db import transaction
 
 from astrometrics.ephem_subs import LCOGT_domes_to_site_codes, determine_darkness_times
-from astrometrics.time_subs import timeit
+from astrometrics.time_subs import timeit, mjd_utc2datetime
 from core.models import CatalogSources, Frame, Block, SourceMeasurement
 from core.utils import NeoException
 
@@ -1990,6 +1990,40 @@ def update_frame_zeropoint(header, ast_cat_name, phot_cat_name, frame_filename, 
 
     return frame
 
+def read_reference_frame_header(reffile):
+    """Reads FITS header of a passed SWarp reference frame <reffile> and returns a dict suitable for use
+    with Frame.objects.create
+
+    :param reffile: _description_
+    :type reffile: str
+    :return: _description_
+    :rtype: dict
+    """
+
+    from photometrics.pds_subs import split_filename
+    params = {}
+
+    try:
+        header = fits.getheader(reffile)
+
+        # Simple 1 to 1 mappings
+        params['exptime'] = header['EXPTIME']
+        params['filename'] = os.path.basename(reffile)
+        params['filter'] = header['L1FILTER']
+        params['frametype'] = Frame.REFERENCE_FRAMETYPE
+        params['fwhm'] = header['FWHMMDIN']
+        params['zeropoint'] = header['FLXSCLZP']
+        params['zeropoint_err'] = None
+        params['zeropoint_src'] = None
+        # Harder things
+        params['midpoint'] = mjd_utc2datetime(header['MJD-OBS']) + timedelta(seconds=header['EXPTIME'] / 2.0)
+        file_chunks = split_filename(header['FILE0001'])
+        params['instrument'] = file_chunks['instrument']
+        params['sitecode'] = LCOGT_domes_to_site_codes(file_chunks['site'], 'clma', file_chunks['tel_class'] + 'a')
+    except OSError:
+        logger.warning(f"Couldn't read from {reffile}")
+        pass
+    return params
 
 @timeit
 def store_catalog_sources(catfile, catalog_type='LCOGT', std_zeropoint_tolerance=0.1, phot_cat_name="UCAC4", ast_cat_name="2MASS"):
