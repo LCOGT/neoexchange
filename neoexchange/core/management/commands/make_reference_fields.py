@@ -169,7 +169,7 @@ class Command(BaseCommand):
 
                             # Run frame reduction pipeline
                             self.stdout.write("Running run_pipeline")
-                            call_command('run_pipeline', '--datadir', dest_dir, '--tempdir', dest_dir, '--refcat', 'PS1', '--solar', 'False', '--color_const', 'False', '--dia', 'True')
+                            call_command('run_pipeline', '--datadir', dest_dir, '--tempdir', dest_dir, '--refcat', 'PS1', '--solar', 'False', '--color_const', 'True', '--dia', 'True')
                             # Reset DB connection after long running process
                             close_old_connections()
                             # Re-check if all products are present
