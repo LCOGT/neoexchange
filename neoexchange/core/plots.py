@@ -1253,7 +1253,7 @@ def translate_from_alcdef_filter(filt):
             filt = 'Clear'
     return filt
 
-def generalized_fwhm_plotter(blocks_or_ref_fields, filters, colors, output_dir, individual_block_plots, make_full_night_plot):
+def generalized_fwhm_plotter(blocks_or_ref_fields, filters, colors, output_dir, individual_block_plots=False, make_full_night_plot=True):
     """Plots full width half maxima against time for each filter in a block or group of blocks over the blocks' observation nights.
     Pass a block, list/Queryset of blocks, reference field, or list/Queryset of reference fields through \<blocks_or_ref_fields\>.
     If a single block is passed, it will be thrown into a one element list. If a list or Queryset of blocks is passed, all elements
