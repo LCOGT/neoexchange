@@ -21,7 +21,7 @@ import logging
 
 try:
     import pyslalib.slalib as S
-except:
+except ImportError:
     pass
 
 logger = logging.getLogger(__name__)

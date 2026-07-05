@@ -631,6 +631,50 @@ def fetch_mpcobs(asteroid, debug=False, ssl_verify=True):
     return None
 
 
+def fetch_mpcobs_from_api(asteroid, ssl_verify=True):
+    """Performs a search for <asteroid> using the MPC Explorer Observations
+    API (https://minorplanetcenter.net/mpcops/documentation/observations-api/)
+    and returns the resulting observations in MPC1992 (80-column) format as
+    a list of text observations, or None if no observations could be found/
+    decoded.
+    This is intended as an alternative to fetch_mpcobs() for objects whose
+    observations are not available through the normal db_search/showobs
+    endpoint scraped by that function.
+    SSL certificate and hostname verifcation can be bypassed in an emergency
+    by setting ssl_verify=False ((small?) Security Risk).
+    """
+
+    query_url = 'https://data.minorplanetcenter.net/api/get-obs'
+    payload = {'desigs': [asteroid.strip()], 'output_format': ['OBS80']}
+
+    try:
+        resp = requests.get(query_url, json=payload, timeout=60, verify=ssl_verify)
+    except requests.exceptions.Timeout:
+        logger.warning("Request to MPC Explorer Observations API timed out for %s" % asteroid)
+        return None
+    except requests.exceptions.RequestException as e:
+        logger.warning("Request to MPC Explorer Observations API for %s caused error: %s" % (asteroid, e))
+        return None
+
+    if not resp.ok:
+        logger.warning("Got status code %s from MPC Explorer Observations API for %s" % (resp.status_code, asteroid))
+        return None
+
+    try:
+        data = resp.json()
+    except ValueError:
+        logger.warning("Could not decode JSON response from MPC Explorer Observations API for %s" % asteroid)
+        return None
+
+    if not data or not data[0].get('OBS80'):
+        logger.warning("No OBS80 observations found via MPC Explorer Observations API for %s" % asteroid)
+        return None
+
+    obs_lines = [line for line in data[0]['OBS80'].split('\n') if line.strip() != '']
+
+    return obs_lines if obs_lines else None
+
+
 def translate_catalog_code(code_or_name, ades_code=False):
     """Mapping between the single character in column 72 of MPC records
     and the astrometric reference catalog used.

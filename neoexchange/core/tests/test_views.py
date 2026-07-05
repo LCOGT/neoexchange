@@ -3863,6 +3863,61 @@ class TestUpdateMPCObs(TestCase):
         self.assertEqual(num_lines, len(lines)-1)
 
 
+class TestUpdateMPCObsFromAPI(TestCase):
+    """Tests for update_MPC_obs_from_api(), the alternative to update_MPC_obs()
+    that fetches MPC1992 (OBS80) format observations via the MPC Explorer
+    Observations API rather than scraping the db_search/showobs HTML pages."""
+
+    def setUp(self):
+        self.debug_print = False
+        self.maxDiff = None
+
+        with open(os.path.join('astrometrics', 'tests', 'test_mpcobs_WSAE9A6.dat'), 'r') as test_fh:
+            self.test_mpcobs_lines = test_fh.readlines()
+
+        with open(os.path.join('astrometrics', 'tests', 'test_mpcobs_13553.dat'), 'r') as test_fh:
+            self.test_mpcobs_lines2 = test_fh.readlines()
+
+    @classmethod
+    def setUpTestData(cls):
+        WSAE9A6_params = { 'provisional_name' : 'WSAE9A6',
+                         }
+
+        cls.test_body = Body.objects.create(**WSAE9A6_params)
+
+        params_13553 = { 'name' : '13553',
+                         'provisional_name' : '1992 JE'
+                         }
+        cls.test_body2 = Body.objects.create(**params_13553)
+
+    def test1_with_lines_passed_directly(self):
+        expected_num_srcmeas = 6
+
+        measures = update_MPC_obs_from_api(self.test_mpcobs_lines)
+
+        self.assertEqual(expected_num_srcmeas, len(measures))
+        source_measures = SourceMeasurement.objects.filter(body=self.test_body)
+        self.assertEqual(expected_num_srcmeas, source_measures.count())
+
+    def test2_multiple_designations(self):
+        expected_measures = 28
+
+        measures = update_MPC_obs_from_api(self.test_mpcobs_lines2)
+        self.assertEqual(len(measures), expected_measures)
+
+    def test_no_observations_found_returns_false(self):
+        with patch('core.views.fetch_mpcobs_from_api', return_value=None) as mock_fetch:
+            result = update_MPC_obs_from_api('1992 JE')
+        mock_fetch.assert_called_once_with('1992 JE', ssl_verify=True)
+        self.assertFalse(result)
+
+    def test_fetches_via_api_when_given_an_obj_id(self):
+        with patch('core.views.fetch_mpcobs_from_api', return_value=self.test_mpcobs_lines2) as mock_fetch:
+            measures = update_MPC_obs_from_api('13553')
+        mock_fetch.assert_called_once_with('13553', ssl_verify=True)
+        self.assertEqual(len(measures), 28)
+
+
 class TestCleanMPCOrbit(TestCase):
 
     def setUp(self):

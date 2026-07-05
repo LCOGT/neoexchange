@@ -74,7 +74,7 @@ from astrometrics.ephem_subs import call_compute_ephem, compute_ephem, \
     calc_moon_sep, get_alt_from_airmass, horizons_ephem
 from astrometrics.sources_subs import fetchpage_and_make_soup, packed_to_normal, \
     fetch_mpcdb_page, parse_mpcorbit, submit_block_to_scheduler, parse_mpcobs,\
-    fetch_NEOCP_observations, PackedError, fetch_filter_list, fetch_mpcobs, validate_text,\
+    fetch_NEOCP_observations, PackedError, fetch_filter_list, fetch_mpcobs, fetch_mpcobs_from_api, validate_text,\
     read_mpcorbit_file, fetch_jpl_physparams_altdes, store_jpl_sourcetypes, store_jpl_desigs,\
     store_jpl_physparams, fetch_jpl_sbobs, random_delay
 from astrometrics.time_subs import extract_mpc_epoch, parse_neocp_date, \
@@ -3367,7 +3367,7 @@ def update_MPC_obs(obj_id_or_page, ssl_verify=True):
     by setting ssl_verify=False ((small?) Security Risk).
     """
     obj_id = None
-    if type(obj_id_or_page) != BeautifulSoup:
+    if not isinstance(obj_id_or_page, BeautifulSoup):
         obj_id = obj_id_or_page
         obslines = fetch_mpcobs(obj_id, ssl_verify=ssl_verify)
 
@@ -3377,6 +3377,39 @@ def update_MPC_obs(obj_id_or_page, ssl_verify=True):
     else:
         page = obj_id_or_page
         obslines = page.text.split('\n')
+
+    if len(obslines) > 0:
+        measures = create_source_measurement(obslines, None)
+    else:
+        measures = []
+    return measures
+
+
+def update_MPC_obs_from_api(obj_id_or_lines, ssl_verify=True):
+    """
+    Alternative to update_MPC_obs() for objects whose observations are not
+    available through the normal db_search/showobs endpoint (used by
+    fetch_mpcobs()). Performs a remote look up of observations for the
+    object with id obj_id_or_lines via the MPC Explorer Observations API
+    (https://minorplanetcenter.net/mpcops/documentation/observations-api/),
+    requesting MPC1992 (80-column) format data. Gets or creates the
+    corresponding Body instance and updates or creates SourceMeasurements.
+    Alternatively obj_id_or_lines can be a list of MPC1992-format
+    observation lines, in which case the call to fetch_mpcobs_from_api()
+    will be skipped and the passed lines will be parsed directly.
+    SSL certificate and hostname verifcation can be bypassed in an emergency
+    by setting ssl_verify=False ((small?) Security Risk).
+    """
+    obj_id = None
+    if not isinstance(obj_id_or_lines, list):
+        obj_id = obj_id_or_lines
+        obslines = fetch_mpcobs_from_api(obj_id, ssl_verify=ssl_verify)
+
+        if obslines is None:
+            logger.warning("Could not find observations via the MPC Explorer API for %s" % obj_id)
+            return False
+    else:
+        obslines = obj_id_or_lines
 
     if len(obslines) > 0:
         measures = create_source_measurement(obslines, None)
