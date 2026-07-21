@@ -1,16 +1,16 @@
 
-
-
 ####management command wrapper for aperture photometry code: core/management/commands/pipeline_psf_photometry.py
 
-###WILL be placed as: core/management/commands/pipeline_aper_photometry.py 
+
 from django.core.management.base import BaseCommand, CommandParser, CommandError
 
 
 from core.views import perform_aper_photometry
 from core.models.blocks import Block
+from astropy.table import Table
 
 from datetime import datetime
+from astropy.time import Time
 import os
 
 class Command(BaseCommand):
@@ -24,7 +24,8 @@ class Command(BaseCommand):
         parser.add_argument('block',type = int, action = "store", help = "Block number of Observation")
         parser.add_argument("aperture_radius",type = float, action = "store", help ="Define aperture radius for photometry")
         parser.add_argument("--account_zps", action = "store_true",default = False, help ="Account for zero point corrections")
-
+        parser.add_argument("--output_dir", default = os.getcwd(), help = "Output directory for Astropy table")
+        parser.add_argument("--output",default=None,help="Output ECSV filename")
 
     def handle(self, *args, **options):
         try:
@@ -36,24 +37,31 @@ class Command(BaseCommand):
 
         
         results = perform_aper_photometry(block, options['datadir'], options['account_zps'], options['aperture_radius'])
+        self.stdout.write(f"returned object: {type(results)}") 
+        self.stdout.write(f"Returned value: {results}")
+
+        if isinstance(results, Table):
+            
+            if options['output'] is None:
+                filename = f"aper_photometry_{options['block']}.ecsv"
+            else:
+                filename = options['output']
+            output = os.path.join(options['output_dir'], filename)
+            
+            if "times" in results.colnames:
+                results["times"] = Time(results["times"])  #change datetime.datetime ---> Astropy.Time objects
+
+            for name in results.colnames:
+                print(name, type(results[name][0]))
+            
+            results.write(output, format = "ascii.ecsv")
+
+            self.stdout.write(self.style.SUCCESS(f"Wrtote Astropy Table object to {output}"))
         
-
-
-
-
-
-
-#Input from USER
-# ---block request number
-#THEN: use Block.objects.get() to get the block to perform aper_photmetry
-#--look at make_subtractions.py to get an idea of how to do this
-
-#---look at other maganement command codes to see how to handle boolean inputs/options: ex: account_zps flag
-#--look at other commands to see how to set value for aperture radius
-
-
-
+            if len(results.columns) >0:
+                self.stdout.write("Table contains data.")
+            else:
+                self.stdout.write("Table has no columns.")
 
 #END goal: BASH
-#    python manage.py pipeline_aper_photometry [block requestnumber] [default_path / Hera / [date]/] 
-#command will pass info to perform_aper_photometry for the results | DONT put any code after results then!!
+#  python manage.py pipeline_aper_photometry [block requestnumber] [default_path / Hera / [date]/] 
