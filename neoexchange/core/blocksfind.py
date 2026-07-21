@@ -14,6 +14,47 @@ warnings.simplefilter('ignore', category=FITSFixedWarning)
 
 logger = logging.getLogger(__name__)
 
+# An astrometric fit is considered good if the RMS is a real, positive value no
+# larger than this (arcsec); SCAMP writes a NaN or a wild value when the fit
+# falls over, so both cases are treated as failures.
+DEFAULT_RMS_LIMIT = 0.3
+# ...and if at least this many stars were used in the fit.
+DEFAULT_MIN_FIT_STARS = 5
+# Filter order for reporting; any others found are appended, sorted.
+PREFERRED_FILTER_ORDER = ['gp', 'rp', 'ip', 'zs', 'zp', 'V', 'B', 'w']
+
+
+def _is_real(value):
+    '''
+    Is <value> a real number i.e. not None and not a NaN ? Exploits the fact
+    that with IEEE floating point, NaN values are not equal to themselves.
+    '''
+    return value is not None and value == value
+
+def _mean_std(values):
+    '''
+    Returns the (mean, standard deviation, number) of the real (not None, not
+    NaN) entries of <values>, or (NaN, NaN, 0) if there are none.
+    '''
+    clean = [v for v in values if _is_real(v)]
+    if len(clean) == 0:
+        return float('nan'), float('nan'), 0
+    array = np.array(clean, dtype=float)
+    # ddof=1 needs more than one point; a single frame has no spread to report
+    std = array.std(ddof=1) if array.size > 1 else 0.0
+
+    return array.mean(), std, array.size
+
+def _ordered_filters(filters):
+    '''
+    Sort <filters> into the conventional order, with any unrecognized ones
+    sorted and appended at the end.
+    '''
+    filters = list(filters)
+    known = [f for f in PREFERRED_FILTER_ORDER if f in filters]
+
+    return known + sorted(f for f in filters if f not in PREFERRED_FILTER_ORDER)
+
 
 def find_didymos_blocks():
     '''
@@ -29,6 +70,152 @@ def find_didymos_blocks():
     blocks = blocks.exclude(superblock__proposal__code__in=["LCOEngineering","SWOPE2022"]).order_by('block_start')
 
     return blocks
+
+def find_didymos_blocks_by_groupid(groupid_prefix='65803_E10'):
+    '''
+    Routine to find all of the observed didymos blocks whose SuperBlock groupid
+    starts with <groupid_prefix> (e.g. '65803_E10' for the FTS/E10 Didymos
+    campaigns, whose group names are of the form '65803_E10_<YYYYMMDD>').
+    Returns a QuerySet of matching Blocks, earliest first.
+    '''
+    blocks = Block.objects.filter(superblock__groupid__startswith=groupid_prefix)
+    blocks = blocks.filter(num_observed__gte=1)
+
+    return blocks.order_by('block_start')
+
+def good_astrometric_fit(frame, rms_limit=DEFAULT_RMS_LIMIT, min_fit_stars=DEFAULT_MIN_FIT_STARS):
+    '''
+    Did <frame> get a usable astrometric fit ? Requires a real (not NaN/None),
+    positive rms_of_fit no larger than <rms_limit> (arcsec) and at least
+    <min_fit_stars> stars used in the fit.
+    '''
+    rms = frame.rms_of_fit
+    num_stars = frame.nstars_in_fit
+    if not _is_real(rms) or rms <= 0 or rms > rms_limit:
+        return False
+    if not _is_real(num_stars) or num_stars < min_fit_stars:
+        return False
+
+    return True
+
+def good_zeropoint(frame):
+    '''
+    Did <frame> get a usable zeropoint ? Requires a real (not NaN/None),
+    positive value; failed fits are stored as null or a -99 sentinel.
+    '''
+    return _is_real(frame.zeropoint) and frame.zeropoint > 0
+
+def frame_quality_stats(frames, rms_limit=DEFAULT_RMS_LIMIT, min_fit_stars=DEFAULT_MIN_FIT_STARS):
+    '''
+    Compute per-filter quality statistics for the passed <frames>.
+    Returns a dict of filter->dict with the number of frames, the number with a
+    good astrometric fit and a good zeropoint, and the mean and standard
+    deviation of the FWHM and zeropoint.
+
+    Only frames with a good zeropoint contribute to the zeropoint statistics,
+    otherwise the null/-99 values of the failures would drag the mean down.
+    '''
+    stats = {}
+    for frame in frames:
+        stats.setdefault(frame.filter, []).append(frame)
+
+    results = {}
+    for obs_filter in _ordered_filters(stats.keys()):
+        filter_frames = stats[obs_filter]
+        good_astrom = [f for f in filter_frames if good_astrometric_fit(f, rms_limit, min_fit_stars)]
+        good_zps = [f for f in filter_frames if good_zeropoint(f)]
+        fwhm_mean, fwhm_std, num_fwhm = _mean_std([f.fwhm for f in filter_frames])
+        zp_mean, zp_std, num_zp = _mean_std([f.zeropoint for f in good_zps])
+        results[obs_filter] = {'num_frames' : len(filter_frames),
+                               'num_good_astrometry' : len(good_astrom),
+                               'num_good_zeropoint' : len(good_zps),
+                               'fwhm_mean' : fwhm_mean, 'fwhm_std' : fwhm_std, 'num_fwhm' : num_fwhm,
+                               'zp_mean' : zp_mean, 'zp_std' : zp_std, 'num_zp' : num_zp,
+                              }
+
+    return results
+
+def summarize_didymos_frame_quality(blocks=None, groupid_prefix='65803_E10',
+                                     rms_limit=DEFAULT_RMS_LIMIT,
+                                     min_fit_stars=DEFAULT_MIN_FIT_STARS,
+                                     show_failures=True):
+    '''
+    Print a per-Block summary of the reduction and subtraction state of the
+    observed Didymos Blocks in <blocks>. If <blocks> is None, the Blocks whose
+    SuperBlock groupid starts with <groupid_prefix> are used.
+
+    For each Block the number of e91 (BANZAI reduced), e92 (NEOx reduced) and
+    e93 (NEOx DIA subtracted) Frames is reported, along with how many of the
+    e92 and e93 Frames have a good astrometric fit and a good zeropoint, and
+    the mean and standard deviation of the FWHM and zeropoint per filter.
+    If <show_failures> is True, the filename and number of fitted stars of the
+    Frames which failed the astrometric fit are also listed.
+
+    Returns a dict of Block id->summary dict.
+    '''
+    if blocks is None:
+        blocks = find_didymos_blocks_by_groupid(groupid_prefix)
+    try:
+        num_blocks = len(blocks)
+    except TypeError:
+        blocks = [blocks, ]
+        num_blocks = len(blocks)
+
+    print(f"Summarizing {num_blocks} Block(s)")
+    print(f"Good astrometry: 0 < rms_of_fit <= {rms_limit} arcsec and "
+          f"nstars_in_fit >= {min_fit_stars}; good zeropoint: zeropoint > 0")
+
+    summaries = {}
+    for block in blocks:
+        # One query for both reduced levels; num_neox is the combined total but
+        # can be indexed by frametype for the individual e92 and e93 counts.
+        neox_frames, num_banzai, num_neox = find_frames(block,
+                                                         frametype=[Frame.NEOX_RED_FRAMETYPE,
+                                                                    Frame.NEOX_SUB_FRAMETYPE])
+        num_e92 = num_neox[Frame.NEOX_RED_FRAMETYPE]
+        num_e93 = num_neox[Frame.NEOX_SUB_FRAMETYPE]
+
+        groupid = ''
+        if block.superblock:
+            groupid = block.superblock.groupid or ''
+        block_start = block.block_start.strftime('%Y-%m-%d %H:%M') if block.block_start else '-'
+        print()
+        print(f"{groupid} Block {block.id}: Request # {block.request_number} "
+              f"{block.site.upper()} {block_start}")
+        print(f"  #e91={num_banzai:>4d} #e92={num_e92:>4d} #e93={num_e93:>4d}")
+
+        block_summary = {'groupid' : groupid, 'num_e91' : num_banzai,
+                         'num_e92' : num_e92, 'num_e93' : num_e93, 'filters' : {}}
+        failures = []
+        for frametype, label in ((Frame.NEOX_RED_FRAMETYPE, 'e92'), (Frame.NEOX_SUB_FRAMETYPE, 'e93')):
+            frames = [f for f in neox_frames if f.frametype == frametype]
+            if len(frames) == 0:
+                continue
+            filter_stats = frame_quality_stats(frames, rms_limit, min_fit_stars)
+            block_summary['filters'][label] = filter_stats
+            num_good_astrom = sum(s['num_good_astrometry'] for s in filter_stats.values())
+            num_good_zp = sum(s['num_good_zeropoint'] for s in filter_stats.values())
+            print(f"  {label}: good astrometry={num_good_astrom:>4d}/{len(frames):<4d} "
+                  f"good zeropoint={num_good_zp:>4d}/{len(frames):<4d}")
+            for obs_filter, stats in filter_stats.items():
+                print(f"    {obs_filter:<4s} n={stats['num_frames']:>4d} "
+                      f"astrom OK={stats['num_good_astrometry']:>4d} "
+                      f"FWHM={stats['fwhm_mean']:>6.3f} +/- {stats['fwhm_std']:<6.3f} (n={stats['num_fwhm']:>3d}) "
+                      f"ZP={stats['zp_mean']:>7.4f} +/- {stats['zp_std']:<6.4f} (n={stats['num_zp']:>3d})")
+            failures += [(label, f) for f in frames
+                         if not good_astrometric_fit(f, rms_limit, min_fit_stars)]
+
+        block_summary['num_failed_astrometry'] = len(failures)
+        if failures and show_failures:
+            print(f"  Failed astrometric fit ({len(failures)} frame(s)):")
+            for label, frame in failures:
+                rms = frame.rms_of_fit if _is_real(frame.rms_of_fit) else float('nan')
+                num_stars = int(frame.nstars_in_fit) if _is_real(frame.nstars_in_fit) else -1
+                print(f"    {label} {frame.filename:<44s} {frame.filter:<4s} "
+                      f"#fit stars={num_stars:>5d} rms_of_fit={rms:>8.3f}")
+        summaries[block.id] = block_summary
+
+    return summaries
 
 def blocks_summary(blocks):
     '''

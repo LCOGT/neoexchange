@@ -498,3 +498,68 @@ class TestEphemInterpolate(SimpleTestCase):
 
         assert_allclose(expected_RA, result_RA, rtol=1e-8)
         assert_allclose(expected_DEC, result_DEC, rtol=1e-8)
+
+
+class TestFrameQualityStats(SimpleTestCase):
+
+    def make_frame(self, obs_filter='rp', rms=0.1, num_stars=40, zp=23.5, fwhm=1.8):
+        '''Build a minimal stand-in for a Frame; these routines only read attributes'''
+        frame = Frame(filter=obs_filter, rms_of_fit=rms, nstars_in_fit=num_stars,
+                      zeropoint=zp, fwhm=fwhm, filename='test.fits')
+        return frame
+
+    def test_good_fit(self):
+        self.assertTrue(good_astrometric_fit(self.make_frame()))
+
+    def test_nan_rms_fails(self):
+        self.assertFalse(good_astrometric_fit(self.make_frame(rms=float('nan'))))
+
+    def test_null_rms_fails(self):
+        self.assertFalse(good_astrometric_fit(self.make_frame(rms=None)))
+
+    def test_large_rms_fails(self):
+        self.assertFalse(good_astrometric_fit(self.make_frame(rms=5.0)))
+
+    def test_too_few_stars_fails(self):
+        self.assertFalse(good_astrometric_fit(self.make_frame(num_stars=2)))
+
+    def test_good_zeropoint(self):
+        self.assertTrue(good_zeropoint(self.make_frame()))
+
+    def test_sentinel_zeropoint_fails(self):
+        self.assertFalse(good_zeropoint(self.make_frame(zp=-99.0)))
+
+    def test_nan_zeropoint_fails(self):
+        self.assertFalse(good_zeropoint(self.make_frame(zp=float('nan'))))
+
+    def test_null_zeropoint_fails(self):
+        self.assertFalse(good_zeropoint(self.make_frame(zp=None)))
+
+    def test_stats_exclude_bad_values(self):
+        # 3 rp frames, one of which failed both the astrometric fit and the ZP
+        frames = [self.make_frame('rp', zp=23.0, fwhm=1.5),
+                  self.make_frame('rp', zp=24.0, fwhm=2.5),
+                  self.make_frame('rp', rms=float('nan'), zp=-99.0, fwhm=float('nan')),
+                  self.make_frame('gp', zp=22.0, fwhm=2.0)]
+
+        stats = frame_quality_stats(frames)
+
+        # Filters are reported in the conventional order, not the order found
+        self.assertEqual(['gp', 'rp'], list(stats.keys()))
+        rp_stats = stats['rp']
+        self.assertEqual(3, rp_stats['num_frames'])
+        self.assertEqual(2, rp_stats['num_good_astrometry'])
+        self.assertEqual(2, rp_stats['num_good_zeropoint'])
+        # The NaN FWHM and the -99 zeropoint must not skew the means
+        self.assertEqual(2, rp_stats['num_fwhm'])
+        self.assertAlmostEqual(2.0, rp_stats['fwhm_mean'], 6)
+        self.assertEqual(2, rp_stats['num_zp'])
+        self.assertAlmostEqual(23.5, rp_stats['zp_mean'], 6)
+
+    def test_stats_no_valid_values(self):
+        frames = [self.make_frame('rp', zp=None, fwhm=None)]
+
+        stats = frame_quality_stats(frames)
+
+        self.assertEqual(0, stats['rp']['num_fwhm'])
+        self.assertNotEqual(stats['rp']['fwhm_mean'], stats['rp']['fwhm_mean'])  # NaN
