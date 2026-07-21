@@ -320,6 +320,45 @@ class TestFindFrames(TestCase):
         self.assertEqual(self.test_frames[0].midpoint, frames[0].midpoint)
         self.assertEqual(self.test_frames[-1].midpoint, frames[frames.count()-1].midpoint)
 
+    def test_counts_behave_as_ints(self):
+        # The returned counts must remain usable as plain ints for existing callers
+        frames, num_banzai, num_neox = find_frames(self.test_block)
+
+        self.assertEqual(5, num_neox)
+        self.assertEqual(0, num_banzai)
+        self.assertIsInstance(num_neox, int)
+        self.assertEqual(6, num_neox + 1)
+        self.assertEqual('    5', f"{num_neox:>5d}")
+
+    def test_single_frametype_breakdown(self):
+        frames, num_banzai, num_neox = find_frames(self.test_block)
+
+        self.assertEqual(5, num_neox[Frame.NEOX_RED_FRAMETYPE])
+
+    def test_multiple_frametype_breakdown(self):
+        # Add 2 BANZAI (e91) and 3 subtracted (e93) frames to the 5 existing e92s
+        frame_params = { 'sitecode' : 'K92',
+                         'filter' : 'w',
+                         'exptime' : 30,
+                         'block' : self.test_block,
+                         'midpoint' : datetime(2022, 10, 20, 16, 0, 0),
+                       }
+        for frame_num in range(2):
+            Frame.objects.create(frametype=Frame.BANZAI_RED_FRAMETYPE, **frame_params)
+        for frame_num in range(3):
+            Frame.objects.create(frametype=Frame.NEOX_SUB_FRAMETYPE, **frame_params)
+
+        frames, num_banzai, num_neox = find_frames(self.test_block,
+                                                   frametype=[Frame.NEOX_RED_FRAMETYPE,
+                                                              Frame.NEOX_SUB_FRAMETYPE])
+
+        self.assertEqual(2, num_banzai)
+        # Total keeps its existing meaning: all frames of the requested type(s)
+        self.assertEqual(8, num_neox)
+        self.assertEqual(5, num_neox[Frame.NEOX_RED_FRAMETYPE])
+        self.assertEqual(3, num_neox[Frame.NEOX_SUB_FRAMETYPE])
+        self.assertEqual(0, num_neox.get(Frame.BANZAI_RED_FRAMETYPE, 0))
+
 class TestEphemInterpolate(SimpleTestCase):
     def setUp(self):
         self.test_ephem = Table.read(os.path.join('core', 'tests', 'test_ephem.fits'))

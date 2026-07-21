@@ -112,11 +112,52 @@ def filter_blocks(original_blocks, start_date, end_date, min_frames=3, max_frame
 
     return filtered_blocks, dates
 
+class FrameCounts(int):
+    '''
+    Total number of frames found, which can also be indexed by frametype to
+    give the per-frametype breakdown.
+
+    Behaves as the plain int total it has always been (so existing callers of
+    find_frames() are unaffected), but additionally supports e.g.
+    num_neox[Frame.NEOX_SUB_FRAMETYPE] to get just the e93 count.
+    '''
+    def __new__(cls, total, per_frametype=None):
+        obj = super().__new__(cls, total)
+        obj.per_frametype = dict(per_frametype or {})
+        return obj
+
+    def __getitem__(self, frametype):
+        return self.per_frametype[frametype]
+
+    def get(self, frametype, default=0):
+        return self.per_frametype.get(frametype, default)
+
+    def keys(self):
+        return self.per_frametype.keys()
+
+    def items(self):
+        return self.per_frametype.items()
+
+
 def find_frames(block, frametype = Frame.NEOX_RED_FRAMETYPE):
     '''
     Routine to find all frames for a given block as well as number of banzai
-    frames and number of neox frames. 
+    frames and number of neox frames.
     Returns list of frames and number of banzai and neox frames.
+
+    The number of neox frames is a FrameCounts, which is the total count (as
+    it has always been) but can additionally be indexed by frametype to get
+    the per-type breakdown, e.g.
+
+        frames, num_banzai, num_neox = find_frames(block,
+                                                   frametype=[Frame.NEOX_RED_FRAMETYPE,
+                                                              Frame.NEOX_SUB_FRAMETYPE])
+        num_neox                             # total of e92+e93 frames
+        num_neox[Frame.NEOX_RED_FRAMETYPE]   # count of e92 frames only
+        num_neox[Frame.NEOX_SUB_FRAMETYPE]   # count of e93 frames only
+
+    This avoids having to call this routine once per frametype (which would
+    also recount the BANZAI frames each time).
     '''
     frames = Frame.objects.filter(block=block)
     # Determine frame types to search for
@@ -133,7 +174,14 @@ def find_frames(block, frametype = Frame.NEOX_RED_FRAMETYPE):
     #if len(banzai_frames) != len(neox_frames):
     #    print(f'Block uid: {block.get_blockuid}, Num banzai frames: {len(banzai_frames)}, Num neox frames: {len(neox_frames)}')
 
-    return neox_frames, banzai_frames.count(), neox_frames.count()
+    # Only hit the database for the breakdown when more than one frametype was
+    # asked for; for the single-type case it is just the total.
+    if len(frametype) > 1:
+        per_frametype = {ftype: neox_frames.filter(frametype=ftype).count() for ftype in frametype}
+    else:
+        per_frametype = {frametype[0]: neox_frames.count()}
+
+    return neox_frames, banzai_frames.count(), FrameCounts(neox_frames.count(), per_frametype)
 
 def frames_summary(frames):
     '''
