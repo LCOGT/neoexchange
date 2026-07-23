@@ -9122,16 +9122,36 @@ class TestSummarizeBlockQuality(TestCase):
 
     def test_no_obs_blocks(self):
 
-        qc_table = summarize_block_quality(self.dataroot, [])
+        qc_table, summaries = summarize_block_quality(self.dataroot, [], frame_diagnostics=True,
+                                                      block_summary=False)
 
         self.assertEqual(None, qc_table)
+        self.assertEqual({}, summaries)
 
     def test_obs_blocks(self):
 
-        qc_table = summarize_block_quality(self.dataroot, self.block)
+        qc_table, summaries = summarize_block_quality(self.dataroot, self.block, frame_diagnostics=True,
+                                                      block_summary=False)
 
         self.assertEqual(len(self.test_qc_table), len(qc_table))
         self.compare_tables(self.test_qc_table, qc_table)
+
+    def test_block_summary(self):
+
+        qc_table, summaries = summarize_block_quality(self.dataroot, self.block, frame_diagnostics=False)
+
+        # No frame-level table when frame_diagnostics is off
+        self.assertEqual(None, qc_table)
+        # One summary, keyed by Block id, with the expected structure
+        self.assertEqual([self.block.id], list(summaries.keys()))
+        summary = summaries[self.block.id]
+        self.assertEqual(Frame.objects.filter(block=self.block, frametype=Frame.NEOX_RED_FRAMETYPE).count(),
+                         summary['num_e92'])
+        self.assertIn('e92', summary['filters'])
+        # Every e92 filter present should have quality stats reported
+        for obs_filter in ['gp', 'rp', 'ip', 'zs']:
+            self.assertIn(obs_filter, summary['filters']['e92'])
+            self.assertIn('num_good_astrometry', summary['filters']['e92'][obs_filter])
 
 class TestPerformAperPhotometry(TestCase):
 

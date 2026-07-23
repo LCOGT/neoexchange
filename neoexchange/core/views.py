@@ -88,7 +88,9 @@ from core.frames import create_frame, ingest_frames, measurements_from_block
 from core.mpc_submit import email_report_to_mpc
 from core.archive_subs import lco_api_call
 from core.utils import search
-from core.blocksfind import find_frames, get_ephem, ephem_interpolate
+from core.blocksfind import find_frames, get_ephem, ephem_interpolate, \
+    find_didymos_blocks_by_groupid, frame_quality_stats, _ordered_filters, \
+    DEFAULT_RMS_LIMIT, DEFAULT_MIN_FIT_STARS
 from photometrics.SA_scatter import readSources, genGalPlane, plotScatter, \
     plotFormat
 from core.plots import spec_plot, lin_vis_plot, lc_plot
@@ -4922,19 +4924,45 @@ def create_latex_table(body_or_name, return_table=False, deluxetable=False, dbg=
 
     return buf
 
-def summarize_block_quality(dataroot, blocks):
-    """Printout a summary of the <blocks> quality. The zeropoint and associated
-    error, the FWHM and RMS of the astrometric fit are printed for each Frame
-    of NEOX_RED_FRAMETYPE (e92) frame type. If the associated e91_ldac.xml can
-    be found for the frame in <dataroot>, then additional information from the
-    SCAMP astrometric fit for the number of reference and fitted stars and the
-    XY and AS contrast values are also printed.
+def summarize_block_quality(dataroot, blocks, filters=None, frame_diagnostics=False,
+                            block_summary=True, rms_limit=DEFAULT_RMS_LIMIT,
+                            min_fit_stars=DEFAULT_MIN_FIT_STARS):
+    """Summarize the quality of the passed <blocks>.
+
+    Two independent levels of reporting are produced:
+
+    * Block-level (<block_summary>, on by default): for each Block the time
+      span, the number of e91 (BANZAI reduced), e92 (NEOx reduced) and e93
+      (NEOx DIA subtracted) Frames, and -- per filter -- how many of the e92
+      and e93 Frames have a good astrometric fit and a good zeropoint, plus the
+      mean and standard deviation of the FWHM and zeropoint. This is computed
+      entirely from the database and needs no on-disk data. FWHM and zeropoint
+      values are NaN- and null-safe (a failed SCAMP fit stores a NaN FWHM and a
+      null/-99 zeropoint, neither of which is allowed into the means).
+
+    * Frame-level (<frame_diagnostics>, off by default): the per-Frame zeropoint,
+      FWHM and astrometric fit RMS for the e92 Frames, plus -- if the matching
+      e91_ldac.xml can be found under <dataroot> -- the SCAMP number of
+      reference and fitted stars and the XY/AS contrast values. This needs
+      access to the reduction products on disk, which is why it is opt-in.
+
+    <filters> selects which filters to report (default: all filters present,
+    in conventional order). <rms_limit> and <min_fit_stars> set the good-fit
+    thresholds.
+
+    Returns a 2-tuple of (block_qc_table, block_summaries):
+      * block_qc_table -- an AstroPy Table of the frame-level diagnostics, or
+        None if <frame_diagnostics> is False (or no Frames were found).
+      * block_summaries -- a dict of Block id -> block-level summary dict, or an
+        empty dict if <block_summary> is False.
     """
 
     try:
-        num_blocks = len(blocks)
+        _ = len(blocks)
     except TypeError:
         blocks = [blocks, ]
+
+    DATE_RE = re.compile(r'(?<!\d)(\d{4})?(\d{2})?(\d{2})(?!\d)')
 
     filenames = []
     times = []
@@ -4947,47 +4975,145 @@ def summarize_block_quality(dataroot, blocks):
     num_ref_stars = []
     xy_contrasts = []
     as_contrasts = []
+    block_summaries = {}
+    orig_dataroot = dataroot
     for block_count, block in enumerate(blocks):
-        print(f'{block.id}: {block.request_number} {",".join(block.get_blockuid)}')
+        groupid = block.superblock.groupid if block.superblock else ''
         frames_all_filters = Frame.objects.filter(block=block, frametype=Frame.NEOX_RED_FRAMETYPE)
-        filters = ['gp', 'rp', 'ip', 'zs'] # frames_all_filters.values_list('filter',flat=True).distinct()
-        for obs_filter in filters:
-            frames = frames_all_filters.filter(filter=obs_filter)
-            for frame in frames.order_by('midpoint', 'frametype'):
-                filenames.append(frame.filename)
-                zp = frame.zeropoint or -99
-                zp_err = frame.zeropoint_err or -99
-                times.append(frame.midpoint)
-                frame_filters.append(frame.filter)
-                zps.append(zp)
-                zp_errs.append(zp_err)
-                fwhm = frame.fwhm or -99
-                fwhms.append(fwhm)
-                rms_of_fit = frame.rms_of_fit or -99
-                fit_rmses.append(rms_of_fit)
-                nfit_stars = frame.nstars_in_fit or -99
-                nfit_stars = int(nfit_stars)
-                num_fit_stars.append(nfit_stars)
-                scamp_xml_file = os.path.join(dataroot, frame.filename.replace('e92.fits', 'e91_ldac.xml'))
-                if os.path.exists(scamp_xml_file) and 'xml' in scamp_xml_file:
-                    scamp_info = get_scamp_xml_info(scamp_xml_file)
-                else:
-                    scamp_info = {'xy_contrast' : -99, 'as_contrast' : -99, 'num_refstars' : -99}
-                xy_contrasts.append(scamp_info['xy_contrast'])
-                as_contrasts.append(scamp_info['as_contrast'])
-                num_ref_stars.append(scamp_info['num_refstars'])
-#                num_srcs = CatalogSources.objects.filter(frame=frame).count()
-#                num_meas = SourceMeasurement.objects.filter(frame=frame).count()
-                print(f"{frame.id}  {frame.filename:>42s}: {frame.midpoint.strftime('%Y-%m-%dT%H:%M:%S')} {obs_filter} {frame.frametype:02d} {zp:>8.4f} +/- {zp_err:>8.4f} FWHM={fwhm:>.3f} RMS={rms_of_fit:>6.2f} (#fit stars={nfit_stars:>4d} xy_c={scamp_info['xy_contrast']:.2f} as_c={scamp_info['as_contrast']:.2f} #refstars={scamp_info['num_refstars']})")
+        # Filters to report: those actually present unless the caller restricted them
+        if filters is None:
+            block_filters = _ordered_filters(frames_all_filters.values_list('filter', flat=True).distinct())
+        else:
+            block_filters = filters
 
-    # Make and return an AstroPy Table of results
+        # --- Block-level summary (database only, no disk access) ---------------
+        if block_summary:
+            # e91 count and the e92/e93 breakdown come from a single query
+            neox_frames, num_e91, num_neox = find_frames(block,
+                frametype=[Frame.NEOX_RED_FRAMETYPE, Frame.NEOX_SUB_FRAMETYPE])
+            num_e92 = num_neox.get(Frame.NEOX_RED_FRAMETYPE, 0)
+            num_e93 = num_neox.get(Frame.NEOX_SUB_FRAMETYPE, 0)
+
+            # Block time span from the science (e91/e92) Frames
+            span_frames = Frame.objects.filter(block=block,
+                frametype__in=[Frame.BANZAI_RED_FRAMETYPE, Frame.NEOX_RED_FRAMETYPE]).order_by('midpoint')
+            block_start = block_end = block_length_hrs = None
+            if span_frames.exists():
+                first_frame = span_frames.first()
+                last_frame = span_frames.last()
+                block_start = first_frame.midpoint - timedelta(seconds=(first_frame.exptime or 0.0) / 2.0)
+                block_end = last_frame.midpoint + timedelta(seconds=(last_frame.exptime or 0.0) / 2.0)
+                block_length_hrs = (block_end - block_start).total_seconds() / 3600.0
+
+            summary = {'block_id' : block.id, 'groupid' : groupid,
+                       'request_number' : block.request_number, 'site' : block.site,
+                       'block_start' : block_start, 'block_end' : block_end,
+                       'block_length_hrs' : block_length_hrs,
+                       'num_e91' : int(num_e91), 'num_e92' : num_e92, 'num_e93' : num_e93,
+                       'filters' : {}}
+            for label, frametype in (('e92', Frame.NEOX_RED_FRAMETYPE), ('e93', Frame.NEOX_SUB_FRAMETYPE)):
+                type_frames = [f for f in neox_frames if f.frametype == frametype]
+                if filters is not None:
+                    type_frames = [f for f in type_frames if f.filter in filters]
+                if type_frames:
+                    summary['filters'][label] = frame_quality_stats(type_frames, rms_limit, min_fit_stars)
+            block_summaries[block.id] = summary
+
+            length_str = f"{block_length_hrs:.1f} hrs" if block_length_hrs is not None else "  -  "
+            start_str = block_start.strftime('%Y-%m-%d %H:%M') if block_start else '-'
+            end_str = block_end.strftime('%H:%M') if block_end else '-'
+            print(f"{groupid} Block {block.id}: Req# {block.request_number} {block.site.upper()} "
+                  f"{start_str}->{end_str} ({length_str}) #e91={num_e91:>4d} #e92={num_e92:>4d} #e93={num_e93:>4d}")
+            for label in ('e92', 'e93'):
+                for obs_filter, stats in summary['filters'].get(label, {}).items():
+                    print(f"  {label} {obs_filter:<4s} n={stats['num_frames']:>3d} "
+                          f"astromOK={stats['num_good_astrometry']:>3d} zpOK={stats['num_good_zeropoint']:>3d} "
+                          f"FWHM={stats['fwhm_mean']:>6.3f} +/- {stats['fwhm_std']:<6.3f} "
+                          f"ZP={stats['zp_mean']:>7.4f} +/- {stats['zp_std']:<6.4f}")
+
+        # --- Frame-level SCAMP diagnostics (needs data on disk) ----------------
+        if frame_diagnostics:
+            print(f'{block.id}: {block.request_number} {groupid} {",".join(block.get_blockuid)}')
+            # Check for daydir already in the dataroot path, if not, add it by calling
+            # block.get_blockdayobs (which can be None if the DAY_OBS can't be
+            # determined, in which case fall back to the dataroot as given).
+            m = DATE_RE.search(orig_dataroot)
+            dayobs = block.get_blockdayobs
+            if m is None and dayobs is not None:
+                dataroot = os.path.join(orig_dataroot, dayobs)
+            else:
+                dataroot = orig_dataroot
+            for obs_filter in block_filters:
+                frames = frames_all_filters.filter(filter=obs_filter)
+                for frame in frames.order_by('midpoint', 'frametype'):
+                    filenames.append(frame.filename)
+                    zp = frame.zeropoint or -99
+                    zp_err = frame.zeropoint_err or -99
+                    times.append(frame.midpoint)
+                    frame_filters.append(frame.filter)
+                    zps.append(zp)
+                    zp_errs.append(zp_err)
+                    fwhm = frame.fwhm or -99
+                    fwhms.append(fwhm)
+                    rms_of_fit = frame.rms_of_fit or -99
+                    fit_rmses.append(rms_of_fit)
+                    nfit_stars = frame.nstars_in_fit or -99
+                    nfit_stars = int(nfit_stars)
+                    num_fit_stars.append(nfit_stars)
+                    scamp_xml_file = os.path.join(dataroot, frame.filename.replace('e92.fits', 'e91_ldac.xml'))
+                    if os.path.exists(scamp_xml_file) and 'xml' in scamp_xml_file:
+                        scamp_info = get_scamp_xml_info(scamp_xml_file)
+                    else:
+                        scamp_info = {'xy_contrast' : -99, 'as_contrast' : -99, 'num_refstars' : -99}
+                    xy_contrasts.append(scamp_info['xy_contrast'])
+                    as_contrasts.append(scamp_info['as_contrast'])
+                    num_ref_stars.append(scamp_info['num_refstars'])
+                    print(f"{frame.id}  {frame.filename:>42s}: {frame.midpoint.strftime('%Y-%m-%dT%H:%M:%S')} {obs_filter} {frame.frametype:02d} {zp:>8.4f} +/- {zp_err:>8.4f} FWHM={fwhm:>.3f} RMS={rms_of_fit:>6.2f} (#fit stars={nfit_stars:>4d} xy_c={scamp_info['xy_contrast']:.2f} as_c={scamp_info['as_contrast']:.2f} #refstars={scamp_info['num_refstars']})")
+
+    # Make the AstroPy Table of the frame-level results
     block_qc_table = None
     if len(times) > 0:
         ap_times = Time(times, scale='utc')
         block_qc_table = Table([filenames, ap_times, frame_filters, zps, zp_errs, fwhms, fit_rmses, num_fit_stars, xy_contrasts, as_contrasts, num_ref_stars],
             names=('frame filename', 'midpoint', 'filter', 'ZP', 'ZP err', 'FWHM', 'Fit RMS', 'num fit stars', 'XY contrast', 'AS contrast', 'num ref stars')
             )
-    return block_qc_table
+    return block_qc_table, block_summaries
+
+def summarize_didymos_block_quality(groupid_prefix='65803_E10', dataroot=None, filters=None,
+                                    frame_diagnostics=False, rms_limit=DEFAULT_RMS_LIMIT,
+                                    min_fit_stars=DEFAULT_MIN_FIT_STARS):
+    """Didymos-specific wrapper around summarize_block_quality().
+
+    Selects the observed Didymos Blocks whose SuperBlock groupid starts with
+    <groupid_prefix> (e.g. the '65803_E10_<YYYYMMDD>' FTS/E10 campaign Blocks),
+    summarizes their quality, and additionally records the number of reference
+    frames held for each Block's calibration field (its reference field).
+
+    Returns the same (block_qc_table, block_summaries) 2-tuple as
+    summarize_block_quality(); each summary additionally has a 'num_ref_frames'
+    entry. Frame-level diagnostics are off by default as the on-disk reduction
+    products are not always available; pass frame_diagnostics=True (and a
+    <dataroot>) to enable them.
+    """
+    if frame_diagnostics and dataroot is None:
+        raise ValueError("dataroot is required when frame_diagnostics is True")
+
+    blocks = find_didymos_blocks_by_groupid(groupid_prefix)
+    block_qc_table, block_summaries = summarize_block_quality(dataroot, blocks, filters=filters,
+        frame_diagnostics=frame_diagnostics, block_summary=True,
+        rms_limit=rms_limit, min_fit_stars=min_fit_stars)
+
+    # Add the count of reference frames for each Block's reference field
+    for block in blocks:
+        summary = block_summaries.get(block.id)
+        if summary is not None:
+            num_refs = 0
+            if block.calibsource:
+                num_refs = Frame.objects.filter(block__calibsource=block.calibsource,
+                    frametype=Frame.REFERENCE_FRAMETYPE).count()
+            summary['num_ref_frames'] = num_refs
+
+    return block_qc_table, block_summaries
 
 def perform_aper_photometry(block, dataroot, account_zps = True, aperture_radius = None):
     """For a full \<block\>, run single_frame_aperture_photometry on every individual frame.
