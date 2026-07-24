@@ -13,17 +13,16 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 """
 
+import logging
 import os
 import re
 import warnings
 
 import numpy as np
+from astropy.table import Column, Table, unique
 from astropy.time import Time
 from astropy.wcs import FITSFixedWarning
-from astropy.table import Table, unique, Column
-from core.models import Frame, CatalogSources, SourceMeasurement
-
-import logging
+from core.models import CatalogSources, Frame, SourceMeasurement
 
 logger = logging.getLogger(__name__)
 
@@ -35,10 +34,9 @@ def read_photompipe_file(filepath):
     table = None
     if os.path.exists(filepath):
         table = Table.read(filepath, format='ascii.commented_header')
-        if len(table) >= 2:
-            if table['filename'][0] == table['filename'][1]:
-                logger.debug("Doubling detected")
-                table = unique(table, keys='filename')
+        if len(table) >= 2 and table['filename'][0] == table['filename'][1]:
+            logger.debug("Doubling detected")
+            table = unique(table, keys='filename')
     return table
 
 def extract_photompipe_aperradius(logfile):
