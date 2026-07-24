@@ -5116,14 +5116,22 @@ def summarize_didymos_block_quality(groupid_prefix='65803_E10', dataroot=None, f
     return block_qc_table, block_summaries
 
 def perform_aper_photometry(block, dataroot, account_zps = True, aperture_radius = None):
-    """For a full \<block\>, run single_frame_aperture_photometry on every individual frame.
-    Determines magnitude and magnitude error + provides other information including aperture sum,
-    aperture sum err, aperture radius, zeropoint, zp err, etc. Optionally, use \<account_zps\> as
-    a boolean variable to  determine whether or not zeropoints should be adjusted for in magnitude.
-    Input a \<dataroot\> that is a directory to the fits images for the selected Block object passed
-    as \<block\>. If needed, specify an \<aperture_radius\> (arcseconds).If not passed, function will default to
-    2.5*full width half max for the aperture radius of a particular frame. Function always assumes
-    background subtraction is done in advance and need not be done inside the routine."""
+    """Run single_frame_aperture_photometry on every subtracted (e93) Frame of
+    <block>, returning per-frame aperture photometry: the magnitude and its
+    error, plus the aperture sum and error, aperture radius, zeropoint and
+    zeropoint error, etc.
+
+    Args:
+        block: the Block whose e93 Frames are measured.
+        dataroot: directory holding the FITS images for <block>.
+        account_zps: if True, correct the measured magnitudes for the frame
+            zeropoints; if False, leave them as instrumental magnitudes.
+        aperture_radius: aperture radius in arcseconds. If not given, defaults
+            to 2.5 * the FWHM of each frame.
+
+    Background subtraction is assumed to have been done already and is not
+    performed here.
+    """
     e93_frameset, banzai_count,  neox_count = find_frames(block, frametype = Frame.NEOX_SUB_FRAMETYPE)
     fwhms = []
     times = []
@@ -5220,10 +5228,24 @@ def generate_ecsv_file_post_photomet(block, dataroot, overwrite, savepath = None
     return results_table_filename
 
 def examine_subtractions(obs_block, save_directory, overwrite, badness_threshold = 1000, filter = 'rp'):
-    """Loops over all subtracted Frames in \<obs_block\> computing statistics in a box on a 3x3 grid, arranges into a
-    single row table with means, stds, positions, filenames, and whether a bad subtractions (mean or median above)
-    \<badness_threshold\>) is found for a passed \<filter\>. Table is written to a file stored in \<save_directory\>.
-    Use \<overwrite\> as a boolean variable for whether this data should replace that in file with the same name/block"""
+    """Compute subtraction-quality statistics for every subtracted (e93) Frame
+    of <obs_block> in the given <filter>.
+
+    Each Frame is divided into a 3x3 grid of boxes; the per-box means, standard
+    deviations and centre positions are collected, along with the filename and
+    a flag for whether the subtraction is bad (a box mean or median above
+    <badness_threshold>). The results are written, one row per Frame, to an
+    .ecsv table in <save_directory>.
+
+    Args:
+        obs_block: the Block whose e93 Frames are examined.
+        save_directory: directory the output .ecsv table is written to.
+        overwrite: if True, replace an existing table of the same name/block;
+            if False, fail rather than overwrite.
+        badness_threshold: pixel value above which a box mean/median marks the
+            subtraction as bad.
+        filter: filter to select Frames for (default 'rp').
+    """
     block_date_str = f"{obs_block.block_start}"[:-9]
     data_storage_filename = os.path.join(save_directory, f"examined_subtractions_table_{block_date_str}.ecsv")
     badness_storage_filename = os.path.join(save_directory, f"bad_subtraction_info_{block_date_str}.ecsv")
@@ -5358,11 +5380,25 @@ def examine_subtractions(obs_block, save_directory, overwrite, badness_threshold
     return data_storage_filename, badness_storage_filename, bad_filenames, percent_bad_files
 
 def pretty_printed_subtractions_info(obs_block, save_directory, overwrite, badness_threshold = 1000, filter = 'rp'):
-    """From FITS files for frames in the passed \<obs_block\>, for a passed \<filter\> organize results of examine_subtractions into two
-    3x3 grids: One for statistics and one for positions, corresponding to the 3x3 gridding of the FITS files + which filenames point to
-    frames with bad subtractions. Use \<badness_threshold\> to define a pixel value above which means and stds are inconsistent with high
-    quality subtractions. Tables + badness test results are stored in a file under \<save_directory\>; \<overwrite\> is a boolean for whether
-    the function overwrites past data under the same block/filename."""
+    """Summarize the subtraction quality of <obs_block>'s e93 Frames in the
+    given <filter> as human-readable tables.
+
+    Reads the FITS files for the block's subtracted (e93) Frames and organizes
+    the per-box results (as computed by examine_subtractions) into two 3x3
+    grids -- one of statistics and one of positions -- matching the 3x3
+    gridding of each FITS file, along with the list of filenames whose
+    subtractions are bad. The tables and badness results are written to an
+    .ecsv file in <save_directory>.
+
+    Args:
+        obs_block: the Block whose e93 Frames are summarized.
+        save_directory: directory the output .ecsv file is written to.
+        overwrite: if True, replace existing data for the same block/filename;
+            if False, fail rather than overwrite.
+        badness_threshold: pixel value above which box means/stds are taken to
+            be inconsistent with a high-quality subtraction.
+        filter: filter to select Frames for (default 'rp').
+    """
     block_date_str = f"{obs_block.block_start}"[:-9]
     data_storage_filename = os.path.join(save_directory, f"pretty_printed_subtractions_info_{block_date_str}.ecsv")
     if overwrite == False:
