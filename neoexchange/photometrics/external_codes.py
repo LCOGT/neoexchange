@@ -1910,6 +1910,8 @@ def single_frame_aperture_photometry(fits_filepath, ra, dec, account_zps, apertu
         else:
             source_flux['mag'] = -2.5*np.log10(source_flux['aperture_sum'])
         source_flux['magerr'] = FLUX2MAG * source_flux['aperture_sum_err'] / source_flux['aperture_sum']
+        source_flux["SNR"] = source_flux['aperture_sum'] / source_flux['aperture_sum_err']
+
         source_flux['filter'] = frame.filter
         source_flux['aperture_radius'] = [aperture_radius]
     return source_flux

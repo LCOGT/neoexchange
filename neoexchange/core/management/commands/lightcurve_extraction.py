@@ -158,7 +158,7 @@ class Command(BaseCommand):
         ax1.xaxis.set_major_formatter(DateFormatter(date_string))
         ax1.fmt_xdata = DateFormatter(date_string)
         fig.autofmt_xdate()
-
+        fig.show() #
         fig.savefig(os.path.join(datadir, filename + 'lightcurve.png'))
 
         # Build Conditions plot
@@ -188,6 +188,7 @@ class Command(BaseCommand):
         ax3.fmt_xdata = DateFormatter(date_string)
         fig2.autofmt_xdate()
         ax2.legend()
+        fig2.show() #
         fig2.savefig(os.path.join(datadir, filename + 'lightcurve_cond.png'))
 
         return

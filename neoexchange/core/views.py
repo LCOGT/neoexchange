@@ -5148,7 +5148,7 @@ def perform_aper_photometry(block, dataroot, account_zps = True, aperture_radius
         return 'no valid files'
     working_ephem = get_ephem(block)
     interpolated_ephem = ephem_interpolate(times, working_ephem)
-    ras, decs, xcenters, ycenters, aperture_sums, aperture_sum_errs, fwhms, zps, zp_errs, mags, magerrs, filter, aperture_radii = [],[],[],[],[],[],[],[],[],[],[],[],[]
+    ras, decs, xcenters, ycenters, aperture_sums, aperture_sum_errs, fwhms, zps, zp_errs, mags, magerrs, filter, aperture_radii, snr = [],[],[],[],[],[],[],[],[],[],[],[],[], [] #added snr
     for i in range (0, len(paths_to_e93_frames)):
         aper_photometry_of_ephem = single_frame_aperture_photometry(paths_to_e93_frames[i], interpolated_ephem[0][i], interpolated_ephem[1][i], aperture_radius= aperture_radius, account_zps = account_zps, background_subtract= False)
         if aper_photometry_of_ephem:
@@ -5165,6 +5165,7 @@ def perform_aper_photometry(block, dataroot, account_zps = True, aperture_radius
             magerrs.append(aper_photometry_of_ephem['magerr'][0])
             filter.append(aper_photometry_of_ephem['filter'][0])
             aperture_radii.append(aper_photometry_of_ephem['aperture_radius'][0])
+            snr.append(aper_photometry_of_ephem['SNR'][0])  #added snr
         else:
             ras.append("")
             decs.append("")
@@ -5196,6 +5197,7 @@ def perform_aper_photometry(block, dataroot, account_zps = True, aperture_radius
     results['mag'] = mags
     results['magerr'] = magerrs
     results['aperture radius'] = aperture_radii
+    results['SNR'] = snr #added basic snr
     return results
 
 def generate_ecsv_file_post_photomet(block, dataroot, overwrite, savepath = None, account_zps = True, aperture_radius = None):

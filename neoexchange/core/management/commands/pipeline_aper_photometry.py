@@ -21,17 +21,52 @@ class Command(BaseCommand):
         default_path = os.path.join(os.path.sep, 'apophis', 'eng', 'rocks')
 
         parser.add_argument('datadir', action="store", default=default_path, help='Path for processed data (e.g. %(default)s)')
-        parser.add_argument('block',type = int, action = "store", help = "Block number of Observation")
         parser.add_argument("aperture_radius",type = float, action = "store", help ="Define aperture radius for photometry")
+        parser.add_argument('--block',type = int, action = "store", help = "Block number of Observation")
+        parser.add_argument("--groupid", type = int, default = None, help ="LCO group ID associated with the block")
+        parser.add_argument("--request_number",type=int,default=None,help="LCO request number associated with the block")
         parser.add_argument("--account_zps", action = "store_true",default = False, help ="Account for zero point corrections")
         parser.add_argument("--output_dir", default = os.getcwd(), help = "Output directory for Astropy table")
         parser.add_argument("--output",default=None,help="Output ECSV filename")
 
     def handle(self, *args, **options):
-        try:
-            block = Block.objects.get(id = options['block'])
-        except Block.DoesNotExist:
-            raise CommandError( f"Block {options['block']} does not exist.")
+
+        block = None
+
+        if options['block'] is not None:
+            try:
+                block = Block.objects.get(id = options['block'])
+            except Block.DoesNotExist:
+                raise CommandError(f"Block ID {options['block']} does not exist.")
+            
+            #block and group id match sanity check
+            if options['groupid'] is not None:
+                if block.groupid != options['groupid']:   
+                    raise CommandError( f" Block {block.id} has groupid {block.groupid},"
+                                        f" not {options['groupid']}")
+        
+        elif options['groupid'] is not None:
+            try:
+                block = Block.objects.get(superblock__groupid = options['groupid'])
+            except Block.DoesNotExist:
+                raise CommandError( f"Block id {options['groupid']} does not exist.")
+        
+        elif options['request_number'] is not None:
+            try:
+                block = Block.objects.get(request_number=options['request_number'])
+            except Block.DoesNotExist:
+                raise CommandError(
+                    f"Request number {options['request_number']} does not exist.")
+            
+            #Sanity check on requst number database
+            if options['request_number'] is not None:
+                if int(block.request_number) != options['request_number']:
+                    raise CommandError(
+                        f"Block {block.id} has request number {block.request_number}, "
+                        f"not {options['request_number']}")
+       
+        else:
+            raise CommandError(f" Must provide either --block or --groupid.")
 
         self.stdout.write("==== Pipeline processing Aperture photometry %s ====" % (datetime.now().strftime('%Y-%m-%d %H:%M')))
 
@@ -54,7 +89,7 @@ class Command(BaseCommand):
             for name in results.colnames:
                 print(name, type(results[name][0]))
             
-            results.write(output, format = "ascii.ecsv")
+            results.write(output, format = "ascii.ecsv", overwrite = True)
 
             self.stdout.write(self.style.SUCCESS(f"Wrtote Astropy Table object to {output}"))
         
