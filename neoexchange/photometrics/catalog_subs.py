@@ -19,6 +19,7 @@ import logging
 import os
 from glob import glob
 import numpy as np
+# Python 3.11+ has datetime.UTC. For 3.10, fall back to timezone.utc
 try:
     from datetime import datetime, timedelta, UTC
 except ImportError:
