@@ -24,7 +24,7 @@ boto3
 matplotlib<3.5.2
 MarkupSafe<2.0
 Jinja2>=2.11.0,<3.0
-bokeh==2.3.0
+bokeh==3.8.2
 fits2image
 pillow>=6.2.1
 aplpy
