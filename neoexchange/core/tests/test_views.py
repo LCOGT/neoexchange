@@ -3313,6 +3313,47 @@ class TestUpdateJPLOrbit(TestCase):
         }])
 
     @patch('core.views.Horizons')
+    def test_no_elements_returned(self, mock_horizons_cls):
+        mock_horizons_cls.return_value.elements.return_value = Table()
+
+        status = update_JPL_orbit('nonexistent')
+
+        self.assertEqual(False, status)
+        self.assertEqual(0, Body.objects.count())
+
+    @patch('core.views.Horizons')
+    def test_ambiguous_name_unresolvable(self, mock_horizons_cls):
+        mock_horizons_cls.return_value.elements.side_effect = ValueError('Ambiguous target name;\nno usable choices here')
+
+        status = update_JPL_orbit('11P')
+
+        self.assertEqual(False, status)
+        self.assertEqual(0, Body.objects.count())
+
+    @patch('core.views.Horizons')
+    def test_other_valueerror_is_failure(self, mock_horizons_cls):
+        mock_horizons_cls.return_value.elements.side_effect = ValueError('No records found')
+
+        status = update_JPL_orbit('11P')
+
+        self.assertEqual(False, status)
+
+    @patch('core.views.determine_horizons_id')
+    @patch('core.views.Horizons')
+    def test_ambiguous_name_resolved(self, mock_horizons_cls, mock_determine_id):
+        mock_determine_id.return_value = 90000221
+        first_call, second_call = Mock(), Mock()
+        first_call.elements.side_effect = ValueError('Ambiguous target name;\nsome choices')
+        second_call.elements.return_value = self._comet_elements_table()
+        mock_horizons_cls.side_effect = [first_call, second_call]
+
+        status = update_JPL_orbit('11P')
+
+        self.assertEqual(True, status)
+        mock_determine_id.assert_called_once()
+        self.assertEqual(1, Body.objects.filter(name='11P').count())
+
+    @patch('core.views.Horizons')
     def test_11P_comet_new_body(self, mock_horizons_cls):
         mock_horizons_cls.return_value.elements.return_value = self._comet_elements_table()
 
