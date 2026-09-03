@@ -3453,6 +3453,27 @@ class TestUpdateJPLOrbit(TestCase):
             if key not in self.nocheck_keys and key != 'id':
                 self.assertEqual(expected_elements[key], new_body_elements[key], msg="Failure on key: " + key)
 
+    @patch('core.views.Horizons')
+    def test_existing_MPC_fields_preserved(self, mock_horizons_cls):
+        """JPL doesn't supply num_obs/arc_length/discovery_date/orbit_rms;
+        confirm a refresh doesn't clobber values MPC had previously set."""
+
+        existing = Body.objects.create(name='11P', origin='M', elements_type='MPC_COMET',
+                                        source_type='C', num_obs=500, arc_length=1000.0,
+                                        discovery_date=datetime(1869, 1, 1), orbit_rms=0.45)
+        mock_horizons_cls.return_value.elements.return_value = self._comet_elements_table()
+
+        status = update_JPL_orbit('11P')
+        self.assertEqual(True, status)
+
+        new_body = Body.objects.get(id=existing.id)
+        self.assertEqual('N', new_body.origin)
+        self.assertEqual(500, new_body.num_obs)
+        self.assertEqual(1000.0, new_body.arc_length)
+        self.assertEqual(datetime(1869, 1, 1), new_body.discovery_date)
+        self.assertEqual(0.45, new_body.orbit_rms)
+        self.assertAlmostEqual(1.38739, new_body.perihdist, 5)
+
 
 class TestIngestNewObject(TestCase):
 
