@@ -28,6 +28,8 @@ from django.http import Http404
 from bs4 import BeautifulSoup
 from mock import patch, Mock
 from astropy.wcs import WCS
+from astropy.table import Table
+from astropy.time import Time
 from numpy.testing import assert_allclose
 
 from neox.tests.mocks import MockDateTime, mock_check_request_status, mock_check_for_images, \
@@ -3268,6 +3270,147 @@ class TestUpdateMPCOrbit(TestCase):
         for key in self.expected_elements_dnc_comet_set1:
             if key not in self.nocheck_keys and key != 'id':
                 self.assertEqual(self.expected_elements_dnc_comet_set1[key], new_body_elements[key], msg="Failure on key: " + key)
+
+
+class TestUpdateJPLOrbit(TestCase):
+    """Tests for update_JPL_orbit(), the fallback used to refresh elements
+    from JPL HORIZONS while the MPC is unreachable."""
+
+    def setUp(self):
+        self.nocheck_keys = ['ingest']
+        self.maxDiff = None
+
+    @staticmethod
+    def _comet_elements_table():
+        # Loosely based on 11P/Tempel-Swift-LINEAR
+        return Table(rows=[{
+            'datetime_jd': 2461000.5,
+            'e': 0.5774,
+            'q': 1.38739,
+            'incl': 14.4316,
+            'Omega': 238.8595,
+            'w': 168.0591,
+            'Tp_jd': 2461354.42876,
+            'a': 3.28289,
+            'M': 301.35445,
+        }])
+
+    @staticmethod
+    def _asteroid_elements_table():
+        # Same object/epoch as the 2014 UR MPC fixture, for comparison
+        return Table(rows=[{
+            'datetime_jd': 2457500.5,
+            'H': 26.6,
+            'G': 0.15,
+            'e': 0.0120915,
+            'q': 0.98467,
+            'incl': 8.25708,
+            'Omega': 24.87559,
+            'w': 222.91160,
+            'Tp_jd': 2457600.0,
+            'a': 0.996771,
+            'M': 221.74204,
+        }])
+
+    @patch('core.views.Horizons')
+    def test_11P_comet_new_body(self, mock_horizons_cls):
+        mock_horizons_cls.return_value.elements.return_value = self._comet_elements_table()
+
+        status = update_JPL_orbit('11P')
+        self.assertEqual(True, status)
+
+        new_body = Body.objects.get(name='11P')
+        new_body_elements = model_to_dict(new_body)
+
+        expected_elements = {'id': new_body.id,
+                              'name': '11P',
+                              'provisional_name': None,
+                              'provisional_packed': None,
+                              'elements_type': 'MPC_COMET',
+                              'abs_mag': None,
+                              'argofperih': 168.0591,
+                              'longascnode': 238.8595,
+                              'eccentricity': 0.5774,
+                              'epochofel': Time(2461000.5, format='jd').datetime,
+                              'meandist': None,
+                              'orbinc': 14.4316,
+                              'meananom': None,
+                              'epochofperih': Time(2461354.42876, format='jd').datetime,
+                              'perihdist': 1.38739,
+                              'slope': None,
+                              'origin': 'N',
+                              'active': True,
+                              'arc_length': None,
+                              'discovery_date': None,
+                              'num_obs': None,
+                              'not_seen': None,
+                              'orbit_rms': 99.0,
+                              'fast_moving': False,
+                              'score': None,
+                              'source_type': 'C',
+                              'source_subtype_1': None,
+                              'source_subtype_2': None,
+                              'update_time': None,
+                              'updated': True,
+                              'urgency': None,
+                              'analysis_status': 0,
+                              'as_updated': None
+                              }
+
+        self.assertEqual(len(expected_elements)+len(self.nocheck_keys), len(new_body_elements))
+        for key in expected_elements:
+            if key not in self.nocheck_keys and key != 'id':
+                self.assertEqual(expected_elements[key], new_body_elements[key], msg="Failure on key: " + key)
+
+    @patch('core.views.Horizons')
+    def test_2014UR_asteroid_new_body(self, mock_horizons_cls):
+        mock_horizons_cls.return_value.elements.return_value = self._asteroid_elements_table()
+
+        status = update_JPL_orbit('2014 UR')
+        self.assertEqual(True, status)
+
+        new_body = Body.objects.get(name='2014 UR')
+        new_body_elements = model_to_dict(new_body)
+
+        expected_elements = {'id': new_body.id,
+                              'name': '2014 UR',
+                              'provisional_name': None,
+                              'provisional_packed': None,
+                              'elements_type': 'MPC_MINOR_PLANET',
+                              'abs_mag': 26.6,
+                              'argofperih': 222.91160,
+                              'longascnode': 24.87559,
+                              'eccentricity': 0.0120915,
+                              'epochofel': Time(2457500.5, format='jd').datetime,
+                              'meandist': 0.996771,
+                              'orbinc': 8.25708,
+                              'meananom': 221.74204,
+                              'epochofperih': None,
+                              'perihdist': None,
+                              'slope': 0.15,
+                              'origin': 'N',
+                              'active': True,
+                              'arc_length': None,
+                              'discovery_date': None,
+                              'num_obs': None,
+                              'not_seen': None,
+                              'orbit_rms': 99.0,
+                              'fast_moving': False,
+                              'score': None,
+                              'source_type': 'N',
+                              'source_subtype_1': None,
+                              'source_subtype_2': None,
+                              'update_time': None,
+                              'updated': True,
+                              'urgency': None,
+                              'analysis_status': 0,
+                              'as_updated': None
+                              }
+
+        self.assertEqual(len(expected_elements)+len(self.nocheck_keys), len(new_body_elements))
+        for key in expected_elements:
+            if key not in self.nocheck_keys and key != 'id':
+                self.assertEqual(expected_elements[key], new_body_elements[key], msg="Failure on key: " + key)
 
 
 class TestIngestNewObject(TestCase):
