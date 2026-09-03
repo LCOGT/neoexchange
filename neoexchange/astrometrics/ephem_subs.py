@@ -751,10 +751,16 @@ def determine_horizons_id(lines, obj_name, now=None):
 
     now = now or datetime.utcnow()
     timespan = timedelta.max
+    provisional_comet = False
+    if obj_name.lstrip().startswith('C/') or obj_name.lstrip().startswith('P/'):
+        # Provisional comet, need to match on different (combined) columns
+        provisional_comet = True
     horizons_id = None
     for line in lines:
         chunks = line.split()
-        if len(chunks) >= 5 and chunks[0].isdigit() is True and chunks[1].isdigit() is True and chunks[3] == obj_name:
+        if (len(chunks) >= 5 and chunks[0].isdigit() is True and chunks[1].isdigit() is True) and \
+            (chunks[3] == obj_name.strip() or \
+             (provisional_comet is True and chunks[4] + ' ' + chunks[5] == obj_name.strip())):
             try:
                 epoch_yr = datetime.strptime(chunks[1], "%Y")
                 if abs(now-epoch_yr) <= timespan:
