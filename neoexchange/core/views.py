@@ -27,6 +27,8 @@ from astropy.io import ascii
 from astropy.table import Table
 from astropy.wcs import FITSFixedWarning
 from astropy.coordinates import SkyCoord
+from astropy.time import Time
+from astroquery.jplhorizons import Horizons
 import json
 import logging
 import tempfile
@@ -71,7 +73,7 @@ from astrometrics.ephem_subs import call_compute_ephem, compute_ephem, \
     determine_darkness_times, determine_slot_length, determine_exp_time_count, \
     MagRangeError, determine_spectro_slot_length, get_sitepos, read_findorb_ephem,\
     accurate_astro_darkness, get_visibility, determine_exp_count, determine_star_trails,\
-    calc_moon_sep, get_alt_from_airmass, horizons_ephem
+    calc_moon_sep, get_alt_from_airmass, horizons_ephem, determine_horizons_id
 from astrometrics.sources_subs import fetchpage_and_make_soup, packed_to_normal, \
     fetch_mpcdb_page, parse_mpcorbit, submit_block_to_scheduler, parse_mpcobs,\
     fetch_NEOCP_observations, PackedError, fetch_filter_list, fetch_mpcobs, validate_text,\
@@ -3214,6 +3216,76 @@ def update_MPC_orbit(obj_id_or_page, dbg=False, origin='M', force=False, ssl_ver
                     body.source_subtype_2 = 'DN'
                     body.save()
 
+    return True
+
+
+def update_JPL_orbit(obj_id, dbg=False, epoch=None):
+    """
+    Temporary fallback for update_MPC_orbit() for use while the MPC is
+    unreachable. Fetches osculating elements for <obj_id> from JPL HORIZONS
+    at [epoch] (defaults to now) and updates (or creates) the corresponding
+    Body with them. Origin is set to 'N' (NASA) to flag these as JPL-sourced.
+    """
+
+    epoch = epoch or datetime.utcnow()
+
+    try:
+        eph = Horizons(id=obj_id, id_type='smallbody', epochs=Time(epoch).jd)
+        elements = eph.elements()
+    except ValueError as e:
+        if e.args and len(e.args) > 0 and 'Ambiguous target name' in e.args[0]:
+            choices = e.args[0].split('\n')
+            horizons_id = determine_horizons_id(choices, obj_id, epoch)
+            if not horizons_id:
+                logger.warning("Unable to determine the HORIZONS id for %s" % obj_id)
+                return False
+            eph = Horizons(id=horizons_id, id_type='id', epochs=Time(epoch).jd)
+            elements = eph.elements()
+        else:
+            logger.warning("Error querying HORIZONS for %s. Error message: %s" % (obj_id, e))
+            return False
+
+    if len(elements) == 0:
+        logger.warning("Could not find JPL elements for %s" % obj_id)
+        return False
+    el = elements[0]
+    if dbg:
+        print(el)
+
+    body, created = Body.objects.get_or_create(name=obj_id)
+
+    params = {
+        'epochofel': Time(el['datetime_jd'], format='jd').datetime,
+        'orbinc': float(el['incl']),
+        'longascnode': float(el['Omega']),
+        'argofperih': float(el['w']),
+        'eccentricity': float(el['e']),
+        'origin': 'N',
+        'active': True,
+        'updated': True,
+    }
+
+    is_comet = 'H' not in elements.colnames
+    if is_comet:
+        params['elements_type'] = 'MPC_COMET'
+        params['source_type'] = 'H' if obj_id.startswith('A/') else 'C'
+        params['perihdist'] = float(el['q'])
+        params['epochofperih'] = Time(el['Tp_jd'], format='jd').datetime
+        params['meandist'] = None
+        params['meananom'] = None
+    else:
+        params['elements_type'] = 'MPC_MINOR_PLANET'
+        params['source_type'] = determine_asteroid_type(float(el['q']), float(el['e']))
+        params['abs_mag'] = float(el['H'])
+        params['slope'] = float(el['G'])
+        params['meandist'] = float(el['a'])
+        params['meananom'] = float(el['M'])
+
+    save_and_make_revision(body, params)
+    if not created:
+        logger.info("Updated elements for %s from JPL HORIZONS" % obj_id)
+    else:
+        logger.info("Added new orbit for %s from JPL HORIZONS" % obj_id)
     return True
 
 
