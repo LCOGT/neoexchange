@@ -1,0 +1,79 @@
+### ~/git/neoexchange (issue-626_PDS_liens checkout used by the live FLOYDS cron): uncommitted diff
+diff --git a/neoexchange/core/management/commands/lightcurve_extraction.py b/neoexchange/core/management/commands/lightcurve_extraction.py
+index 62b87699..53fe0ebd 100644
+--- a/neoexchange/core/management/commands/lightcurve_extraction.py
++++ b/neoexchange/core/management/commands/lightcurve_extraction.py
+@@ -185,10 +185,12 @@ class Command(BaseCommand):
+ 
+         # Build Conditions plot
+         fig2, (ax2, ax3) = plt.subplots(nrows=2, sharex=True)
+-        ax2.plot(alltimes, fwhm, marker='.', color=colors[0], linestyle=' ')
+-        fwhm_0_median = fwhm[0]
+-        if len(fwhm) > 3:
+-            fwhm_0_median = np.median(fwhm[0:3])
++        fwhm_times = [alltimes[i] for i, fwhm in enumerate(fwhm) if fwhm > 0]
++        fwhms_good = [fwhm for i, fwhm in enumerate(fwhm) if fwhm > 0]
++        ax2.plot(fwhm_times, fwhms_good, marker='.', color=colors[0], linestyle=' ')
++        fwhm_0_median = fwhms_good[0]
++        if len(fwhms_good) > 3:
++            fwhm_0_median = np.median(fwhms_good[0:3])
+         expected_fwhm = self.generate_expected_fwhm(alltimes, air_mass, fwhm_0=fwhm_0_median, tel_diameter=diameter)
+         if (times[-1] - times[0]) < timedelta(hours=12):
+             ax2.plot(alltimes, expected_fwhm, color='black', linestyle='--', linewidth=0.75, label="Predicted")
+diff --git a/neoexchange/photometrics/gf_movie.py b/neoexchange/photometrics/gf_movie.py
+index cac7aa41..d719415f 100644
+--- a/neoexchange/photometrics/gf_movie.py
++++ b/neoexchange/photometrics/gf_movie.py
+@@ -303,8 +303,12 @@ def make_gif(frames, title=None, sort=True, fr=100, init_fr=1000, progress=True,
+                 td = target_data[n]
+                 coord = SkyCoord(td['ra'], td['dec'], unit="rad")
+                 x_pix, y_pix = skycoord_to_pixel(coord, wcs)
+-                x_offset = int(x_pix - header_n['CRPIX1'])
+-                y_offset = int(y_pix - header_n['CRPIX2'])
++                print(os.path.basename(good_fits_files[n]), x_pix, y_pix, header_n['CRPIX1'], header_n['CRPIX2'])
++                x_offset = 0
++                y_offset = 0
++                if x_pix >= 0 and x_pix <= header_n['NAXIS1'] and y_pix >= 0 and y_pix <= header_n['NAXIS2']:
++                    x_offset = int(x_pix - header_n['CRPIX1'])
++                    y_offset = int(y_pix - header_n['CRPIX2'])
+                 if abs(x_offset) > x_frac:
+                     x_offset = int(copysign(x_frac, x_offset))
+                 if abs(y_offset) > y_frac:
+### its stash list
+stash@{0}: WIP on issue-626_PDS_liens: 69a02c62 Add support for extracting and plotting WMSCLOUD from the FITS files
+stash@{1}: WIP on issue-626_PDS_liens: 3237bcef Update new PDS example with X/Y sizes that match example raw MEF file we have available. Add test case (currently failing) for new example label file
+stash@{2}: WIP on main: 0356ff01 Pure CSS render for modal
+stash@{3}: WIP on main: 3e638376 Update version number and readme
+stash@{4}: WIP on master: 49d6b791 Merge pull request #582 from LCOGT/issue-580
+stash@{5}: WIP on fix_fits_oserror: 8b95e179 Address review comments: clean up logging
+stash@{6}: WIP on master: e515d58 Merge pull request #211 from LCOGT/feature/alternating_filters
+stash@{7}: WIP on master: c49394b Remap slashes in object name
+stash@{8}: WIP on master: 32eb4d2 Add forgotten migrations for Hyperbolic asteroids and longer taxonomic notes
+stash@{9}: WIP on master: 57c6afd Validate form to check jitter is larger than slot_length
+stash@{10}: WIP on issue-198: 65f2e2d Correct testing structures for catalog_subs
+stash@{11}: WIP on master: 2827dcc New Year, new danger...
+stash@{12}: WIP on master: 7354dda Merge branch 'master' of https://github.com/LCOGT/neoexchange
+### its HEAD vs remote
+92490a15 2024-08-08 Merge branch 'issue-626_PDS_liens' of https://github.com/LCOGT/neoexchange into issue-626_PDS_liens
+92490a15d34ff2300fe710b734ac2949edc335b2
+last fetch: 2024-08-08 21:09:28.931338705 +0000
+### ~/git/neoexchange-stacking: untracked file sizes
+-rw-r--r-- 1 tlister Domain Users   23 Mar 31  2024 pipelines/constants.py
+-rw-r--r-- 1 tlister Domain Users 1775 Mar 31  2024 pipelines/mpi.py
+lrwxrwxrwx 1 tlister Domain Users   46 Apr 24  2024 summarize_obs.py -> ../../neoexchange/neoexchange/summarize_obs.py
+### stacking HEAD vs origin
+8c77f53b 2026-06-22 Pass through dia option. Add looser tolerance on matches for epXX (MuSCAT) and efXX (FLI) in astrometric fitter
+8c77f53bc37b1b836830df43f7dce8ea339ace46
+### ~/git/neoexchange-multiaper: diff (2 analysis scripts)
+ neoexchange/concat_reduced_data.py    |  2 +-
+ neoexchange/summarize_reduced_data.py | 14 +++++++++-----
+ 2 files changed, 10 insertions(+), 6 deletions(-)
+stash@{0}: WIP on pipelines_multi_aper: 71446236 Added filter to file output paths
+stash@{1}: WIP on pipelines_multi_aper: 820f1e85 Propagated phot uncertainties for all apertures to the output table and plots. Converted timeseries plots to UTC date rather than MJD
+### how is python3.9 provided on apophis2?
+lrwxrwxrwx 1 tlister Domain Users 31 Mar 31  2024 /home/tlister/venv/neocode39_psfphot_venv/bin/python3 -> /opt/lcogt-python39/bin/python3
+lrwxrwxrwx 1 tlister Domain Users  7 Mar 31  2024 /home/tlister/venv/neocode39_psfphot_venv/bin/python3.9 -> python3
+/opt/lcogt-python39/bin/python3.9
+/opt/rh:
+devtoolset-9
+### END3

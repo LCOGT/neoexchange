@@ -1,0 +1,3 @@
+# Tests failing ONLY with astropy 7.2.2 + photutils 2.3.0 + APLpy 2.2.1 + matplotlib 3.8.4 (numpy 1.26.4, Django 4.2.30) vs control astropy 5.3.4 -- main suite, no network, 2026-09-28
+test_first_galcoord (photometrics.tests.test_SA_scatter.Test_Plotting)
+# Cause: transform_to() given a frame CLASS (removed in astropy 6.0). Same pattern in photometrics/SA_scatter.py:79 -> pass coordinates.ICRS() instance.

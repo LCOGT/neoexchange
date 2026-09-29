@@ -1,0 +1,25 @@
+# Do the merged dependencies ship Python 3.11 x86_64 wheels usable on glibc 2.17 (CentOS 7 / manylinux2014)?  PyPI metadata, 2026-09-28
+# Relevant to running the pipelines on apophis2 (CentOS 7.9). "ONLY glibc>=2.28" = manylinux_2_28 wheels only (RHEL 8+).
+numpy==1.26.4        glibc2.17 OK
+astropy==5.3.4       glibc2.17 OK
+scipy==1.13.1        glibc2.17 OK        (scipy 1.18.x no longer ships cp311 wheels)
+matplotlib==3.7.5    glibc2.17 OK
+matplotlib==3.8.4    glibc2.17 OK
+photutils==1.11.0    glibc2.17 OK
+kiwisolver==1.5.1    glibc2.17 OK
+pillow==10.4.0       glibc2.17 OK
+pillow==11.3.0       glibc2.17 OK
+pillow==12.3.0       ONLY glibc>=2.28
+lxml==6.1.3          glibc2.17 OK
+cryptography==50.0.1 glibc2.17 OK
+cffi==2.1.1          glibc2.17 OK
+gevent==26.9.0       ONLY glibc>=2.28
+greenlet==3.5.6      ONLY glibc>=2.28
+psycopg2-binary==2.9.9 / 2.9.13   glibc2.17 OK
+PyYAML==6.0.3        glibc2.17 OK
+zope.interface==8.6  glibc2.17 OK
+charset-normalizer==3.5.1  glibc2.17 OK
+numba==0.67.0        glibc2.17 OK
+scikit-image==0.26.0 ONLY glibc>=2.28
+torch==2.14.0        ONLY glibc>=2.28   (requirements-trippy.txt; stays out of the image)
+MarkupSafe==1.1.1, pyslalib==1.0.10, tornado 6.5.x, pyerfa 2.0.1.5(cp311), contourpy 1.4.x : sdist / built from source

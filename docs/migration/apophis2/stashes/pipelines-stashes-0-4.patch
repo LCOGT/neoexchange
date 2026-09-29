@@ -1,0 +1,973 @@
+=== stash@{0} ===
+diff --git a/neoexchange/photometrics/catalog_subs.py b/neoexchange/photometrics/catalog_subs.py
+index b6e328f9..6da759e1 100644
+--- a/neoexchange/photometrics/catalog_subs.py
++++ b/neoexchange/photometrics/catalog_subs.py
+@@ -1854,6 +1854,7 @@ def extract_catalog(catfile, catalog_type=None, flag_filter=0, new=True, remove=
+             new_fwhm = determine_fwhm(header, table)
+             if new_fwhm is not None:
+                 logger.info("Updating FWHM to {new_fwhm:.4f} from table")
++                print(f"Updating FWHM to {new_fwhm:.4f} from table")
+                 header['fwhm'] = new_fwhm
+     return header, table
+ 
+@@ -1904,17 +1905,77 @@ def update_zeropoint(header, table, avg_zeropoint, std_zeropoint, include_zperr=
+     return header, table
+ 
+ 
+-def update_frame_zeropoint(header, ast_cat_name, phot_cat_name, frame_filename, frame_type):
++def local_determine_original_name(fits_file):
++    """Determines the ORIGNAME for the FITS file <fits_file>.
++    This is pretty disgusting and a sign we are probably doing something wrong
++    and should store the true filename but at least it's contained to one place
++    now..."""
++    fits_file_orig = fits_file
++    if 'e90.fits' in os.path.basename(fits_file):
++        fits_file_orig = os.path.basename(fits_file.replace('e90.fits', 'e00.fits'))
++    elif 'e10.fits' in os.path.basename(fits_file):
++        fits_file_orig = os.path.basename(fits_file.replace('e10.fits', 'e00.fits'))
++    elif 'e91.fits' in os.path.basename(fits_file):
++        fits_file_orig = os.path.basename(fits_file.replace('e91.fits', 'e00.fits'))
++    elif 'e92.fits' in os.path.basename(fits_file):
++        fits_file_orig = os.path.basename(fits_file.replace('e92.fits', 'e00.fits'))
++    elif 'e11.fits' in os.path.basename(fits_file):
++        fits_file_orig = os.path.basename(fits_file.replace('e11.fits', 'e00.fits'))
++    return fits_file_orig
++
++def local_find_block_for_frame(catfile):
++    """Try and find a Block for the original passed <catfile> filename (new style with
++    filename directly stored in the DB. If that fails, try and determine the filename
++    that would have been stored with the ORIGNAME.
++    Returns the Block if found, None otherwise."""
++
++    # try and find Frame does for the fits catfile with a non-null block
++    try:
++        # Swope filenames are non-unique so need extra info from the header
++        if os.path.basename(catfile).startswith('rccd'):
++            header, cattype = get_header(catfile)
++            frame = Frame.objects.get(filename=os.path.basename(catfile), block__request_number=header['request_number'])
++        else:
++            frame = Frame.objects.get(filename=os.path.basename(catfile), block__isnull=False)
++    except Frame.MultipleObjectsReturned:
++        logger.error("photometrics.catalog_subs: Found multiple versions of fits frame %s pointing at multiple blocks" % os.path.basename(catfile))
++        return None
++    except Frame.DoesNotExist:
++        # Try and find the Frame under the original name (old-style)
++        fits_file_orig = local_determine_original_name(catfile)
++        try:
++            frame = Frame.objects.get(filename=fits_file_orig, block__isnull=False)
++        except Frame.MultipleObjectsReturned:
++            logger.error("photometrics.catalog_subs: Found multiple versions of fits frame %s pointing at multiple blocks" % fits_file_orig)
++            return None
++        except Frame.DoesNotExist:
++            logger.error("photometrics.catalog_subs: Frame entry for fits file %s does not exist" % fits_file_orig)
++            return None
++    return frame.block
++
++
++def update_frame_zeropoint(header, ast_cat_name, phot_cat_name, frame_filepath, frame_type):
+     """update the Frame zeropoint, astrometric fit, astrometric catalog
+-    and photometric catalog used"""
++    and photometric catalog used.
++    Modified to take the <frame_filepath> rather than frame_filename since we
++    need the full path to the frame to get the header to get the Block since
++    Swope has non-unique filenames
++    """
+ 
++    frame_filename = os.path.basename(frame_filepath)
+     frame = None
+     block = None
++    try:
++        block = local_find_block_for_frame(frame_filepath)
++    except TypeError:
++        block = None
+     # if a Frame exists for the file, update the zeropoint,
+     # astrometric catalog, rms_of_fit, nstars_in_fit, and
+     # photometric catalog in the Frame
+     try:
+-        frame = Frame.objects.get(filename=frame_filename, block__isnull=False)
++        logger.info(f"update_frame_zeropoint: Updating existing Frame {frame_filename}")
++        frame = Frame.objects.get(filename=frame_filename, block__isnull=False, block=block)
++        frame.fwhm = header['fwhm']
+         frame.zeropoint = header['zeropoint']
+         frame.zeropoint_err = header['zeropoint_err']
+         frame.zeropoint_src = header['zeropoint_src']
+@@ -2042,15 +2103,15 @@ def get_or_create_CatalogSources(table, frame, header={}):
+     num_in_table = len(table)
+     num_cat_sources = CatalogSources.objects.filter(frame=frame).count()
+     # Index of flux array to ingest
+-    flux_aper_index = 3
+-    aper_scaling = 4
++    flux_aper_index = 4 #3
++    aper_scaling = 5
+     if num_cat_sources == 0:
+         new_sources = []
+         for source in table:
+             if len(source['obs_mag'].shape) == 0:
+                 obs_mag = source['obs_mag']
+                 obs_mag_err = source['obs_mag_err']
+-                aper_size = header.get('aperture_radius_arcsec', 3.0)
++                aper_size = header.get('aperture_radius_arcsec', 1.0)
+             else:
+                 # Array of fluxes/mags
+                 obs_mag = source['obs_mag'][flux_aper_index]
+@@ -2385,9 +2446,15 @@ def funpack_fits_file(fpack_file, all_hdus=False):
+     new_hdulist = fits.HDUList([hdu,])
+ 
+     if all_hdus:
++        # Get list of unique extension HDU names
++        hdu_names = list(set([hdu.name for hdu in hdulist[1:]]))
++        raw_mef = False
++        if len(hdu_names) == 1 and hdu_names[0].upper() == 'SCI':
++            raw_mef = True
++
+         for index, hdu in enumerate(hdulist[1:]):
+ #            print(index, hdu.name+'X', hdu._summary())
+-            if hdu.name != 'SCI':
++            if hdu.name != 'SCI' or raw_mef is True:
+                 if hasattr(hdu, 'compressed_data'):
+                     new_hdu = fits.ImageHDU(data=hdu.data, header=hdu.header, name=hdu.name)
+                 else:
+@@ -2525,6 +2592,7 @@ def sort_rocks(fits_files):
+         fits_header, fits_table, cattype = open_fits_catalog(fits_filepath, header_only=True)
+         object_name = fits_header.get('OBJECT', None)
+         block_id = fits_header.get('BLKUID', '').replace('/', '')
++        print(fits_filepath, object_name, block_id)
+         if object_name:
+             object_directory = make_object_directory(fits_filepath, object_name, block_id)
+             if os.path.basename(object_directory) not in objects:
+@@ -2540,6 +2608,10 @@ def sort_rocks(fits_files):
+             elif 'e11' in fits_filepath and not os.path.exists(dest_filepath.replace('e11.fits', 'e91.fits')):
+                 if not os.path.exists(dest_filepath):
+                     os.symlink(fits_filepath, dest_filepath)
++            # if the file is an e00 and an e91 doesn't exit in the working directory, create link to the e00
++            elif 'e00' in fits_filepath and not os.path.exists(dest_filepath.replace('e00.fits', 'e91.fits')):
++                if not os.path.exists(dest_filepath):
++                    os.symlink(fits_filepath, dest_filepath)
+     return objects
+ 
+ 
+diff --git a/neoexchange/photometrics/configs/sextractor_neox_ldac.conf b/neoexchange/photometrics/configs/sextractor_neox_ldac.conf
+index 7930e0f5..97b76fb6 100644
+--- a/neoexchange/photometrics/configs/sextractor_neox_ldac.conf
++++ b/neoexchange/photometrics/configs/sextractor_neox_ldac.conf
+@@ -19,8 +19,8 @@ FLAG_IMAGE	flag.fits	# filename for an input FLAG-image
+ DETECT_MINAREA	3.0		# minimum number of pixels above threshold
+ THRESH_TYPE     RELATIVE        # threshold type: RELATIVE (in sigmas)
+                                 # or ABSOLUTE (in ADUs)
+-DETECT_THRESH	3.0 		# <sigmas> or <threshold>,<ZP> in mag.arcsec-2
+-ANALYSIS_THRESH	3.0		# <sigmas> or <threshold>,<ZP> in mag.arcsec-2
++DETECT_THRESH	1.2 		# <sigmas> or <threshold>,<ZP> in mag.arcsec-2
++ANALYSIS_THRESH	1.2		# <sigmas> or <threshold>,<ZP> in mag.arcsec-2
+ 
+ FILTER		Y		# apply filter for detection ("Y" or "N")?
+ FILTER_NAME	gauss_1.5_3x3.conv
+diff --git a/neoexchange/photometrics/external_codes.py b/neoexchange/photometrics/external_codes.py
+index fff3b27a..619c69f6 100644
+--- a/neoexchange/photometrics/external_codes.py
++++ b/neoexchange/photometrics/external_codes.py
+@@ -410,7 +410,9 @@ def determine_hotpants_options(ref, sci, source_dir, dest_dir, dbgOptions=False)
+         logger.error(f"Error occurred in SWarp while aligning images.")
+         return -9
+ 
+-    output_diff_image = os.path.join(dest_dir, os.path.basename(sci).replace('.fits', '.subtracted.fits'))
++    # XXX replace with proper call to increment_red_level if red level present in filename
++    #output_diff_image = os.path.join(dest_dir, os.path.basename(sci).replace('.fits', '.subtracted.fits'))
++    output_diff_image = os.path.join(dest_dir, os.path.basename(sci).replace('e92.fits', 'e93.fits'))
+     output_noise_image = output_diff_image.replace('.fits', '.rms.fits')
+ 
+     # Get the relevant header and data information
+@@ -818,7 +820,7 @@ def determine_scamp_options(fits_catalog, external_cat_name='GAIA-DR2.cat', dist
+         logger.warning("Trying to create XML output file with the same name as input FITS catalog. Resetting to scamp.xml")
+         xml_file = 'scamp.xml'
+ 
+-    options += " -XML_NAME {}".format(xml_file)
++    options += " -VERBOSE_TYPE NORMAL -XML_NAME {}".format(xml_file)
+ 
+     return options
+ 
+@@ -1197,7 +1199,7 @@ def run_scamp(source_dir, dest_dir, fits_catalog_path, refcatalog='GAIA-DR2.cat'
+                 os.symlink(fits_catalog_path, fits_catalog)
+     cmdline = "%s %s -c %s %s" % ( binary, fits_catalog, scamp_config_file, options )
+     cmdline = cmdline.rstrip()
+-
++    print("Scamp cmdline=", cmdline)
+     if dbg is True:
+         retcode_or_cmdline = cmdline
+     else:
+@@ -1421,8 +1423,8 @@ def updateFITSWCS(fits_file, scamp_file, scamp_xml_file, fits_file_output):
+ 
+     # Check goodness of fit
+     good_fit = True
+-    if scamp_info['xy_contrast'] < 1.4 or scamp_info['num_match'] < 4:
+-#    if scamp_info['xy_contrast'] < 0.95 or scamp_info['num_match'] < 4: # More lax constraint for efXX data
++#    if scamp_info['xy_contrast'] < 1.4 or scamp_info['num_match'] < 4:
++    if scamp_info['xy_contrast'] < 0.95 or scamp_info['num_match'] < 4: # More lax constraint for efXX data
+         # Bad fit
+         logger.warning(f"Bad fit for {os.path.basename(fits_file)} detected. Nmatch={scamp_info['num_match']} XY_contrast={scamp_info['xy_contrast']} AS_contrast={scamp_info['as_contrast']}")
+         good_fit = False
+=== stash@{1} ===
+diff --git a/neoexchange/photometrics/catalog_subs.py b/neoexchange/photometrics/catalog_subs.py
+index 6be32c4b..1c36a035 100644
+--- a/neoexchange/photometrics/catalog_subs.py
++++ b/neoexchange/photometrics/catalog_subs.py
+@@ -41,7 +41,7 @@ from astropy import __version__ as astropyversion
+ 
+ from astrometrics.ephem_subs import LCOGT_domes_to_site_codes, determine_darkness_times
+ from astrometrics.time_subs import timeit
+-from core.models import CatalogSources, Frame
++from core.models import CatalogSources, Frame, Block
+ from core.utils import NeoException
+ 
+ logger = logging.getLogger(__name__)
+@@ -1851,6 +1851,7 @@ def extract_catalog(catfile, catalog_type=None, flag_filter=0, new=True, remove=
+             new_fwhm = determine_fwhm(header, table)
+             if new_fwhm is not None:
+                 logger.info("Updating FWHM to {new_fwhm:.4f} from table")
++                print(f"Updating FWHM to {new_fwhm:.4f} from table")
+                 header['fwhm'] = new_fwhm
+     return header, table
+ 
+@@ -1901,17 +1902,77 @@ def update_zeropoint(header, table, avg_zeropoint, std_zeropoint, include_zperr=
+     return header, table
+ 
+ 
+-def update_frame_zeropoint(header, ast_cat_name, phot_cat_name, frame_filename, frame_type):
++def local_determine_original_name(fits_file):
++    """Determines the ORIGNAME for the FITS file <fits_file>.
++    This is pretty disgusting and a sign we are probably doing something wrong
++    and should store the true filename but at least it's contained to one place
++    now..."""
++    fits_file_orig = fits_file
++    if 'e90.fits' in os.path.basename(fits_file):
++        fits_file_orig = os.path.basename(fits_file.replace('e90.fits', 'e00.fits'))
++    elif 'e10.fits' in os.path.basename(fits_file):
++        fits_file_orig = os.path.basename(fits_file.replace('e10.fits', 'e00.fits'))
++    elif 'e91.fits' in os.path.basename(fits_file):
++        fits_file_orig = os.path.basename(fits_file.replace('e91.fits', 'e00.fits'))
++    elif 'e92.fits' in os.path.basename(fits_file):
++        fits_file_orig = os.path.basename(fits_file.replace('e92.fits', 'e00.fits'))
++    elif 'e11.fits' in os.path.basename(fits_file):
++        fits_file_orig = os.path.basename(fits_file.replace('e11.fits', 'e00.fits'))
++    return fits_file_orig
++
++def local_find_block_for_frame(catfile):
++    """Try and find a Block for the original passed <catfile> filename (new style with
++    filename directly stored in the DB. If that fails, try and determine the filename
++    that would have been stored with the ORIGNAME.
++    Returns the Block if found, None otherwise."""
++
++    # try and find Frame does for the fits catfile with a non-null block
++    try:
++        # Swope filenames are non-unique so need extra info from the header
++        if os.path.basename(catfile).startswith('rccd'):
++            header, cattype = get_header(catfile)
++            frame = Frame.objects.get(filename=os.path.basename(catfile), block__request_number=header['request_number'])
++        else:
++            frame = Frame.objects.get(filename=os.path.basename(catfile), block__isnull=False)
++    except Frame.MultipleObjectsReturned:
++        logger.error("photometrics.catalog_subs: Found multiple versions of fits frame %s pointing at multiple blocks" % os.path.basename(catfile))
++        return None
++    except Frame.DoesNotExist:
++        # Try and find the Frame under the original name (old-style)
++        fits_file_orig = local_determine_original_name(catfile)
++        try:
++            frame = Frame.objects.get(filename=fits_file_orig, block__isnull=False)
++        except Frame.MultipleObjectsReturned:
++            logger.error("photometrics.catalog_subs: Found multiple versions of fits frame %s pointing at multiple blocks" % fits_file_orig)
++            return None
++        except Frame.DoesNotExist:
++            logger.error("photometrics.catalog_subs: Frame entry for fits file %s does not exist" % fits_file_orig)
++            return None
++    return frame.block
++
++
++def update_frame_zeropoint(header, ast_cat_name, phot_cat_name, frame_filepath, frame_type):
+     """update the Frame zeropoint, astrometric fit, astrometric catalog
+-    and photometric catalog used"""
++    and photometric catalog used.
++    Modified to take the <frame_filepath> rather than frame_filename since we
++    need the full path to the frame to get the header to get the Block since
++    Swope has non-unique filenames
++    """
+ 
++    frame_filename = os.path.basename(frame_filepath)
+     frame = None
+     block = None
++    try:
++        block = local_find_block_for_frame(frame_filepath)
++    except TypeError:
++        block = None
+     # if a Frame exists for the file, update the zeropoint,
+     # astrometric catalog, rms_of_fit, nstars_in_fit, and
+     # photometric catalog in the Frame
+     try:
+-        frame = Frame.objects.get(filename=frame_filename, block__isnull=False)
++        logger.info(f"update_frame_zeropoint: Updating existing Frame {frame_filename}")
++        frame = Frame.objects.get(filename=frame_filename, block__isnull=False, block=block)
++        frame.fwhm = header['fwhm']
+         frame.zeropoint = header['zeropoint']
+         frame.zeropoint_err = header['zeropoint_err']
+         frame.zeropoint_src = header['zeropoint_src']
+@@ -2039,15 +2100,15 @@ def get_or_create_CatalogSources(table, frame, header={}):
+     num_in_table = len(table)
+     num_cat_sources = CatalogSources.objects.filter(frame=frame).count()
+     # Index of flux array to ingest
+-    flux_aper_index = 3
+-    aper_scaling = 4
++    flux_aper_index = 4 #3
++    aper_scaling = 5
+     if num_cat_sources == 0:
+         new_sources = []
+         for source in table:
+             if len(source['obs_mag'].shape) == 0:
+                 obs_mag = source['obs_mag']
+                 obs_mag_err = source['obs_mag_err']
+-                aper_size = header.get('aperture_radius_arcsec', 3.0)
++                aper_size = header.get('aperture_radius_arcsec', 1.0)
+             else:
+                 # Array of fluxes/mags
+                 obs_mag = source['obs_mag'][flux_aper_index]
+@@ -2329,6 +2390,17 @@ def funpack_fits_file(fpack_file, all_hdus=False):
+     hdu.header.insert("NAXIS2", ("BSCALE", 1.0), after=True)
+     hdu.header.remove("BZERO", ignore_missing=True)
+     hdu.header.insert("BSCALE", ("BZERO", 0.0), after=True)
++    ccdsum = header.get('CCDSUM', None)
++    if ccdsum:
++        chunks = ccdsum.split(' ')
++        if len(chunks) == 2:
++            try:
++                xbinning = int(chunks[0])
++                hdu.header.insert("CCDSUM", ("XBINNING", xbinning, 'Binning in X direction'), after=True)
++                ybinning = int(chunks[0])
++                hdu.header.insert("XBINNING", ("YBINNING", ybinning, 'Binning in Y direction'), after=True)
++            except ValueError:
++                pass
+     new_hdulist = fits.HDUList([hdu,])
+ 
+     if all_hdus:
+@@ -2402,6 +2474,8 @@ def get_fits_files(fits_path, match_pattern='*e91.fits'):
+ 
+         fpacked_files = sorted(glob(fits_path + match_pattern+'.fz'))
+         for fpack_file in fpacked_files:
++            # For DIA processing
++            #funpack_fits_file(fpack_file, all_hdus=True)
+             funpack_fits_file(fpack_file)
+ 
+         sorted_fits_files = sorted(glob(fits_path + match_pattern))
+@@ -2435,12 +2509,21 @@ def sanitize_object_name(object_name):
+     return clean_object_name
+ 
+ 
+-def make_object_directory(filepath, object_name, block_id):
++def make_object_directory(filepath, object_name_or_block, block_id_or_block):
+ 
++    if isinstance(object_name_or_block, Block):
++        filepath = os.path.join(filepath, object_name_or_block.get_blockdayobs, '')
++        object_name = object_name_or_block.current_name()
++    else:
++        object_name = object_name_or_block
+     object_directory = sanitize_object_name(object_name)
++    if isinstance(block_id_or_block, Block):
++        block_id = block_id_or_block.get_blockuid[0]
++    else:
++        block_id = block_id_or_block
+     if block_id != '':
+-        object_directory = object_directory + '_' + str(block_id)
+-    object_directory = os.path.join(os.path.dirname(filepath), object_directory)
++        object_directory = object_directory + '_' + str(block_id)        
++    object_directory = os.path.join(os.path.dirname(filepath), object_directory, '')
+     if not os.path.exists(object_directory):
+         oldumask = os.umask(0o002)
+         os.makedirs(object_directory)
+diff --git a/neoexchange/photometrics/configs/sextractor_neox_ldac.conf b/neoexchange/photometrics/configs/sextractor_neox_ldac.conf
+index 83d1577b..939cfd7c 100644
+--- a/neoexchange/photometrics/configs/sextractor_neox_ldac.conf
++++ b/neoexchange/photometrics/configs/sextractor_neox_ldac.conf
+@@ -24,6 +24,7 @@ ANALYSIS_THRESH	3.0		# <sigmas> or <threshold>,<ZP> in mag.arcsec-2
+ 
+ FILTER		Y		# apply filter for detection ("Y" or "N")?
+ FILTER_NAME	gauss_1.5_3x3.conv
++#FILTER_NAME	/usr/share/sextractor/mexhat_5.0_11x11.conv
+ 
+ DEBLEND_NTHRESH	32		# Number of deblending sub-thresholds
+ DEBLEND_MINCONT	0.005		# Minimum contrast parameter for deblending
+@@ -40,7 +41,7 @@ MASK_TYPE	NONE		# type of detection MASKing: can be one of
+ 
+ #------------------------------ Photometry -----------------------------------
+ 
+-PHOT_APERTURES	10 		# MAG_APER aperture diameter(s) in pixels
++PHOT_APERTURES	3 		# MAG_APER aperture diameter(s) in pixels
+ PHOT_AUTOPARAMS	2.5, 3.5	# MAG_AUTO parameters: <Kron_fact>,<min_radius>
+ 
+ SATUR_LEVEL	46000.0		# level (in ADUs) at which arises saturation
+diff --git a/neoexchange/photometrics/configs/sextractor_neox_ldac_multiaper.conf b/neoexchange/photometrics/configs/sextractor_neox_ldac_multiaper.conf
+index 534e7b9e..58824085 100644
+--- a/neoexchange/photometrics/configs/sextractor_neox_ldac_multiaper.conf
++++ b/neoexchange/photometrics/configs/sextractor_neox_ldac_multiaper.conf
+@@ -24,9 +24,10 @@ ANALYSIS_THRESH	3.0		# <sigmas> or <threshold>,<ZP> in mag.arcsec-2
+ 
+ FILTER		Y		# apply filter for detection ("Y" or "N")?
+ FILTER_NAME	gauss_1.5_3x3.conv
++#FILTER_NAME	/usr/share/sextractor/gauss_3.0_5x5.conv
+ 
+ DEBLEND_NTHRESH	32		# Number of deblending sub-thresholds
+-DEBLEND_MINCONT	0.000		# Minimum contrast parameter for deblending
++DEBLEND_MINCONT	0.005		# Minimum contrast parameter for deblending
+ 
+ CLEAN		Y		# Clean spurious detections? (Y or N)?
+ CLEAN_PARAM	1.03		# Cleaning efficiency
+@@ -42,8 +43,14 @@ MASK_TYPE	CORRECT		# type of detection MASKing: can be one of
+ 
+ # Aperture *DIAMETERS*
+ #PHOT_APERTURES	4.0,6.0,8.0,10.0,12.0,14.0,16.0,18.0,20.0,22.0,24.0,26.0,28.0,30.0,32.0,34.0,36.0,38.0,40.0,42.0		# MAG_APER aperture diameter(s) in pixels
+-#PHOT_APERTURES	2.94,5.87,8.81,11.74,14.68,17.61,20.55,23.49,26.42,29.36,32.29,35.23,38.16,41.10,44.03,46.97,49.91,52.84,55.78,58.71		# MAG_APER aperture diameter(s) in pixels
+-PHOT_APERTURES	5.13,10.27,15.40,20.53,22,25.67,30.80,35.93,41.06,46.20,51.33		# MAG_APER aperture diameter(s) in pixels ((1"..10" *radius*)
++#PHOT_APERTURES	6.0,8.0,10.0,12.0,14.0,16.0,18.0,20.0,22.0,24.0,26.0		# MAG_APER 11 aperture diameter(s) in pixels
++#PHOT_APERTURES	2.0,4.0,6.0,8.0,10.0,12.0,14.0,16.0,18.0,20.0,22.0		# MAG_APER 11 aperture diameter(s) in pixels
++#PHOT_APERTURES	2.94,5.87,8.81,11.74,14.68,17.61,20.55,23.49,26.42,29.36,32.29,35.23,38.16,41.10,44.03,46.97,49.91,52.84,55.78,58.71		# MAG_APER aperture diameter(s) in pixels (1"..20" *radius* for ef04)
++#PHOT_APERTURES	2.94,5.88,8.82,11.76,14.7,17.64,20.59,23.53,26.47,29.41,32.35,35.29,38.23,41.17,44.11,47.05,49.99,52.93,55.87,58.82		# MAG_APER aperture diameter(s) in pixels (1"..20" *radius* for ef03)
++#PHOT_APERTURES	2.93,5.87,8.80,11.74,14.67,17.60,20.54,23.47,26.41,29.34,32.28,35.21,38.14,41.08,44.01,46.95,49.88,52.81,55.75,58.68		# MAG_APER aperture diameter(s) in pixels (1"..20" *radius* for ef02)
++#				1	 2	   3     4     5     6     7     8     9     10    11
++PHOT_APERTURES	5.13,10.27,15.40,20.53,22.00,25.67,30.80,35.93,41.06,46.20,51.33		# MAG_APER aperture diameter(s) in pixels (1"..10" *radius*) for Sinistro
++#PHOT_APERTURES	3.84, 7.67,11.51,15.35,19.18,23.02,26.86,30.69,34.53,38.36,42.20		# MAG_APER aperture diameter(s) in pixels (1"..10" *radius*) for MRO
+ PHOT_AUTOPARAMS	2.5, 3.5	# MAG_AUTO parameters: <Kron_fact>,<min_radius>
+ 
+ SATUR_LEVEL	46000.0		# level (in ADUs) at which arises saturation
+@@ -62,7 +69,9 @@ MAG_ZEROPOINT	00.00		# magnitude zero-point
+ MAG_GAMMA	4.0		# gamma of emulsion (for photographic scans)
+ GAIN		1.4		# detector gain in e-/ADU.
+ GAIN_KEY        GAIN            # keyword for detector gain in e-/ADU
+-PIXEL_SCALE	0.389635		# size of pixel in arcsec (0=use FITS WCS info).
++PIXEL_SCALE	0		# size of Sinistro pixel in arcsec (0=use FITS WCS info).
++#PIXEL_SCALE	0.389635		# size of Sinistro pixel in arcsec (0=use FITS WCS info).
++#PIXEL_SCALE	0.6816		# size of efXX pixel in arcsec (0=use FITS WCS info).
+ 
+ #------------------------- Star/Galaxy Separation ----------------------------
+ 
+diff --git a/neoexchange/photometrics/external_codes.py b/neoexchange/photometrics/external_codes.py
+index 584b94be..a0510275 100644
+--- a/neoexchange/photometrics/external_codes.py
++++ b/neoexchange/photometrics/external_codes.py
+@@ -417,7 +417,9 @@ def determine_hotpants_options(ref, sci, source_dir, dest_dir, dbgOptions=False)
+         logger.error(f"Error occurred in SWarp while aligning images.")
+         return -9
+ 
+-    output_diff_image = os.path.join(dest_dir, os.path.basename(sci).replace('.fits', '.subtracted.fits'))
++    # XXX replace with proper call to increment_red_level if red level present in filename
++    #output_diff_image = os.path.join(dest_dir, os.path.basename(sci).replace('.fits', '.subtracted.fits'))
++    output_diff_image = os.path.join(dest_dir, os.path.basename(sci).replace('e92.fits', 'e93.fits'))
+     output_noise_image = output_diff_image.replace('.fits', '.rms.fits')
+ 
+     # Get the relevant header and data information
+@@ -1256,8 +1258,8 @@ def updateFITSWCS(fits_file, scamp_file, scamp_xml_file, fits_file_output):
+ 
+     # Check goodness of fit
+     good_fit = True
+-    if scamp_info['xy_contrast'] < 1.4 or scamp_info['num_match'] < 4:
+-#    if scamp_info['xy_contrast'] < 0.95 or scamp_info['num_match'] < 4: # More lax constraint for efXX data
++#    if scamp_info['xy_contrast'] < 1.4 or scamp_info['num_match'] < 4:
++    if scamp_info['xy_contrast'] < 0.95 or scamp_info['num_match'] < 4: # More lax constraint for efXX data
+         # Bad fit
+         logger.warning(f"Bad fit for {os.path.basename(fits_file)} detected. Nmatch={scamp_info['num_match']} XY_contrast={scamp_info['xy_contrast']} AS_contrast={scamp_info['as_contrast']}")
+         good_fit = False
+=== stash@{2} ===
+diff --git a/neoexchange/photometrics/catalog_subs.py b/neoexchange/photometrics/catalog_subs.py
+index 2a5bf4a6..cdcf9793 100644
+--- a/neoexchange/photometrics/catalog_subs.py
++++ b/neoexchange/photometrics/catalog_subs.py
+@@ -41,7 +41,7 @@ from astropy import __version__ as astropyversion
+ 
+ from astrometrics.ephem_subs import LCOGT_domes_to_site_codes, determine_darkness_times
+ from astrometrics.time_subs import timeit
+-from core.models import CatalogSources, Frame
++from core.models import CatalogSources, Frame, Block
+ from core.utils import NeoException
+ 
+ logger = logging.getLogger(__name__)
+@@ -1783,6 +1783,7 @@ def extract_catalog(catfile, catalog_type=None, flag_filter=0, new=True, remove=
+             new_fwhm = determine_fwhm(header, table)
+             if new_fwhm is not None:
+                 logger.info("Updating FWHM to {new_fwhm:.4f} from table")
++                print(f"Updating FWHM to {new_fwhm:.4f} from table")
+                 header['fwhm'] = new_fwhm
+     return header, table
+ 
+@@ -1833,17 +1834,77 @@ def update_zeropoint(header, table, avg_zeropoint, std_zeropoint, include_zperr=
+     return header, table
+ 
+ 
+-def update_frame_zeropoint(header, ast_cat_name, phot_cat_name, frame_filename, frame_type):
++def local_determine_original_name(fits_file):
++    """Determines the ORIGNAME for the FITS file <fits_file>.
++    This is pretty disgusting and a sign we are probably doing something wrong
++    and should store the true filename but at least it's contained to one place
++    now..."""
++    fits_file_orig = fits_file
++    if 'e90.fits' in os.path.basename(fits_file):
++        fits_file_orig = os.path.basename(fits_file.replace('e90.fits', 'e00.fits'))
++    elif 'e10.fits' in os.path.basename(fits_file):
++        fits_file_orig = os.path.basename(fits_file.replace('e10.fits', 'e00.fits'))
++    elif 'e91.fits' in os.path.basename(fits_file):
++        fits_file_orig = os.path.basename(fits_file.replace('e91.fits', 'e00.fits'))
++    elif 'e92.fits' in os.path.basename(fits_file):
++        fits_file_orig = os.path.basename(fits_file.replace('e92.fits', 'e00.fits'))
++    elif 'e11.fits' in os.path.basename(fits_file):
++        fits_file_orig = os.path.basename(fits_file.replace('e11.fits', 'e00.fits'))
++    return fits_file_orig
++
++def local_find_block_for_frame(catfile):
++    """Try and find a Block for the original passed <catfile> filename (new style with
++    filename directly stored in the DB. If that fails, try and determine the filename
++    that would have been stored with the ORIGNAME.
++    Returns the Block if found, None otherwise."""
++
++    # try and find Frame does for the fits catfile with a non-null block
++    try:
++        # Swope filenames are non-unique so need extra info from the header
++        if os.path.basename(catfile).startswith('rccd'):
++            header, cattype = get_header(catfile)
++            frame = Frame.objects.get(filename=os.path.basename(catfile), block__request_number=header['request_number'])
++        else:
++            frame = Frame.objects.get(filename=os.path.basename(catfile), block__isnull=False)
++    except Frame.MultipleObjectsReturned:
++        logger.error("photometrics.catalog_subs: Found multiple versions of fits frame %s pointing at multiple blocks" % os.path.basename(catfile))
++        return None
++    except Frame.DoesNotExist:
++        # Try and find the Frame under the original name (old-style)
++        fits_file_orig = local_determine_original_name(catfile)
++        try:
++            frame = Frame.objects.get(filename=fits_file_orig, block__isnull=False)
++        except Frame.MultipleObjectsReturned:
++            logger.error("photometrics.catalog_subs: Found multiple versions of fits frame %s pointing at multiple blocks" % fits_file_orig)
++            return None
++        except Frame.DoesNotExist:
++            logger.error("photometrics.catalog_subs: Frame entry for fits file %s does not exist" % fits_file_orig)
++            return None
++    return frame.block
++
++
++def update_frame_zeropoint(header, ast_cat_name, phot_cat_name, frame_filepath, frame_type):
+     """update the Frame zeropoint, astrometric fit, astrometric catalog
+-    and photometric catalog used"""
++    and photometric catalog used.
++    Modified to take the <frame_filepath> rather than frame_filename since we
++    need the full path to the frame to get the header to get the Block since
++    Swope has non-unique filenames
++    """
+ 
++    frame_filename = os.path.basename(frame_filepath)
+     frame = None
+     block = None
++    try:
++        block = local_find_block_for_frame(frame_filepath)
++    except TypeError:
++        block = None
+     # if a Frame exists for the file, update the zeropoint,
+     # astrometric catalog, rms_of_fit, nstars_in_fit, and
+     # photometric catalog in the Frame
+     try:
+-        frame = Frame.objects.get(filename=frame_filename, block__isnull=False)
++        logger.info(f"update_frame_zeropoint: Updating existing Frame {frame_filename}")
++        frame = Frame.objects.get(filename=frame_filename, block__isnull=False, block=block)
++        frame.fwhm = header['fwhm']
+         frame.zeropoint = header['zeropoint']
+         frame.zeropoint_err = header['zeropoint_err']
+         frame.zeropoint_src = header['zeropoint_src']
+@@ -1971,15 +2032,15 @@ def get_or_create_CatalogSources(table, frame, header={}):
+     num_in_table = len(table)
+     num_cat_sources = CatalogSources.objects.filter(frame=frame).count()
+     # Index of flux array to ingest
+-    flux_aper_index = 3
+-    aper_scaling = 4
++    flux_aper_index = 4 #3
++    aper_scaling = 5
+     if num_cat_sources == 0:
+         new_sources = []
+         for source in table:
+             if len(source['obs_mag'].shape) == 0:
+                 obs_mag = source['obs_mag']
+                 obs_mag_err = source['obs_mag_err']
+-                aper_size = header.get('aperture_radius_arcsec', 3.0)
++                aper_size = header.get('aperture_radius_arcsec', 1.0)
+             else:
+                 # Array of fluxes/mags
+                 obs_mag = source['obs_mag'][flux_aper_index]
+@@ -2334,7 +2395,7 @@ def get_fits_files(fits_path, match_pattern='*e91.fits'):
+ 
+         fpacked_files = sorted(glob(fits_path + match_pattern+'.fz'))
+         for fpack_file in fpacked_files:
+-            funpack_fits_file(fpack_file)
++            funpack_fits_file(fpack_file, all_hdus=True)
+ 
+         sorted_fits_files = sorted(glob(fits_path + match_pattern))
+ 
+@@ -2367,12 +2428,21 @@ def sanitize_object_name(object_name):
+     return clean_object_name
+ 
+ 
+-def make_object_directory(filepath, object_name, block_id):
++def make_object_directory(filepath, object_name_or_block, block_id_or_block):
+ 
++    if isinstance(object_name_or_block, Block):
++        filepath = os.path.join(filepath, object_name_or_block.get_blockdayobs, '')
++        object_name = object_name_or_block.current_name()
++    else:
++        object_name = object_name_or_block
+     object_directory = sanitize_object_name(object_name)
++    if isinstance(block_id_or_block, Block):
++        block_id = block_id_or_block.get_blockuid[0]
++    else:
++        block_id = block_id_or_block
+     if block_id != '':
+-        object_directory = object_directory + '_' + str(block_id)
+-    object_directory = os.path.join(os.path.dirname(filepath), object_directory)
++        object_directory = object_directory + '_' + str(block_id)        
++    object_directory = os.path.join(os.path.dirname(filepath), object_directory, '')
+     if not os.path.exists(object_directory):
+         oldumask = os.umask(0o002)
+         os.makedirs(object_directory)
+diff --git a/neoexchange/photometrics/configs/sextractor_neox_ldac.conf b/neoexchange/photometrics/configs/sextractor_neox_ldac.conf
+index 83d1577b..0d10c962 100644
+--- a/neoexchange/photometrics/configs/sextractor_neox_ldac.conf
++++ b/neoexchange/photometrics/configs/sextractor_neox_ldac.conf
+@@ -24,6 +24,7 @@ ANALYSIS_THRESH	3.0		# <sigmas> or <threshold>,<ZP> in mag.arcsec-2
+ 
+ FILTER		Y		# apply filter for detection ("Y" or "N")?
+ FILTER_NAME	gauss_1.5_3x3.conv
++#FILTER_NAME	/usr/share/sextractor/mexhat_5.0_11x11.conv
+ 
+ DEBLEND_NTHRESH	32		# Number of deblending sub-thresholds
+ DEBLEND_MINCONT	0.005		# Minimum contrast parameter for deblending
+@@ -40,7 +41,7 @@ MASK_TYPE	NONE		# type of detection MASKing: can be one of
+ 
+ #------------------------------ Photometry -----------------------------------
+ 
+-PHOT_APERTURES	10 		# MAG_APER aperture diameter(s) in pixels
++PHOT_APERTURES	6 		# MAG_APER aperture diameter(s) in pixels
+ PHOT_AUTOPARAMS	2.5, 3.5	# MAG_AUTO parameters: <Kron_fact>,<min_radius>
+ 
+ SATUR_LEVEL	46000.0		# level (in ADUs) at which arises saturation
+diff --git a/neoexchange/photometrics/configs/sextractor_neox_ldac_multiaper.conf b/neoexchange/photometrics/configs/sextractor_neox_ldac_multiaper.conf
+index 534e7b9e..58824085 100644
+--- a/neoexchange/photometrics/configs/sextractor_neox_ldac_multiaper.conf
++++ b/neoexchange/photometrics/configs/sextractor_neox_ldac_multiaper.conf
+@@ -24,9 +24,10 @@ ANALYSIS_THRESH	3.0		# <sigmas> or <threshold>,<ZP> in mag.arcsec-2
+ 
+ FILTER		Y		# apply filter for detection ("Y" or "N")?
+ FILTER_NAME	gauss_1.5_3x3.conv
++#FILTER_NAME	/usr/share/sextractor/gauss_3.0_5x5.conv
+ 
+ DEBLEND_NTHRESH	32		# Number of deblending sub-thresholds
+-DEBLEND_MINCONT	0.000		# Minimum contrast parameter for deblending
++DEBLEND_MINCONT	0.005		# Minimum contrast parameter for deblending
+ 
+ CLEAN		Y		# Clean spurious detections? (Y or N)?
+ CLEAN_PARAM	1.03		# Cleaning efficiency
+@@ -42,8 +43,14 @@ MASK_TYPE	CORRECT		# type of detection MASKing: can be one of
+ 
+ # Aperture *DIAMETERS*
+ #PHOT_APERTURES	4.0,6.0,8.0,10.0,12.0,14.0,16.0,18.0,20.0,22.0,24.0,26.0,28.0,30.0,32.0,34.0,36.0,38.0,40.0,42.0		# MAG_APER aperture diameter(s) in pixels
+-#PHOT_APERTURES	2.94,5.87,8.81,11.74,14.68,17.61,20.55,23.49,26.42,29.36,32.29,35.23,38.16,41.10,44.03,46.97,49.91,52.84,55.78,58.71		# MAG_APER aperture diameter(s) in pixels
+-PHOT_APERTURES	5.13,10.27,15.40,20.53,22,25.67,30.80,35.93,41.06,46.20,51.33		# MAG_APER aperture diameter(s) in pixels ((1"..10" *radius*)
++#PHOT_APERTURES	6.0,8.0,10.0,12.0,14.0,16.0,18.0,20.0,22.0,24.0,26.0		# MAG_APER 11 aperture diameter(s) in pixels
++#PHOT_APERTURES	2.0,4.0,6.0,8.0,10.0,12.0,14.0,16.0,18.0,20.0,22.0		# MAG_APER 11 aperture diameter(s) in pixels
++#PHOT_APERTURES	2.94,5.87,8.81,11.74,14.68,17.61,20.55,23.49,26.42,29.36,32.29,35.23,38.16,41.10,44.03,46.97,49.91,52.84,55.78,58.71		# MAG_APER aperture diameter(s) in pixels (1"..20" *radius* for ef04)
++#PHOT_APERTURES	2.94,5.88,8.82,11.76,14.7,17.64,20.59,23.53,26.47,29.41,32.35,35.29,38.23,41.17,44.11,47.05,49.99,52.93,55.87,58.82		# MAG_APER aperture diameter(s) in pixels (1"..20" *radius* for ef03)
++#PHOT_APERTURES	2.93,5.87,8.80,11.74,14.67,17.60,20.54,23.47,26.41,29.34,32.28,35.21,38.14,41.08,44.01,46.95,49.88,52.81,55.75,58.68		# MAG_APER aperture diameter(s) in pixels (1"..20" *radius* for ef02)
++#				1	 2	   3     4     5     6     7     8     9     10    11
++PHOT_APERTURES	5.13,10.27,15.40,20.53,22.00,25.67,30.80,35.93,41.06,46.20,51.33		# MAG_APER aperture diameter(s) in pixels (1"..10" *radius*) for Sinistro
++#PHOT_APERTURES	3.84, 7.67,11.51,15.35,19.18,23.02,26.86,30.69,34.53,38.36,42.20		# MAG_APER aperture diameter(s) in pixels (1"..10" *radius*) for MRO
+ PHOT_AUTOPARAMS	2.5, 3.5	# MAG_AUTO parameters: <Kron_fact>,<min_radius>
+ 
+ SATUR_LEVEL	46000.0		# level (in ADUs) at which arises saturation
+@@ -62,7 +69,9 @@ MAG_ZEROPOINT	00.00		# magnitude zero-point
+ MAG_GAMMA	4.0		# gamma of emulsion (for photographic scans)
+ GAIN		1.4		# detector gain in e-/ADU.
+ GAIN_KEY        GAIN            # keyword for detector gain in e-/ADU
+-PIXEL_SCALE	0.389635		# size of pixel in arcsec (0=use FITS WCS info).
++PIXEL_SCALE	0		# size of Sinistro pixel in arcsec (0=use FITS WCS info).
++#PIXEL_SCALE	0.389635		# size of Sinistro pixel in arcsec (0=use FITS WCS info).
++#PIXEL_SCALE	0.6816		# size of efXX pixel in arcsec (0=use FITS WCS info).
+ 
+ #------------------------- Star/Galaxy Separation ----------------------------
+ 
+diff --git a/neoexchange/photometrics/external_codes.py b/neoexchange/photometrics/external_codes.py
+index 28baa84a..1e843bd4 100644
+--- a/neoexchange/photometrics/external_codes.py
++++ b/neoexchange/photometrics/external_codes.py
+@@ -1204,8 +1204,8 @@ def updateFITSWCS(fits_file, scamp_file, scamp_xml_file, fits_file_output):
+ 
+     # Check goodness of fit
+     good_fit = True
+-    if scamp_info['xy_contrast'] < 1.4 or scamp_info['num_match'] < 4:
+-#    if scamp_info['xy_contrast'] < 0.95 or scamp_info['num_match'] < 4: # More lax constraint for efXX data
++#    if scamp_info['xy_contrast'] < 1.4 or scamp_info['num_match'] < 4:
++    if scamp_info['xy_contrast'] < 0.95 or scamp_info['num_match'] < 4: # More lax constraint for efXX data
+         # Bad fit
+         logger.warning(f"Bad fit for {os.path.basename(fits_file)} detected. Nmatch={scamp_info['num_match']} XY_contrast={scamp_info['xy_contrast']} AS_contrast={scamp_info['as_contrast']}")
+         good_fit = False
+=== stash@{3} ===
+diff --git a/neoexchange/photometrics/catalog_subs.py b/neoexchange/photometrics/catalog_subs.py
+index 2a5bf4a6..54568dd9 100644
+--- a/neoexchange/photometrics/catalog_subs.py
++++ b/neoexchange/photometrics/catalog_subs.py
+@@ -1783,6 +1783,7 @@ def extract_catalog(catfile, catalog_type=None, flag_filter=0, new=True, remove=
+             new_fwhm = determine_fwhm(header, table)
+             if new_fwhm is not None:
+                 logger.info("Updating FWHM to {new_fwhm:.4f} from table")
++                print(f"Updating FWHM to {new_fwhm:.4f} from table")
+                 header['fwhm'] = new_fwhm
+     return header, table
+ 
+@@ -1833,17 +1834,77 @@ def update_zeropoint(header, table, avg_zeropoint, std_zeropoint, include_zperr=
+     return header, table
+ 
+ 
+-def update_frame_zeropoint(header, ast_cat_name, phot_cat_name, frame_filename, frame_type):
++def local_determine_original_name(fits_file):
++    """Determines the ORIGNAME for the FITS file <fits_file>.
++    This is pretty disgusting and a sign we are probably doing something wrong
++    and should store the true filename but at least it's contained to one place
++    now..."""
++    fits_file_orig = fits_file
++    if 'e90.fits' in os.path.basename(fits_file):
++        fits_file_orig = os.path.basename(fits_file.replace('e90.fits', 'e00.fits'))
++    elif 'e10.fits' in os.path.basename(fits_file):
++        fits_file_orig = os.path.basename(fits_file.replace('e10.fits', 'e00.fits'))
++    elif 'e91.fits' in os.path.basename(fits_file):
++        fits_file_orig = os.path.basename(fits_file.replace('e91.fits', 'e00.fits'))
++    elif 'e92.fits' in os.path.basename(fits_file):
++        fits_file_orig = os.path.basename(fits_file.replace('e92.fits', 'e00.fits'))
++    elif 'e11.fits' in os.path.basename(fits_file):
++        fits_file_orig = os.path.basename(fits_file.replace('e11.fits', 'e00.fits'))
++    return fits_file_orig
++
++def local_find_block_for_frame(catfile):
++    """Try and find a Block for the original passed <catfile> filename (new style with
++    filename directly stored in the DB. If that fails, try and determine the filename
++    that would have been stored with the ORIGNAME.
++    Returns the Block if found, None otherwise."""
++
++    # try and find Frame does for the fits catfile with a non-null block
++    try:
++        # Swope filenames are non-unique so need extra info from the header
++        if os.path.basename(catfile).startswith('rccd'):
++            header, cattype = get_header(catfile)
++            frame = Frame.objects.get(filename=os.path.basename(catfile), block__request_number=header['request_number'])
++        else:
++            frame = Frame.objects.get(filename=os.path.basename(catfile), block__isnull=False)
++    except Frame.MultipleObjectsReturned:
++        logger.error("photometrics.catalog_subs: Found multiple versions of fits frame %s pointing at multiple blocks" % os.path.basename(catfile))
++        return None
++    except Frame.DoesNotExist:
++        # Try and find the Frame under the original name (old-style)
++        fits_file_orig = local_determine_original_name(catfile)
++        try:
++            frame = Frame.objects.get(filename=fits_file_orig, block__isnull=False)
++        except Frame.MultipleObjectsReturned:
++            logger.error("photometrics.catalog_subs: Found multiple versions of fits frame %s pointing at multiple blocks" % fits_file_orig)
++            return None
++        except Frame.DoesNotExist:
++            logger.error("photometrics.catalog_subs: Frame entry for fits file %s does not exist" % fits_file_orig)
++            return None
++    return frame.block
++
++
++def update_frame_zeropoint(header, ast_cat_name, phot_cat_name, frame_filepath, frame_type):
+     """update the Frame zeropoint, astrometric fit, astrometric catalog
+-    and photometric catalog used"""
++    and photometric catalog used.
++    Modified to take the <frame_filepath> rather than frame_filename since we
++    need the full path to the frame to get the header to get the Block since
++    Swope has non-unique filenames
++    """
+ 
++    frame_filename = os.path.basename(frame_filepath)
+     frame = None
+     block = None
++    try:
++        block = local_find_block_for_frame(frame_filepath)
++    except TypeError:
++        block = None
+     # if a Frame exists for the file, update the zeropoint,
+     # astrometric catalog, rms_of_fit, nstars_in_fit, and
+     # photometric catalog in the Frame
+     try:
+-        frame = Frame.objects.get(filename=frame_filename, block__isnull=False)
++        logger.info(f"update_frame_zeropoint: Updating existing Frame {frame_filename}")
++        frame = Frame.objects.get(filename=frame_filename, block__isnull=False, block=block)
++        frame.fwhm = header['fwhm']
+         frame.zeropoint = header['zeropoint']
+         frame.zeropoint_err = header['zeropoint_err']
+         frame.zeropoint_src = header['zeropoint_src']
+@@ -1971,15 +2032,15 @@ def get_or_create_CatalogSources(table, frame, header={}):
+     num_in_table = len(table)
+     num_cat_sources = CatalogSources.objects.filter(frame=frame).count()
+     # Index of flux array to ingest
+-    flux_aper_index = 3
+-    aper_scaling = 4
++    flux_aper_index = 4 #3
++    aper_scaling = 5
+     if num_cat_sources == 0:
+         new_sources = []
+         for source in table:
+             if len(source['obs_mag'].shape) == 0:
+                 obs_mag = source['obs_mag']
+                 obs_mag_err = source['obs_mag_err']
+-                aper_size = header.get('aperture_radius_arcsec', 3.0)
++                aper_size = header.get('aperture_radius_arcsec', 1.0)
+             else:
+                 # Array of fluxes/mags
+                 obs_mag = source['obs_mag'][flux_aper_index]
+diff --git a/neoexchange/photometrics/configs/sextractor_neox_ldac.conf b/neoexchange/photometrics/configs/sextractor_neox_ldac.conf
+index 83d1577b..0d10c962 100644
+--- a/neoexchange/photometrics/configs/sextractor_neox_ldac.conf
++++ b/neoexchange/photometrics/configs/sextractor_neox_ldac.conf
+@@ -24,6 +24,7 @@ ANALYSIS_THRESH	3.0		# <sigmas> or <threshold>,<ZP> in mag.arcsec-2
+ 
+ FILTER		Y		# apply filter for detection ("Y" or "N")?
+ FILTER_NAME	gauss_1.5_3x3.conv
++#FILTER_NAME	/usr/share/sextractor/mexhat_5.0_11x11.conv
+ 
+ DEBLEND_NTHRESH	32		# Number of deblending sub-thresholds
+ DEBLEND_MINCONT	0.005		# Minimum contrast parameter for deblending
+@@ -40,7 +41,7 @@ MASK_TYPE	NONE		# type of detection MASKing: can be one of
+ 
+ #------------------------------ Photometry -----------------------------------
+ 
+-PHOT_APERTURES	10 		# MAG_APER aperture diameter(s) in pixels
++PHOT_APERTURES	6 		# MAG_APER aperture diameter(s) in pixels
+ PHOT_AUTOPARAMS	2.5, 3.5	# MAG_AUTO parameters: <Kron_fact>,<min_radius>
+ 
+ SATUR_LEVEL	46000.0		# level (in ADUs) at which arises saturation
+diff --git a/neoexchange/photometrics/configs/sextractor_neox_ldac_multiaper.conf b/neoexchange/photometrics/configs/sextractor_neox_ldac_multiaper.conf
+index 534e7b9e..58824085 100644
+--- a/neoexchange/photometrics/configs/sextractor_neox_ldac_multiaper.conf
++++ b/neoexchange/photometrics/configs/sextractor_neox_ldac_multiaper.conf
+@@ -24,9 +24,10 @@ ANALYSIS_THRESH	3.0		# <sigmas> or <threshold>,<ZP> in mag.arcsec-2
+ 
+ FILTER		Y		# apply filter for detection ("Y" or "N")?
+ FILTER_NAME	gauss_1.5_3x3.conv
++#FILTER_NAME	/usr/share/sextractor/gauss_3.0_5x5.conv
+ 
+ DEBLEND_NTHRESH	32		# Number of deblending sub-thresholds
+-DEBLEND_MINCONT	0.000		# Minimum contrast parameter for deblending
++DEBLEND_MINCONT	0.005		# Minimum contrast parameter for deblending
+ 
+ CLEAN		Y		# Clean spurious detections? (Y or N)?
+ CLEAN_PARAM	1.03		# Cleaning efficiency
+@@ -42,8 +43,14 @@ MASK_TYPE	CORRECT		# type of detection MASKing: can be one of
+ 
+ # Aperture *DIAMETERS*
+ #PHOT_APERTURES	4.0,6.0,8.0,10.0,12.0,14.0,16.0,18.0,20.0,22.0,24.0,26.0,28.0,30.0,32.0,34.0,36.0,38.0,40.0,42.0		# MAG_APER aperture diameter(s) in pixels
+-#PHOT_APERTURES	2.94,5.87,8.81,11.74,14.68,17.61,20.55,23.49,26.42,29.36,32.29,35.23,38.16,41.10,44.03,46.97,49.91,52.84,55.78,58.71		# MAG_APER aperture diameter(s) in pixels
+-PHOT_APERTURES	5.13,10.27,15.40,20.53,22,25.67,30.80,35.93,41.06,46.20,51.33		# MAG_APER aperture diameter(s) in pixels ((1"..10" *radius*)
++#PHOT_APERTURES	6.0,8.0,10.0,12.0,14.0,16.0,18.0,20.0,22.0,24.0,26.0		# MAG_APER 11 aperture diameter(s) in pixels
++#PHOT_APERTURES	2.0,4.0,6.0,8.0,10.0,12.0,14.0,16.0,18.0,20.0,22.0		# MAG_APER 11 aperture diameter(s) in pixels
++#PHOT_APERTURES	2.94,5.87,8.81,11.74,14.68,17.61,20.55,23.49,26.42,29.36,32.29,35.23,38.16,41.10,44.03,46.97,49.91,52.84,55.78,58.71		# MAG_APER aperture diameter(s) in pixels (1"..20" *radius* for ef04)
++#PHOT_APERTURES	2.94,5.88,8.82,11.76,14.7,17.64,20.59,23.53,26.47,29.41,32.35,35.29,38.23,41.17,44.11,47.05,49.99,52.93,55.87,58.82		# MAG_APER aperture diameter(s) in pixels (1"..20" *radius* for ef03)
++#PHOT_APERTURES	2.93,5.87,8.80,11.74,14.67,17.60,20.54,23.47,26.41,29.34,32.28,35.21,38.14,41.08,44.01,46.95,49.88,52.81,55.75,58.68		# MAG_APER aperture diameter(s) in pixels (1"..20" *radius* for ef02)
++#				1	 2	   3     4     5     6     7     8     9     10    11
++PHOT_APERTURES	5.13,10.27,15.40,20.53,22.00,25.67,30.80,35.93,41.06,46.20,51.33		# MAG_APER aperture diameter(s) in pixels (1"..10" *radius*) for Sinistro
++#PHOT_APERTURES	3.84, 7.67,11.51,15.35,19.18,23.02,26.86,30.69,34.53,38.36,42.20		# MAG_APER aperture diameter(s) in pixels (1"..10" *radius*) for MRO
+ PHOT_AUTOPARAMS	2.5, 3.5	# MAG_AUTO parameters: <Kron_fact>,<min_radius>
+ 
+ SATUR_LEVEL	46000.0		# level (in ADUs) at which arises saturation
+@@ -62,7 +69,9 @@ MAG_ZEROPOINT	00.00		# magnitude zero-point
+ MAG_GAMMA	4.0		# gamma of emulsion (for photographic scans)
+ GAIN		1.4		# detector gain in e-/ADU.
+ GAIN_KEY        GAIN            # keyword for detector gain in e-/ADU
+-PIXEL_SCALE	0.389635		# size of pixel in arcsec (0=use FITS WCS info).
++PIXEL_SCALE	0		# size of Sinistro pixel in arcsec (0=use FITS WCS info).
++#PIXEL_SCALE	0.389635		# size of Sinistro pixel in arcsec (0=use FITS WCS info).
++#PIXEL_SCALE	0.6816		# size of efXX pixel in arcsec (0=use FITS WCS info).
+ 
+ #------------------------- Star/Galaxy Separation ----------------------------
+ 
+diff --git a/neoexchange/photometrics/external_codes.py b/neoexchange/photometrics/external_codes.py
+index 15c1fa49..5c3094d5 100644
+--- a/neoexchange/photometrics/external_codes.py
++++ b/neoexchange/photometrics/external_codes.py
+@@ -1192,8 +1192,8 @@ def updateFITSWCS(fits_file, scamp_file, scamp_xml_file, fits_file_output):
+ 
+     # Check goodness of fit
+     good_fit = True
+-    if scamp_info['xy_contrast'] < 1.4 or scamp_info['num_match'] < 4:
+-#    if scamp_info['xy_contrast'] < 0.95 or scamp_info['num_match'] < 4: # More lax constraint for efXX data
++#    if scamp_info['xy_contrast'] < 1.4 or scamp_info['num_match'] < 4:
++    if scamp_info['xy_contrast'] < 0.95 or scamp_info['num_match'] < 4: # More lax constraint for efXX data
+         # Bad fit
+         logger.warning(f"Bad fit for {os.path.basename(fits_file)} detected. Nmatch={scamp_info['num_match']} XY_contrast={scamp_info['xy_contrast']} AS_contrast={scamp_info['as_contrast']}")
+         good_fit = False
+diff --git a/neoexchange/requirements.txt b/neoexchange/requirements.txt
+index 2bd71934..85c63fda 100644
+--- a/neoexchange/requirements.txt
++++ b/neoexchange/requirements.txt
+@@ -1,13 +1,13 @@
+ --extra-index-url=http://buildsba.lco.gtn/python/
+ --trusted-host buildsba.lco.gtn
+-numpy==1.21.4; sys_platform != 'win32'
++numpy==1.23.5; sys_platform != 'win32'
+ numpy==1.22.4+mkl; sys_platform == 'win32'
+ Django>=3.1.13,<3.2
+ #mysqlclient~=1.4.2
+ psycopg2-binary
+-astropy==4.2.1
++astropy #==4.2.1
+ astroquery>=0.4.4.dev7007
+-photutils==1.3.0  # Higher versions need astropy>=5.0
++photutils>=1.11.0  # Higher versions need astropy>=5.0
+ pyslalib
+ beautifulsoup4
+ django-reversion
+@@ -39,7 +39,7 @@ awscli
+ #awscli==1.18.157 # Specific version for `pipelines` - not needed ?
+ redis==3.5.3
+ dramatiq[watch,redis]
+-django-dramatiq==0.9.1
++django-dramatiq==0.11.0
+ djangorestframework==3.12.1
+ freezegun
+ git+https://github.com/mkelley/calviacat.git@main#egg=calviacat
+=== stash@{4} ===
+diff --git a/neoexchange/neox/settings.py b/neoexchange/neox/settings.py
+index 615159fc..da9aeee2 100644
+--- a/neoexchange/neox/settings.py
++++ b/neoexchange/neox/settings.py
+@@ -143,7 +143,6 @@ LOGIN_REDIRECT_URL = '/'
+ # GRAPPELLI_INDEX_DASHBOARD = 'neox.dashboard.CustomIndexDashboard'
+ 
+ INSTALLED_APPS = (
+-    "django_dramatiq",
+     'django.contrib.auth',
+     'django.contrib.contenttypes',
+     'django.contrib.sessions',
+@@ -151,6 +150,7 @@ INSTALLED_APPS = (
+     'django.contrib.staticfiles',
+     'django.contrib.admin',
+     'django.contrib.messages',
++    'django_dramatiq',
+     'reversion',
+     'rest_framework',
+     'core.apps.CoreConfig',
+@@ -180,9 +180,18 @@ DRAMATIQ_BROKER = {
+         'dramatiq.middleware.Callbacks',
+         'dramatiq.middleware.Retries',
+         'django_dramatiq.middleware.DbConnectionsMiddleware',
++        'django_dramatiq.middleware.AdminMiddleware',
+     ]
+ }
+-
++DRAMATIQ_RESULT_BACKEND = {
++    'BACKEND': 'dramatiq.results.backends.redis.RedisBackend',
++    'BACKEND_OPTIONS': {
++        'url': f'redis://{REDIS_HOSTNAME}:6379',
++    },
++    'MIDDLEWARE_OPTIONS': {
++        'result_ttl': 60000
++    }
++}
+ 
+ rollbar_default_env = 'development' if DEBUG else 'production'
+ ROLLBAR = {

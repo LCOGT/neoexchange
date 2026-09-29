@@ -1,0 +1,456 @@
+### host
+apophis2.lco.gtn
+CentOS Linux release 7.9.2009 (Core)
+3.10.0-1160.49.1.el7.x86_64
+ldd (GNU libc) 2.17
+OpenSSL 1.0.2k-fips  26 Jan 2017
+Tue Sep 29 16:40:38 UTC 2026
+ 16:40:38 up 457 days, 18:34,  3 users,  load average: 0.01, 0.14, 0.21
+### git
+git version 2.25.1
+### repo
+/home/tlister/git/neoexchange-devel
+branch: pipelines
+HEAD: 8d32e1c86b2daf3d7b111d355afbb3ad37f8f716 2026-09-21 Tim Lister Fix missing closing parentheses and placate a ruff whinge
+origin	https://talister@github.com/LCOGT/neoexchange.git (fetch)
+origin	https://talister@github.com/LCOGT/neoexchange.git (push)
+### origin/pipelines as last fetched here
+8d32e1c86b2daf3d7b111d355afbb3ad37f8f716
+8d32e1c8 2026-09-21 Fix missing closing parentheses and placate a ruff whinge
+last fetch: 2026-09-29 00:11:13.786058024 +0000
+### local commits not on origin/pipelines (here)
+### commits on origin/pipelines (here) not in HEAD
+0
+### stash
+stash@{0}: WIP on pipelines: b36b46b6 buildsba is long gone
+stash@{1}: WIP on pipelines: 1918604f Actually format an output message rather than just trying to dump Pile'O'Stuff...
+stash@{2}: WIP on pipelines: 6f833c72 Update help text a little. Only uppercase "sites" that are 3 characters long
+stash@{3}: WIP on pipelines: 1e27dbb4 Make the Scamp fitting for 2m data more restrictive and hopefully therefore more successful
+stash@{4}: WIP on pipelines: a1740afe Add AsyncProcessAdmin class to give more details and allow better filtering in the admin
+stash@{5}: WIP on focus_project_support: 10de93b6 Generalize existing_catalog_coverage to allow different catalog types (SQlite db files as well as existing GAIA-DR2 ones)
+stash@{6}: WIP on staticsource_photometry: e19edbf5 Allow processing of Blocks that only have a StaticSource and no Body
+stash@{7}: WIP on GPS_satellites: f8448557 Commit of files from apophis for processing GPS sat data: core/views.py: Don't uppercase proposal so can fetch LCOEngineering-only data... Pass cat_type through run_sextractor_make_catalog() to run_sextractor() photometrics/catalog_subs.py: Add linearity keyword mapping. photometrics/configs/sextractor_gps_ldac.conf: New version tuned for GPS satellites. photometrics/configs/sextractor_ldac.params: Add X/Y_IMAGE, CXX/CYY/CYY_IMAGE, A/B_IMAGE and ELONGATION columns for use in Starlink Gaia catalog display. photometrics/external_codes.py: Check for lower value of saturation and linearity. Add support for GPS::FITS_LDAC catalog type.
+stash@{8}: WIP on gaia-dr2_astrom_photom: 35f6a48 Add reset of DB connection after 2nd potentially long-running SExtractor process. Update log message to say it is a refitted WCS rather than necessarily a bad one
+stash@{9}: WIP on gaia-dr2_astrom_photom: 35f6a48 Add reset of DB connection after 2nd potentially long-running SExtractor process. Update log message to say it is a refitted WCS rather than necessarily a bad one
+stash@{10}: WIP on gaia-dr2_astrom_photom: c5bd8b5 Split out image filename determining code from make_sext_dict_list and add tests prior to refactoring
+stash@{11}: WIP on migrate-to-3.6: 292e063 Get a consistent SECRET_KEY from the environment to fix login problems after uwsgi->gunicorn change
+stash@{12}: WIP on feature/astrometry: 8025e2d Add myself into default receipients for MPC emails
+stash@{13}: WIP on feature/astrometry: 2176ad3 Catch and supress UserWarning from loading in a mtds file with no detections
+### status counts
+     10 ??
+      4  M
+### tracked modifications (diffstat)
+ .../management/commands/make_reference_fields.py   |  4 +
+ neoexchange/photometrics/catalog_subs.py           | 86 ++++++++++++++++++++--
+ .../photometrics/configs/sextractor_neox_ldac.conf | 10 ++-
+ neoexchange/photometrics/external_codes.py         |  2 +-
+ 4 files changed, 90 insertions(+), 12 deletions(-)
+### staged
+### untracked files (size  path), excluding pyc/fits/fz/png/jpg/gif/db/log
+        79  neoexchange/Bad_frame
+      6569  neoexchange/DART_stuff_20230429.py
+     89391  neoexchange/Log_tests_1
+      2606  neoexchange/direct_blocks
+       306  neoexchange/dump.rdb
+      1173  neoexchange/moon_phases_2023.tsv
+      1254  neoexchange/moon_phases_2024.tsv
+     15015  neoexchange/ogg2m001-ep02-20250224-0062-e91_ldac.xml
+### untracked file counts by extension
+      2 .tsv
+      2 .png
+      1 .xml
+      1 .rdb
+      1 .py
+### ignored-but-present files of interest
+neoexchange/Diffs
+neoexchange/dart_mro_20230915.py
+neoexchange/dart_mro_20230918.py
+neoexchange/dart_mro_20230921.py
+neoexchange/dart_mro_20230929.py
+neoexchange/foo.db
+neoexchange/gps_sats_blocks.py
+neoexchange/lightcurve.png
+neoexchange/lightcurve_data.txt
+neoexchange/mpc_positions.txt
+neoexchange/neox.log
+neoexchange/neox/local_settings.py
+neox.log
+### local branches
+  GPS_satellites                          f8448557 [origin/GPS_satellites: behind 2] Commit of files from apophis for processing GPS sat data: core/views.py: Don't uppercase proposal so can fetch LCOEngineering-only data... Pass cat_type through run_sextractor_make_catalog() to run_sextractor() photometrics/catalog_subs.py: Add linearity keyword mapping. photometrics/configs/sextractor_gps_ldac.conf: New version tuned for GPS satellites. photometrics/configs/sextractor_ldac.params: Add X/Y_IMAGE, CXX/CYY/CYY_IMAGE, A/B_IMAGE and ELONGATION columns for use in Starlink Gaia catalog display. photometrics/external_codes.py: Check for lower value of saturation and linearity. Add support for GPS::FITS_LDAC catalog type.
+  bug_fix-catalog                         5a6981b8 [origin/bug_fix-catalog: gone] Updated tests to reflect changes in zeropoint determination code.
+  dataproducts                            7aa1ccfd [origin/dataproducts: gone] update crontabs
+  deploy_mtdlink                          a802b28b [origin/deploy_mtdlink: gone] Merge branch 'master' into deploy_mtdlink
+  feature/astrometry                      28d66bcc [origin/feature/astrometry: gone] Add test for discovery asterisk. Fix tests for change in generate_message call args.
+  feature/celery                          51ff2d81 [origin/feature/celery: behind 250] Moving tasks into a single file
+  feature/damit                           efd57258 [origin/feature/damit: gone] Add commands for building damit binaries inside the container
+  feature/django-2.0                      12f8541b [origin/feature/django-2.0: gone] Update values to match
+  feature/lc_extraction_from_super_blocks d779172a [origin/feature/lc_extraction_from_super_blocks: gone] Make it clearer that we want the tracking number, not the SuperBlock id/pk
+  feature/postgres                        43abda51 [origin/feature/postgres: gone] Semi-working postrgres build
+  feature/postgres_2020                   1508b385 [origin/feature/postgres_2020: gone] Merge branch 'master' into feature/postgres_2020
+  fix_fits_oserror                        7ffb4f82 Fix 2 incorrect is vs ==
+  focus_project_support                   10de93b6 [origin/focus_project_support: behind 2] Generalize existing_catalog_coverage to allow different catalog types (SQlite db files as well as existing GAIA-DR2 ones)
+  gaia-dr2_astrom_photom                  105a143f [origin/gaia-dr2_astrom_photom: gone] remove batch size to allow for tests
+  issue-224                               8264bc8a [origin/issue-224: gone] improve tests, fix bugs in parse_mpcobs
+  issue-498                               24cc5a90 [origin/issue-498: gone] Revert "Add Mt John to visibility wheels"
+  main                                    8386bcda [origin/main: behind 493] BANZAI images and derived catalogs now may have a zeropoint and may not have a L1FWHM if BANZAI WCS fit fails
+  merge-gaia-dr2                          27cbdd06 [origin/merge-gaia-dr2: gone] fix mag_err test
+  migrate-to-3.6                          a188033a [origin/migrate-to-3.6: gone] fix tests to submit data rather than text. undo earlier 'fix'
+* pipelines                               8d32e1c8 [origin/pipelines] Fix missing closing parentheses and placate a ruff whinge
+  staticsource_photometry                 e19edbf5 [origin/staticsource_photometry] Allow processing of Blocks that only have a StaticSource and no Body
+### reflog (recent)
+8d32e1c8 HEAD@{2026-09-29}: pull: Fast-forward
+4f256d43 HEAD@{2026-09-29}: reset: moving to HEAD
+4f256d43 HEAD@{2026-06-26}: pull: Fast-forward
+e96ba4de HEAD@{2026-06-26}: reset: moving to HEAD
+e96ba4de HEAD@{2026-06-25}: pull: Fast-forward
+e485c200 HEAD@{2026-06-25}: commit: Rename DIA product to e93.fits not .subtracted. Add (commented out) option to turn on more verbose logging to diagnose Scamp failures. Switch to more lax constraint for current MuSCAT data
+e714a35b HEAD@{2026-06-25}: commit: Add more possible objects.
+47b58075 HEAD@{2026-06-25}: commit: Ignore DART MRO stuff
+b5b7a7b8 HEAD@{2026-06-22}: pull: Fast-forward
+99c2d495 HEAD@{2026-03-24}: commit: Fix reference to out of scope variable name in log message (not sure how this ever worked..)
+1113f253 HEAD@{2026-03-24}: pull: Fast-forward
+6dc4a73f HEAD@{2026-03-24}: pull: Fast-forward
+43fd2251 HEAD@{2026-03-24}: reset: moving to HEAD
+43fd2251 HEAD@{2026-01-30}: commit (cherry-pick): Fix missing comma that was causing elp-aqwb-0m4b/V99 to be configured as a 1m+Sinistro. Add moar tests
+c2b43b92 HEAD@{2026-01-30}: commit (cherry-pick): Add new fake MPC codes for new ELP aqwb 0m4's.
+29c02abf HEAD@{2025-11-03}: pull: Fast-forward
+0e05d152 HEAD@{2025-10-16}: pull: Fast-forward
+783bf30d HEAD@{2025-10-16}: reset: moving to HEAD
+783bf30d HEAD@{2025-09-16}: commit: Fix missing import of transaction which has been missing/not working since commit adae02a in 2020
+49e7c239 HEAD@{2025-09-16}: commit: Fix long-standing bug preventing ZP calibration of gp data with non-constant color correction. (Fetch the brown paper bag...)
+### other checkouts under ~/git
+/home/tlister/git/asteroidtracker/  branch=master  head=a889ce4 2019-05-24  dirty_lines=0
+/home/tlister/git/calviacat/  branch=HEAD  head=0445896 2026-03-17  dirty_lines=0
+/home/tlister/git/CSS_MOPS/  branch=master  head=c520420 2017-01-31  dirty_lines=1
+/home/tlister/git/neoexchange/  branch=issue-626_PDS_liens  head=92490a15 2024-08-08  dirty_lines=2
+/home/tlister/git/neoexchange_comet/  branch=comet_photometry  head=fbcd7148 2021-07-27  dirty_lines=1
+/home/tlister/git/neoexchange-devel/  branch=pipelines  head=8d32e1c8 2026-09-21  dirty_lines=14
+/home/tlister/git/neoexchange-django42/  branch=main  head=d3039f1b 2024-08-08  dirty_lines=0
+/home/tlister/git/neoexchange-multiaper/  branch=pipelines_multi_aper  head=93cd905d 2023-02-23  dirty_lines=2
+/home/tlister/git/neoexchange-stacking/  branch=stacking  head=8c77f53b 2026-06-22  dirty_lines=3
+/home/tlister/git/neoexchange-vesta/  branch=vesta_family  head=d004f8fd 2018-08-01  dirty_lines=4
+/home/tlister/git/photometrypipeline/  branch=main  head=e298282 2022-09-27  dirty_lines=4
+/home/tlister/git/scamp/  branch=master  head=43e06dc 2020-12-03  dirty_lines=1
+/home/tlister/git/XEphem/  branch=main  head=89c6a70 2021-06-28  dirty_lines=0
+/home/tlister/git/zuds-pipeline/  branch=master  head=16a8f03 2020-08-06  dirty_lines=1
+### python / venvs
+/usr/bin/python
+/usr/bin/python3
+Python 2.7.5
+Python 3.6.8
+VIRTUAL_ENV=
+--- venv /home/tlister/venv/foo: Python 3.6.5 openssl=OpenSSL 1.0.2k-fips  26 Jan 2017
+
+--- venv /home/tlister/venv/neoexchange36-venv: Python 3.6.5 openssl=OpenSSL 1.0.2k-fips  26 Jan 2017
+APLpy==2.0.3 astropy==4.1 astroquery==0.4.6 bokeh==2.3.0 Django==1.11.29 djangorestframework==3.9.4 Jinja2==2.11.3 MarkupSafe==1.1.1 matplotlib==3.3.4 numpy==1.19.5 photutils==1.0.2 psycopg2-binary==2.9.3 pySLALIB==1.0.4 scipy==1.1.0 selenium==3.141.0 
+--- venv /home/tlister/venv/neoexchange_venv: Python 2.7.11 openssl=Could not find platform dependent libraries <exec_prefix>
+
+--- venv /home/tlister/venv/neoexchange-django31-venv: Python 3.6.5 openssl=OpenSSL 1.0.2k-fips  26 Jan 2017
+APLpy==2.0.3 astropy==3.2.3 astroquery==0.4.1 bokeh==1.4.0 Django==3.1.7 django-dramatiq==0.9.1 djangorestframework==3.12.1 dramatiq==1.13.0 Jinja2==2.11.2 MarkupSafe==1.1.1 matplotlib==3.2.2 numpy==1.19.2 photutils==0.7.1 psycopg2-binary==2.8.6 pySLALIB==1.0.4 redis==4.3.6 scipy==1.5.2 selenium==3.141.0 watchdog==2.3.1 
+--- venv /home/tlister/venv/neocode37_venv: Python 3.7.3 openssl=OpenSSL 1.0.2k-fips  26 Jan 2017
+aplpy==2.1.0 astropy==4.2.1 astroquery==0.4.7.dev7946 bokeh==2.3.0 calviacat==1.3.0a1 Django==3.1.14 django-dramatiq==0.9.1 djangorestframework==3.12.1 dramatiq==1.13.0 Jinja2==2.11.3 MarkupSafe==1.1.1 mastcasjobs==0.0.5 matplotlib==3.5.1 numpy==1.21.4 psycopg2-binary==2.9.3 pySLALIB==1.0.4 redis==3.5.3 scipy==1.7.3 selenium==3.141.0 watchdog==2.1.9 
+--- venv /home/tlister/venv/neocode39_venv: Python 3.9.13 openssl=OpenSSL 1.0.2k-fips  26 Jan 2017
+aplpy==2.1.0 astropy==4.2.1 astroquery==0.4.7.dev8738 bokeh==2.3.0 Django==3.1.14 django-dramatiq==0.11.0 djangorestframework==3.12.1 dramatiq==1.14.2 Jinja2==2.11.3 MarkupSafe==1.1.1 matplotlib==3.5.1 numpy==1.21.4 photutils==1.3.0 psycopg2-binary==2.9.6 pySLALIB==1.0.6 redis==3.5.3 scipy==1.9.1 selenium==3.141.0 watchdog==2.1.9 
+--- venv /home/tlister/venv/neocode39-django42_venv: Python 3.9.13 openssl=OpenSSL 1.0.2k-fips  26 Jan 2017
+aplpy==2.1.0 astropy==4.2.1 astroquery==0.4.7.dev9008 bokeh==2.3.0 Django==4.2.8 Jinja2==2.11.3 MarkupSafe==1.1.1 matplotlib==3.5.1 numpy==1.22.4 photutils==1.3.0 psycopg2-binary==2.9.9 pySLALIB==1.0.4 scipy==1.11.4 selenium==3.141.0 
+--- venv /home/tlister/venv/neocode39_psfphot_venv: Python 3.9.13 openssl=OpenSSL 1.0.2k-fips  26 Jan 2017
+aplpy==2.1.0 astropy==6.0.1 astroquery==0.4.7 bokeh==2.3.0 Django==3.1.14 django-dramatiq==0.11.0 djangorestframework==3.12.1 dramatiq==1.14.2 Jinja2==2.11.3 MarkupSafe==1.1.1 matplotlib==3.5.1 numpy==1.23.5 photutils==1.11.0 psycopg2-binary==2.9.9 pySLALIB==1.0.7 redis==3.5.3 scipy==1.12.0 selenium==3.141.0 watchdog==3.0.0 
+### cronwrapper files (redacted)
+-rwx------ 1 tlister Domain Users 1399 Jun 13  2023 /home/tlister/cronwrapper
+-rwx------ 1 tlister Domain Users 2078 Feb 14  2023 /home/tlister/cronwrapper_devDB
+-rwx------ 1 tlister Domain Users 1541 Jul 21  2023 /home/tlister/cronwrapper_S3
+-rwx------ 1 tlister Domain Users 1847 Jun 13  2023 /home/tlister/cronwrapper_S3_devDB
+--- /home/tlister/cronwrapper
+#!/bin/bash
+VENV="${HOME}/venv/neoexchange-django31-venv"
+source ${VENV}/bin/activate
+export PYTHONPATH="${HOME}/git/neoexchange"
+export DJANGO_SETTINGS_MODULE="neox.settings"
+
+# Add /usr/local/bin to the path so mtdlink can be found
+PATH=${PATH}:/usr/local/bin
+
+export NEOX_DB_USER="neoexchange"
+export NEOX_DB_NAME="neoexchange"
+#export NEOX_DB_HOST=db1.lco.gtn
+#export NEOX_DB_HOST=apophis.lco.gtn
+# Settings for MySQL production DB
+#export NEOX_DB_HOST="db1.cple9sjsskrf.us-west-2.rds.amazonaws.com"
+#export NEOX_DB_PASSWD=<redacted>
+
+# Settings for PostgreSQL production DB
+export NEOX_DB_HOST="prod-shared1-pg14-writer-pgbouncer.lco.earth"
+export NEOX_DB_PASSWD=<redacted>
+export NEOX_DB_ENGINE="django.db.backends.postgresql"
+
+export ROLLBAR_TOKEN=<redacted>
+export NEOX_EMAIL_USERNAME='neox@lco.global'
+export NEOX_EMAIL_PASSWORD=<redacted>
+export USE_S3=False
+# Tim's tokens
+export VALHALLA_TOKEN=<redacted>
+export ARCHIVE_TOKEN=<redacted>
+# NEOX robot's tokens
+#export VALHALLA_TOKEN=<redacted>
+#export ARCHIVE_TOKEN=<redacted>
+#export ARCHIVE_TOKEN=<redacted>
+
+export ZOONIVERSE_USER='zemogle'
+export ZOONIVERSE_PASSWD=<redacted>
+
+
+cd $PYTHONPATH/neoexchange
+
+umask 002
+--- /home/tlister/cronwrapper_devDB
+#!/bin/bash
+#VENV="${HOME}/venv/neoexchange-django31-venv"
+VENV="${HOME}/venv/neocode39_venv"
+source ${VENV}/bin/activate
+export PYTHONPATH="${HOME}/git/neoexchange-devel"
+export DJANGO_SETTINGS_MODULE="neox.settings"
+
+# Add /usr/local/bin to the path so mtdlink can be found
+PATH=${PATH}:/usr/local/bin
+
+export USE_S3="False"
+export AWS_ACCESS_KEY_ID=<redacted>
+export AWS_SECRET_ACCESS_KEY=<redacted>
+export AWS_S3_REGION_NAME="us-west-2"
+export AWS_STORAGE_BUCKET_NAME="neoexchange.lco.global"
+
+export DATA_ROOT=/apophis/eng/rocks
+
+export NEOX_DB_USER="neoexchange"
+export NEOX_DB_NAME="neoexchange"
+#export NEOX_DB_HOST=db1.lco.gtn
+#export NEOX_DB_HOST=apophis.lco.gtn
+# Settings for MySQL production DB
+#export NEOX_DB_HOST="db1.cple9sjsskrf.us-west-2.rds.amazonaws.com"
+#export NEOX_DB_PASSWD=<redacted>
+
+# Settings for PostgreSQL production DB
+#export NEOX_DB_HOST="postgres1-cluster.cluster-cple9sjsskrf.us-west-2.rds.amazonaws.com"
+#export NEOX_DB_PASSWD=<redacted>
+#export NEOX_DB_ENGINE="django.db.backends.postgresql"
+
+# Settings for PostgreSQL dev DB
+export NEOX_DB_USER="neoexchange-dev-copy"
+export NEOX_DB_NAME="neoexchange-dev-copy"
+#export NEOX_DB_HOST="postgres1-cluster.cluster-cple9sjsskrf.us-west-2.rds.amazonaws.com"
+#export NEOX_DB_HOST="prod-shared1-pg14-cluster.cluster-cple9sjsskrf.us-west-2.rds.amazonaws.com"
+export NEOX_DB_HOST="prod-shared1-pg14-writer-pgbouncer.lco.earth"
+export NEOX_DB_PASSWD=<redacted>
+export NEOX_DB_ENGINE="django.db.backends.postgresql"
+
+export ROLLBAR_TOKEN=<redacted>
+export NEOX_EMAIL_USERNAME='neox@lco.global'
+export NEOX_EMAIL_PASSWORD=<redacted>
+
+# Tim's tokens
+export VALHALLA_TOKEN=<redacted>
+export ARCHIVE_TOKEN=<redacted>
+# NEOX robot's tokens
+#export VALHALLA_TOKEN=<redacted>
+#export ARCHIVE_TOKEN=<redacted>
+##export ARCHIVE_TOKEN=<redacted>
+--- /home/tlister/cronwrapper_S3
+#!/bin/bash
+VENV="${HOME}/venv/neoexchange-django31-venv"
+source ${VENV}/bin/activate
+export PYTHONPATH="${HOME}/git/neoexchange"
+export DJANGO_SETTINGS_MODULE="neox.settings"
+
+# Add /usr/local/bin to the path so mtdlink can be found
+PATH=${PATH}:/usr/local/bin
+
+export USE_S3="True"
+export AWS_ACCESS_KEY_ID=<redacted>
+export AWS_SECRET_ACCESS_KEY=<redacted>
+export AWS_S3_REGION_NAME="us-west-2"
+export AWS_STORAGE_BUCKET_NAME="neoexchange.lco.global"
+
+export DATA_ROOT=/apophis/eng/rocks
+
+export NEOX_DB_USER="neoexchange"
+export NEOX_DB_NAME="neoexchange"
+#export NEOX_DB_HOST=db1.lco.gtn
+#export NEOX_DB_HOST=apophis.lco.gtn
+# Settings for MySQL production DB
+#export NEOX_DB_HOST="db1.cple9sjsskrf.us-west-2.rds.amazonaws.com"
+#export NEOX_DB_PASSWD=<redacted>
+
+# Settings for PostgreSQL production DB
+export NEOX_DB_HOST="prod-shared1-pg14-writer-pgbouncer.lco.earth"
+export NEOX_DB_PASSWD=<redacted>
+export NEOX_DB_ENGINE="django.db.backends.postgresql"
+
+export ROLLBAR_TOKEN=<redacted>
+export NEOX_EMAIL_USERNAME='neox@lco.global'
+export NEOX_EMAIL_PASSWORD=<redacted>
+
+# Tim's tokens
+export VALHALLA_TOKEN=<redacted>
+export ARCHIVE_TOKEN=<redacted>
+# NEOX robot's tokens
+#export VALHALLA_TOKEN=<redacted>
+#export ARCHIVE_TOKEN=<redacted>
+##export ARCHIVE_TOKEN=<redacted>
+
+--- /home/tlister/cronwrapper_S3_devDB
+#!/bin/bash
+VENV="${HOME}/venv/neoexchange-django31-venv"
+source ${VENV}/bin/activate
+export PYTHONPATH="${HOME}/git/neoexchange"
+export DJANGO_SETTINGS_MODULE="neox.settings"
+
+# Add /usr/local/bin to the path so mtdlink can be found
+PATH=${PATH}:/usr/local/bin
+
+export USE_S3="True"
+export AWS_ACCESS_KEY_ID=<redacted>
+export AWS_SECRET_ACCESS_KEY=<redacted>
+export AWS_S3_REGION_NAME="us-west-2"
+export AWS_STORAGE_BUCKET_NAME="neoexchange.lco.global"
+
+export DATA_ROOT=/apophis/eng/rocks
+
+export NEOX_DB_USER="neoexchange"
+export NEOX_DB_NAME="neoexchange"
+#export NEOX_DB_HOST=db1.lco.gtn
+#export NEOX_DB_HOST=apophis.lco.gtn
+# Settings for MySQL production DB
+#export NEOX_DB_HOST="db1.cple9sjsskrf.us-west-2.rds.amazonaws.com"
+#export NEOX_DB_PASSWD=<redacted>
+
+# Settings for PostgreSQL production DB
+#export NEOX_DB_HOST="postgres1-cluster.cluster-cple9sjsskrf.us-west-2.rds.amazonaws.com"
+#export NEOX_DB_PASSWD=<redacted>
+#export NEOX_DB_ENGINE="django.db.backends.postgresql"
+
+# Settings for PostgreSQL dev DB
+export NEOX_DB_USER="neoexchange-dev-copy"
+export NEOX_DB_NAME="neoexchange-dev-copy"
+export NEOX_DB_HOST="prod-shared1-pg14-writer-pgbouncer.lco.earth"
+export NEOX_DB_PASSWD=<redacted>
+export NEOX_DB_ENGINE="django.db.backends.postgresql"
+
+export ROLLBAR_TOKEN=<redacted>
+export NEOX_EMAIL_USERNAME='neox@lco.global'
+export NEOX_EMAIL_PASSWORD=<redacted>
+
+# Tim's tokens
+export VALHALLA_TOKEN=<redacted>
+export ARCHIVE_TOKEN=<redacted>
+# NEOX robot's tokens
+#export VALHALLA_TOKEN=<redacted>
+#export ARCHIVE_TOKEN=<redacted>
+##export ARCHIVE_TOKEN=<redacted>
+### crontab (redacted)
+#00,20,40 0-15 * * *  source ~/cronwrapper ; python ~/git/neoexchange/neoexchange/manage.py download_archive_data --date "$(date  --date '1 day ago' +\%Y\%m\%d)" --datadir /apophis/eng/rocks/ &>> /data/eng/rocks/Logs/download_archive_"$(date  --date '1 day ago' +\%Y-\%m-\%d)".log
+# New download script
+#00,20,40 0-19 * * *  source ~/cronwrapper_devDB ; python ~/git/neoexchange-devel/neoexchange/manage.py download_process_data --downloadonly --keep-temp-dir --datadir /apophis/eng/rocks/ --date "$(date  --date '1 day ago' +\%Y\%m\%d)" &>> /data/eng/rocks/Logs/download_archive_"$(date  --date '1 day ago' +\%Y-\%m-\%d)".log
+# Old pipeline
+#10,30,50 16-23 * * * source ~/cronwrapper ; python ~/git/neoexchange/neoexchange/manage.py download_archive_data --date "$(date +\%Y\%m\%d)" --datadir /apophis/eng/rocks/ &>> /data/eng/rocks/Logs/download_archive_"$(date +\%Y-\%m-\%d)".log
+# New pipeline
+#10,30,50 16-23 * * * source ~/cronwrapper_devDB ; python ~/git/neoexchange-devel/neoexchange/manage.py download_process_data --downloadonly --keep-temp-dir --date "$(date +\%Y\%m\%d)" --datadir /apophis/eng/rocks/ &>> /data/eng/rocks/Logs/download_archive_"$(date +\%Y-\%m-\%d)".log
+##05,40 00-21 * * * source ~/download_process_data_cron "$(date --date '1 day ago' +\%Y\%m\%d)"
+##05,40 16-23 * * * source ~/download_process_data_cron "$(date +\%Y\%m\%d)"
+# Spectra downloading
+20 19,22,23 * * * source ~/download_FLOYDS_data_cron "$(date --date '1 day ago' +\%Y\%m\%d)"
+# Upload data to S3
+##30 15 * * * source ~/upload_data_cron "$(date --date '1 day ago' +\%Y\%m\%d)"
+### ~/bin
+total 1508
+drwxrwxr-x  2 tlister Domain Users     62 Apr  8  2019 .
+drwxr-xr-x 42 tlister Domain Users   8192 Sep 28 16:42 ..
+-rwxrwxr-x  1 tlister Domain Users  86096 Oct 14  2024 astcheck
+-rwxrwxr-x  1 tlister Domain Users 695096 Oct 14  2024 find_orb
+-rwxrwxr-x  1 tlister Domain Users 638744 Oct 14  2024 fo
+-rwxrwxr-x  1 tlister Domain Users 102576 Oct 14  2024 sat_id
+### processes (redis/dramatiq/manage.py/gunicorn)
+redis      1709 457-18:33:57 /usr/bin/redis-server 0.0.0.0:6379
+tlister  114581    16:29:26 /home/tlister/venv/neocode39_psfphot_venv/bin/python3 /home/tlister/venv/neocode39_psfphot_venv/bin/dramatiq-gevent --path . --processes 4 --threads 1 --worker-shutdown-timeout 600000 --watch . django_dramatiq.setup django_dramatiq.tasks core.tasks --log-file /apophis/eng/rocks/Logs/dramatiq_20260729.log
+tlister  114582    16:29:26 /home/tlister/venv/neocode39_psfphot_venv/bin/python3 /home/tlister/venv/neocode39_psfphot_venv/bin/dramatiq-gevent --path . --processes 4 --threads 1 --worker-shutdown-timeout 600000 --watch . django_dramatiq.setup django_dramatiq.tasks core.tasks --log-file /apophis/eng/rocks/Logs/dramatiq_20260729.log
+tlister  114583    16:29:26 /home/tlister/venv/neocode39_psfphot_venv/bin/python3 /home/tlister/venv/neocode39_psfphot_venv/bin/dramatiq-gevent --path . --processes 4 --threads 1 --worker-shutdown-timeout 600000 --watch . django_dramatiq.setup django_dramatiq.tasks core.tasks --log-file /apophis/eng/rocks/Logs/dramatiq_20260729.log
+tlister  114584    16:29:26 /home/tlister/venv/neocode39_psfphot_venv/bin/python3 /home/tlister/venv/neocode39_psfphot_venv/bin/dramatiq-gevent --path . --processes 4 --threads 1 --worker-shutdown-timeout 600000 --watch . django_dramatiq.setup django_dramatiq.tasks core.tasks --log-file /apophis/eng/rocks/Logs/dramatiq_20260729.log
+tlister  174263 60-21:23:35 /home/tlister/venv/neocode39_psfphot_venv/bin/python3 /home/tlister/venv/neocode39_psfphot_venv/bin/dramatiq-gevent --path . --processes 4 --threads 1 --worker-shutdown-timeout 600000 --watch . django_dramatiq.setup django_dramatiq.tasks core.tasks --log-file /apophis/eng/rocks/Logs/dramatiq_20260729.log
+tlister  174544 60-21:23:13 tail -F /apophis/eng/rocks/Logs/dramatiq_20260729.log
+### systemd units
+  redis.service                                         loaded    active   running Redis persistent key-value database
+redis-sentinel.service                        disabled
+redis.service                                 enabled 
+### binaries
+sex            /usr/bin/sex
+sextractor     -
+scamp          /usr/bin/scamp
+swarp          /usr/bin/swarp
+hotpants       /usr/local/bin/hotpants
+mtdlink        -
+fo             -
+period_scan    -
+convexinv      /usr/local/bin/convexinv
+astwarp        /usr/local/bin/astwarp
+astnoisechisel /usr/local/bin/astnoisechisel
+astconvertt    /usr/local/bin/astconvertt
+unix2dos       /usr/bin/unix2dos
+redis-server   /usr/bin/redis-server
+node           -
+docker         /usr/bin/docker
+podman         -
+### rpms of interest
+cdsclient-3.83-1.lcogt.el7.x86_64
+devtoolset-9-9.1-0.el7.x86_64
+devtoolset-9-binutils-2.32-16.el7.x86_64
+devtoolset-9-dwz-0.12-1.1.el7.x86_64
+devtoolset-9-dyninst-10.1.0-4.el7.x86_64
+devtoolset-9-elfutils-0.176-6.el7.x86_64
+devtoolset-9-elfutils-libelf-0.176-6.el7.x86_64
+devtoolset-9-elfutils-libs-0.176-6.el7.x86_64
+devtoolset-9-gcc-9.3.1-2.2.el7.x86_64
+devtoolset-9-gcc-c++-9.3.1-2.2.el7.x86_64
+devtoolset-9-gcc-gfortran-9.3.1-2.2.el7.x86_64
+devtoolset-9-gdb-8.3-3.el7.x86_64
+devtoolset-9-libquadmath-devel-9.3.1-2.2.el7.x86_64
+devtoolset-9-libstdc++-devel-9.3.1-2.2.el7.x86_64
+devtoolset-9-ltrace-0.7.91-2.el7.x86_64
+devtoolset-9-make-4.2.1-2.el7.x86_64
+devtoolset-9-memstomp-0.1.5-5.el7.x86_64
+devtoolset-9-oprofile-1.3.0-4.el7.x86_64
+devtoolset-9-perftools-9.1-0.el7.x86_64
+devtoolset-9-runtime-9.1-0.el7.x86_64
+devtoolset-9-strace-5.1-7.el7.x86_64
+devtoolset-9-systemtap-4.1-9.el7.x86_64
+devtoolset-9-systemtap-client-4.1-9.el7.x86_64
+devtoolset-9-systemtap-devel-4.1-9.el7.x86_64
+devtoolset-9-systemtap-runtime-4.1-9.el7.x86_64
+devtoolset-9-toolchain-9.1-0.el7.x86_64
+devtoolset-9-valgrind-3.15.0-9.el7.x86_64
+python3-3.6.8-18.el7.x86_64
+python36-fitsio-1.1.2-1.lcogt.el7.x86_64
+python36-numpy-1.12.1-3.el7.x86_64
+python3-libs-3.6.8-18.el7.x86_64
+python3-pip-9.0.3-8.el7.noarch
+python3-setuptools-39.2.0-10.el7.noarch
+redis-3.2.12-2.el7.x86_64
+scamp-2.0.4-1.lcogt.el7.x86_64
+sextractor-2.19.5-2.lcogt.el7.x86_64
+swarp-2.38.0-1.lcogt.el7.x86_64
+### find_orb config
+total 912
+drwxrwxr-x  2 tlister Domain Users   4096 Nov 27  2024 .
+drwxr-xr-x 42 tlister Domain Users   8192 Sep 28 16:42 ..
+-rw-rw-r--  1 tlister Domain Users    697 Oct 14  2024 command.txt
+-rw-rw-r--  1 tlister Domain Users  27611 Nov 27  2024 covar.txt
+-rw-rw-r--  1 tlister Domain Users   4924 Nov 27  2024 debug.txt
+-rw-rw-r--  1 tlister Domain Users  24551 Oct 14  2024 details.txt
+-rw-rw-r--  1 tlister Domain Users   3564 Oct 14  2024 dfindorb.txt
+### data roots
+drwsrwsrwx 1361 eng Domain Users 45056 Sep 26 00:08 /apophis/eng/rocks
+drwsrwsrwx 1361 eng Domain Users 45056 Sep 26 00:08 /data/eng/rocks
+/dev/md0         37T   35T  1.6T  96% /data
+### env var names present (values omitted)
+### local_settings.py (redacted)
+DEBUG = True
+
+### END

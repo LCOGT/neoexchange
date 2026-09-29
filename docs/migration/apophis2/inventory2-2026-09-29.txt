@@ -1,0 +1,212 @@
+### dramatiq master process: cwd and non-secret environment
+pid 114581 cwd=/home/tlister/git/neoexchange-devel/neoexchange
+NEOX_DB_HOST=prod-shared1-pg14-writer-pgbouncer.lco.earth
+VIRTUAL_ENV=/home/tlister/venv/neocode39_psfphot_venv
+PATH=/home/tlister/venv/neocode39_psfphot_venv/bin:/opt/starjava/bin:/opt/starjava/bin:/usr/local/bin:/bin:/usr/bin:/usr/local/sbin:/usr/sbin:/opt/anaconda/bin:/opt/astrometry.net/bin:/opt/idl/idl85/bin:/opt/puppetlabs/bin:/home/tlister/.local/bin:/home/tlister/bin:/home/tlister/validate/bin/:/opt/anaconda/bin:/opt/astrometry.net/bin:/opt/idl/idl85/bin:/git-star/bin/startcl:/git-star/bin:/git-star/starjava/bin:/home/tlister/.local/bin:/home/tlister/bin:/home/tlister/validate/bin/
+NEOX_DB_USER=neoexchange-dev-copy
+NEOX_DB_ENGINE=django.db.backends.postgresql
+NEOX_DB_NAME=neoexchange-dev-copy
+USE_S3=False
+DJANGO_SETTINGS_MODULE=neox.settings
+### how dramatiq / run_pipeline were launched (bash history, last 8)
+python manage.py run_pipeline --datadir /apophis/eng/rocks/20260624/Didymos_COJ_2026_Field#09_813004589/ --refcat PS1 --solar False --color_const True --dia
+python manage.py run_pipeline --help
+python manage.py run_pipeline --datadir /apophis/eng/rocks/20260729/164216_825757039/
+python manage.py rundramatiq --reload  --use-gevent --processes 4 --threads 1 --log-file /apophis/eng/rocks/Logs/dramatiq_20260622.log &
+python manage.py rundramatiq --reload  --use-gevent --processes 4 --threads 1 --log-file /apophis/eng/rocks/Logs/dramatiq_20260622.log &
+tail -F /apophis/eng/rocks/Logs/dramatiq_20260622.log 
+python manage.py run_pipeline --datadir /apophis/eng/rocks/20260731/164216_825866333/
+less ~/cronwrapper_devDB
+### home cron/wrapper scripts present
+-rw-rw-r-- 1 tlister Domain Users  895 Nov 19  2021 /home/tlister/apophis_crontab
+-rwxr-xr-x 1 tlister Domain Users 3783 Mar 10  2023 /home/tlister/archivedownload_65803_ef04_20220906.sh
+-rwx------ 1 tlister Domain Users 1399 Jun 13  2023 /home/tlister/cronwrapper
+-rwx------ 1 tlister Domain Users 2078 Feb 14  2023 /home/tlister/cronwrapper_devDB
+-rwx------ 1 tlister Domain Users 1541 Jul 21  2023 /home/tlister/cronwrapper_S3
+-rwx------ 1 tlister Domain Users 1847 Jun 13  2023 /home/tlister/cronwrapper_S3_devDB
+-rwxrwxr-x 1 tlister Domain Users  995 Jul 21  2023 /home/tlister/download_FLOYDS_data_cron
+-rwxrwxr-x 1 tlister Domain Users  884 Sep 30  2021 /home/tlister/download_process_data_cron
+-rwxrwxr-x 1 tlister Domain Users 1351 Jul  3  2019 /home/tlister/dump-tables-mysql.sh
+-rw-rw-r-- 1 tlister Domain Users 1351 Feb 11  2019 /home/tlister/dump-tables_v2.sh
+-rwxr-xr-x 1 tlister Domain Users 1295 Aug 11  2021 /home/tlister/upload_data_cron
+### stash summaries
+--- stash@{0}: stash@{0}: WIP on pipelines: b36b46b6 buildsba is long gone
+ neoexchange/photometrics/catalog_subs.py           | 86 ++++++++++++++++++++--
+ .../photometrics/configs/sextractor_neox_ldac.conf |  4 +-
+ neoexchange/photometrics/external_codes.py         | 12 +--
+ 3 files changed, 88 insertions(+), 14 deletions(-)
+--- stash@{1}: stash@{1}: WIP on pipelines: 1918604f Actually format an output message rather than just trying to dump Pile'O'Stuff...
+ neoexchange/photometrics/catalog_subs.py           | 103 +++++++++++++++++++--
+ .../photometrics/configs/sextractor_neox_ldac.conf |   3 +-
+ .../configs/sextractor_neox_ldac_multiaper.conf    |  17 +++-
+ neoexchange/photometrics/external_codes.py         |   8 +-
+ 4 files changed, 113 insertions(+), 18 deletions(-)
+--- stash@{2}: stash@{2}: WIP on pipelines: 6f833c72 Update help text a little. Only uppercase "sites" that are 3 characters long
+ neoexchange/photometrics/catalog_subs.py           | 92 +++++++++++++++++++---
+ .../photometrics/configs/sextractor_neox_ldac.conf |  3 +-
+ .../configs/sextractor_neox_ldac_multiaper.conf    | 17 +++-
+ neoexchange/photometrics/external_codes.py         |  4 +-
+ 4 files changed, 98 insertions(+), 18 deletions(-)
+--- stash@{3}: stash@{3}: WIP on pipelines: 1e27dbb4 Make the Scamp fitting for 2m data more restrictive and hopefully therefore more successful
+ neoexchange/photometrics/catalog_subs.py           | 73 ++++++++++++++++++++--
+ .../photometrics/configs/sextractor_neox_ldac.conf |  3 +-
+ .../configs/sextractor_neox_ldac_multiaper.conf    | 17 +++--
+ neoexchange/photometrics/external_codes.py         |  4 +-
+ neoexchange/requirements.txt                       |  8 +--
+ 5 files changed, 88 insertions(+), 17 deletions(-)
+--- stash@{4}: stash@{4}: WIP on pipelines: a1740afe Add AsyncProcessAdmin class to give more details and allow better filtering in the admin
+ neoexchange/neox/settings.py | 13 +++++++++++--
+ 1 file changed, 11 insertions(+), 2 deletions(-)
+--- stash@{5}: stash@{5}: WIP on focus_project_support: 10de93b6 Generalize existing_catalog_coverage to allow different catalog types (SQlite db files as well as existing GAIA-DR2 ones)
+ neoexchange/core/management/commands/download_process_data.py | 8 +++++---
+ neoexchange/core/management/commands/pipeline_astrometry.py   | 1 +
+ neoexchange/photometrics/configs/sextractor_ldac.params       | 2 ++
+ neoexchange/photometrics/configs/sextractor_neox_ldac.conf    | 2 +-
+ 4 files changed, 9 insertions(+), 4 deletions(-)
+--- stash@{6}: stash@{6}: WIP on staticsource_photometry: e19edbf5 Allow processing of Blocks that only have a StaticSource and no Body
+ neoexchange/core/views.py                |  6 +++---
+ neoexchange/photometrics/catalog_subs.py | 16 +++++++++++++---
+ 2 files changed, 16 insertions(+), 6 deletions(-)
+--- stash@{7}: stash@{7}: WIP on GPS_satellites: f8448557 Commit of files from apophis for processing GPS sat data: core/views.py: Don't uppercase proposal so can fetch LCOEngineering-only data... Pass cat_type through run_sextractor_make_catalog() to run_sextractor() photometrics/catalog_subs.py: Add linearity keyword mapping. photometrics/configs/sextractor_gps_ldac.conf: New version tuned for GPS satellites. photometrics/configs/sextractor_ldac.params: Add X/Y_IMAGE, CXX/CYY/CYY_IMAGE, A/B_IMAGE and ELONGATION columns for use in Starlink Gaia catalog display. photometrics/external_codes.py: Check for lower value of saturation and linearity. Add support for GPS::FITS_LDAC catalog type.
+ .../core/management/commands/backfill_blocks.py    | 187 +++++++++++----------
+ 1 file changed, 96 insertions(+), 91 deletions(-)
+--- stash@{8}: stash@{8}: WIP on gaia-dr2_astrom_photom: 35f6a48 Add reset of DB connection after 2nd potentially long-running SExtractor process. Update log message to say it is a refitted WCS rather than necessarily a bad one
+ neoexchange/core/management/commands/download_archive_data.py | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+--- stash@{9}: stash@{9}: WIP on gaia-dr2_astrom_photom: 35f6a48 Add reset of DB connection after 2nd potentially long-running SExtractor process. Update log message to say it is a refitted WCS rather than necessarily a bad one
+ neoexchange/core/archive_subs.py                              | 2 +-
+ neoexchange/core/management/commands/download_archive_data.py | 2 +-
+ neoexchange/photometrics/catalog_subs.py                      | 3 +++
+ 3 files changed, 5 insertions(+), 2 deletions(-)
+--- stash@{10}: stash@{10}: WIP on gaia-dr2_astrom_photom: c5bd8b5 Split out image filename determining code from make_sext_dict_list and add tests prior to refactoring
+ .../photometrics/tests/test_catalog_subs.py        | 36 ++++++++++++++++++++++
+ 1 file changed, 36 insertions(+)
+--- stash@{11}: stash@{11}: WIP on migrate-to-3.6: 292e063 Get a consistent SECRET_KEY from the environment to fix login problems after uwsgi->gunicorn change
+ neoexchange/neox/settings.py | 4 ++++
+ 1 file changed, 4 insertions(+)
+--- stash@{12}: stash@{12}: WIP on feature/astrometry: 8025e2d Add myself into default receipients for MPC emails
+ neoexchange/core/frames.py               |  2 +-
+ neoexchange/photometrics/catalog_subs.py | 50 +++++++++++++++++---------------
+ 2 files changed, 28 insertions(+), 24 deletions(-)
+--- stash@{13}: stash@{13}: WIP on feature/astrometry: 2176ad3 Catch and supress UserWarning from loading in a mtds file with no detections
+ .../management/commands/download_process_data.py   | 23 ++++--------------
+ neoexchange/photometrics/catalog_subs.py           | 28 +++++++++++++++++++++-
+ 2 files changed, 32 insertions(+), 19 deletions(-)
+### local-only branch fix_fits_oserror vs origin/pipelines
+merge-base: 7ffb4f82efb2069989380ad02465eb3b9f5bdc81
+7ffb4f82 2020-12-01
+### other neoexchange checkouts: state
+--- /home/tlister/git/neoexchange (issue-626_PDS_liens)
+ M neoexchange/core/management/commands/lightcurve_extraction.py
+ M neoexchange/photometrics/gf_movie.py
+stashes: 13
+92490a15 2024-08-08 Merge branch 'issue-626_PDS_liens' of https://github.com/LCOGT/neoexchange into issue-626_PDS_liens
+--- /home/tlister/git/neoexchange-stacking (stacking)
+?? neoexchange/pipelines/constants.py
+?? neoexchange/pipelines/mpi.py
+?? neoexchange/summarize_obs.py
+stashes: 0
+8c77f53b 2026-06-22 Pass through dia option. Add looser tolerance on matches for epXX (MuSCAT) and efXX (FLI) in astrometric fitter
+--- /home/tlister/git/neoexchange-multiaper (pipelines_multi_aper)
+ M neoexchange/concat_reduced_data.py
+ M neoexchange/summarize_reduced_data.py
+stashes: 2
+93cd905d 2023-02-23 Time continues it's forward progression...
+--- /home/tlister/git/neoexchange-django42 (main)
+stashes: 1
+d3039f1b 2024-08-08 Update version number and Changelog
+### untracked/ignored python scripts and small files (head of each)
+--- DART_stuff_20230429.py (6569 bytes, modified 2023-04-30 03:51:05)
+# coding: utf-8
+from core.models import Body, SuperBlock, Block, Frame, CatalogSources, SourceMeasurement, Proposal
+from core.views import determine_images_and_catalogs, compare_NEOx_horizons_ephems
+
+from astrometrics.ephem_subs import horizons_ephem, compute_ephem
+from photometrics.catalog_subs import *
+from photometrics.pds_subs import *
+
+from matplotlib.dates import HourLocator, DateFormatter
+import astropy.units as u
+import matplotlib
+import matplotlib.pyplot as plt
+--- dart_mro_20230915.py (5447 bytes, modified 2023-09-15 20:42:30)
+# coding: utf-8
+fits_files = get_fits_files(datadir)
+from core.models import Body, SuperBlock, Block, Frame, CatalogSources, SourceMeasurement, Proposal
+from core.views import determine_images_and_catalogs, compare_NEOx_horizons_ephems, find_matching_image_file, run_sextractor_make_catalog, \
+    run_scamp, find_block_for_frame, make_new_catalog_entry
+
+from astrometrics.ephem_subs import horizons_ephem, compute_ephem
+from photometrics.catalog_subs import *
+from photometrics.external_codes import *
+from matplotlib.dates import HourLocator, DateFormatter
+import astropy.units as u
+import matplotlib
+--- dart_mro_20230918.py (5400 bytes, modified 2023-09-18 20:57:59)
+# coding: utf-8
+from core.models import Body, SuperBlock, Block, Frame, CatalogSources, SourceMeasurement, Proposal
+from core.views import determine_images_and_catalogs, compare_NEOx_horizons_ephems, find_matching_image_file, run_sextractor_make_catalog, \
+    run_scamp, find_block_for_frame, make_new_catalog_entry
+
+from astrometrics.ephem_subs import horizons_ephem, compute_ephem
+from photometrics.catalog_subs import *
+from photometrics.external_codes import *
+from matplotlib.dates import HourLocator, DateFormatter
+import astropy.units as u
+import matplotlib
+import matplotlib.pyplot as plt
+--- dart_mro_20230921.py (73252 bytes, modified 2023-09-22 01:29:0)
+# coding: utf-8
+import tempfile
+temp_dir = tempfile.mkdtemp(prefix='tmp_neox_')
+shutil.copy(os.path.abspath(test_photpipefilename), temp_dir)
+import shutil
+shutil.copy(os.path.abspath(test_photpipefilename), temp_dir)
+import os
+test_photpipefilename = os.path.join('photometrics', 'tests', 'photpipe_test_ldac.fits')
+shutil.copy(os.path.abspath(test_photpipefilename), temp_dir)
+test_photpipefilename = os.path.join(temp_dir, os.path.basename(test_photpipefilename))
+test_photpipefilename
+from photometrics.catalog_subs import *
+--- dart_mro_20230929.py (27917 bytes, modified 2023-10-03 04:02:0)
+# coding: utf-8
+get_ipython().system('geany dart_mro_20230921.py&')
+from core.models import Body, SuperBlock, Block, Frame, CatalogSources, SourceMeasurement, Proposal
+from core.views import determine_images_and_catalogs, compare_NEOx_horizons_ephems, find_matching_image_file, run_sextractor_make_catalog, \
+    run_scamp, find_block_for_frame, make_new_catalog_entry
+
+from astrometrics.ephem_subs import horizons_ephem, compute_ephem
+from photometrics.catalog_subs import *
+from photometrics.external_codes import *
+from matplotlib.dates import HourLocator, DateFormatter
+import astropy.units as u
+import matplotlib
+--- gps_sats_blocks.py (8694 bytes, modified 2021-09-11 22:04:15)
+# coding: utf-8
+from core.models import Block,Body,SuperBlock, Frame
+import os
+from glob import glob
+data_dir = os.path.join(os.sep,'apophis','eng','rocks','20210722','G22_263211087','Temp')
+fits_catalogs = glob(data_dir + '/*e92.fits')
+data_dir
+get_ipython().system('ls -ltr /apophis/eng/rocks/20210722/G22_263211087/Temp')
+for fits_catalog in fits_catalogs:
+    header, table, cat_type = open_fits_catalog(fits_catalog)
+    print(os.path.basename(fits_catalog), header['object'], header['siteid'], header['encid'], header['SEXDBLDC'])
+    
+--- direct_blocks (2606 bytes, modified 2022-09-27 23:31:39)
+3010142: None -> None
+3010142: None -> None
+
+3010141: None -> None
+3010141: None -> None
+
+3010140: None -> None
+3010140: None -> None
+
+3010220: cpt1m012-ef04-20220926-1022-e91.fits  cpt1m012-ef04-20220926-1172-e91.fits
+3010220: cpt1m012-ef04-20220926-1022-e92.fits  cpt1m012-ef04-20220926-1172-e92.fits
+
+--- Bad_frame (79 bytes, modified 2019-07-29 16:09:55.9)
+/data/eng/rocks/20190726/2015HM10_9746669/cpt1m012-fa06-20190726-0139-e91.fits
+### END2
