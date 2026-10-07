@@ -749,6 +749,11 @@ def create_dart_lightcurve(input_dir_or_block, output_dir, block, match='photome
     warnings.simplefilter('ignore', FITSFixedWarning)
     output_lc_filepath = None
     #frames = Frame.objects.filter(block=block, frametype__in=[Frame.BANZAI_RED_FRAMETYPE, Frame.SWOPE_RED_FRAMETYPE])
+    # XXX Need to filter handle multi-filter blocks. Possible fixes:
+    # - Add an obs_filter argument (or loop over the Block's distinct filters).
+    # - Apply it to the frames query, `create_table_from_srcmeasures` and the photometry-file match.
+    # - Put the filter in the output filename.
+    #
     frames = Frame.objects.filter(block=block, frametype=Frame.BANZAI_RED_FRAMETYPE)
     if frames.count() > 0:
         first_frame = frames.earliest('midpoint')
