@@ -40,7 +40,9 @@ Analysis done 2026-10-05.
 6. **The excess scatter in the circulated PhotPipe lightcurve (χ²_red ≈ 3.5) is not a zeropoint problem (§6).**
    - **Trailing:** the frames were tracked sidereally, so Didymos trails **6.6 px** in a 5 px-radius aperture while
      the calibration stars are round. The extra loss (0.067–0.112 mag) does not cancel; it makes the magnitudes about
-     0.09 mag too faint and varies with seeing.
+     0.09 mag too faint and varies with seeing. A PSF simulation agrees (0.09–0.10 mag at 1.44″). Rubin's
+     SMTN-003 trailing-loss formula is an S/N loss, not a flux correction, and is tuned to Rubin's 2 × 15 s snaps,
+     so it doesn't apply here.
    - **Field stars:** 19 frames have more than 0.02 mag of star flux in the aperture.
    - **Result:** fitting a seeing term and dropping those frames gives χ²_red ≈ 1.0.
 7. **Aperture units and choice (§7).**
@@ -382,6 +384,71 @@ absorbs the stars' aperture loss but not the target's extra trail loss.
   worst at the start and end of the night, where a mutual event or other slow signal could sit. One night can't
   separate these.
 
+### Cross-check: simulated trail loss, and the Rubin SMTN-003 formula
+
+*Added 2026-10-07.*
+
+**Rate units:** 1°/day = 2.5″/min = 150″/h. Didymos moved **0.505″/min = 0.202°/day**, so the trail is
+0.505 × 210/60 = 1.77″ per 210 s exposure. The trail length relative to seeing is
+
+x = v[″/min] · T[s] / (60 θ[″]) = v[°/day] · T[s] / (24 θ[″])
+
+which is **1.23** here (θ = 1.44″).
+
+**Simulated aperture loss** (`aperture_trail_loss()` below): a PSF smeared along a 1.77″ trail. Each entry is the
+extra loss of the trailed target relative to a star in the same circular aperture (mag). The ranges cover a
+double-Gaussian PSF and Moffat profiles with β = 2.5 and 4.
+
+| FWHM | 5 px (1.33″) | 8 px (2.13″) | 12 px (3.19″) |
+|---|---|---|---|
+| 1.0″ | 0.06–0.07 | ≤ 0.012 | ≤ 0.002 |
+| 1.44″ | 0.09–0.10 | 0.012–0.023 | ≤ 0.005 |
+| 1.7″ | 0.09–0.11 | 0.022–0.028 | ≤ 0.006 |
+
+- **Matches the measurement:** at 1.44″ this agrees with the 0.092 mag measured above from each frame's own stars.
+- **Seeing dependence:** it reproduces the loss rising with seeing at 5 px.
+- **Large apertures:** it confirms the loss is negligible by 12 px.
+- **PhotPipe's curve of growth:** the 0.058 mag gap from PhotPipe's curve of growth (§7) is low by comparison, which
+  supports the explanation that its star sample is too loose.
+
+**SMTN-003 / `rubin_sim` `calc_trailing_losses`:**
+[SMTN-003](https://smtn-003.lsst.io/) gives
+
+dmag = 1.25 log10(1 + a x²/(1 + b x))
+
+with a_trail = 0.761, b_trail = 1.162 and a_det = 0.420, b_det = 0.003.
+
+- **Provenance:** the constants are fitted (`curve_fit`) to simulations in the technote's own
+  `Trailing Losses.ipynb` (repo `lsst-sims/smtn-003`). They do not come from Vereš et al. That paper is
+  [2012, PASP 124, 1197](https://arxiv.org/abs/1209.6106), not 2015, and gives an analytic trailed-Gaussian model
+  for trail fitting.
+- **What they measure:** they are **S/N losses, not flux losses.**
+  - `dmag_trail` = 1.25 log10(n_eff,trail / n_eff,star). That is the sky-limited S/N penalty at S/N = 5 for an
+    *optimal, trail-matched* measurement that captures all the flux.
+  - `dmag_detect` is the drop in the peak of a stellar-PSF matched-filter image: Rubin's detection-threshold loss.
+  - **Neither is a correction to apply to magnitudes.** The quantity that biases a lightcurve is the
+    aperture-flux loss in the table above.
+- **General:** the x scaling and the functional form. The pixel scale cancels, since the simulation is unpixelised
+  on a 0.01″ grid.
+- **Rubin-specific:**
+  - **Snaps:** 2 × 15 s with a 2–4 s gap, fitted as if T = 30 s, which makes the trail 7–13% longer than v·T.
+  - **PSF:** a double Gaussian approximating von Kármán.
+  - **Seeing:** 0.7–1.2″ only.
+  - **Fit range:** 0.02–10°/day (0.05–25″/min), i.e. x ≈ 0–17. That is dominated by long trails, so the two-parameter
+    form overestimates at x ≲ 1.5.
+- **Reproduced:** with their setup, my refit gives a = 0.634, b = 0.935. That agrees with their curve to 0.01 mag
+  for x ≥ 2, but the published constants come out 0.025–0.03 mag high at x ≈ 1.
+- **Didymos's S/N loss (x = 1.23):**
+
+  | Model | S/N loss (mag) |
+  |---|---|
+  | SMTN-003 constants | 0.211 |
+  | Their setup, simulated directly | ≈ 0.19 |
+  | Single continuous exposure, double Gaussian | 0.15 |
+  | Single continuous exposure, Moffat β = 2.5–4 | 0.12–0.14 |
+
+  For a single LCO exposure, the published constants overstate the S/N loss by roughly 40–75% at this x.
+
 ### Cause 2: field stars in the aperture
 
 The field was tracked sidereally, so the stars stay put while Didymos moves across them. I measured the star flux
@@ -635,6 +702,8 @@ is close to S/N-optimal.
   - Tracking mode from the e92 headers (`SRCTYPE`, `RATRACK`, `DECTRACK`, `L1ELLIP`). Rate and PA from a linear fit to
     PhotPipe's `source_ra`/`source_dec`.
   - Trail loss and field-star contamination measured per frame on all 86 frames.
+  - The simulated aperture loss and the SMTN-003 comparison use `aperture_trail_loss()`/`snr_trail_loss()` below, and
+    a re-run of the SMTN-003 notebook's velocity/seeing grid (2 × 15 s snaps, 2 and 4 s gaps, double Gaussian).
   - The aperture-dependence test re-measured Didymos on e92 at 5/6/8/10/12 px, each calibrated with the e92 zeropoint
     plus the star-measured aperture correction. The 5 px values reproduce PhotPipe to a median of 0.000.
 - **Aperture units and curve of growth (§7):**
@@ -737,4 +806,54 @@ def star_contamination(ref_base, ra, dec, length, u, target_counts, r_ap=5.0, ns
     pts = np.array([[x, y]]) + np.outer(np.linspace(-length / 2, length / 2, nstep), u)
     fc = np.mean(np.asarray(aperture_photometry(img, CircularAperture(pts, r_ap), method='exact')['aperture_sum']))
     return 2.5 * np.log10(1 + max(fc, 0) / target_counts)
+```
+
+**Simulated trail loss and SMTN-003 comparison (§6 cross-check):** no data needed. Rates in ″/min (1°/day = 2.5″/min).
+
+```python
+import numpy as np
+
+def trail_image(fwhm, trail, kind='moffat', beta=2.5, half=8.0, step=0.02):
+    """Unit-flux image (arcsec grid) of a PSF smeared along x by <trail> arcsec."""
+    g = np.arange(-half, half + step / 2, step)
+    X, Y = np.meshgrid(g, g)
+
+    def psf(x0):
+        r2 = (X - x0)**2 + Y**2
+        if kind == 'moffat':
+            alpha = fwhm / (2 * np.sqrt(2**(1 / beta) - 1))
+            return (1 + r2 / alpha**2)**(-beta)
+        s = fwhm / 2.3548                       # SMTN-003 double Gaussian
+        return np.exp(-r2 / (2 * s * s)) / s**2 + 0.1 * np.exp(-r2 / (8 * s * s)) / (4 * s**2)
+
+    centres = np.linspace(-trail / 2, trail / 2, max(2, int(40 * trail / fwhm) + 1))
+    img = sum(psf(x0) for x0 in centres)
+    return X, Y, img / img.sum()
+
+def aperture_trail_loss(fwhm, rate_arcsec_min, texp, radius, **kw):
+    """Extra loss (mag) of a trailed target relative to a star in a circular aperture of <radius> arcsec."""
+    trail = rate_arcsec_min * texp / 60.0
+    frac = []
+    for t in (1e-6, trail):
+        X, Y, img = trail_image(fwhm, t, **kw)
+        frac.append(img[X**2 + Y**2 <= radius**2].sum())
+    return 2.5 * np.log10(frac[0] / frac[1])
+
+def snr_trail_loss(fwhm, rate_arcsec_min, texp, **kw):
+    """Sky-limited S/N loss (mag) for optimal extraction: 1.25 log10(neff_trail / neff_star)."""
+    trail = rate_arcsec_min * texp / 60.0
+    half = 6 * fwhm + trail
+    neff = [1 / np.sum(trail_image(fwhm, t, half=half, **kw)[2]**2) for t in (1e-6, trail)]
+    return 1.25 * np.log10(neff[1] / neff[0])
+
+# Didymos 2026-07-12: 0.505"/min (0.202 deg/day), 210 s; 5/8/12 px at 0.266"/px
+for fw in (1.0, 1.44, 1.7):
+    print(fw, [round(aperture_trail_loss(fw, 0.505, 210, r), 3) for r in (1.33, 2.13, 3.19)])
+print(snr_trail_loss(1.44, 0.505, 210, kind='dgauss'), snr_trail_loss(1.44, 0.505, 210))  # 0.149, 0.118
+
+def smtn003(rate_arcsec_min, fwhm, texp):
+    """SMTN-003 S/N (trail) and detection losses, with the rate in "/min instead of deg/day."""
+    x = rate_arcsec_min * texp / fwhm / 60.0
+    return (1.25 * np.log10(1 + 0.761 * x**2 / (1 + 1.162 * x)),
+            1.25 * np.log10(1 + 0.420 * x**2 / (1 + 0.003 * x)))
 ```
