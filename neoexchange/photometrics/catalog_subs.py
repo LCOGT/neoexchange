@@ -1874,7 +1874,7 @@ def extract_catalog(catfile, catalog_type=None, flag_filter=0, new=True, remove=
         if header.get('fwhm', -99) == -99 and header.get('pixel_scale', None) is not None:
             new_fwhm = determine_fwhm(header, table)
             if new_fwhm is not None:
-                logger.info("Updating FWHM to {new_fwhm:.4f} from table")
+                logger.info(f"Updating FWHM to {new_fwhm:.4f} from table")
                 header['fwhm'] = new_fwhm
     return header, table
 
@@ -2502,9 +2502,15 @@ def funpack_fits_file(fpack_file, all_hdus=False):
     new_hdulist = fits.HDUList([hdu,])
 
     if all_hdus:
+        # Raw multi-extension frames have all their extensions named SCI; keep them all
+        hdu_names = list(set([hdu.name for hdu in hdulist[1:]]))
+        raw_mef = False
+        if len(hdu_names) == 1 and hdu_names[0].upper() == 'SCI':
+            raw_mef = True
+
         for index, hdu in enumerate(hdulist[1:]):
 #            print(index, hdu.name+'X', hdu._summary())
-            if hdu.name != 'SCI':
+            if hdu.name != 'SCI' or raw_mef is True:
                 if hasattr(hdu, 'compressed_data'):
                     new_hdu = fits.ImageHDU(data=hdu.data, header=hdu.header, name=hdu.name)
                 else:
@@ -2700,6 +2706,10 @@ def sort_rocks(fits_files):
                     os.symlink(fits_filepath, dest_filepath)
             # if the file is an e11 and an e91 doesn't exit in the working directory, create link to the e11
             elif 'e11' in fits_filepath and not os.path.exists(dest_filepath.replace('e11.fits', 'e91.fits')):
+                if not os.path.exists(dest_filepath):
+                    os.symlink(fits_filepath, dest_filepath)
+            # if the file is an e00 and an e91 doesn't exist in the working directory, create link to the e00
+            elif 'e00' in fits_filepath and not os.path.exists(dest_filepath.replace('e00.fits', 'e91.fits')):
                 if not os.path.exists(dest_filepath):
                     os.symlink(fits_filepath, dest_filepath)
     return objects

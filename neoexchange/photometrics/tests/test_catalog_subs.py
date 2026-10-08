@@ -5138,3 +5138,62 @@ class TestReadReferenceFrameHeader(SimpleTestCase):
         params = read_reference_frame_header(self.test_reffilename)
 
         self.assertEqual(expected_params, params)
+
+
+class TestFunpackRawMEF(SimpleTestCase):
+    """Raw multi-extension frames (e.g. multi-amp e00s) have every extension named SCI."""
+
+    def setUp(self):
+        self.test_dir = tempfile.mkdtemp(prefix='tmp_neox_')
+        self.addCleanup(shutil.rmtree, self.test_dir)
+        self.amps = [array(range(16), dtype='int16').reshape(4, 4) + 100 * i for i in range(2)]
+        hdus = [fits.PrimaryHDU()] + [fits.CompImageHDU(data=amp, name='SCI') for amp in self.amps]
+        self.test_fz_file = os.path.join(self.test_dir, 'test-e00.fits.fz')
+        fits.HDUList(hdus).writeto(self.test_fz_file)
+        self.unpacked_file = self.test_fz_file.replace('.fz', '')
+
+    def test_raw_mef_keeps_all_sci_extensions(self):
+        status = funpack_fits_file(self.test_fz_file, all_hdus=True)
+
+        self.assertEqual(0, status)
+        with fits.open(self.unpacked_file) as hdulist:
+            self.assertEqual(3, len(hdulist))
+            self.assertEqual(['SCI', 'SCI'], [hdu.name for hdu in hdulist[1:]])
+            for hdu, amp in zip(hdulist[1:], self.amps):
+                assert_allclose(amp, hdu.data)
+
+    def test_raw_mef_sci_only(self):
+        status = funpack_fits_file(self.test_fz_file)
+
+        self.assertEqual(0, status)
+        with fits.open(self.unpacked_file) as hdulist:
+            self.assertEqual(1, len(hdulist))
+            assert_allclose(self.amps[0], hdulist[0].data)
+
+
+class TestSortRocks(SimpleTestCase):
+    # Only the symlinking is tested: the returned names are currently '' (make_object_directory
+    # returns a path with a trailing separator, so os.path.basename() of it is empty).
+
+    def setUp(self):
+        self.test_dir = tempfile.mkdtemp(prefix='tmp_neox_')
+        self.addCleanup(shutil.rmtree, self.test_dir)
+        src = os.path.join('photometrics', 'tests', 'banzai_test_frame.fits')  # OBJECT=XL8B85F, BLKUID=84183606
+        self.files = {}
+        for red_level in ('e00', 'e91'):
+            self.files[red_level] = os.path.join(self.test_dir, f'cpt1m013-kb76-20160606-0396-{red_level}.fits')
+            shutil.copyfile(src, self.files[red_level])
+        self.object_dir = os.path.join(self.test_dir, 'XL8B85F_84183606')
+
+    def test_links_e00_without_e91(self):
+        sort_rocks([self.files['e00']])
+
+        link = os.path.join(self.object_dir, os.path.basename(self.files['e00']))
+        self.assertTrue(os.path.islink(link))
+        self.assertEqual(self.files['e00'], os.readlink(link))
+
+    def test_skips_e00_when_e91_linked(self):
+        sort_rocks([self.files['e91'], self.files['e00']])
+
+        self.assertTrue(os.path.islink(os.path.join(self.object_dir, os.path.basename(self.files['e91']))))
+        self.assertFalse(os.path.lexists(os.path.join(self.object_dir, os.path.basename(self.files['e00']))))
