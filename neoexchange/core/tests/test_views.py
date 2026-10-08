@@ -48,7 +48,8 @@ from photometrics.tests.test_external_codes import ExternalCodeUnitTest
 from astrometrics.ephem_subs import compute_ephem, determine_darkness_times
 from astrometrics.sources_subs import parse_mpcorbit, parse_mpcobs, \
     fetch_flux_standards, read_solar_standards
-from photometrics.catalog_subs import open_fits_catalog, get_catalog_header, get_header
+from photometrics.catalog_subs import open_fits_catalog, get_catalog_header, get_header, \
+    determine_original_name
 from photometrics.gf_movie import make_gif
 from core.frames import block_status, create_frame
 from core.models import Body, Proposal, Block, SourceMeasurement, Frame, Candidate,\
@@ -5940,6 +5941,54 @@ class TestCheckCatalogAndRefitNew(TestCase):
         block = find_block_for_frame(self.test_fits_e10)
 
         self.assertEqual(expected_block, block)
+
+    def test_find_block_for_frame_fallback_to_original_name(self):
+        frame_params = {    'sitecode': 'K92',
+                            'instrument': 'kb76',
+                            'filter': 'w',
+                            'filename': 'example-sbig-e00.fits',
+                            'exptime': 225.0,
+                            'midpoint': datetime(2016, 8, 2, 2, 17, 19),
+                            'block': self.test_block,
+                            'frametype': 0,
+                        }
+        Frame.objects.create(**frame_params)
+
+        block = find_block_for_frame(self.test_fits_e10)
+
+        self.assertEqual(self.test_block, block)
+
+    def test_find_block_for_frame_swope_nonunique_names(self):
+        # Swope filenames repeat between nights, so the Block is picked by the REQNUM in the header
+        swope_fits = os.path.join(self.temp_dir, 'rccd1100.fits')
+        shutil.copyfile(os.path.abspath(os.path.join('photometrics', 'tests', 'swope_test_frame.fits')), swope_fits)
+        blocks = {}
+        for request_number in ('23092022', '24092022'):
+            block = Block.objects.create(telclass='1m0', site='lco', body=self.test_body, superblock=self.test_sblock,
+                                         block_start=datetime(2022, 9, 24, 23), block_end=datetime(2022, 9, 25, 10),
+                                         request_number=request_number, num_exposures=1, exp_length=60.0)
+            Frame.objects.create(sitecode='304', filter='r', filename='rccd1100.fits', block=block,
+                                 midpoint=datetime(2022, 9, 25, 3), frametype=Frame.SWOPE_RED_FRAMETYPE)
+            blocks[request_number] = block
+
+        block = find_block_for_frame(swope_fits)
+
+        self.assertEqual(blocks['24092022'], block)
+
+    def test_determine_original_name(self):
+        cases = [('lsc1m005-fl15-20170307-0121-e90.fits', 'lsc1m005-fl15-20170307-0121-e00.fits'),
+                 ('lsc1m005-fl15-20170307-0121-e10.fits', 'lsc1m005-fl15-20170307-0121-e00.fits'),
+                 ('lsc1m005-fl15-20170307-0121-e91.fits', 'lsc1m005-fl15-20170307-0121-e00.fits'),
+                 ('lsc1m005-fl15-20170307-0121-e92.fits', 'lsc1m005-fl15-20170307-0121-e00.fits'),
+                 ('lsc1m005-fl15-20170307-0121-e11.fits', 'lsc1m005-fl15-20170307-0121-e00.fits'),
+                 ('/data/dir/lsc1m005-fl15-20170307-0121-e91.fits', 'lsc1m005-fl15-20170307-0121-e00.fits'),
+                 # Anything else (incl. e93, Swope) comes back unchanged, directory and all
+                 ('/data/dir/lsc1m005-fl15-20170307-0121-e93.fits', '/data/dir/lsc1m005-fl15-20170307-0121-e93.fits'),
+                 ('rccd1100.fits', 'rccd1100.fits'),
+                 ]
+        for fits_file, expected in cases:
+            with self.subTest(fits_file=fits_file):
+                self.assertEqual(expected, determine_original_name(fits_file))
 
     def test_find_block_for_frame_check_catalog_and_refit_new(self):
 

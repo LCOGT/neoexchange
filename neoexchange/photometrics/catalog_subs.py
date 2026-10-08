@@ -1925,6 +1925,56 @@ def update_zeropoint(header, table, avg_zeropoint, std_zeropoint, include_zperr=
     return header, table
 
 
+def determine_original_name(fits_file):
+    """Determines the ORIGNAME for the FITS file <fits_file>.
+    This is pretty disgusting and a sign we are probably doing something wrong
+    and should store the true filename but at least it's contained to one place
+    now..."""
+    fits_file_orig = fits_file
+    if 'e90.fits' in os.path.basename(fits_file):
+        fits_file_orig = os.path.basename(fits_file.replace('e90.fits', 'e00.fits'))
+    elif 'e10.fits' in os.path.basename(fits_file):
+        fits_file_orig = os.path.basename(fits_file.replace('e10.fits', 'e00.fits'))
+    elif 'e91.fits' in os.path.basename(fits_file):
+        fits_file_orig = os.path.basename(fits_file.replace('e91.fits', 'e00.fits'))
+    elif 'e92.fits' in os.path.basename(fits_file):
+        fits_file_orig = os.path.basename(fits_file.replace('e92.fits', 'e00.fits'))
+    elif 'e11.fits' in os.path.basename(fits_file):
+        fits_file_orig = os.path.basename(fits_file.replace('e11.fits', 'e00.fits'))
+    return fits_file_orig
+
+
+def find_block_for_frame(catfile):
+    """Try and find a Block for the original passed <catfile> filename (new style with
+    filename directly stored in the DB. If that fails, try and determine the filename
+    that would have been stored with the ORIGNAME.
+    Returns the Block if found, None otherwise."""
+
+    # try and find Frame does for the fits catfile with a non-null block
+    try:
+        # Swope filenames are non-unique so need extra info from the header
+        if os.path.basename(catfile).startswith('rccd'):
+            header, cattype = get_header(catfile)
+            frame = Frame.objects.get(filename=os.path.basename(catfile), block__request_number=header['request_number'])
+        else:
+            frame = Frame.objects.get(filename=os.path.basename(catfile), block__isnull=False)
+    except Frame.MultipleObjectsReturned:
+        logger.error("Found multiple versions of fits frame %s pointing at multiple blocks" % os.path.basename(catfile))
+        return None
+    except Frame.DoesNotExist:
+        # Try and find the Frame under the original name (old-style)
+        fits_file_orig = determine_original_name(catfile)
+        try:
+            frame = Frame.objects.get(filename=fits_file_orig, block__isnull=False)
+        except Frame.MultipleObjectsReturned:
+            logger.error("Found multiple versions of fits frame %s pointing at multiple blocks" % fits_file_orig)
+            return None
+        except Frame.DoesNotExist:
+            logger.error("photometrics.catalog_subs: Frame entry for fits file %s does not exist" % fits_file_orig)
+            return None
+    return frame.block
+
+
 def update_frame_zeropoint(header, ast_cat_name, phot_cat_name, frame_filename, frame_type):
     """update the Frame zeropoint, astrometric fit, astrometric catalog
     and photometric catalog used"""
