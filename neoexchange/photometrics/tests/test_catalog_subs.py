@@ -3666,7 +3666,7 @@ class UpdateFrameZeropointTest(FITSUnitTest):
         phot_cat_name = "UCAC4"
         fits_file = 'lsc1m005-fl15-20170307-0121-e91.fits'
 
-        frame = update_frame_zeropoint(self.test_header, ast_cat_name, phot_cat_name, frame_filename=fits_file, frame_type=self.test_frame1.frametype)
+        frame = update_frame_zeropoint(self.test_header, ast_cat_name, phot_cat_name, frame_filepath=fits_file, frame_type=self.test_frame1.frametype)
 
         self.assertEqual(frame.zeropoint, 29.6113857745)
         self.assertEqual(frame.zeropoint_err, 0.0414642608048)
@@ -3674,6 +3674,7 @@ class UpdateFrameZeropointTest(FITSUnitTest):
         self.assertEqual(frame.nstars_in_fit, -4)
         self.assertEqual(frame.astrometric_catalog, '2MASS')
         self.assertEqual(frame.photometric_catalog, 'UCAC4')
+        self.assertEqual(frame.fwhm, self.test_header['fwhm'])
 
     def test_update_BANZAI_LDAC_frame_zeropoint(self):
 
@@ -3681,7 +3682,7 @@ class UpdateFrameZeropointTest(FITSUnitTest):
         phot_cat_name = "UCAC4"
         fits_file = 'lsc1m005-fl15-20170307-0121-e91_ldac.fits'
 
-        frame = update_frame_zeropoint(self.test_header, ast_cat_name, phot_cat_name, frame_filename=fits_file, frame_type=self.test_frame2.frametype)
+        frame = update_frame_zeropoint(self.test_header, ast_cat_name, phot_cat_name, frame_filepath=fits_file, frame_type=self.test_frame2.frametype)
 
         self.assertEqual(frame.zeropoint, 29.6113857745)
         self.assertEqual(frame.zeropoint_err, 0.0414642608048)
@@ -3689,6 +3690,65 @@ class UpdateFrameZeropointTest(FITSUnitTest):
         self.assertEqual(frame.nstars_in_fit, -4)
         self.assertEqual(frame.astrometric_catalog, '2MASS')
         self.assertEqual(frame.photometric_catalog, 'UCAC4')
+        self.assertEqual(frame.fwhm, self.test_header['fwhm'])
+
+    def test_update_frame_zeropoint_full_path(self):
+        fits_filepath = os.path.join(os.sep, 'data', 'eng', 'rocks', 'lsc1m005-fl15-20170307-0121-e91.fits')
+
+        frame = update_frame_zeropoint(self.test_header, '2MASS', 'UCAC4', frame_filepath=fits_filepath, frame_type=self.test_frame1.frametype)
+
+        self.assertEqual(self.test_frame1.pk, frame.pk)
+        self.assertEqual(frame.zeropoint, 29.6113857745)
+
+    def _make_swope_frames(self):
+        """Two Blocks, each with a Swope frame called rccd1100.fits (Swope filenames
+        repeat between nights). swope_test_frame.fits has REQNUM 24092022."""
+        frames = {}
+        for request_number in ('23092022', '24092022'):
+            block = Block.objects.create(telclass='1m0', site='lco', body=self.body_with_provname,
+                                         superblock=self.test_sblock, block_start=parse('2022-09-24 23:00'),
+                                         block_end=parse('2022-09-25 10:00'), request_number=request_number,
+                                         num_exposures=1, exp_length=60.0)
+            frames[request_number] = Frame.objects.create(sitecode='304', filter='r', filename='rccd1100.fits',
+                                                          block=block, midpoint=datetime(2022, 9, 25, 3),
+                                                          frametype=Frame.SWOPE_RED_FRAMETYPE, zeropoint=-99)
+        return frames
+
+    def test_update_frame_zeropoint_swope_picks_block_from_header(self):
+        frames = self._make_swope_frames()
+        temp_dir = tempfile.mkdtemp(prefix='tmp_neox_')
+        self.addCleanup(shutil.rmtree, temp_dir)
+        swope_filepath = os.path.join(temp_dir, 'rccd1100.fits')
+        shutil.copyfile(os.path.join('photometrics', 'tests', 'swope_test_frame.fits'), swope_filepath)
+
+        frame = update_frame_zeropoint(self.test_header, '2MASS', 'UCAC4', frame_filepath=swope_filepath, frame_type=Frame.SWOPE_RED_FRAMETYPE)
+
+        self.assertEqual(frames['24092022'].pk, frame.pk)
+        self.assertEqual(frame.zeropoint, 29.6113857745)
+        frames['23092022'].refresh_from_db()
+        self.assertEqual(frames['23092022'].zeropoint, -99)
+
+    def test_update_frame_zeropoint_swope_bare_filename(self):
+        # No file to read the header from, so the Frame is matched on filename alone
+        frames = self._make_swope_frames()
+        frames['23092022'].delete()
+
+        frame = update_frame_zeropoint(self.test_header, '2MASS', 'UCAC4', frame_filepath='rccd1100.fits', frame_type=Frame.SWOPE_RED_FRAMETYPE)
+
+        self.assertEqual(frames['24092022'].pk, frame.pk)
+        self.assertEqual(frame.zeropoint, 29.6113857745)
+
+    def test_update_frame_zeropoint_creates_NEOX_RED_frame(self):
+        header = dict(self.test_header, wcs=None)
+        fits_filepath = os.path.join(os.sep, 'data', 'eng', 'rocks', 'lsc1m005-fl15-20170307-0121-e92.fits')
+
+        frame = update_frame_zeropoint(header, '2MASS', 'UCAC4', frame_filepath=fits_filepath, frame_type=Frame.NEOX_RED_FRAMETYPE)
+
+        self.assertEqual(frame.filename, 'lsc1m005-fl15-20170307-0121-e92.fits')
+        self.assertEqual(frame.frametype, Frame.NEOX_RED_FRAMETYPE)
+        self.assertEqual(frame.block, self.test_block)
+        self.assertEqual(frame.zeropoint, 29.6113857745)
+        self.assertEqual(Frame.objects.filter(filename='lsc1m005-fl15-20170307-0121-e92.fits').count(), 1)
 
 
 class MakeSEXTFileTest(FITSUnitTest):

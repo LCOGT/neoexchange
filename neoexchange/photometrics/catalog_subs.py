@@ -1975,17 +1975,29 @@ def find_block_for_frame(catfile):
     return frame.block
 
 
-def update_frame_zeropoint(header, ast_cat_name, phot_cat_name, frame_filename, frame_type):
+def update_frame_zeropoint(header, ast_cat_name, phot_cat_name, frame_filepath, frame_type):
     """update the Frame zeropoint, astrometric fit, astrometric catalog
-    and photometric catalog used"""
+    and photometric catalog used.
+    <frame_filepath> can be a full path or a bare filename. The Block is found
+    via find_block_for_frame(), which needs to read the header of Swope (rccd*)
+    frames since their filenames repeat between nights; if no Block is found,
+    the Frame is matched on filename alone."""
 
+    frame_filename = os.path.basename(frame_filepath)
     frame = None
     block = None
+    if os.path.exists(frame_filepath) or not frame_filename.startswith('rccd'):
+        block = find_block_for_frame(frame_filepath)
+    frame_query = {'filename': frame_filename, 'block__isnull': False}
+    if block is not None:
+        frame_query['block'] = block
     # if a Frame exists for the file, update the zeropoint,
     # astrometric catalog, rms_of_fit, nstars_in_fit, and
     # photometric catalog in the Frame
     try:
-        frame = Frame.objects.get(filename=frame_filename, block__isnull=False)
+        frame = Frame.objects.get(**frame_query)
+        logger.info(f"update_frame_zeropoint: Updating existing Frame {frame_filename}")
+        frame.fwhm = header.get('fwhm', frame.fwhm)
         frame.zeropoint = header['zeropoint']
         frame.zeropoint_err = header['zeropoint_err']
         frame.zeropoint_src = header['zeropoint_src']
@@ -2125,10 +2137,10 @@ def store_catalog_sources(catfile, catalog_type='LCOGT', std_zeropoint_tolerance
                     fits_file = os.path.basename(catfile)
 
                 # update the zeropoint computed above in the FITS file Frame
-                frame = update_frame_zeropoint(header, ast_cat_name, phot_cat_name, frame_filename=fits_file, frame_type=Frame.SINGLE_FRAMETYPE)
+                frame = update_frame_zeropoint(header, ast_cat_name, phot_cat_name, frame_filepath=fits_file, frame_type=Frame.SINGLE_FRAMETYPE)
 
                 # update the zeropoint computed above in the CATALOG file Frame
-                frame_cat = update_frame_zeropoint(header, ast_cat_name, phot_cat_name, frame_filename=os.path.basename(catfile), frame_type=Frame.BANZAI_LDAC_CATALOG)
+                frame_cat = update_frame_zeropoint(header, ast_cat_name, phot_cat_name, frame_filepath=os.path.basename(catfile), frame_type=Frame.BANZAI_LDAC_CATALOG)
 
                 # store the CatalogSources
                 num_sources_created, num_in_table = get_or_create_CatalogSources(table, frame)
