@@ -38,7 +38,7 @@ from numpy import where, array
 from numpy.testing import assert_allclose
 from dateutil.parser import parse
 
-from core.models import Body, Proposal, Block, Frame, SuperBlock
+from core.models import Body, Proposal, Block, Frame, SuperBlock, CatalogSources
 from neox.tests.mocks import mock_get_vizier_catalog_table
 
 # Import module to test
@@ -5197,3 +5197,49 @@ class TestSortRocks(SimpleTestCase):
 
         self.assertTrue(os.path.islink(os.path.join(self.object_dir, os.path.basename(self.files['e91']))))
         self.assertFalse(os.path.lexists(os.path.join(self.object_dir, os.path.basename(self.files['e00']))))
+
+
+class TestGetOrCreateCatalogSources(TestCase):
+
+    def setUp(self):
+        self.frame = Frame.objects.create(sitecode='K91', filter='rp', filename='cpt1m010-fa14-20260731-0099-e92_ldac.fits',
+                                          midpoint=datetime(2026, 7, 31, 18, 0), frametype=Frame.BANZAI_LDAC_CATALOG)
+
+    def make_table(self, obs_mag, obs_mag_err):
+        n = len(obs_mag)
+        cols = {'ccd_x': [10.0] * n, 'ccd_y': [20.0] * n, 'obs_ra': [240.4] * n, 'obs_dec': [22.1] * n,
+                'obs_ra_err': [1e-5] * n, 'obs_dec_err': [1e-5] * n, 'obs_sky_bkgd': [100.0] * n,
+                'major_axis': [2.0] * n, 'minor_axis': [1.5] * n, 'ccd_pa': [30.0] * n, 'flags': [0] * n,
+                'flux_max': [1000.0] * n, 'threshold': [20.0] * n,
+                'obs_mag': obs_mag, 'obs_mag_err': obs_mag_err}
+        return Table(cols)
+
+    def test_multi_aperture_uses_fifth_aperture(self):
+        mags = [[15.0 + 0.1 * i for i in range(8)]]
+        errs = [[0.01 * (i + 1) for i in range(8)]]
+        table = self.make_table(mags, errs)
+
+        num_created, num_in_table = get_or_create_CatalogSources(table, self.frame, {'aperture_radius_arcsec': 1.0})
+
+        self.assertEqual((1, 1), (num_created, num_in_table))
+        src = CatalogSources.objects.get(frame=self.frame)
+        self.assertAlmostEqual(15.4, src.obs_mag, places=5)
+        self.assertAlmostEqual(0.05, src.err_obs_mag, places=5)
+        self.assertAlmostEqual(5.0, src.aperture_size, places=5)
+
+    def test_single_aperture_header_radius(self):
+        table = self.make_table([15.5], [0.02])
+
+        get_or_create_CatalogSources(table, self.frame, {'aperture_radius_arcsec': 1.6})
+
+        src = CatalogSources.objects.get(frame=self.frame)
+        self.assertAlmostEqual(15.5, src.obs_mag, places=5)
+        self.assertAlmostEqual(1.6, src.aperture_size, places=5)
+
+    def test_single_aperture_default_radius(self):
+        table = self.make_table([15.5], [0.02])
+
+        get_or_create_CatalogSources(table, self.frame)
+
+        src = CatalogSources.objects.get(frame=self.frame)
+        self.assertAlmostEqual(1.0, src.aperture_size, places=5)
