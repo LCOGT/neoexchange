@@ -38,7 +38,7 @@ from numpy import where, array
 from numpy.testing import assert_allclose
 from dateutil.parser import parse
 
-from core.models import Body, Proposal, Block, Frame, SuperBlock
+from core.models import Body, Proposal, Block, Frame, SuperBlock, CatalogSources
 from neox.tests.mocks import mock_get_vizier_catalog_table
 
 # Import module to test
@@ -3666,7 +3666,7 @@ class UpdateFrameZeropointTest(FITSUnitTest):
         phot_cat_name = "UCAC4"
         fits_file = 'lsc1m005-fl15-20170307-0121-e91.fits'
 
-        frame = update_frame_zeropoint(self.test_header, ast_cat_name, phot_cat_name, frame_filename=fits_file, frame_type=self.test_frame1.frametype)
+        frame = update_frame_zeropoint(self.test_header, ast_cat_name, phot_cat_name, frame_filepath=fits_file, frame_type=self.test_frame1.frametype)
 
         self.assertEqual(frame.zeropoint, 29.6113857745)
         self.assertEqual(frame.zeropoint_err, 0.0414642608048)
@@ -3674,6 +3674,7 @@ class UpdateFrameZeropointTest(FITSUnitTest):
         self.assertEqual(frame.nstars_in_fit, -4)
         self.assertEqual(frame.astrometric_catalog, '2MASS')
         self.assertEqual(frame.photometric_catalog, 'UCAC4')
+        self.assertEqual(frame.fwhm, self.test_header['fwhm'])
 
     def test_update_BANZAI_LDAC_frame_zeropoint(self):
 
@@ -3681,7 +3682,7 @@ class UpdateFrameZeropointTest(FITSUnitTest):
         phot_cat_name = "UCAC4"
         fits_file = 'lsc1m005-fl15-20170307-0121-e91_ldac.fits'
 
-        frame = update_frame_zeropoint(self.test_header, ast_cat_name, phot_cat_name, frame_filename=fits_file, frame_type=self.test_frame2.frametype)
+        frame = update_frame_zeropoint(self.test_header, ast_cat_name, phot_cat_name, frame_filepath=fits_file, frame_type=self.test_frame2.frametype)
 
         self.assertEqual(frame.zeropoint, 29.6113857745)
         self.assertEqual(frame.zeropoint_err, 0.0414642608048)
@@ -3689,6 +3690,65 @@ class UpdateFrameZeropointTest(FITSUnitTest):
         self.assertEqual(frame.nstars_in_fit, -4)
         self.assertEqual(frame.astrometric_catalog, '2MASS')
         self.assertEqual(frame.photometric_catalog, 'UCAC4')
+        self.assertEqual(frame.fwhm, self.test_header['fwhm'])
+
+    def test_update_frame_zeropoint_full_path(self):
+        fits_filepath = os.path.join(os.sep, 'data', 'eng', 'rocks', 'lsc1m005-fl15-20170307-0121-e91.fits')
+
+        frame = update_frame_zeropoint(self.test_header, '2MASS', 'UCAC4', frame_filepath=fits_filepath, frame_type=self.test_frame1.frametype)
+
+        self.assertEqual(self.test_frame1.pk, frame.pk)
+        self.assertEqual(frame.zeropoint, 29.6113857745)
+
+    def _make_swope_frames(self):
+        """Two Blocks, each with a Swope frame called rccd1100.fits (Swope filenames
+        repeat between nights). swope_test_frame.fits has REQNUM 24092022."""
+        frames = {}
+        for request_number in ('23092022', '24092022'):
+            block = Block.objects.create(telclass='1m0', site='lco', body=self.body_with_provname,
+                                         superblock=self.test_sblock, block_start=parse('2022-09-24 23:00'),
+                                         block_end=parse('2022-09-25 10:00'), request_number=request_number,
+                                         num_exposures=1, exp_length=60.0)
+            frames[request_number] = Frame.objects.create(sitecode='304', filter='r', filename='rccd1100.fits',
+                                                          block=block, midpoint=datetime(2022, 9, 25, 3),
+                                                          frametype=Frame.SWOPE_RED_FRAMETYPE, zeropoint=-99)
+        return frames
+
+    def test_update_frame_zeropoint_swope_picks_block_from_header(self):
+        frames = self._make_swope_frames()
+        temp_dir = tempfile.mkdtemp(prefix='tmp_neox_')
+        self.addCleanup(shutil.rmtree, temp_dir)
+        swope_filepath = os.path.join(temp_dir, 'rccd1100.fits')
+        shutil.copyfile(os.path.join('photometrics', 'tests', 'swope_test_frame.fits'), swope_filepath)
+
+        frame = update_frame_zeropoint(self.test_header, '2MASS', 'UCAC4', frame_filepath=swope_filepath, frame_type=Frame.SWOPE_RED_FRAMETYPE)
+
+        self.assertEqual(frames['24092022'].pk, frame.pk)
+        self.assertEqual(frame.zeropoint, 29.6113857745)
+        frames['23092022'].refresh_from_db()
+        self.assertEqual(frames['23092022'].zeropoint, -99)
+
+    def test_update_frame_zeropoint_swope_bare_filename(self):
+        # No file to read the header from, so the Frame is matched on filename alone
+        frames = self._make_swope_frames()
+        frames['23092022'].delete()
+
+        frame = update_frame_zeropoint(self.test_header, '2MASS', 'UCAC4', frame_filepath='rccd1100.fits', frame_type=Frame.SWOPE_RED_FRAMETYPE)
+
+        self.assertEqual(frames['24092022'].pk, frame.pk)
+        self.assertEqual(frame.zeropoint, 29.6113857745)
+
+    def test_update_frame_zeropoint_creates_NEOX_RED_frame(self):
+        header = dict(self.test_header, wcs=None)
+        fits_filepath = os.path.join(os.sep, 'data', 'eng', 'rocks', 'lsc1m005-fl15-20170307-0121-e92.fits')
+
+        frame = update_frame_zeropoint(header, '2MASS', 'UCAC4', frame_filepath=fits_filepath, frame_type=Frame.NEOX_RED_FRAMETYPE)
+
+        self.assertEqual(frame.filename, 'lsc1m005-fl15-20170307-0121-e92.fits')
+        self.assertEqual(frame.frametype, Frame.NEOX_RED_FRAMETYPE)
+        self.assertEqual(frame.block, self.test_block)
+        self.assertEqual(frame.zeropoint, 29.6113857745)
+        self.assertEqual(Frame.objects.filter(filename='lsc1m005-fl15-20170307-0121-e92.fits').count(), 1)
 
 
 class MakeSEXTFileTest(FITSUnitTest):
@@ -5078,3 +5138,108 @@ class TestReadReferenceFrameHeader(SimpleTestCase):
         params = read_reference_frame_header(self.test_reffilename)
 
         self.assertEqual(expected_params, params)
+
+
+class TestFunpackRawMEF(SimpleTestCase):
+    """Raw multi-extension frames (e.g. multi-amp e00s) have every extension named SCI."""
+
+    def setUp(self):
+        self.test_dir = tempfile.mkdtemp(prefix='tmp_neox_')
+        self.addCleanup(shutil.rmtree, self.test_dir)
+        self.amps = [array(range(16), dtype='int16').reshape(4, 4) + 100 * i for i in range(2)]
+        hdus = [fits.PrimaryHDU()] + [fits.CompImageHDU(data=amp, name='SCI') for amp in self.amps]
+        self.test_fz_file = os.path.join(self.test_dir, 'test-e00.fits.fz')
+        fits.HDUList(hdus).writeto(self.test_fz_file)
+        self.unpacked_file = self.test_fz_file.replace('.fz', '')
+
+    def test_raw_mef_keeps_all_sci_extensions(self):
+        status = funpack_fits_file(self.test_fz_file, all_hdus=True)
+
+        self.assertEqual(0, status)
+        with fits.open(self.unpacked_file) as hdulist:
+            self.assertEqual(3, len(hdulist))
+            self.assertEqual(['SCI', 'SCI'], [hdu.name for hdu in hdulist[1:]])
+            for hdu, amp in zip(hdulist[1:], self.amps):
+                assert_allclose(amp, hdu.data)
+
+    def test_raw_mef_sci_only(self):
+        status = funpack_fits_file(self.test_fz_file)
+
+        self.assertEqual(0, status)
+        with fits.open(self.unpacked_file) as hdulist:
+            self.assertEqual(1, len(hdulist))
+            assert_allclose(self.amps[0], hdulist[0].data)
+
+
+class TestSortRocks(SimpleTestCase):
+    # Only the symlinking is tested: the returned names are currently '' (make_object_directory
+    # returns a path with a trailing separator, so os.path.basename() of it is empty).
+
+    def setUp(self):
+        self.test_dir = tempfile.mkdtemp(prefix='tmp_neox_')
+        self.addCleanup(shutil.rmtree, self.test_dir)
+        src = os.path.join('photometrics', 'tests', 'banzai_test_frame.fits')  # OBJECT=XL8B85F, BLKUID=84183606
+        self.files = {}
+        for red_level in ('e00', 'e91'):
+            self.files[red_level] = os.path.join(self.test_dir, f'cpt1m013-kb76-20160606-0396-{red_level}.fits')
+            shutil.copyfile(src, self.files[red_level])
+        self.object_dir = os.path.join(self.test_dir, 'XL8B85F_84183606')
+
+    def test_links_e00_without_e91(self):
+        sort_rocks([self.files['e00']])
+
+        link = os.path.join(self.object_dir, os.path.basename(self.files['e00']))
+        self.assertTrue(os.path.islink(link))
+        self.assertEqual(self.files['e00'], os.readlink(link))
+
+    def test_skips_e00_when_e91_linked(self):
+        sort_rocks([self.files['e91'], self.files['e00']])
+
+        self.assertTrue(os.path.islink(os.path.join(self.object_dir, os.path.basename(self.files['e91']))))
+        self.assertFalse(os.path.lexists(os.path.join(self.object_dir, os.path.basename(self.files['e00']))))
+
+
+class TestGetOrCreateCatalogSources(TestCase):
+
+    def setUp(self):
+        self.frame = Frame.objects.create(sitecode='K91', filter='rp', filename='cpt1m010-fa14-20260731-0099-e92_ldac.fits',
+                                          midpoint=datetime(2026, 7, 31, 18, 0), frametype=Frame.BANZAI_LDAC_CATALOG)
+
+    def make_table(self, obs_mag, obs_mag_err):
+        n = len(obs_mag)
+        cols = {'ccd_x': [10.0] * n, 'ccd_y': [20.0] * n, 'obs_ra': [240.4] * n, 'obs_dec': [22.1] * n,
+                'obs_ra_err': [1e-5] * n, 'obs_dec_err': [1e-5] * n, 'obs_sky_bkgd': [100.0] * n,
+                'major_axis': [2.0] * n, 'minor_axis': [1.5] * n, 'ccd_pa': [30.0] * n, 'flags': [0] * n,
+                'flux_max': [1000.0] * n, 'threshold': [20.0] * n,
+                'obs_mag': obs_mag, 'obs_mag_err': obs_mag_err}
+        return Table(cols)
+
+    def test_multi_aperture_uses_fifth_aperture(self):
+        mags = [[15.0 + 0.1 * i for i in range(8)]]
+        errs = [[0.01 * (i + 1) for i in range(8)]]
+        table = self.make_table(mags, errs)
+
+        num_created, num_in_table = get_or_create_CatalogSources(table, self.frame, {'aperture_radius_arcsec': 1.0})
+
+        self.assertEqual((1, 1), (num_created, num_in_table))
+        src = CatalogSources.objects.get(frame=self.frame)
+        self.assertAlmostEqual(15.4, src.obs_mag, places=5)
+        self.assertAlmostEqual(0.05, src.err_obs_mag, places=5)
+        self.assertAlmostEqual(5.0, src.aperture_size, places=5)
+
+    def test_single_aperture_header_radius(self):
+        table = self.make_table([15.5], [0.02])
+
+        get_or_create_CatalogSources(table, self.frame, {'aperture_radius_arcsec': 1.6})
+
+        src = CatalogSources.objects.get(frame=self.frame)
+        self.assertAlmostEqual(15.5, src.obs_mag, places=5)
+        self.assertAlmostEqual(1.6, src.aperture_size, places=5)
+
+    def test_single_aperture_default_radius(self):
+        table = self.make_table([15.5], [0.02])
+
+        get_or_create_CatalogSources(table, self.frame)
+
+        src = CatalogSources.objects.get(frame=self.frame)
+        self.assertAlmostEqual(1.0, src.aperture_size, places=5)

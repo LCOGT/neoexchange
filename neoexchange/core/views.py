@@ -78,9 +78,10 @@ from astrometrics.time_subs import extract_mpc_epoch, parse_neocp_date, \
 from photometrics.external_codes import run_sextractor, run_swarp, run_hotpants, run_scamp, updateFITSWCS,\
     read_mtds_file, unpack_tarball, run_findorb, get_scamp_xml_info, single_frame_aperture_photometry,\
     updateFITSdia
-from photometrics.catalog_subs import open_fits_catalog, get_header, get_catalog_header, \
+from photometrics.catalog_subs import open_fits_catalog, get_catalog_header, \
     determine_filenames, increment_red_level, funpack_fits_file, update_ldac_catalog_wcs, FITSHdrException, \
-    get_reference_catalog, reset_database_connection, sanitize_object_name
+    get_reference_catalog, reset_database_connection, sanitize_object_name, \
+    find_block_for_frame
 from photometrics.external_codes import determine_stats_in_boxes, determine_bad_subtractions_in_box_stats, format_box_stats_for_pretty_print
 from photometrics.photometry_subs import calc_asteroid_snr, calc_sky_brightness
 from photometrics.spectraplot import pull_data_from_spectrum, pull_data_from_text, spectrum_plot
@@ -3452,25 +3453,6 @@ def create_source_measurement(obs_lines, block=None):
     return measures
 
 
-def determine_original_name(fits_file):
-    """Determines the ORIGNAME for the FITS file <fits_file>.
-    This is pretty disgusting and a sign we are probably doing something wrong
-    and should store the true filename but at least it's contained to one place
-    now..."""
-    fits_file_orig = fits_file
-    if 'e90.fits' in os.path.basename(fits_file):
-        fits_file_orig = os.path.basename(fits_file.replace('e90.fits', 'e00.fits'))
-    elif 'e10.fits' in os.path.basename(fits_file):
-        fits_file_orig = os.path.basename(fits_file.replace('e10.fits', 'e00.fits'))
-    elif 'e91.fits' in os.path.basename(fits_file):
-        fits_file_orig = os.path.basename(fits_file.replace('e91.fits', 'e00.fits'))
-    elif 'e92.fits' in os.path.basename(fits_file):
-        fits_file_orig = os.path.basename(fits_file.replace('e92.fits', 'e00.fits'))
-    elif 'e11.fits' in os.path.basename(fits_file):
-        fits_file_orig = os.path.basename(fits_file.replace('e11.fits', 'e00.fits'))
-    return fits_file_orig
-
-
 def find_matching_image_file(catfile):
     """Find the matching image file for the passed <catfile>. Returns None if it
     can't be found or opened"""
@@ -3623,37 +3605,6 @@ def run_hotpants_subtraction(ref, sci_dir, configs_dir, dest_dir, sci_files=None
                 logger.warning(f"No Block found for {sci}")
                 status = -3
     return status
-
-
-def find_block_for_frame(catfile):
-    """Try and find a Block for the original passed <catfile> filename (new style with
-    filename directly stored in the DB. If that fails, try and determine the filename
-    that would have been stored with the ORIGNAME.
-    Returns the Block if found, None otherwise."""
-
-    # try and find Frame does for the fits catfile with a non-null block
-    try:
-        # Swope filenames are non-unique so need extra info from the header
-        if os.path.basename(catfile).startswith('rccd'):
-            header, cattype = get_header(catfile)
-            frame = Frame.objects.get(filename=os.path.basename(catfile), block__request_number=header['request_number'])
-        else:
-            frame = Frame.objects.get(filename=os.path.basename(catfile), block__isnull=False)
-    except Frame.MultipleObjectsReturned:
-        logger.error("Found multiple versions of fits frame %s pointing at multiple blocks" % os.path.basename(catfile))
-        return None
-    except Frame.DoesNotExist:
-        # Try and find the Frame under the original name (old-style)
-        fits_file_orig = determine_original_name(catfile)
-        try:
-            frame = Frame.objects.get(filename=fits_file_orig, block__isnull=False)
-        except Frame.MultipleObjectsReturned:
-            logger.error("Found multiple versions of fits frame %s pointing at multiple blocks" % fits_file_orig)
-            return None
-        except Frame.DoesNotExist:
-            logger.error("core.views: Frame entry for fits file %s does not exist" % fits_file_orig)
-            return None
-    return frame.block
 
 
 def make_new_catalog_entry(new_ldac_catalog, header, block, frame_type=Frame.BANZAI_LDAC_CATALOG):

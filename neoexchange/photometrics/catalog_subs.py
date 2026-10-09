@@ -1874,7 +1874,7 @@ def extract_catalog(catfile, catalog_type=None, flag_filter=0, new=True, remove=
         if header.get('fwhm', -99) == -99 and header.get('pixel_scale', None) is not None:
             new_fwhm = determine_fwhm(header, table)
             if new_fwhm is not None:
-                logger.info("Updating FWHM to {new_fwhm:.4f} from table")
+                logger.info(f"Updating FWHM to {new_fwhm:.4f} from table")
                 header['fwhm'] = new_fwhm
     return header, table
 
@@ -1925,17 +1925,79 @@ def update_zeropoint(header, table, avg_zeropoint, std_zeropoint, include_zperr=
     return header, table
 
 
-def update_frame_zeropoint(header, ast_cat_name, phot_cat_name, frame_filename, frame_type):
-    """update the Frame zeropoint, astrometric fit, astrometric catalog
-    and photometric catalog used"""
+def determine_original_name(fits_file):
+    """Determines the ORIGNAME for the FITS file <fits_file>.
+    This is pretty disgusting and a sign we are probably doing something wrong
+    and should store the true filename but at least it's contained to one place
+    now..."""
+    fits_file_orig = fits_file
+    if 'e90.fits' in os.path.basename(fits_file):
+        fits_file_orig = os.path.basename(fits_file.replace('e90.fits', 'e00.fits'))
+    elif 'e10.fits' in os.path.basename(fits_file):
+        fits_file_orig = os.path.basename(fits_file.replace('e10.fits', 'e00.fits'))
+    elif 'e91.fits' in os.path.basename(fits_file):
+        fits_file_orig = os.path.basename(fits_file.replace('e91.fits', 'e00.fits'))
+    elif 'e92.fits' in os.path.basename(fits_file):
+        fits_file_orig = os.path.basename(fits_file.replace('e92.fits', 'e00.fits'))
+    elif 'e11.fits' in os.path.basename(fits_file):
+        fits_file_orig = os.path.basename(fits_file.replace('e11.fits', 'e00.fits'))
+    return fits_file_orig
 
+
+def find_block_for_frame(catfile):
+    """Try and find a Block for the original passed <catfile> filename (new style with
+    filename directly stored in the DB. If that fails, try and determine the filename
+    that would have been stored with the ORIGNAME.
+    Returns the Block if found, None otherwise."""
+
+    # try and find Frame does for the fits catfile with a non-null block
+    try:
+        # Swope filenames are non-unique so need extra info from the header
+        if os.path.basename(catfile).startswith('rccd'):
+            header, cattype = get_header(catfile)
+            frame = Frame.objects.get(filename=os.path.basename(catfile), block__request_number=header['request_number'])
+        else:
+            frame = Frame.objects.get(filename=os.path.basename(catfile), block__isnull=False)
+    except Frame.MultipleObjectsReturned:
+        logger.error("Found multiple versions of fits frame %s pointing at multiple blocks" % os.path.basename(catfile))
+        return None
+    except Frame.DoesNotExist:
+        # Try and find the Frame under the original name (old-style)
+        fits_file_orig = determine_original_name(catfile)
+        try:
+            frame = Frame.objects.get(filename=fits_file_orig, block__isnull=False)
+        except Frame.MultipleObjectsReturned:
+            logger.error("Found multiple versions of fits frame %s pointing at multiple blocks" % fits_file_orig)
+            return None
+        except Frame.DoesNotExist:
+            logger.error("photometrics.catalog_subs: Frame entry for fits file %s does not exist" % fits_file_orig)
+            return None
+    return frame.block
+
+
+def update_frame_zeropoint(header, ast_cat_name, phot_cat_name, frame_filepath, frame_type):
+    """update the Frame zeropoint, astrometric fit, astrometric catalog
+    and photometric catalog used.
+    <frame_filepath> can be a full path or a bare filename. The Block is found
+    via find_block_for_frame(), which needs to read the header of Swope (rccd*)
+    frames since their filenames repeat between nights; if no Block is found,
+    the Frame is matched on filename alone."""
+
+    frame_filename = os.path.basename(frame_filepath)
     frame = None
     block = None
+    if os.path.exists(frame_filepath) or not frame_filename.startswith('rccd'):
+        block = find_block_for_frame(frame_filepath)
+    frame_query = {'filename': frame_filename, 'block__isnull': False}
+    if block is not None:
+        frame_query['block'] = block
     # if a Frame exists for the file, update the zeropoint,
     # astrometric catalog, rms_of_fit, nstars_in_fit, and
     # photometric catalog in the Frame
     try:
-        frame = Frame.objects.get(filename=frame_filename, block__isnull=False)
+        frame = Frame.objects.get(**frame_query)
+        logger.info(f"update_frame_zeropoint: Updating existing Frame {frame_filename}")
+        frame.fwhm = header.get('fwhm', frame.fwhm)
         frame.zeropoint = header['zeropoint']
         frame.zeropoint_err = header['zeropoint_err']
         frame.zeropoint_src = header['zeropoint_src']
@@ -2075,10 +2137,10 @@ def store_catalog_sources(catfile, catalog_type='LCOGT', std_zeropoint_tolerance
                     fits_file = os.path.basename(catfile)
 
                 # update the zeropoint computed above in the FITS file Frame
-                frame = update_frame_zeropoint(header, ast_cat_name, phot_cat_name, frame_filename=fits_file, frame_type=Frame.SINGLE_FRAMETYPE)
+                frame = update_frame_zeropoint(header, ast_cat_name, phot_cat_name, frame_filepath=fits_file, frame_type=Frame.SINGLE_FRAMETYPE)
 
                 # update the zeropoint computed above in the CATALOG file Frame
-                frame_cat = update_frame_zeropoint(header, ast_cat_name, phot_cat_name, frame_filename=os.path.basename(catfile), frame_type=Frame.BANZAI_LDAC_CATALOG)
+                frame_cat = update_frame_zeropoint(header, ast_cat_name, phot_cat_name, frame_filepath=os.path.basename(catfile), frame_type=Frame.BANZAI_LDAC_CATALOG)
 
                 # store the CatalogSources
                 num_sources_created, num_in_table = get_or_create_CatalogSources(table, frame)
@@ -2096,22 +2158,23 @@ def get_or_create_CatalogSources(table, frame, header={}):
 
     num_in_table = len(table)
     num_cat_sources = CatalogSources.objects.filter(frame=frame).count()
-    # Index of flux array to ingest
-    flux_aper_index = 3
-    aper_scaling = 4
+    # Index of flux array to ingest (the 5th aperture), and its radius in units of
+    # header['aperture_radius_arcsec']
+    flux_aper_index = 4
+    aper_scaling = 5
     if num_cat_sources == 0:
         new_sources = []
         for source in table:
             if len(source['obs_mag'].shape) == 0:
                 obs_mag = source['obs_mag']
                 obs_mag_err = source['obs_mag_err']
-                aper_size = header.get('aperture_radius_arcsec', 3.0)
+                aper_size = header.get('aperture_radius_arcsec', 1.0)
             else:
                 # Array of fluxes/mags
                 obs_mag = source['obs_mag'][flux_aper_index]
                 obs_mag_err = source['obs_mag_err'][flux_aper_index]
                 aper_size = header.get('aperture_radius_arcsec', 1.0)
-                # Correct aperture radius to 4th aperture
+                # Correct aperture radius to the ingested aperture
                 aper_size =  aper_size * aper_scaling # header['pixel_scale'] * 11
             new_source = CatalogSources(frame=frame, obs_x=source['ccd_x'], obs_y=source['ccd_y'],
                                         obs_ra=source['obs_ra'], obs_dec=source['obs_dec'], obs_mag=obs_mag,
@@ -2138,7 +2201,7 @@ def get_or_create_CatalogSources(table, frame, header={}):
                 obs_mag = source['obs_mag'][flux_aper_index]
                 obs_mag_err = source['obs_mag_err'][flux_aper_index]
                 aper_size = header.get('aperture_radius_arcsec', 3.0)
-                # Correct aperture radius to 3rd aperture
+                # Correct aperture radius to the ingested aperture
                 aper_size = aper_size * aper_scaling
             source_params = {   'frame': frame,
                                 'obs_x': source['ccd_x'],
@@ -2440,9 +2503,15 @@ def funpack_fits_file(fpack_file, all_hdus=False):
     new_hdulist = fits.HDUList([hdu,])
 
     if all_hdus:
+        # Raw multi-extension frames have all their extensions named SCI; keep them all
+        hdu_names = list(set([hdu.name for hdu in hdulist[1:]]))
+        raw_mef = False
+        if len(hdu_names) == 1 and hdu_names[0].upper() == 'SCI':
+            raw_mef = True
+
         for index, hdu in enumerate(hdulist[1:]):
 #            print(index, hdu.name+'X', hdu._summary())
-            if hdu.name != 'SCI':
+            if hdu.name != 'SCI' or raw_mef is True:
                 if hasattr(hdu, 'compressed_data'):
                     new_hdu = fits.ImageHDU(data=hdu.data, header=hdu.header, name=hdu.name)
                 else:
@@ -2638,6 +2707,10 @@ def sort_rocks(fits_files):
                     os.symlink(fits_filepath, dest_filepath)
             # if the file is an e11 and an e91 doesn't exit in the working directory, create link to the e11
             elif 'e11' in fits_filepath and not os.path.exists(dest_filepath.replace('e11.fits', 'e91.fits')):
+                if not os.path.exists(dest_filepath):
+                    os.symlink(fits_filepath, dest_filepath)
+            # if the file is an e00 and an e91 doesn't exist in the working directory, create link to the e00
+            elif 'e00' in fits_filepath and not os.path.exists(dest_filepath.replace('e00.fits', 'e91.fits')):
                 if not os.path.exists(dest_filepath):
                     os.symlink(fits_filepath, dest_filepath)
     return objects
