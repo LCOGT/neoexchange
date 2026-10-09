@@ -635,6 +635,55 @@ is close to S/N-optimal.
 
 ### Moving-target photometry (§6)
 
+#### Target method, and how close Fixes 11–13 get to it
+
+The data mix telescopes, sites and seeing. A fixed aperture, in pixels or in arcsec, then puts the target and the
+calibration stars on different encircled-energy scales from frame to frame. The two differ further whenever one of
+them is trailed and the other isn't. Matching the aperture size isn't enough. Each frame's target flux and zeropoint
+have to refer to the same *total* flux.
+
+The surveys don't solve this. They give useful context but no recipe (survey details are from memory and not
+re-checked):
+
+- **ZTF** measures moving objects with a PSF fit on the difference image (`magpsf`). The alerts also carry
+  fixed-aperture magnitudes (`magap`, `magapbig`). Nothing is corrected for trailing.
+- **Rubin** aperture-corrects its PSF fluxes to a fixed calibration aperture. It measures a ladder of fixed apertures,
+  and its DIASources carry a simple trailed-source fit (`trailFlux`, `trailLength`). SMTN-003 covers detection and S/N
+  loss only (§6).
+- **ATLAS and Pan-STARRS** fit trailed PSF models to streaks.
+
+All of these tolerate 0.05–0.2 mag errors on moving objects, because their H/G and orbit science averages over many
+points. A rotation lightcurve for Hera can't.
+
+The usual small-body method follows TRIPPy (Fraser et al. 2016, AJ 151, 158). Applied to each frame:
+
+1. **PSF model.** Build it from bright, isolated, unsaturated stars, using PSFEx, Piff or a stacked empirical PSF. Keep
+   the star curve of growth.
+2. **Zeropoint to total flux.** Measure the catalogue stars in a large aperture (≈ 4–5 × FWHM), or in a smaller one
+   with an aperture correction out to that size. The zeropoint then doesn't depend on seeing.
+3. **Target in a small aperture.** Use a circle of ≈ 1.5–2 × FWHM, in pixels, or a pill aligned with the motion.
+4. **Trail-aware aperture correction.** Convolve the frame's PSF with the trail segment (rate × exptime, at the motion
+   PA from the ephemeris). From that, compute the correction from the step-3 aperture to the step-2 total.
+5. **Colour terms.** Fit them per instrument and filter. MuSCAT's simultaneous bands supply the colours.
+6. **Acceptance tests.**
+   - The corrected target magnitude is flat as the aperture radius grows.
+   - Residuals show no slope against FWHM. Today they do: r ≈ +0.55, or 0.05 mag per px of FWHM (§6).
+   - Lightcurves from different sites agree where the nights overlap.
+
+**Shortcut for bright, uncrowded fields:** use one large aperture (≳ 3 × FWHM) for both target and stars, which skips
+steps 3–4. The trail loss is then ≤ 0.005 mag, per the §6 table, and the S/N cost is small while the source dominates
+the noise.
+
+**How close the existing pipelines get once fixed.** Fix 4 gives NEOx step 2, with a matched, documented zeropoint
+aperture. Fix 16 gives step 3. Fix 11 is step 4 with stacked or smeared stars in place of a fitted PSF model. Fix 12
+handles the contamination that difference imaging and large apertures each bring. Fix 13 makes the errors honest
+enough for step 6 to mean something. PhotPipe with `-fixed_aprad` at a large radius (Fix 18) amounts to the shortcut.
+
+The bet is that these fixed pipelines pass step 6 at the 0.01–0.02 mag level for targets like Didymos. If they don't,
+fall back to the full trailed-PSF route. Earlier experiments with that route are in `requirements-trippy.txt`: TRIPPy
+(the `talister/trippy` fork, pending upstream fixes), TrailedSourceCentering for trailed centroids, and Piff for PSF
+models. Run step 6 on this night first; the §6 simulation predicts what a correct method should show.
+
 - [ ] **Fix 11 — trail-aware aperture correction.** For sidereally tracked frames, correct each frame for the
   target's extra trail loss: either an aperture correction from the frame's own stars smeared synthetically along the
   measured trail (the method in §6, `trail_loss()` below), or an elongated aperture along the motion. The rate, PA
@@ -676,6 +725,61 @@ is close to S/N-optimal.
   - Slow features at the start and end of the night coincide with the worst seeing.
 
   Re-issue after Fixes 11–13, or with a fitted seeing term and the contaminated frames removed (χ²_red ≈ 1.0).
+
+### Deferred: PDS delivery and multi-filter MuSCAT export
+
+*Added 2026-10-07.* Not worth doing until the lightcurves are good: Fixes 11–13 first, then 1, 4 and 16 together.
+
+`photometrics/pds_subs.py` was built for single-filter LCO 1 m DART data. Hera deliveries from the 2 m MuSCAT
+(g′/r′/i′/z_s at once) need work at both ends.
+
+- **Hera side:** PDS delivery arrangements, data dictionaries and product definitions are not yet defined.
+- **Our side — `create_dart_lightcurve` and `export_block_to_pds` (the latter on `main` only) are single-filter:**
+  - **Filenames collide:** the output filename (`pds_subs.py:812`) has no filter, so with one photometry file per
+    filter each overwrites the last. `main` already globs per-filter `{name}_data_*.fits` (`:1832`).
+  - **Filters get mixed:** `create_table_from_srcmeasures(block)` (`lightcurve_subs.py:80`) takes all e92 *and* e93
+    SourceMeasurements of the block, whatever the filter. That mixes filters, and could duplicate frames measured
+    on both frametypes (not checked).
+  - **Frame query:** the unfiltered `Frame` query (`pds_subs.py:753`, the uncommitted `XXX` note; `:1348`/`:1580` on
+    `main`) only sets the filename's site, instrument and date. It is the least of these problems.
+  - **Hardwired for DART on Sinistro:** labels assume `Instrument: Sinistro`, the DART investigation and LIDs
+    (`create_obs_area`, `create_id_area`), and PanSTARRS r for `mag` and `ZP` (`create_file_area_table`).
+  - **Likely shape of a fix:** an `obs_filter` argument (or a loop over the block's distinct filters) applied to the
+    frame query, the SourceMeasurement table and the photometry-file match, plus the filter in the output name.
+    Check this against the Hera product definitions once they exist.
+- **Searched for prior work:** none. All 23 branches and 3 stashes have the identical unfiltered query, and nothing in
+  apophis2's uncommitted patch, stashes or scripts touches it (checked 2026-10-07).
+- **Upside for the lightcurve work:** the four simultaneous MuSCAT bands share identical trailing and timing, which
+  should help separate seeing systematics from real variation (§6 caveat).
+
+### Deferred: zeropoint provenance and reproducibility
+
+*Added 2026-10-09*, from the local before/after rerun of Block 35906 for the apophis2 recovery.
+
+- **Colour options aren't recorded, and the defaults differ from what was used:**
+  - The copy of record was made with `color_const=True, solar=False` (§2 table), so its Frames have
+    `color_used=N/A`.
+  - `run_pipeline` defaults to `--color_const False --solar True`. A rerun with only `--refcat PS1 --dia` therefore
+    fits colour terms (g−r, g−i, g−z/i−z).
+  - In g′/r′/i′, the median zeropoint differences from the record are +0.024, +0.007 and −0.011 mag, with about 23
+    fewer stars per fit.
+  - In z_s, the g−z fit is poor: `zeropoint_err` is about 0.09 against 0.012, the zeropoints are about +0.75 mag off,
+    and 3 frames (ep09 0089/0100/0128) failed the fit and kept BANZAI's zeropoint.
+  - Nothing on the Frame records which colour options were used. The `PipelineProcess` inputs are the only trace.
+  - The g′/r′/i′ offsets mix colour mode with environment (local astropy 5.3.4 against 6.0.1 on apophis2), so the
+    environment-only offset hasn't been measured.
+- **`zeropoint_src` is a hard-coded literal:** `'py_zp_cvc-V0.2.1'` (`catalog_subs.py`, `update_zeropoint`) is
+  independent of the installed calviacat (`1.3.3.dev3+g0445896fc` here). Bump it when the calviacat Gaia DR3 branch
+  lands, and consider building it from `calviacat.__version__` so the version reaches `Frame.zeropoint_src` and
+  `L1ZPSRC`. Check first whether notebooks or lightcurve code filter on the old string.
+- **A PS1 outage silently poisons the catalog cache:**
+  - On 2026-10-08, STScI's `panstarrs/search.php` returned HTTP 200 with the body `Can't connect to PWMASTDB11`.
+  - calviacat's `PanSTARRS1.fetch_field` logs that as an error and returns, leaving a zero-row
+    `PS1_<ra><dec>_<w>x<h>.db` in the tempdir.
+  - `existing_catalog_coverage` then reuses the empty cache for every later frame, so they all keep BANZAI's
+    zeropoint, even after STScI recovers.
+  - **Workaround:** delete the cache file, or seed it from an earlier run's tempdir.
+  - **Fix (in calviacat):** raise on a failed query instead of creating the table.
 
 ---
 
