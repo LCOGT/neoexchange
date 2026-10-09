@@ -80,6 +80,10 @@ class Command(BaseCommand):
             obs_blocks = Block.objects.filter(calibsource=field, num_observed__gte=1)
             if options['blocknum'] is not None:
                 obs_blocks = obs_blocks.filter(request_number=options['blocknum'])
+                # If the obs_block is not for the current field, skip
+                if obs_blocks.count() == 0 or obs_blocks[0].calibsource != field:
+                    self.stdout.write(f"Block #{options['blocknum']} is not for this field {field}")
+                    continue
             for obs_block in obs_blocks:
                 # Find frames corresponding to each block
                 frames = Frame.objects.filter(block=obs_block, frametype=Frame.BANZAI_RED_FRAMETYPE)
