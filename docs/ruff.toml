@@ -1,0 +1,8 @@
+# The notebooks and scripts under docs/ are outside the Django project, so they don't pick up
+# neoexchange/pyproject.toml on their own.
+extend = "../neoexchange/pyproject.toml"
+# Resolve core/astrometrics/photometrics imports as first-party, as they are inside neoexchange/.
+src = ["../neoexchange"]
+
+[lint.extend-per-file-ignores]
+"Hera_2026/*" = ["DTZ001"]

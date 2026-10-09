@@ -44,7 +44,7 @@ Consequences for the plan: the pipeline workers have been validated against **as
 
 ## 5. Orphan files in `~/git/neoexchange-devel/neoexchange` (fetched to `scripts/`)
 
-`DART_stuff_20230429.py`, `dart_mro_20230915/18/21/29.py`, `gps_sats_blocks.py` are IPython session transcripts (`get_ipython().system(...)`) from the DART/MRO and GPS work — not production code; keep them with the other reduction notes (e.g. under `neoexchange/docs/DART_2023/`) or drop. `direct_blocks`, `Bad_frame`, `Log_tests_1`, `moon_phases_*.tsv`, `dump.rdb` (a redis dump written into the repo dir), two PNGs → drop.
+`DART_stuff_20230429.py`, `dart_mro_20230915/18/21/29.py`, `gps_sats_blocks.py` are IPython session transcripts (`get_ipython().system(...)`) from the DART/MRO and GPS work — not production code; keep them with the other reduction notes (e.g. under `docs/DART_2023/`) or drop. `direct_blocks`, `Bad_frame`, `Log_tests_1`, `moon_phases_*.tsv`, `dump.rdb` (a redis dump written into the repo dir), two PNGs → drop.
 
 ## 6. Recommended order (Phase 0, step 0)
 
