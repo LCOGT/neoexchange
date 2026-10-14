@@ -1,13 +1,17 @@
-import os
 import argparse
+import os
+from collections import Counter
 from datetime import datetime
 
 from django.core.management.base import BaseCommand, CommandError
 from dramatiq import pipeline
+from dramatiq.results import ResultMissing, ResultTimeout
 
-from core.tasks import run_pipeline
 from core.models import PipelineProcess
+from core.models.async_process import ASYNC_STATUS_CREATED
+from core.tasks import run_pipeline
 from core.views import determine_images_and_catalogs
+
 
 class Command(BaseCommand):
 
@@ -23,10 +27,16 @@ class Command(BaseCommand):
         else:
             raise argparse.ArgumentTypeError('Boolean value expected')
 
+    def parse_date(self, v):
+        try:
+            return datetime.strptime(v, '%Y%m%d')
+        except ValueError:
+            raise argparse.ArgumentTypeError(f"'{v}' is not a date of the form YYYYMMDD")
+
     def add_arguments(self, parser):
         default_path = os.path.join(os.path.sep, 'data', 'eng', 'rocks')
         default_tempdir = 'Temp_cvc'
-        parser.add_argument('--date', action="store", default=datetime.utcnow(), help='Date of the data to process (YYYYMMDD)')
+        parser.add_argument('--date', type=self.parse_date, default=datetime.utcnow(), help='Date of the data to process (YYYYMMDD; default: today)')
         parser.add_argument('--datadir', action="store", default=default_path, help='Path for processed data (e.g. /data/eng/rocks)')
         parser.add_argument('--refcat',
                     default='GAIA-DR3',
@@ -64,15 +74,7 @@ class Command(BaseCommand):
         # Path to directory containing some e91 BANZAI files
         dataroot = options['datadir']
 
-        if isinstance(options['date'], str):
-            try:
-                obs_date = datetime.strptime(options['date'], '%Y%m%d')
-            except ValueError:
-                raise CommandError(usage)
-        else:
-            obs_date = options['date']
-
-        obs_date = obs_date.strftime('%Y%m%d')
+        obs_date = options['date'].strftime('%Y%m%d')
 
         # Check for valid dataroot. Try original `dataroot`, then `dataroot/obs_date`
         if os.path.exists(dataroot) is False:
@@ -84,7 +86,7 @@ class Command(BaseCommand):
 
         # Ensure trailing slash is present
         dataroot = os.path.join(dataroot, '')
-        fits_files, fits_catalogs = determine_images_and_catalogs(self, dataroot, red_level='e91') # red_level must be null to pickup Swope/MRO data
+        fits_files, _ = determine_images_and_catalogs(self, dataroot, red_level='e91') # red_level must be null to pickup Swope/MRO data
 
         if fits_files is None or len(fits_files) == 0:
             # XXX maybe do a new call to determine_images_and_catalogs() with red_level=''
@@ -102,6 +104,8 @@ class Command(BaseCommand):
             origin = 'MRO'
         mapping = self.file_mapping(origin)
         # Process all files through all pipeline steps
+        runners = []
+        processes = []
         for fits_filepath in fits_files:
             # fits_filepath is the full path including the dataroot and obs_date e.g. /apophis/eng/rocks/20220731/cpt1m010-fa16-20220731-0146-e91.fits
             # fits_file is the basename e.g. cpt1m010-fa16-20220731-0146-e91.fits
@@ -154,10 +158,43 @@ class Command(BaseCommand):
                 inputs.update(step['inputs'])
                 self.stdout.write(f"  Performing pipeline step {step['name']}")
                 pipe = pipeline_cls.create_timestamped(inputs)
-#                self.stdout.write(f"  PK={pipe.pk} for {step['name']}")
+                processes.append((fits_file, step['name'], pipe.pk))
                 pipes.append(run_pipeline.message_with_options(args=[pipe.pk, step['name']], pipe_ignore=True))
-            runner  = pipeline(pipes).run()
-        self.stdout.write("Waiting for pipeline to complete")
-        runner.get_result(block=True, timeout=180_000*len(fits_files))
-#        self.stdout.write(f"Completed for {fits_file}")
-        self.stdout.write(f"Completed")
+            runners.append(pipeline(pipes).run())
+        self.stdout.write("Waiting for pipelines to complete")
+        timeout = 180_000*len(fits_files)
+        for runner in runners:
+            try:
+                runner.get_result(block=True, timeout=timeout)
+            except (ResultMissing, ResultTimeout) as e:
+                self.stderr.write(f"Gave up waiting for pipelines to complete ({e.__class__.__name__})")
+                break
+        self.summarize(processes)
+
+    def summarize(self, processes):
+        """Write a per-step tally of the final status of the PipelineProcesses
+        in <processes> (a list of (fits_file, step name, pk) tuples) and list the
+        steps that did not complete, so a partially processed night is visible
+        at the prompt rather than only in the worker logs.
+        Returns the number of steps that did not complete."""
+
+        pks = [pk for _, _, pk in processes]
+        results = {pk: (status, msg) for pk, status, msg in
+                   PipelineProcess.objects.filter(pk__in=pks).values_list('pk', 'status', 'failure_message')}
+        tally = {}
+        failures = []
+        for fits_file, step_name, pk in processes:
+            status, msg = results.get(pk, ('missing', ''))
+            tally.setdefault(step_name, Counter())[status] += 1
+            if status != ASYNC_STATUS_CREATED:
+                failures.append((fits_file, step_name, status, msg))
+
+        self.stdout.write("Completed. Pipeline step status:")
+        for step_name, counts in tally.items():
+            counts_str = ', '.join(f"{n} {status}" for status, n in sorted(counts.items()))
+            self.stdout.write(f"  {step_name:15s}: {counts_str}")
+        if failures:
+            self.stdout.write(f"{len(failures)} steps did not complete (rerun with --overwrite once the cause is fixed):")
+            for fits_file, step_name, status, msg in failures:
+                self.stdout.write(f"  {fits_file} {step_name}: {status} {msg}".rstrip())
+        return len(failures)
