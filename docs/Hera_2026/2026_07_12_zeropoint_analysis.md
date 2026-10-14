@@ -13,7 +13,9 @@ Analysis done 2026-10-05.
 
 **Code:** line numbers refer to branch `pipelines` at `77ecc148` in this checkout. NEOx frames were reduced on
 **apophis2**, which runs that branch plus an uncommitted patch captured in `docs/migration/apophis2/uncommitted.patch`
-(MIGRATION_PLAN Q18). Where they differ, this document says which applies.
+(MIGRATION_PLAN Q18). Where they differ, this document says which applies. *Since 2026-10-09 that patch is merged
+into `pipelines` (9d1f2cfa), so the "committed" and "apophis2" descriptions now agree. Line numbers still refer to
+`77ecc148`.*
 
 ## Summary
 
@@ -34,9 +36,9 @@ Analysis done 2026-10-05.
    - **After fixing item 3 alone (e92 zeropoint):** too bright by 0.089–0.270 mag (median 0.153), with a **0.181 mag
      peak-to-peak seeing-correlated** variation that would contaminate the lightcurve.
    Item 3 must not be fixed and the tables regenerated without also fixing the aperture mismatch.
-5. **The committed `pipelines` branch can't run `proc-zeropoint`.** `processdata.py:511,523` pass `frame_filepath=`,
-   but the committed signature takes `frame_filename`. Only apophis2's uncommitted patch makes this work (Q18,
-   already planned).
+5. ~~**The committed `pipelines` branch can't run `proc-zeropoint`.**~~ **Resolved 2026-10-09** (§5): the apophis2
+   patch, including the `update_frame_zeropoint(frame_filepath=…)` signature and its SExtractor config, has been
+   merged into `pipelines` (9d1f2cfa).
 6. **The excess scatter in the circulated PhotPipe lightcurve (χ²_red ≈ 3.5) is not a zeropoint problem (§6).**
    - **Trailing:** the frames were tracked sidereally, so Didymos trails **6.6 px** in a 5 px-radius aperture while
      the calibration stars are round. The extra loss (0.067–0.112 mag) does not cancel; it makes the magnitudes about
@@ -309,7 +311,16 @@ the e92 stars apply.
 An earlier, model-based version of this table (0.014–0.110 now, and 0.063–0.316 after a §3-only fix) is superseded by
 these measured values.
 
-## 5. The committed `pipelines` branch can't run `proc-zeropoint`
+## 5. The committed `pipelines` branch can't run `proc-zeropoint` — resolved 2026-10-09
+
+> **Resolved.** The apophis2 patch was recovered into `pipelines` and merged as 9d1f2cfa (MIGRATION_PLAN Q18):
+> - e654595c adopts `frame_filepath` (bare filenames still work) and updates the `catalog_subs.py` callers and tests.
+> - 54178d65 moves `find_block_for_frame`/`determine_original_name` into `catalog_subs`.
+> - fe1946d0 commits the 1.2σ / `PHOT_APERTURES 12` SExtractor config.
+>
+> Rerunning Blocks 36170 and 35906 gave identical Frames and CatalogSources with apophis2's code and with the merged
+> branch. A committed checkout now reproduces apophis2's reductions, given the same run options and environment. The
+> analysis below describes the state at `77ecc148`.
 
 ```python
 # photometrics/catalog_subs.py:1928  (committed)
@@ -590,18 +601,34 @@ is close to S/N-optimal.
 
 ### Code
 
-- [ ] **Fix 1 — copy the e92 calibration into e93.** In `run_hotpants_subtraction` (`core/views.py:3575`), which
-  already has the `sci` (e92) path, or in `updateFITSdia(fits_file, sci_file=None)` (`external_codes.py:1665`): after
-  HOTPANTS, copy the photometric-calibration keywords from the **e92** header into the e93 header and `.rms.fits`,
-  *before* `get_catalog_header`/`make_new_catalog_entry`. The keywords are those `updateFITScalib` writes
-  (`external_codes.py:1592-1600`): `L1ZP`, `L1ZPERR`, `L1ZPSRC`, `L1PHTCAT`, plus the colour keywords from
-  `banzai_ldac_catalog_mapping`. Add a test that checks e93 `L1ZP` == e92 `L1ZP`. This is valid because of HOTPANTS
-  `-n i`; if that option changes, so must this.
-- [ ] **Fix 2 — keep the check images in sync.** After `proc-zeropoint` (`processdata.py:515`), also run
-  `updateFITScalib` on `.bkgsub.fits` and `.rms.fits`. Defence in depth; Fix 1 is the primary fix.
-- [ ] **Fix 3 — `update_frame_zeropoint` signature.** Part of the planned `prep/apophis2-recovery` change (2): adopt
-  `frame_filepath`, tolerate bare filenames, update `catalog_subs.py:2078,2081` and the tests.
-- [ ] **Fix 4 — match the target aperture to the zeropoint aperture.** **Must land with or before Fix 1 and the data
+*Revised 2026-10-09: Fix 2 is now the primary fix, and Fix 1 a guard.* **HOTPANTS uses no zeropoint.**
+- None of its options reads one, and our command line (`determine_hotpants_options`, `external_codes.py:367`) passes
+  only the data, noise images, limits computed from the pixels, and a kernel size from `L1FWHM`. `-n i` normalises the
+  difference image to the **science** image's flux scale, and the fitted kernel absorbs the reference's scale. e93 is
+  therefore on e92's counts scale, and the e92 zeropoint applies to it.
+- The stale `L1ZP` is only header metadata: HOTPANTS copies the `-inim` (`.bkgsub.fits`) header into e93 (§3).
+- Aligning the reference to each science frame (`run_swarp_align`) uses only the science frame's image size and WCS
+  (`make_ref_head`).
+- A zeropoint *does* scale data when the stacked reference is built: `run_swarp` → `normalize()`
+  (`external_codes.py:566`) converts each reference frame's `L1ZP` into SWarp `FLXSCALE`, stacking to ZP = 25
+  (`FLXSCLZP`). `make_reference_fields` stacks **e92** frames after `proc-zeropoint` and checks that their Frames have
+  good zeropoints, so those values are already the fitted ones. The e93 bug doesn't affect them.
+
+- [ ] **Fix 2 — write the calibration into the check images (primary fix).** After `proc-zeropoint` updates the e92
+  (`processdata.py:515-520`), also run `updateFITScalib` on that frame's `.bkgsub.fits` and `.rms.fits`. HOTPANTS then
+  copies the correct calibration into e93 and its `.rms.fits`, with no change to the subtraction. The keywords are
+  those `updateFITScalib` writes (`external_codes.py:1592-1600`): `L1ZP`, `L1ZPERR`, `L1ZPSRC`, `L1PHTCAT`, plus the
+  colour keywords from `banzai_ldac_catalog_mapping`.
+- [ ] **Fix 1 — guard the e93 calibration.** In `updateFITSdia(fits_file, sci_file=None)` (`external_codes.py:1665`)
+  or `run_hotpants_subtraction` (`core/views.py:3575`), which already has the `sci` (e92) path: after HOTPANTS, and
+  *before* `get_catalog_header`/`make_new_catalog_entry`, set or check the e93 calibration keywords against the
+  **e92** header. This is still needed for subtractions run from check images written before Fix 2, and it overlaps
+  with the Fix 8 repair command. Add a test that e93 `L1ZP` == e92 `L1ZP`.
+  - Comment the dependency on HOTPANTS `-n i`. With `-n t`, e93 would be on the reference's ZP = 25 scale instead.
+- [x] **Fix 3 — `update_frame_zeropoint` signature.** Part of the planned `prep/apophis2-recovery` change (2): adopt
+  `frame_filepath`, tolerate bare filenames, update `catalog_subs.py:2078,2081` and the tests. **Done:** e654595c,
+  merged in 9d1f2cfa.
+- [ ] **Fix 4 — match the target aperture to the zeropoint aperture.** **Must land with or before Fixes 1–2 and the data
   repair.** Choose one:
   - (a) Measure Didymos on e93 with the zeropoint's aperture: 6 px = 1.602″ here, or in general
     `PHOT_APERTURES/2 × pixscale`. Simplest; it is what PhotPipe does (with 5 px).
@@ -612,14 +639,15 @@ is close to S/N-optimal.
 - [ ] **Fix 5 (parked) — aperture correction.** `FITS_LDAC_MULTIAPER` catalogs already exist but `run_pipeline.py:95`
   only selects them for `-ef` frames. The star-flux-ratio method used in §2 and §4 is a working prototype: median
   ratio of bright, isolated, unsaturated stars between two apertures, measured per frame.
-- [ ] **Fix 6 — commit the apophis2 config.** Review and commit the `sextractor_neox_ldac.conf` tuning
+- [x] **Fix 6 — commit the apophis2 config.** Review and commit the `sextractor_neox_ldac.conf` tuning
   (`PHOT_APERTURES 12`, `DETECT/ANALYSIS_THRESH 1.2`; Q20, Tim's to commit), so reductions are reproducible from any
   checkout. Consider writing the aperture into the e92 header (e.g. `L1ZPAPER`) during `proc-zeropoint`, so it is
-  recorded with the data rather than inferred.
+  recorded with the data rather than inferred. **Config committed:** fe1946d0, merged in 9d1f2cfa. The `L1ZPAPER`
+  header keyword is still open.
 - [ ] **Fix 7 (minor):** correct the index-4 comment and the multiaper aperture list, and add `ZP_sig` in quadrature to
   `magerr` (or document that it is left out).
 
-### Data repair (after Fix 1 **and** Fix 4)
+### Data repair (after Fixes 1–2 **and** Fix 4)
 
 - [ ] **Fix 8:** a management command, e.g. `fix_e93_zeropoints --block <id> | --date <YYYYMMDD> [--dry-run]`. For
   each e93 `Frame`, find the e92 `Frame` (`-e93` → `-e92`). Copy `zeropoint`, `zeropoint_err`, `zeropoint_src` and the
