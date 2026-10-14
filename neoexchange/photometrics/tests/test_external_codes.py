@@ -1741,6 +1741,28 @@ class TestUpdateFITScalib(TestCase):
             self.assertTrue(fits_keyword in new_header, "Failure on " + fits_keyword)
             self.assertEqual(header[key], new_header[fits_keyword])
 
+    def test_zero_color_values_are_written(self):
+        """A constant-color calibration gives color_err=0.0 (and a fit can give color=0.0);
+        these must overwrite any stale value in the file rather than being skipped as falsy"""
+        header = deepcopy(self.test_header)
+        header['zeropoint'] = 28.01
+        header['zeropoint_err'] = 0.012
+        header['zeropoint_src'] = 'py_zp_cvc-V0.1'
+        header['color_used'] = 'N/A'
+        header['color'] = 0.0
+        header['color_err'] = 0.0
+        with fits.open(self.banzai_file_output, mode='update') as hdul:
+            hdul[0].header.set('L1COLOR', 0.1234, after='L1ELLIPA')
+            hdul[0].header.set('L1COLERR', 0.112, after='L1COLOR')
+            hdul.flush()
+
+        status, new_header = updateFITScalib(header,  self.banzai_file_output)
+
+        self.assertEqual(0, status)
+        self.assertEqual(0.0, new_header['L1COLOR'])
+        self.assertEqual(0.0, new_header['L1COLERR'])
+        self.assertEqual('N/A', new_header['L1COLORU'])
+
 
 class TestGetSCAMPXMLInfo(SimpleTestCase):
 

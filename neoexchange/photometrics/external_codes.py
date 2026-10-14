@@ -1634,7 +1634,9 @@ def updateFITScalib(header, fits_file, catalog_type='BANZAI'):
     #print(f"Initial prior_keyword= {prior_keyword}")
     for key, comment in keywords.items():
         new_val = header.get(key, None)
-        if new_val:
+        # 0.0 is a real value (e.g. color_err when the color is held constant), so test for None
+        # and not for truthiness
+        if new_val is not None:
             fits_keyword = hdr_mapping.get(key, '')
             fits_keyword = fits_keyword.replace('<', '').replace('>', '')
             if fits_keyword != '':
