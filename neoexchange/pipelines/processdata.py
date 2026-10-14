@@ -518,6 +518,17 @@ class ZeropointProcessPipeline(PipelineProcess):
                     logger.debug(f"Calling updateFITScalib for e{red_level}_ldac")
                     status, new_fits_header = updateFITScalib(header, catfile, update_catalog_type)
 
+                    # Also update the zeropoint in DIA files if they exist (e.g. e92.apers, e92.bkgd, e92.bkgsub,
+                    #  e92.rms)
+                    dia_files = ['.apers.fits', '.bkgd.fits', '.bkgsub.fits', '.rms.fits']
+                    for check_suffix in dia_files:
+                        dia_file = fits_filepath.replace('.fits', check_suffix)
+                        if os.path.exists(dia_file):
+                            logger.debug(f"Calling updateFITScalib for {dia_file:}")
+                            status, _ = updateFITScalib(header, dia_file, update_frame_type)
+                            if status != 0:
+                                logger.warning(f"updateFITScalib failed for {dia_file:} with status {status:}")
+                                self.log(f"updateFITScalib failed for {dia_file:} with status {status:}")
                     # update the zeropoint computed above in the CATALOG file Frame
                     logger.debug("Calling update_frame_zeropoint (2)")
                     frame_cat = update_frame_zeropoint(header, ast_cat_name, phot_cat_name, frame_filepath=catfile, frame_type=Frame.BANZAI_LDAC_CATALOG)
@@ -554,7 +565,6 @@ class ZeropointProcessPipeline(PipelineProcess):
 
         refcat = None
 
-        filename = os.path.basename(catfile)
         datadir = os.path.join(os.path.dirname(catfile), '')
 
         # flag_filter=7 allows all of:
