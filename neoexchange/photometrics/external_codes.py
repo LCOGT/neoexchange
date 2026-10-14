@@ -936,14 +936,14 @@ def run_sextractor(source_dir, dest_dir, fits_file, checkimage_type=[], binary=N
     else:
         options = determine_sextractor_options(fits_file, dest_dir, checkimage_type, catalog_type)
 
-    cmdline = "%s %s -c %s %s" % ( binary, fits_file, sextractor_config_file, options )
+    cmdline = f"{binary} {fits_file} -c {sextractor_config_file} {options}"
     cmdline = cmdline.rstrip()
-    print("Extractor cmdline=", cmdline)
+    print(f"Extractor cmdline={cmdline}")
     if dbg is True:
         retcode_or_cmdline = cmdline
     else:
         # This executes the command to the terminal
-        logger.debug("cmdline=%s" % cmdline)
+        logger.debug(f"cmdline={cmdline}")
         args = cmdline.split()
         retcode_or_cmdline = call(args, cwd=dest_dir)
 
@@ -995,7 +995,7 @@ def run_swarp(source_dir, dest_dir, images, outname='reference.fits', binary=Non
         else:
             weight_image = image.replace(".fits", ".weights.fits")
         if weight_image == image:
-            logger.error("'%s' does not end in .fits or .fits.fz" % image)
+            logger.error(f"'{image}' does not end in .fits or .fits.fz")
             return -5
 
         weight_filename = os.path.basename(weight_image)
@@ -1028,7 +1028,7 @@ def run_swarp(source_dir, dest_dir, images, outname='reference.fits', binary=Non
     options = determine_swarp_options(inweight, outname, dest_dir)
 
     #assemble command line
-    cmdline = "%s -c %s @%s %s" % (binary, swarp_config_file, inlist, options )
+    cmdline = f"{binary} -c {swarp_config_file} @{inlist} {options}"
     cmdline = cmdline.rstrip()
 
     #run swarp
@@ -1036,7 +1036,7 @@ def run_swarp(source_dir, dest_dir, images, outname='reference.fits', binary=Non
         retcode_or_cmdline = cmdline
     else:
         # This executes the command to the terminal
-        logger.debug("cmdline=%s" % cmdline)
+        logger.debug(f"cmdline={cmdline}")
         args = cmdline.split()
         retcode_or_cmdline = call(args, cwd=dest_dir)
         if retcode_or_cmdline == 0:
@@ -1092,7 +1092,7 @@ def run_hotpants(ref, sci, source_dir, dest_dir, binary=None, dbg=False, dbgOpti
         return options
 
     #assemble command line
-    cmdline = "%s %s" % (binary, options)
+    cmdline = f"{binary} {options}"
     cmdline = cmdline.rstrip()
 
     #run hotpants
@@ -1100,7 +1100,7 @@ def run_hotpants(ref, sci, source_dir, dest_dir, binary=None, dbg=False, dbgOpti
         retcode_or_cmdline = cmdline
     else:
         # This executes the command to the terminal
-        logger.debug("cmdline=%s" % cmdline)
+        logger.debug(f"cmdline={cmdline}")
         args = cmdline.split()
 
         # Open /dev/null for writing to lose the Hotpants output into
@@ -1156,7 +1156,7 @@ def run_swarp_align(ref, sci, source_dir, dest_dir, outname, binary=None, dbg=Fa
     ref_head = make_ref_head(ref, sci, dest_dir, outname)
 
     #assemble command line
-    cmdline = "%s -c %s %s %s" % (binary, swarp_config_file, ref, options )
+    cmdline = f"{binary} -c {swarp_config_file} {ref} {options}"
     cmdline = cmdline.rstrip()
 
     #run swarp
@@ -1164,7 +1164,7 @@ def run_swarp_align(ref, sci, source_dir, dest_dir, outname, binary=None, dbg=Fa
         retcode_or_cmdline = cmdline
     else:
         # This executes the command to the terminal
-        logger.debug("cmdline=%s" % cmdline)
+        logger.debug(f"cmdline={cmdline}")
         args = cmdline.split()
         retcode_or_cmdline = call(args, cwd=dest_dir)
 
@@ -1196,17 +1196,16 @@ def run_scamp(source_dir, dest_dir, fits_catalog_path, refcatalog='GAIA-DR3.cat'
     if fits_catalog != fits_catalog_path:
         fits_catalog = os.path.join(dest_dir, fits_catalog)
         # If the file exists and is a link (or a broken link), then remove it
-        if os.path.lexists(fits_catalog):
-            if os.path.islink(fits_catalog):
-                os.unlink(fits_catalog)
-                os.symlink(fits_catalog_path, fits_catalog)
-    cmdline = "%s %s -c %s %s" % ( binary, fits_catalog, scamp_config_file, options )
+        if os.path.lexists(fits_catalog) and os.path.islink(fits_catalog):
+            os.unlink(fits_catalog)
+            os.symlink(fits_catalog_path, fits_catalog)
+    cmdline = f"{binary} {fits_catalog} -c {scamp_config_file} {options}"
     cmdline = cmdline.rstrip()
 
     if dbg is True:
         retcode_or_cmdline = cmdline
     else:
-        logger.debug("cmdline=%s" % cmdline)
+        logger.debug(f"cmdline={cmdline}")
         args = cmdline.split()
         try:
             # Open /dev/null for writing to lose the SCAMP output into
@@ -1628,7 +1627,7 @@ def updateFITScalib(header, fits_file, catalog_type='BANZAI'):
         prior_keyword = "PNTOFST"
     elif "L1ELLIPA" in fits_header:
         prior_keyword = "L1ELLIPA"
-    elif (catalog_type.startswith('SWOPE') or catalog_type.startswith('MRO')) and "WCSERR" in fits_header:
+    elif catalog_type.startswith(('SWOPE', 'MRO')) and "WCSERR" in fits_header:
         prior_keyword = "WCSERR"
     else:
         prior_keyword = None
