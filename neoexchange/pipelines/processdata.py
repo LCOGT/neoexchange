@@ -643,6 +643,13 @@ class ZeropointProcessPipeline(PipelineProcess):
             refcat.fetch_field(lco)
             end = time.time()
             logger.debug(f"TIME: refcat.fetch_field took {end-start:.1f} seconds")
+            num_refcat_srcs = len(refcat.search(lco)[0])
+            if num_refcat_srcs == 0:
+                # fetch_field() only logs on failure, so this is the first point an outage of the
+                # catalog service (or a field outside the catalog's coverage) can be detected. Fail
+                # the step rather than carrying on to an uncalibrated frame.
+                raise NeoException(f"No {refcat.__class__.__name__} sources after fetching field; catalog service down or no coverage here?")
+            logger.debug(f"{num_refcat_srcs} {refcat.__class__.__name__} sources in field after fetch")
 
         start = time.time()
         retstatus = refcat.xmatch(lco)
