@@ -26,9 +26,11 @@ into `pipelines` (9d1f2cfa), so the "committed" and "apophis2" descriptions now 
    - PhotPipe uses **5 px** (`-PHOT_APERTURES 10.0`; "best-fit aperture radius: 5.0 (px)" in its LOG).
    - The 5 px/6 px flux ratio measured on each frame's stars predicts dZP with r = **0.995**. The residual is
      **+0.0053 ± 0.0020 mag**, which matches PhotPipe's PS1→SDSS r transformation for this field (median +0.0047).
-3. **Bug: e93 frames carry BANZAI's e91 zeropoint, not the e92 calviacat one.** Confirmed on all 86 frames. The
-   SExtractor `.bkgsub.fits` check image is written before `proc-zeropoint` updates `L1ZP`, and HOTPANTS copies that
-   stale header into e93. This is the "smooth" orange series.
+3. ~~**Bug: e93 frames carry BANZAI's e91 zeropoint, not the e92 calviacat one.**~~ **Code fixed 2026-10-14** (§3,
+   Fix 2: 7d9a1ab8). Confirmed on all 86 frames. The SExtractor `.bkgsub.fits` check image is written before
+   `proc-zeropoint` updates `L1ZP`, and HOTPANTS copies that stale header into e93. This is the "smooth" orange series.
+   `proc-zeropoint` now writes the calibration into the check images too. The existing e93 files, Frames and tables,
+   including this Block's, are unchanged until the data repair (Fix 8), which waits on Fix 4 (item 4).
 4. **The target photometry and its zeropoint use different apertures.** The e93 target photometry uses **5″**
    apertures (`perform_aper_photometry` works in arcsec). Measured from the stars on each frame:
    - **Now (BANZAI zeropoint):** Didymos is too bright by 0.034–0.055 mag (median 0.043). That is almost constant: it
@@ -164,7 +166,16 @@ only approximate. All numbers in this document now come from direct flux measure
 **Parked:** an aperture-correction step in NEOx (Fix 5). PhotPipe doesn't do one either; it only uses the curve of
 growth to choose the aperture.
 
-## 3. Bug: e93 frames carry BANZAI's e91 zeropoint
+## 3. Bug: e93 frames carry BANZAI's e91 zeropoint — code fixed 2026-10-14
+
+> **Fixed in the pipeline (Fix 2, 7d9a1ab8):** `proc-zeropoint` now runs `updateFITScalib` on the frame's
+> `.apers/.bkgd/.bkgsub/.rms.fits` check images after the e92 and the LDAC, so HOTPANTS copies the fitted calibration
+> into e93. Checked by hand on `Hera/20260712` frame 0069: its `.apers.fits` now matches the e92's `L1ZP`, `L1ZPERR`
+> and `L1ZPSRC`. 12fbc1d3 makes `updateFITScalib` write `0.0` values; it skipped them as falsy, so `L1COLERR=0.0`
+> from a constant-colour run never reached the files. Strictly, the check images carry whatever the e92 header held
+> when the e92 extract ran: BANZAI's values on a first pass, as here, or a previous NEOx pass's on a reprocess. The
+> e93 files and Frames made before this, including this Block's, still need the Fix 8 repair, which waits on Fix 4.
+> Fix 1 (the guard in the DIA step) and its e93-equals-e92 test are still open.
 
 The orange series in cell 43 ("5SNR aperture photometry ZP", the `ZP` column of `aper_p_Didymos5snr_712_06_13.ecsv`)
 scatters by 0.020 mag, against 0.051 for the e92 calviacat zeropoint, and is less tied to seeing (r = −0.45 against
@@ -614,11 +625,13 @@ is close to S/N-optimal.
   (`FLXSCLZP`). `make_reference_fields` stacks **e92** frames after `proc-zeropoint` and checks that their Frames have
   good zeropoints, so those values are already the fitted ones. The e93 bug doesn't affect them.
 
-- [ ] **Fix 2 — write the calibration into the check images (primary fix).** After `proc-zeropoint` updates the e92
+- [x] **Fix 2 — write the calibration into the check images (primary fix).** After `proc-zeropoint` updates the e92
   (`processdata.py:515-520`), also run `updateFITScalib` on that frame's `.bkgsub.fits` and `.rms.fits`. HOTPANTS then
   copies the correct calibration into e93 and its `.rms.fits`, with no change to the subtraction. The keywords are
   those `updateFITScalib` writes (`external_codes.py:1592-1600`): `L1ZP`, `L1ZPERR`, `L1ZPSRC`, `L1PHTCAT`, plus the
-  colour keywords from `banzai_ldac_catalog_mapping`.
+  colour keywords from `banzai_ldac_catalog_mapping`. **Done:** 7d9a1ab8 updates all four check images, found by
+  file existence rather than a new `dia` input, so a zeropoint-only rerun over an old tempdir is covered too;
+  12fbc1d3 for the `0.0` values. No test yet for this block; see Fix 1.
 - [ ] **Fix 1 — guard the e93 calibration.** In `updateFITSdia(fits_file, sci_file=None)` (`external_codes.py:1665`)
   or `run_hotpants_subtraction` (`core/views.py:3575`), which already has the `sci` (e92) path: after HOTPANTS, and
   *before* `get_catalog_header`/`make_new_catalog_entry`, set or check the e93 calibration keywords against the
@@ -800,14 +813,20 @@ models. Run step 6 on this night first; the §6 simulation predicts what a corre
   independent of the installed calviacat (`1.3.3.dev3+g0445896fc` here). Bump it when the calviacat Gaia DR3 branch
   lands, and consider building it from `calviacat.__version__` so the version reaches `Frame.zeropoint_src` and
   `L1ZPSRC`. Check first whether notebooks or lightcurve code filter on the old string.
-- **A PS1 outage silently poisons the catalog cache:**
+- **A PS1 outage silently left every frame uncalibrated** (*corrected and fixed 2026-10-14*):
   - On 2026-10-08, STScI's `panstarrs/search.php` returned HTTP 200 with the body `Can't connect to PWMASTDB11`.
   - calviacat's `PanSTARRS1.fetch_field` logs that as an error and returns, leaving a zero-row
     `PS1_<ra><dec>_<w>x<h>.db` in the tempdir.
-  - `existing_catalog_coverage` then reuses the empty cache for every later frame, so they all keep BANZAI's
-    zeropoint, even after STScI recovers.
-  - **Workaround:** delete the cache file, or seed it from an earlier run's tempdir.
-  - **Fix (in calviacat):** raise on a failed query instead of creating the table.
+  - The empty cache is **not** sticky, contrary to the first reading of this: `cross_match_and_zp` re-fetches whenever
+    the cache holds fewer than 500 sources, so each frame retried and each retry failed while the outage lasted. The
+    frames kept BANZAI's zeropoint and every `proc-zeropoint` step still ended `complete`, with only a worker-log
+    warning to show for it.
+  - **Fixed:** 1a4433d0 fails the step (`NeoException` → a `failed` PipelineProcess) when the catalog is still empty
+    after `fetch_field`; ae9c1673 makes `run_pipeline` wait on every frame's pipeline (it waited on the last one only)
+    and print a per-step tally plus the steps that didn't complete. A zeropoint that fails the tolerance check still
+    ends `complete`, so it doesn't show in that list.
+  - **After an outage:** rerun with `--overwrite` once the service is back, or seed the cache from an earlier run's
+    tempdir. A calviacat-side fix (raise on a failed query instead of returning) would still be cleaner.
 
 ---
 
