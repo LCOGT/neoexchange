@@ -2,16 +2,16 @@
 ####management command wrapper for aperture photometry code: core/management/commands/pipeline_psf_photometry.py
 
 
-from django.core.management.base import BaseCommand, CommandParser, CommandError
-
-
-from core.views import perform_aper_photometry
-from core.models.blocks import Block
-from astropy.table import Table
-
-from datetime import datetime
-from astropy.time import Time
 import os
+from datetime import datetime
+
+from astropy.table import Table
+from astropy.time import Time
+from django.core.management.base import BaseCommand, CommandError, CommandParser
+
+from core.models.blocks import Block
+from core.views import perform_aper_photometry
+
 
 class Command(BaseCommand):
 
@@ -38,61 +38,60 @@ class Command(BaseCommand):
                 block = Block.objects.get(id = options['block'])
             except Block.DoesNotExist:
                 raise CommandError(f"Block ID {options['block']} does not exist.")
-            
+
             #block and group id match sanity check
-            if options['groupid'] is not None:
-                if block.groupid != options['groupid']:   
-                    raise CommandError( f" Block {block.id} has groupid {block.groupid},"
-                                        f" not {options['groupid']}")
-        
+            if options['groupid'] is not None and block.groupid != options['groupid']:
+                raise CommandError( f" Block {block.id} has groupid {block.groupid},"
+                                    f" not {options['groupid']}")
+
         elif options['groupid'] is not None:
             try:
                 block = Block.objects.get(superblock__groupid = options['groupid'])
             except Block.DoesNotExist:
                 raise CommandError( f"Block id {options['groupid']} does not exist.")
-        
+
         elif options['request_number'] is not None:
             try:
                 block = Block.objects.get(request_number=options['request_number'])
             except Block.DoesNotExist:
                 raise CommandError(
                     f"Request number {options['request_number']} does not exist.")
-            
+
             #Sanity check on requst number database
-            if options['request_number'] is not None:
-                if int(block.request_number) != options['request_number']:
-                    raise CommandError(
-                        f"Block {block.id} has request number {block.request_number}, "
-                        f"not {options['request_number']}")
-       
+            if options['request_number'] is not None and int(block.request_number) != options['request_number']:
+                raise CommandError(
+                    f"Block {block.id} has request number {block.request_number}, "
+                    f"not {options['request_number']}")
+
         else:
-            raise CommandError(f" Must provide either --block or --groupid.")
+            raise CommandError(" Must provide either --block or --groupid.")
 
-        self.stdout.write("==== Pipeline processing Aperture photometry %s ====" % (datetime.now().strftime('%Y-%m-%d %H:%M')))
+        time_now = datetime.now().strftime('%Y-%m-%d %H:%M')
+        self.stdout.write(f"==== Pipeline processing Aperture photometry {time_now} ====")
 
-        
+
         results = perform_aper_photometry(block, options['datadir'], options['account_zps'], options['aperture_radius'])
         self.stdout.write(f"returned object: {type(results)}") 
         self.stdout.write(f"Returned value: {results}")
 
         if isinstance(results, Table):
-            
+
             if options['output'] is None:
                 filename = f"aper_photometry_{options['block']}.ecsv"
             else:
                 filename = options['output']
             output = os.path.join(options['output_dir'], filename)
-            
+
             if "times" in results.colnames:
                 results["times"] = Time(results["times"])  #change datetime.datetime ---> Astropy.Time objects
 
             for name in results.colnames:
                 print(name, type(results[name][0]))
-            
+
             results.write(output, format = "ascii.ecsv", overwrite = True)
 
-            self.stdout.write(self.style.SUCCESS(f"Wrtote Astropy Table object to {output}"))
-        
+            self.stdout.write(self.style.SUCCESS(f"Wrote Astropy Table object to {output}"))
+
             if len(results.columns) >0:
                 self.stdout.write("Table contains data.")
             else:
