@@ -13,6 +13,9 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 """
 
+import logging
+import os
+
 from django.test import TestCase, SimpleTestCase
 from datetime import datetime, timedelta
 from math import radians, degrees
@@ -20,7 +23,10 @@ from mock import patch
 
 from neox.tests.mocks import MockDateTime
 
+from astropy.utils import iers
+
 # Import module to test
+import astrometrics.time_subs as time_subs
 from astrometrics.time_subs import *
 
 
@@ -542,3 +548,161 @@ class TestGetSemesterDates(SimpleTestCase):
 
         self.assertEqual(expected_start, start)
         self.assertEqual(expected_end, end)
+
+
+class IERSTestMixin:
+    """Isolates the module-level IERS table cache in astrometrics.time_subs
+    between tests and provides a truncated IERS-A fixture (2026-08-20 to
+    2026-11-27, predictions from 2026-10-09)."""
+
+    iers_fixture = os.path.join(os.path.dirname(__file__), 'iers', 'finals2000A_truncated.all')
+
+    def setUp(self):
+        self.saved_iers_state = (time_subs._iers_table, time_subs._iers_table_loaded, time_subs._iers_range_warned)
+        time_subs._iers_table = None
+        time_subs._iers_table_loaded = None
+        time_subs._iers_range_warned = False
+        # Other test modules disable logging globally at import time, which
+        # would defeat the assertLogs() checks below
+        self.saved_logging_disable = logging.root.manager.disable
+        logging.disable(logging.NOTSET)
+        # The test settings pin NEOX_IERS_A_FILE; these tests exercise the cache path
+        self.env_patcher = patch.dict(os.environ)
+        self.env_patcher.start()
+        os.environ.pop('NEOX_IERS_A_FILE', None)
+
+    def tearDown(self):
+        self.env_patcher.stop()
+        time_subs._iers_table, time_subs._iers_table_loaded, time_subs._iers_range_warned = self.saved_iers_state
+        logging.disable(self.saved_logging_disable)
+
+    def load_fixture_table(self):
+        with patch('astrometrics.time_subs.download_file', return_value=self.iers_fixture):
+            return get_iers_table(force_reload=True)
+
+
+class TestGetIERSTable(IERSTestMixin, SimpleTestCase):
+
+    def test_loads_cached_iers_a_table(self):
+        with patch('astrometrics.time_subs.download_file', return_value=self.iers_fixture) as mock_download:
+            table = get_iers_table()
+
+        mock_download.assert_called_once_with(IERS_A_URL, cache=True, sources=[])
+        self.assertIsInstance(table, iers.IERS_A)
+        self.assertEqual(100, len(table))
+        self.assertEqual(61272.0, table['MJD'][0].value)
+        self.assertEqual(61371.0, table['MJD'][-1].value)
+        self.assertIs(table, iers.earth_orientation_table.get())
+
+    def test_never_downloads(self):
+        self.assertFalse(iers.conf.auto_download)
+
+    def test_file_from_environment_overrides_cache(self):
+        os.environ['NEOX_IERS_A_FILE'] = self.iers_fixture
+
+        with patch('astrometrics.time_subs.download_file', side_effect=AssertionError('cache should not be used')):
+            table = get_iers_table()
+
+        self.assertIsInstance(table, iers.IERS_A)
+        self.assertEqual(100, len(table))
+
+    def test_falls_back_to_iers_b_when_not_cached(self):
+        with patch('astrometrics.time_subs.download_file', side_effect=KeyError('not in cache')):
+            with self.assertLogs('astrometrics.time_subs', level='WARNING') as cm:
+                table = get_iers_table()
+
+        self.assertIsInstance(table, iers.IERS_B)
+        self.assertEqual(1, len(cm.output))
+        self.assertIn('update_iers_data', cm.output[0])
+        self.assertIs(table, iers.earth_orientation_table.get())
+
+    def test_falls_back_to_iers_b_when_cached_file_unreadable(self):
+        with patch('astrometrics.time_subs.download_file', return_value=__file__):
+            with self.assertLogs('astrometrics.time_subs', level='WARNING'):
+                table = get_iers_table()
+
+        self.assertIsInstance(table, iers.IERS_B)
+
+    def test_table_is_reused(self):
+        table = self.load_fixture_table()
+
+        with patch('astrometrics.time_subs.download_file', side_effect=AssertionError('should not reload')):
+            self.assertIs(table, get_iers_table())
+
+    def test_table_is_reread_after_reload_interval(self):
+        table = self.load_fixture_table()
+        time_subs._iers_table_loaded -= IERS_RELOAD_INTERVAL + 1
+
+        with patch('astrometrics.time_subs.download_file', return_value=self.iers_fixture) as mock_download:
+            new_table = get_iers_table()
+
+        mock_download.assert_called_once()
+        self.assertIsNot(table, new_table)
+        self.assertIsInstance(new_table, iers.IERS_A)
+
+    def test_force_reload(self):
+        table = self.load_fixture_table()
+
+        with patch('astrometrics.time_subs.download_file', side_effect=KeyError('gone')):
+            with self.assertLogs('astrometrics.time_subs', level='WARNING'):
+                new_table = get_iers_table(force_reload=True)
+
+        self.assertIsNot(table, new_table)
+        self.assertIsInstance(new_table, iers.IERS_B)
+
+
+class TestUT1MinusUTC(IERSTestMixin, SimpleTestCase):
+
+    def setUp(self):
+        super().setUp()
+        self.load_fixture_table()
+
+    def test_final_value(self):
+        self.assertAlmostEqual(-0.0087766, ut1_minus_utc(61300.5), 7)
+
+    def test_predicted_value(self):
+        self.assertAlmostEqual(-0.0643556, ut1_minus_utc(61350.5), 7)
+
+    def test_value_is_float(self):
+        self.assertIsInstance(ut1_minus_utc(61300.5), float)
+
+    def test_dbg_output(self):
+        with patch('builtins.print') as mock_print:
+            ut1_minus_utc(61300.5, dbg=True)
+        mock_print.assert_called_once_with('UT1-UTC= -0.008777 (status=1)')
+
+    def test_before_table_start_uses_first_value_and_warns(self):
+        with self.assertLogs('astrometrics.time_subs', level='WARNING') as cm:
+            dut = ut1_minus_utc(61000.0)
+
+        self.assertAlmostEqual(0.0067351, dut, 7)
+        self.assertIn('outside the IERS table range (MJD 61272-61371)', cm.output[0])
+
+    def test_beyond_table_end_uses_last_value(self):
+        with self.assertLogs('astrometrics.time_subs', level='WARNING'):
+            dut = ut1_minus_utc(61500.0)
+
+        self.assertAlmostEqual(-0.0880703, dut, 7)
+
+    def test_out_of_range_warns_only_once_per_table(self):
+        with self.assertLogs('astrometrics.time_subs', level='WARNING') as cm:
+            ut1_minus_utc(61500.0)
+            ut1_minus_utc(61600.0)
+        self.assertEqual(1, len(cm.output))
+
+        self.load_fixture_table()
+        with self.assertLogs('astrometrics.time_subs', level='WARNING') as cm:
+            ut1_minus_utc(61500.0)
+        self.assertEqual(1, len(cm.output))
+
+    def test_iers_b_fallback_value(self):
+        with patch('astrometrics.time_subs.download_file', side_effect=KeyError('not in cache')):
+            with self.assertLogs('astrometrics.time_subs', level='WARNING'):
+                get_iers_table(force_reload=True)
+
+        self.assertAlmostEqual(-0.1703239, ut1_minus_utc(58635.5), 7)
+
+    def test_compute_ut1(self):
+        expected_ut1 = 0.5 + (-0.0087766 / 86400.0)
+
+        self.assertAlmostEqual(expected_ut1, compute_ut1(61300.5), 12)

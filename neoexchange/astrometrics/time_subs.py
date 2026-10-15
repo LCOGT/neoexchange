@@ -16,8 +16,12 @@ GNU General Public License for more details.
 """
 from datetime import datetime, timedelta
 from math import degrees
+import os
 import time
 import logging
+
+from astropy.utils import iers
+from astropy.utils.data import download_file
 
 try:
     import pyslalib.slalib as S
@@ -25,6 +29,20 @@ except:
     pass
 
 logger = logging.getLogger(__name__)
+
+# Never let astropy fetch IERS data on demand: with a missing or stale table it
+# would retry the download (2 x 10s timeout) on *every* UT1-UTC lookup from inside
+# the ephemeris hot path, and then raise. The table is refreshed out-of-band by
+# `manage.py update_iers_data` and read from the astropy cache by get_iers_table().
+iers.conf.auto_download = False
+iers.conf.iers_degraded_accuracy = 'warn'
+
+IERS_A_URL = iers.conf.iers_auto_url
+IERS_RELOAD_INTERVAL = 86400.0  # seconds; how often a long-running process re-reads the cache
+
+_iers_table = None
+_iers_table_loaded = None
+_iers_range_warned = False
 
 
 def get_semester_start(date):
@@ -307,24 +325,67 @@ def datetime2mjd_tdb(date, obsvr_long, obsvr_lat, obsvr_hgt, dbg=False):
     return mjd_tdb
 
 
-def ut1_minus_utc(mjd_utc, dbg=False):
-    """Compute UT1-UTC (in seconds), needed for tasks that require the Earth's orientation.
-    UT1-UTC can be had from IERS Bulletin A (http://maia.usno.navy.mil/ser7/ser7.dat)
-    but only for a short timespan and in arrears requiring continual downloading.
-    Really need to get and read ftp://maia.usno.navy.mil/ser7/finals.all
-    to get accurate UT1 value or switch to astropy which can automatically
-    handle this. Exercise for the reader...
-    Currently we fake it by asuming 0.0. This will be wrong by at most +/- 0.9s
-    until they do away with leapseconds."""
+def get_iers_table(force_reload=False):
+    """Returns the IERS Earth orientation table used for UT1-UTC lookups.
 
-    dut = 0.0
+    This never touches the network. It reads the IERS-A table (finals2000A.all)
+    that `manage.py update_iers_data` has put in the astropy download cache and
+    falls back to the IERS-B table bundled with astropy if that is missing or
+    unreadable. The cache is re-read once per IERS_RELOAD_INTERVAL so that
+    long-running processes pick up the daily updates.
+    Setting the NEOX_IERS_A_FILE environment variable to the path of an IERS-A
+    file uses that file instead of the cache (the test settings do this so the
+    results don't depend on the machine's cache).
+    The table is also installed as astropy's `earth_orientation_table` so any
+    astropy coordinate/time conversions use the same data."""
+    global _iers_table, _iers_table_loaded, _iers_range_warned
+
+    if _iers_table is not None and not force_reload and \
+            time.monotonic() - _iers_table_loaded < IERS_RELOAD_INTERVAL:
+        return _iers_table
+
+    try:
+        iers_file = os.environ.get('NEOX_IERS_A_FILE') or download_file(IERS_A_URL, cache=True, sources=[])
+        table = iers.IERS_A.open(iers_file)
+        logger.info("Loaded IERS-A table from %s (MJD %.0f-%.0f)", iers_file, table['MJD'][0].value, table['MJD'][-1].value)
+    except Exception as e:
+        logger.warning("No usable cached IERS-A table (%s); falling back to astropy's bundled IERS-B. "
+                       "Run 'manage.py update_iers_data' to fetch one.", e)
+        table = iers.IERS_B.open()
+    iers.earth_orientation_table.set(table)
+
+    _iers_table = table
+    _iers_table_loaded = time.monotonic()
+    _iers_range_warned = False
+    return table
+
+
+def ut1_minus_utc(mjd_utc, dbg=False):
+    """Compute UT1-UTC (in seconds) at <mjd_utc>, needed for tasks that require
+    the Earth's orientation.
+    The value is linearly interpolated from the IERS table returned by
+    get_iers_table() (see there for how it is kept up to date). Times outside
+    the range of the table get the value at the nearest end of the table; this
+    is a much better guess than the 0.0 we used to assume, now that leap seconds
+    are no longer going to keep |UT1-UTC| < 0.9s."""
+    global _iers_range_warned
+
+    table = get_iers_table()
+    dut, status = table.ut1_utc(2400000.5, mjd_utc, return_status=True)
+    dut = float(dut.to_value('s'))
+    if status in (iers.TIME_BEFORE_IERS_RANGE, iers.TIME_BEYOND_IERS_RANGE) and not _iers_range_warned:
+        logger.warning("MJD %.2f is outside the IERS table range (MJD %.0f-%.0f); using UT1-UTC=%.4fs from the table edge",
+                       mjd_utc, table['MJD'][0].value, table['MJD'][-1].value, dut)
+        _iers_range_warned = True
+    if dbg:
+        print("UT1-UTC= %.6f (status=%d)" % (dut, status))
     return dut
 
 
 def compute_ut1(mjd_utc, dbg=False):
     """Compute UT1 (as fraction of a day), needed for tasks that require the Earth's orientation.
-    Currently we fake it by taking the fractional part of the day. This is good
-    to +/- 0.9s until they do away with leapseconds."""
+    This is the fractional part of the UTC day corrected by UT1-UTC from the
+    IERS table (see ut1_minus_utc())."""
 
     dut = ut1_minus_utc(mjd_utc)
     if dbg:

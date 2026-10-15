@@ -305,6 +305,9 @@ if 'test' in sys.argv:
         },
     }
     USE_S3 = False
+    # Pin the IERS Earth orientation table (for UT1-UTC) to a copy in the repo so
+    # ephemeris test results don't depend on the machine's astropy cache
+    os.environ.setdefault('NEOX_IERS_A_FILE', os.path.join(BASE_DIR, 'astrometrics', 'tests', 'iers', 'finals2000A.all'))
 
 USE_FIREFOXDRIVER = True
 

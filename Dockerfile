@@ -134,6 +134,11 @@ RUN python3.11 -m pip --no-cache-dir install --upgrade pip \
 # Add path to findorb
 ENV PATH=/root/bin:$PATH
 
+# Astropy config and download cache (IERS Earth orientation tables etc.) shared by
+# gunicorn (see neox/wsgi.py) and the cron-driven management commands
+ENV XDG_CONFIG_HOME=/var/www/apps/astropyconfig \
+    XDG_CACHE_HOME=/var/www/apps/astropycache
+
 # The entry point is our init script, which runs startup tasks, then starts gunicorn
 ENTRYPOINT [ "/init" ]
 

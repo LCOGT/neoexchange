@@ -313,7 +313,7 @@ class TestComputeEphemerides(TestCase):
         expected_dec = 0.522637696108887
         expected_mag = 20.408525362626005
         expected_motion = 2.4825093417658186
-        expected_alt = -58.658929026981895
+        expected_alt = -58.658217506963204
         expected_spd = 119.94694444444444
         expected_pa = 91.35793788996334
         expected_delta = 0.18138901132373111
@@ -346,7 +346,7 @@ class TestComputeEphemerides(TestCase):
         expected_dec = 0.522637696108887
         expected_mag = 20.408525362626005
         expected_motion = 2.4825093417658186
-        expected_alt = -58.658929026981895
+        expected_alt = -58.658217506963204
         expected_spd = 119.94694444444444
         expected_pa = 91.35793788996334
         expected_delta = 0.18138901132373111
@@ -716,22 +716,22 @@ class TestDarkAndObjectUp(TestCase):
 
     def test1(self):
         expected_first_line = {'date': datetime(2019, 1, 26, 1, 20),
-                               'ra': 3.13872732667931,
-                               'dec': -0.09499609693219863,
-                               'mag': 20.600690640173646,
-                               'sky_motion': 1.760842377819953,
-                               'altitude': 30.206739359560114,
+                               'ra': 3.1387273269688802,
+                               'dec': -0.09499609689627012,
+                               'mag': 20.60069064136003,
+                               'sky_motion': 1.7608427094708572,
+                               'altitude': 30.206556788817647,
                                'southpole_sep': 84.55611111111111,
-                               'sky_motion_pa': 88.26314748574852
+                               'sky_motion_pa': 88.263148639884
                                }
         expected_last_line = {'date': datetime(2019, 1, 26, 6, 30),
-                               'ra': 3.141344602912528,
-                               'dec': -0.09490298162746419,
-                               'mag': 20.589568103540817,
-                               'sky_motion': 1.7374161477538685,
-                               'altitude': 47.8232397476396,
+                               'ra': 3.1413446033436974,
+                               'dec': -0.09490298164712109,
+                               'mag': 20.58956810371186,
+                               'sky_motion': 1.7374159598310952,
+                               'altitude': 47.82337375377621,
                                'southpole_sep': 84.56222222222222,
-                               'sky_motion_pa': 87.63684359362396
+                               'sky_motion_pa': 87.63684456453912
                                }
 
         expected_num_lines = 32
@@ -1397,9 +1397,9 @@ class TestDetermineRatesAndPA(TestCase):
         self.assertAlmostEqual(expected_deltapa, deltapa, self.precision)
 
     def test_close_neo_W86(self):
-        expected_minrate = 11.168352251337911 - (0.01*11.168352251337911)
-        expected_maxrate = 11.235951320053525 + (0.01*11.235951320053525)
-        expected_pa = (359.4874655767052+(0.26203084523351095+360.0))/2.0
+        expected_minrate = 11.168351826714824 - (0.01*11.168351826714824)
+        expected_maxrate = 11.235951957489554 + (0.01*11.235951957489554)
+        expected_pa = (359.48761108608676+(0.2621710439592846+360.0))/2.0
         expected_deltapa = 10.0
 
         start_time = datetime(2017, 1, 25, 7, 00, 0)
@@ -1429,10 +1429,10 @@ class TestDetermineRatesAndPA(TestCase):
         self.assertAlmostEqual(expected_deltapa, deltapa, self.precision)
 
     def test_perturb_error(self):
-        expected_minrate = 1.2072179264460565 - (0.01*1.2072179264460565)
-        expected_maxrate = 1.3456142840902674 + (0.01*1.3456142840902674)
-        expected_pa = (309.8080216233171+320.9860119849485)/2.0
-        expected_deltapa = 11.17799036163143
+        expected_minrate = 1.2072111506161038 - (0.01*1.2072111506161038)
+        expected_maxrate = 1.345605962621034 + (0.01*1.345605962621034)
+        expected_pa = (309.80863342963085+320.9867629325993)/2.0
+        expected_deltapa = 11.178129502968432
 
         start_time = datetime(2018, 5, 9, 7, 11, 12, 181000)
         end_time =   datetime(2018, 5, 9, 7, 38, 14, 888000)

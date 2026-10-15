@@ -1346,7 +1346,7 @@ class TestScheduleCheck(TestCase):
         self.expected_resp = {
                             'target_name': self.body_mp.current_name(),
                             'magnitude': 19.09694937750832,
-                            'speed': 2.904310588055287,
+                            'speed': 2.904310509257155,
                             'slot_length': 20.0,
                             'filter_pattern': 'w',
                             'pattern_iterations': 10.0,
@@ -1383,10 +1383,10 @@ class TestScheduleCheck(TestCase):
                             'lco_site': 'COJ',
                             'lco_tel': '1M0',
                             'max_alt': 67,
-                            'moon_alt': -59.5216514230195,
+                            'moon_alt': -59.521709881359314,
                             'moon_phase': 1.2020664612667709,
                             'moon_sep': 170.4033428302428,
-                            'trail_len': 1.9362070587035247,
+                            'trail_len': 1.9362070061714365,
                             'typical_seeing': 2.0,
                             'ipp_value': 1.0,
                             'para_angle': False,
@@ -1998,7 +1998,7 @@ class TestScheduleCheck(TestCase):
                         'lco_site': 'COJ',
                         'lco_tel': '2M0',
                         'max_alt': 67,
-                        'moon_alt': -59.52147932253441,
+                        'moon_alt': -59.52153777625064,
                         'moon_phase': 1.2020671312553743,
                         'moon_sep': 170.40334265453788,
                         'trail_len': 0.4840515969823632,
@@ -2084,7 +2084,7 @@ class TestScheduleCheck(TestCase):
                         'lco_site': 'COJ',
                         'lco_tel': '2M0',
                         'max_alt': 67,
-                        'moon_alt': -59.52147932253441,
+                        'moon_alt': -59.52153777625064,
                         'moon_phase': 1.2020671312553743,
                         'moon_sep': 170.40334265453788,
                         'trail_len': 0.4840515969823632,
@@ -7434,7 +7434,7 @@ class TestFindBestFluxStandard(TestCase):
 
     def test_FTN(self):
         expected_standard = StaticSource.objects.get(name='HR9087')
-        expected_params = { 'separation_rad' : 0.9379758789119819}
+        expected_params = { 'separation_rad' : 0.9379927810794447}
         # Python 3.5 dict merge; see PEP 448
         expected_params = {**expected_params, **model_to_dict(expected_standard)}
 
@@ -7450,7 +7450,7 @@ class TestFindBestFluxStandard(TestCase):
 
     def test_FTS(self):
         expected_standard = StaticSource.objects.get(name='CD-34d241')
-        expected_params = { 'separation_rad' : 0.11565764559405214}
+        expected_params = { 'separation_rad' : 0.11563944900531758}
         # Python 3.5 dict merge; see PEP 448
         expected_params = {**expected_params, **model_to_dict(expected_standard)}
 
@@ -7578,7 +7578,7 @@ class TestFindBestSolarAnalog(TestCase):
         expected_ra = 4.334041503242261
         expected_dec = -0.3877173805762358
         expected_standard = StaticSource.objects.get(name='HD 140990')
-        expected_params = {'separation_deg': 10.838361371951908}
+        expected_params = {'separation_deg': 10.83836138304881}
         # Python 3.5 dict merge; see PEP 448
         expected_params = {**expected_params, **model_to_dict(expected_standard)}
 
