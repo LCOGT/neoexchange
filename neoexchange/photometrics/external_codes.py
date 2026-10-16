@@ -664,9 +664,9 @@ def determine_image_stats(filename, hdu='SCI', center=None, size=None):
 
 def determine_image_stats_from_fits(filename, center=None, size=None):
     """Compute mean and standard deviation on the FITS image referenced
-    by \<filename\>. Instead of using run_aststatistics, this function pulls
+    by <filename>. Instead of using run_aststatistics, this function pulls
     from get_fits_imagestats, using the astropy sigma_clipped_stats method.
-    Optionally \<center\> (x, y) and \<size\> (x, y) can be passed as pairs of
+    Optionally <center> (x, y) and <size> (x, y) can be passed as pairs of
     values for the pixel center of the box and the (width, height) in pixels
     of the box within which the statistics will be calculated."""
 
@@ -681,7 +681,7 @@ def determine_image_stats_from_fits(filename, center=None, size=None):
 def determine_stats_in_boxes(frame, fits_filepath):
     """Computes means and stds in boxes on a 3x3 grid
     for an individual Frame object <frame> using its
-    filename \<fits_filepath\>"""
+    filename <fits_filepath>"""
     if hasattr(frame, 'frametype'):
         frame_for_stat_analysis = frame
         xsize = frame_for_stat_analysis.get_x_size()
@@ -729,9 +729,9 @@ def determine_stats_in_boxes(frame, fits_filepath):
     return mean_grid, std_grid, cent_x_grid, cent_y_grid
 
 def determine_bad_subtractions_in_box_stats(frame, fits_filepath, badness_threshold):
-    """For a \<frame\> and \<fits_filepath\> (enter None for \<frame\> if using a FITS file
+    """For a <frame> and <fits_filepath> (enter None for <frame> if using a FITS file
     with no associated Frame object), determine whether bad subtractions occur in any
-    box of 3x3 grid based on a \<badness_threshold\> above which mean/std data is too high
+    box of 3x3 grid based on a <badness_threshold> above which mean/std data is too high
     for a good subtraction. If a bad subtraction occurs anywhere on the filename,
     function returns the filename so it can be noted as a bad subtraction in other
     functions. Does not specify where on 3x3 grid bad subtraction occurs. If no bad

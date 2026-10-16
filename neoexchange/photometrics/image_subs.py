@@ -435,8 +435,8 @@ def determine_reference_frame_for_block(obs_block, reference_dir, obs_filter=Non
 
 def get_fits_imagestats(fits_filename, keyword, center = None, size = None):
     """Finds std, median, or mean of pixel data in FITS image referenced <fits_filename>, depending 
-    on \<keyword\>. Pixel data will optionally be cropped to a specified \<size\> 
-    (x, y) around a specified \<center\> (x, y)"""
+    on <keyword>. Pixel data will optionally be cropped to a specified <size>
+    (x, y) around a specified <center> (x, y)"""
     if fits_filename is None:
         return None
     if os.path.exists(fits_filename) is False:

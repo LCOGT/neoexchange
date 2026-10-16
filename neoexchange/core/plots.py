@@ -1255,22 +1255,22 @@ def translate_from_alcdef_filter(filt):
 
 def generalized_fwhm_plotter(blocks_or_ref_fields, filters, colors, output_dir, individual_block_plots=False, make_full_night_plot=True):
     """Plots full width half maxima against time for each filter in a block or group of blocks over the blocks' observation nights.
-    Pass a block, list/Queryset of blocks, reference field, or list/Queryset of reference fields through \<blocks_or_ref_fields\>.
+    Pass a block, list/Queryset of blocks, reference field, or list/Queryset of reference fields through <blocks_or_ref_fields>.
     If a single block is passed, it will be thrown into a one element list. If a list or Queryset of blocks is passed, all elements
     will be thrown into a new list. If a reference field is passed, function will find all blocks in the reference field and throw them
     into a list. The same process will be done for a list of reference fields; all reference will be looped over and have their blocks
     extracted + thrown into the same list. No matter which of the four options is passed, it will be configured into a list of blocks.
-    Pass an np array or list of \<filters\> for which to plot fwhm, and a corresponding list or np array of colors for which the color
-    matches the filter at its same index. This determines the color coding and legends for the plot. Select an \<output_dir\> as an output
-    directory to save the figure(s). Finally, select True or False for \<individual_block_plots\> and \<make_full_night_plot\>. If
-    \<individual_block_plots\> is true, an individual plot of fwhms for all filters will be made for each block (unique date + ref field combo).
-    If <\make_full_night_plot\> is True, it will make a plot for a night of observation; if multiple blocks fall on this night they will appear as
+    Pass an np array or list of <filters> for which to plot fwhm, and a corresponding list or np array of colors for which the color
+    matches the filter at its same index. This determines the color coding and legends for the plot. Select an <output_dir> as an output
+    directory to save the figure(s). Finally, select True or False for <individual_block_plots> and <make_full_night_plot>. If
+    <individual_block_plots> is true, an individual plot of fwhms for all filters will be made for each block (unique date + ref field combo).
+    If <make_full_night_plot> is True, it will make a plot for a night of observation; if multiple blocks fall on this night they will appear as
     subplots labelled by their corresponding reference field. If there are more than 5 blocks sharing a night of observation, multiple
     plots will be made for the night, each with 5 subplots in chronological order representing each block. If #blocks % 5 != 0, the final
     plot will contain as many subplots as there are blocks in the remainder. The separate plots will be numbered in chronological order,
-    (i.e. first 5 blocks chronologically = plot 1, second 5 blocks= plot 2, ...). If \<individual_block_plots\> and \<make_full_night_plot\>
-    are True, both actions will be executed. If both are false, function defaults to \<make_full_night_plot\> = True. If there is only one block,
-    \<individual_block_plots\> defaults to true and \<make_full_night_plot\> defaults to false to save computational time, since for one block
+    (i.e. first 5 blocks chronologically = plot 1, second 5 blocks= plot 2, ...). If <individual_block_plots> and <make_full_night_plot>
+    are True, both actions will be executed. If both are false, function defaults to <make_full_night_plot> = True. If there is only one block,
+    <individual_block_plots> defaults to true and <make_full_night_plot> defaults to false to save computational time, since for one block
     they do the same thing and individual block plots are faster. """
     filenames = []
     #determine datatype given and extract corresponding blocks
@@ -1408,13 +1408,13 @@ def generalized_fwhm_plotter(blocks_or_ref_fields, filters, colors, output_dir, 
 
 
 
-def plot_magnitude(block, filter, photometry_table, savepath, bad_subtractions, err_threshold_mag = None, err_threshold_zp = None, account_zps = True, aperture_radius = None):
-    '''Plots light curve in the passed \<block\> for a specified \<filter\> on a single plot using a \<photometry_table\>, subplot containing fwhm and zp is added
-    to better understand data and bad subtractions are labeled with a '*'. Use \<savepath\> to enter a directory for saving the plot
-    Use examine_subtractions to find bad subtractions, then pass their file names as a list in \<bad_subtractions\> for labelling.
-    If you would like data points with high uncertainty to be excluded, pass a value \<err_threshold_maf\> for maximum tolerable
+def plot_magnitude(block, filter, photometry_table, savepath, bad_subtractions, err_threshold_mag = None, err_threshold_zp = None, account_zps = True, aperture_radius_pix = None):
+    '''Plots light curve in the passed <block> for a specified <filter> on a single plot using a <photometry_table>, subplot containing fwhm and zp is added
+    to better understand data and bad subtractions are labeled with a '*'. Use <savepath> to enter a directory for saving the plot
+    Use examine_subtractions to find bad subtractions, then pass their file names as a list in <bad_subtractions> for labelling.
+    If you would like data points with high uncertainty to be excluded, pass a value <err_threshold_maf> for maximum tolerable
     error in magnitude. All magnitudes with an error greater than the value will be dropped from the plot. Repeat for
-    \<err_threshold_zp\> to set a maximum error for zeropoints. WARNING: Make sure aperture radius and zp account specs
+    <err_threshold_zp> to set a maximum error for zeropoints. WARNING: Make sure aperture radius and zp account specs
     match what is in aperture photometry table, otherwise it may overwrite a plot for the same block with different specs'''
     times_col = photometry_table['times'].data
     magnitudes_col = photometry_table['mag'].data
@@ -1582,22 +1582,22 @@ def plot_magnitude(block, filter, photometry_table, savepath, bad_subtractions, 
 
 def generalized_zeropoint_plotter(blocks_or_ref_fields, filters, colors, output_dir, individual_block_plots, make_full_night_plot):
     """Plots zeropoints against time for each filter in a block or group of blocks over the blocks' observation nights.
-    Pass a block, list/Queryset of blocks, reference field, or list/Queryset of reference fields through \<blocks_or_ref_fields\>.
+    Pass a block, list/Queryset of blocks, reference field, or list/Queryset of reference fields through <blocks_or_ref_fields>.
     If a single block is passed, it will be thrown into a one element list. If a list or Queryset of blocks is passed, all elements
     will be thrown into a new list. If a reference field is passed, function will find all blocks in the reference field and throw them
     into a list. The same process will be done for a list of reference fields; all reference will be looped over and have their blocks
     extracted + thrown into the same list. No matter which of the four options is passed, it will be configured into a list of blocks.
-    Pass a list of \<filters\> for which to plot zeropoint, and a corresponding list of colors for which the color matches the filter at its
-    same index. This determines the color coding and legends for the plot. Select an \<output_dir\> as an output directory to save the
-    figure(s). Finally, select True or False for \<individual_block_plots\> and \<make_full_night_plot\>. If \<individual_block_plots\>
-    is true, an individual plot of zeropoints for all filters will be made for each block (unique date + ref field combo). If <\make_full
-    _night_plot\> is True, it will make a plot for a night of observation; if multiple blocks fall on this night they will appear as
+    Pass a list of <filters> for which to plot zeropoint, and a corresponding list of colors for which the color matches the filter at its
+    same index. This determines the color coding and legends for the plot. Select an <output_dir> as an output directory to save the
+    figure(s). Finally, select True or False for <individual_block_plots> and <make_full_night_plot>. If <individual_block_plots>
+    is true, an individual plot of zeropoints for all filters will be made for each block (unique date + ref field combo). If <make_full
+    _night_plot> is True, it will make a plot for a night of observation; if multiple blocks fall on this night they will appear as
     subplots labelled by their corresponding reference field. If there are more than 5 blocks sharing a night of observation, multiple
     plots will be made for the night, each with 5 subplots in chronological order representing each block. If #blocks % 5 != 0, the final
     plot will contain as many subplots as there are blocks in the remainder. The separate plots will be numbered in chronological order,
-    (i.e. first 5 blocks chronologically = plot 1, second 5 blocks= plot 2, ...). If \<individual_block_plots\> and \<make_full_night_plot\>
-    are True, both actions will be executed. If both are false, function defaults to \<make_full_night_plot\> = True. If there is only one block,
-    \<individual_block_plots\> defaults to true and \<make_full_night_plot\> defaults to false to save computational time, since for one block
+    (i.e. first 5 blocks chronologically = plot 1, second 5 blocks= plot 2, ...). If <individual_block_plots> and <make_full_night_plot>
+    are True, both actions will be executed. If both are false, function defaults to <make_full_night_plot> = True. If there is only one block,
+    <individual_block_plots> defaults to true and <make_full_night_plot> defaults to false to save computational time, since for one block
     they do the same thing and individual block plots are faster. """
     filenames = []
     if type(filters) != np.ndarray:
