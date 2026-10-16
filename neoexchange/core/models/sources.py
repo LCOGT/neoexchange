@@ -12,19 +12,17 @@ GNU General Public License for more details.
 """
 import logging
 import warnings
-from math import pi, log10, sqrt, cos, ceil
+from math import ceil, log10, pi, sqrt
 
+from astropy.wcs import FITSFixedWarning
 from django.db import models
 from django.utils.translation import gettext_lazy as _
-from astropy.wcs import FITSFixedWarning
-from astropy.wcs.utils import proj_plane_pixel_scales
 
+import astrometrics.site_config as cfg
 from astrometrics.ast_subs import normal_to_packed
 from astrometrics.ephem_subs import get_sitecam_params
-from astrometrics.time_subs import dttodecimalday, degreestohms, degreestodms
-from astrometrics.sources_subs import translate_catalog_code, psv_padding
-import astrometrics.site_config as cfg
-
+from astrometrics.sources_subs import psv_padding, translate_catalog_code
+from astrometrics.time_subs import degreestodms, degreestohms, dttodecimalday
 from core.models.body import Body
 from core.models.frame import Frame
 

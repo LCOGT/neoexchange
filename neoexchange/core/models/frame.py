@@ -10,16 +10,18 @@ but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 """
-from astropy.wcs import WCS
+from base64 import b64decode, b64encode
+
 from astropy import units as u
+from astropy.wcs import WCS
 from django.db import models
 from django.utils.encoding import force_str
+
 try:
     # cpython 2.x
-    from cPickle import loads, dumps
+    from cPickle import dumps, loads
 except ImportError:
-    from pickle import loads, dumps
-from base64 import b64decode, b64encode
+    from pickle import dumps, loads
 
 class WCSField(models.Field):
 
