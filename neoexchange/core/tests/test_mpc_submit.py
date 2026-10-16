@@ -15,10 +15,11 @@ GNU General Public License for more details.
 
 from datetime import datetime
 
+from astropy.wcs import WCS
 from django.test import TestCase
+from numpy import array
 
-from neox.tests.mocks import MockDateTime
-from core.models import Body, Proposal, SuperBlock, Block, Frame, SourceMeasurement
+from core.models import Block, Body, Frame, Proposal, SourceMeasurement, SuperBlock
 
 # Import module to test
 from core.mpc_submit import *
@@ -131,7 +132,6 @@ class TestGenerateMessage(TestCase):
                          'reported' : False
                        }
         self.test_block2 = Block.objects.create(**block_params)
-        self.test_block2ql = Block.objects.create(**block_params)
 
         sblock_params = {
                          'body'     : self.body2,
@@ -244,18 +244,6 @@ class TestGenerateMessage(TestCase):
                  }
         self.test_frame_satellite = Frame.objects.create(**frame_params)
 
-        frame_params = {  'sitecode'      : 'W86',
-                    'instrument'    : 'fl03',
-                    'filter'        : 'V',
-                    'frametype'     : Frame.BANZAI_QL_FRAMETYPE,
-                    'midpoint'      : datetime(2015, 12, 5, 1, 10, 49, int(0.9*1e6)),
-                    'filename'      : 'lsc1m003-fl03-20151205-0130-e11.fits',
-                    'block'         : self.test_block2ql,
-                    'astrometric_catalog' : "2MASS",
-                    'photometric_catalog' : "PPMXL",
-                 }
-        self.test_frame_ql = Frame.objects.create(**frame_params)
-
         measure_params = {  'body' : self.body,
                             'frame' : self.test_frame,
                             'obs_ra' : 157.5,
@@ -305,15 +293,6 @@ class TestGenerateMessage(TestCase):
                             'obs_mag' : 21.57,
                             'astrometric_catalog' : 'GAIA-DR2',
                             'photometric_catalog' : 'GAIA-DR2'
-                         }
-
-        measure = SourceMeasurement.objects.create(**measure_params)
-
-        measure_params = {  'body' : self.body2,
-                            'frame' : self.test_frame_ql,
-                            'obs_ra' : 15.5,
-                            'obs_dec' : -3.75,
-                            'obs_mag' : 21.57,
                          }
 
         measure = SourceMeasurement.objects.create(**measure_params)
@@ -530,7 +509,7 @@ class TestGenerateMessage(TestCase):
                             u'CON [tlister@lco.global]\n'
                             u'OBS T. Lister, J. Chatelain, S. Greenstreet, E. Gomez\n'
                             u'MEA T. Lister\n'
-                            u'TEL 2.0-m f/10 Ritchey-Chretien + CCD\n'
+                            u'TEL 2.0-m f/ 5 Ritchey-Chretien + CCD\n'
                             u'ACK NEOx_2015 XS54_F65_fs02\n'
                             u'COM LCO OGG Node 2m0 FTN at Haleakala, Maui\n'
                             u'AC2 tlister@lco.global,sgreenstreet@lco.global,jchatelain@lco.global\n'
@@ -566,7 +545,7 @@ class TestGenerateMessage(TestCase):
                             u'CON [tlister@lco.global]\n'
                             u'OBS T. Lister, J. Chatelain, S. Greenstreet, E. Gomez\n'
                             u'MEA T. Lister\n'
-                            u'TEL 2.0-m f/10 Ritchey-Chretien + CCD\n'
+                            u'TEL 2.0-m f/ 5 Ritchey-Chretien + CCD\n'
                             u'ACK NEOx_2015 XS54_F65_ep02\n'
                             u'COM LCO OGG Node 2m0 FTN at Haleakala, Maui\n'
                             u'AC2 tlister@lco.global,sgreenstreet@lco.global,jchatelain@lco.global\n'
@@ -599,31 +578,6 @@ class TestGenerateMessage(TestCase):
                             u'BND G\n'
                             u'     N999r0q  C2015 07 13.88184001 02 00.00 -03 45 00.0          21.6 G      K93\n')
         message = generate_message(self.test_block_gaia.id, self.test_block_gaia.body.id)
-
-        i = 0
-        expected_lines = expected_message.split('\n')
-        message_lines = message.split('\n')
-        while i < len(expected_lines):
-            self.assertEqual(expected_lines[i], message_lines[i])
-            i += 1
-
-        self.assertEqual(expected_message, message)
-
-    def test_W86_QL(self):
-
-        expected_message = (u'COD W86\n'
-                            u'CON LCO, 6740 Cortona Drive Suite 102, Goleta, CA 93117\n'
-                            u'CON [tlister@lco.global]\n'
-                            u'OBS T. Lister, J. Chatelain, S. Greenstreet, E. Gomez\n'
-                            u'MEA T. Lister\n'
-                            u'TEL 1.0-m f/8 Ritchey-Chretien + CCD\n'
-                            u'ACK NEOx_2015 XS54_W86_fl03\n'
-                            u'COM LCO LSC Node 1m0 Dome B at Cerro Tololo, Chile\n'
-                            u'AC2 tlister@lco.global,sgreenstreet@lco.global,jchatelain@lco.global\n'
-                            u'NET 2MASS\n'
-                            u'BND V\n'
-                            u'     K15X54S  C2015 12 05.04918901 02 00.00 -03 45 00.0          21.6 V      W86\n')
-        message = generate_message(self.test_block2ql.id, self.test_block2ql.body.id)
 
         i = 0
         expected_lines = expected_message.split('\n')
@@ -688,6 +642,20 @@ class TestGenerateMessage(TestCase):
             i += 1
 
         self.assertEqual(expected_message, message)
+
+
+def make_fake_wcs(pixscale, naxis1, naxis2):
+    """Build a minimal TAN WCS with a CD matrix (so the scale survives
+    WCSField pickling) and NAXIS keywords (so Frame.get_x_size/get_y_size
+    and get_pixel_scale all return values).
+    [pixscale] is in arcsec/pixel."""
+    w = WCS({'NAXIS': 2, 'NAXIS1': naxis1, 'NAXIS2': naxis2})
+    w.wcs.crpix = [naxis1 / 2.0, naxis2 / 2.0]
+    scale_deg = pixscale / 3600.0
+    w.wcs.cd = array([[-scale_deg, 0.0], [0.0, scale_deg]])
+    w.wcs.crval = [150.0, -30.0]
+    w.wcs.ctype = ["RA---TAN", "DEC--TAN"]
+    return w
 
 
 class TestGenerateADESPSVMessage(TestCase):
@@ -797,7 +765,6 @@ class TestGenerateADESPSVMessage(TestCase):
                          'reported' : False
                        }
         self.test_block2 = Block.objects.create(**block_params)
-        self.test_block2ql = Block.objects.create(**block_params)
 
         sblock_params = {
                          'body'     : self.body2,
@@ -857,7 +824,8 @@ class TestGenerateADESPSVMessage(TestCase):
                     'exptime'       : 40.0,
                     'midpoint'      : datetime(2015, 7, 13, 21, 9, 51),
                     'block'         : self.test_block,
-                    'astrometric_catalog' : "UCAC-4"
+                    'astrometric_catalog' : "UCAC-4",
+                    'wcs'           : make_fake_wcs(0.464, 2028, 2038)
                  }
         self.test_frame = Frame.objects.create(**frame_params)
 
@@ -878,6 +846,7 @@ class TestGenerateADESPSVMessage(TestCase):
                     'midpoint'      : datetime(2015, 12, 5, 1, 10, 49, int(0.9*1e6)),
                     'block'         : self.test_block2,
                     'astrometric_catalog' : "2MASS",
+                    'wcs'           : make_fake_wcs(0.389, 4096, 4096)
                  }
         self.test_frame_stack = Frame.objects.create(**frame_params)
 
@@ -888,6 +857,7 @@ class TestGenerateADESPSVMessage(TestCase):
                     'midpoint'      : datetime(2015, 12, 5, 1, 10, 49, int(0.9*1e6)),
                     'block'         : self.test_block3,
                     'astrometric_catalog' : "2MASS",
+                    'wcs'           : make_fake_wcs(0.571, 3072, 2048)
                  }
         self.test_frame_point4m = Frame.objects.create(**frame_params)
 
@@ -898,6 +868,7 @@ class TestGenerateADESPSVMessage(TestCase):
                     'midpoint'      : datetime(2015, 12, 5, 9, 50, 49),
                     'block'         : self.test_block4,
                     'astrometric_catalog' : "PPMXL",
+                    'wcs'           : make_fake_wcs(0.304, 2048, 2048)
                  }
         self.test_frame_twom = Frame.objects.create(**frame_params)
 
@@ -909,18 +880,6 @@ class TestGenerateADESPSVMessage(TestCase):
                     'extrainfo'     : '     N999r0q  s2016 02 08.89193 1 - 3471.6659 - 5748.3475 - 1442.3263        C51'
                  }
         self.test_frame_satellite = Frame.objects.create(**frame_params)
-
-        frame_params = {  'sitecode'      : 'W86',
-                    'instrument'    : 'fl03',
-                    'filter'        : 'V',
-                    'frametype'     : Frame.BANZAI_QL_FRAMETYPE,
-                    'midpoint'      : datetime(2015, 12, 5, 1, 10, 49, int(0.9*1e6)),
-                    'filename'      : 'lsc1m003-fl03-20151205-0130-e11.fits',
-                    'block'         : self.test_block2ql,
-                    'astrometric_catalog' : "2MASS",
-                    'photometric_catalog' : "PPMXL",
-                 }
-        self.test_frame_ql = Frame.objects.create(**frame_params)
 
         measure_params = {  'body' : self.body,
                             'frame' : self.test_frame,
@@ -975,20 +934,11 @@ class TestGenerateADESPSVMessage(TestCase):
 
         measure = SourceMeasurement.objects.create(**measure_params)
 
-        measure_params = {  'body' : self.body2,
-                            'frame' : self.test_frame_ql,
-                            'obs_ra' : 15.5,
-                            'obs_dec' : -3.75,
-                            'obs_mag' : 21.57,
-                         }
-
-        measure = SourceMeasurement.objects.create(**measure_params)
-
         self.maxDiff = None
 
     def test_K93(self):
 
-        exp_msg = ( '# version=2017\n'
+        exp_msg = ( '# version=2022\n'
                     '# observatory\n'
                     '! mpcCode K93\n'
                     '# submitter\n'
@@ -996,6 +946,7 @@ class TestGenerateADESPSVMessage(TestCase):
                     '! institution LCO, 6740 Cortona Drive Suite 102, Goleta, CA 93117\n'
                     '# observers\n'
                     '! name T. Lister\n'
+                    '! name C. Holt\n'
                     '! name E. Gomez\n'
                     '! name J. Chatelain\n'
                     '! name S. Greenstreet\n'
@@ -1007,6 +958,8 @@ class TestGenerateADESPSVMessage(TestCase):
                     '! aperture 1.0\n'
                     '! detector CCD\n'
                     '! fRatio 8.0\n'
+                    '! arraySize 2028x2038\n'
+                    '! pixelScale 0.4640\n'
                     'permID |provID     |trkSub  |mode|stn |obsTime                |ra         |dec        |astCat  |mag  |band|photCat |notes|remarks\n'
                     '       |           | N999r0q| CCD|K93 |2015-07-13T21:09:51.00Z|157.500000 |-32.750000 |   UCAC4|21.5 |   R|   UCAC4|     |\n')
 
@@ -1022,7 +975,7 @@ class TestGenerateADESPSVMessage(TestCase):
         self.assertEqual(exp_msg, message)
 
     def test_W86(self):
-        exp_msg = ( '# version=2017\n'
+        exp_msg = ( '# version=2022\n'
                     '# observatory\n'
                     '! mpcCode W86\n'
                     '# submitter\n'
@@ -1030,6 +983,7 @@ class TestGenerateADESPSVMessage(TestCase):
                     '! institution LCO, 6740 Cortona Drive Suite 102, Goleta, CA 93117\n'
                     '# observers\n'
                     '! name T. Lister\n'
+                    '! name C. Holt\n'
                     '! name E. Gomez\n'
                     '! name J. Chatelain\n'
                     '! name S. Greenstreet\n'
@@ -1041,6 +995,8 @@ class TestGenerateADESPSVMessage(TestCase):
                     '! aperture 1.0\n'
                     '! detector CCD\n'
                     '! fRatio 8.0\n'
+                    '! arraySize 4096x4096\n'
+                    '! pixelScale 0.3890\n'
                     'permID |provID     |trkSub  |mode|stn |obsTime                |ra         |dec        |astCat  |mag  |band|photCat |notes|remarks\n'
                     '       |2015 XS54  |        | CCD|W86 |2015-12-05T01:10:49.90Z|157.500000 |  0.660000 |   2MASS|21.5 |   R|   2MASS|K    |\n')
 
@@ -1056,7 +1012,7 @@ class TestGenerateADESPSVMessage(TestCase):
         self.assertEqual(exp_msg, message)
 
     def test_Z21(self):
-        exp_msg = ( '# version=2017\n'
+        exp_msg = ( '# version=2022\n'
                     '# observatory\n'
                     '! mpcCode Z21\n'
                     '# submitter\n'
@@ -1064,6 +1020,7 @@ class TestGenerateADESPSVMessage(TestCase):
                     '! institution LCO, 6740 Cortona Drive Suite 102, Goleta, CA 93117\n'
                     '# observers\n'
                     '! name T. Lister\n'
+                    '! name C. Holt\n'
                     '! name E. Gomez\n'
                     '! name J. Chatelain\n'
                     '! name S. Greenstreet\n'
@@ -1075,6 +1032,8 @@ class TestGenerateADESPSVMessage(TestCase):
                     '! aperture 0.4\n'
                     '! detector CCD\n'
                     '! fRatio 8.0\n'
+                    '! arraySize 3072x2048\n'
+                    '! pixelScale 0.5710\n'
                     'permID |provID     |trkSub  |mode|stn |obsTime                |ra         |dec        |astCat  |mag  |band|photCat |notes|remarks\n'
                     '       |2015 XS54  |        | CCD|Z21 |2015-12-05T01:10:49.90Z|  7.600000 | 32.755000 |   2MASS|20.5 |   R|   2MASS|     |\n')
 
@@ -1097,7 +1056,7 @@ class TestGenerateADESPSVMessage(TestCase):
         self.test_frame_point4m.sitecode = 'W89'
         self.test_frame_point4m.instrument = 'kb93'
         self.test_frame_point4m.save()
-        exp_msg = ( '# version=2017\n'
+        exp_msg = ( '# version=2022\n'
                     '# observatory\n'
                     '! mpcCode W89\n'
                     '# submitter\n'
@@ -1105,6 +1064,7 @@ class TestGenerateADESPSVMessage(TestCase):
                     '! institution LCO, 6740 Cortona Drive Suite 102, Goleta, CA 93117\n'
                     '# observers\n'
                     '! name T. Lister\n'
+                    '! name C. Holt\n'
                     '! name E. Gomez\n'
                     '! name J. Chatelain\n'
                     '! name S. Greenstreet\n'
@@ -1116,6 +1076,8 @@ class TestGenerateADESPSVMessage(TestCase):
                     '! aperture 0.4\n'
                     '! detector CCD\n'
                     '! fRatio 8.0\n'
+                    '! arraySize 3072x2048\n'
+                    '! pixelScale 0.5710\n'
                     'permID |provID     |trkSub  |mode|stn |obsTime                |ra         |dec        |astCat  |mag  |band|photCat |notes|remarks\n'
                     '       |2015 XS54  |        | CCD|W89 |2015-12-05T01:10:49.90Z|  7.600000 | 32.755000 |   2MASS|20.5 |   R|   2MASS|     |\n')
 
@@ -1138,7 +1100,7 @@ class TestGenerateADESPSVMessage(TestCase):
         self.test_frame_point4m.sitecode = 'W79'
         self.test_frame_point4m.instrument = 'kb26'
         self.test_frame_point4m.save()
-        exp_msg = ( '# version=2017\n'
+        exp_msg = ( '# version=2022\n'
                     '# observatory\n'
                     '! mpcCode W79\n'
                     '# submitter\n'
@@ -1146,6 +1108,7 @@ class TestGenerateADESPSVMessage(TestCase):
                     '! institution LCO, 6740 Cortona Drive Suite 102, Goleta, CA 93117\n'
                     '# observers\n'
                     '! name T. Lister\n'
+                    '! name C. Holt\n'
                     '! name E. Gomez\n'
                     '! name J. Chatelain\n'
                     '! name S. Greenstreet\n'
@@ -1157,6 +1120,8 @@ class TestGenerateADESPSVMessage(TestCase):
                     '! aperture 0.4\n'
                     '! detector CCD\n'
                     '! fRatio 8.0\n'
+                    '! arraySize 3072x2048\n'
+                    '! pixelScale 0.5710\n'
                     'permID |provID     |trkSub  |mode|stn |obsTime                |ra         |dec        |astCat  |mag  |band|photCat |notes|remarks\n'
                     '       |2015 XS54  |        | CCD|W79 |2015-12-05T01:10:49.90Z|  7.600000 | 32.755000 |   2MASS|20.5 |   R|   2MASS|     |\n')
 
@@ -1179,7 +1144,7 @@ class TestGenerateADESPSVMessage(TestCase):
         self.test_frame_point4m.sitecode = 'V38'
         self.test_frame_point4m.instrument = 'kb26'
         self.test_frame_point4m.save()
-        exp_msg = ( '# version=2017\n'
+        exp_msg = ( '# version=2022\n'
                     '# observatory\n'
                     '! mpcCode V38\n'
                     '# submitter\n'
@@ -1187,6 +1152,7 @@ class TestGenerateADESPSVMessage(TestCase):
                     '! institution LCO, 6740 Cortona Drive Suite 102, Goleta, CA 93117\n'
                     '# observers\n'
                     '! name T. Lister\n'
+                    '! name C. Holt\n'
                     '! name E. Gomez\n'
                     '! name J. Chatelain\n'
                     '! name S. Greenstreet\n'
@@ -1198,6 +1164,8 @@ class TestGenerateADESPSVMessage(TestCase):
                     '! aperture 0.4\n'
                     '! detector CCD\n'
                     '! fRatio 8.0\n'
+                    '! arraySize 3072x2048\n'
+                    '! pixelScale 0.5710\n'
                     'permID |provID     |trkSub  |mode|stn |obsTime                |ra         |dec        |astCat  |mag  |band|photCat |notes|remarks\n'
                     '       |2015 XS54  |        | CCD|V38 |2015-12-05T01:10:49.90Z|  7.600000 | 32.755000 |   2MASS|20.5 |   R|   2MASS|     |\n')
 
@@ -1220,7 +1188,7 @@ class TestGenerateADESPSVMessage(TestCase):
         self.test_frame_point4m.sitecode = 'L09'
         self.test_frame_point4m.instrument = 'kb96'
         self.test_frame_point4m.save()
-        exp_msg = ( '# version=2017\n'
+        exp_msg = ( '# version=2022\n'
                     '# observatory\n'
                     '! mpcCode L09\n'
                     '# submitter\n'
@@ -1228,6 +1196,7 @@ class TestGenerateADESPSVMessage(TestCase):
                     '! institution LCO, 6740 Cortona Drive Suite 102, Goleta, CA 93117\n'
                     '# observers\n'
                     '! name T. Lister\n'
+                    '! name C. Holt\n'
                     '! name E. Gomez\n'
                     '! name J. Chatelain\n'
                     '! name S. Greenstreet\n'
@@ -1239,6 +1208,8 @@ class TestGenerateADESPSVMessage(TestCase):
                     '! aperture 0.4\n'
                     '! detector CCD\n'
                     '! fRatio 8.0\n'
+                    '! arraySize 3072x2048\n'
+                    '! pixelScale 0.5710\n'
                     'permID |provID     |trkSub  |mode|stn |obsTime                |ra         |dec        |astCat  |mag  |band|photCat |notes|remarks\n'
                     '       |2015 XS54  |        | CCD|L09 |2015-12-05T01:10:49.90Z|  7.600000 | 32.755000 |   2MASS|20.5 |   R|   2MASS|     |\n')
 
@@ -1255,7 +1226,7 @@ class TestGenerateADESPSVMessage(TestCase):
 
     def test_F65(self):
 
-        exp_msg = ( '# version=2017\n'
+        exp_msg = ( '# version=2022\n'
                     '# observatory\n'
                     '! mpcCode F65\n'
                     '# submitter\n'
@@ -1263,6 +1234,7 @@ class TestGenerateADESPSVMessage(TestCase):
                     '! institution LCO, 6740 Cortona Drive Suite 102, Goleta, CA 93117\n'
                     '# observers\n'
                     '! name T. Lister\n'
+                    '! name C. Holt\n'
                     '! name E. Gomez\n'
                     '! name J. Chatelain\n'
                     '! name S. Greenstreet\n'
@@ -1273,7 +1245,9 @@ class TestGenerateADESPSVMessage(TestCase):
                     '! design Ritchey-Chretien\n'
                     '! aperture 2.0\n'
                     '! detector CCD\n'
-                    '! fRatio 10.0\n'
+                    '! fRatio 5.2\n'
+                    '! arraySize 2048x2048\n'
+                    '! pixelScale 0.3040\n'
                     'permID |provID     |trkSub  |mode|stn |obsTime                |ra         |dec        |astCat  |mag  |band|photCat |notes|remarks\n'
                     '       |2015 XS54  |        | CCD|F65 |2015-12-05T09:50:49.00Z|  7.600000 | 32.755000 |   PPMXL|20.7 |   R|   PPMXL|     |\n')
 
@@ -1290,7 +1264,7 @@ class TestGenerateADESPSVMessage(TestCase):
 
     def test_K93_gaia(self):
 
-        exp_msg = ( '# version=2017\n'
+        exp_msg = ( '# version=2022\n'
                     '# observatory\n'
                     '! mpcCode K93\n'
                     '# submitter\n'
@@ -1298,6 +1272,7 @@ class TestGenerateADESPSVMessage(TestCase):
                     '! institution LCO, 6740 Cortona Drive Suite 102, Goleta, CA 93117\n'
                     '# observers\n'
                     '! name T. Lister\n'
+                    '! name C. Holt\n'
                     '! name E. Gomez\n'
                     '! name J. Chatelain\n'
                     '! name S. Greenstreet\n'
@@ -1309,45 +1284,12 @@ class TestGenerateADESPSVMessage(TestCase):
                     '! aperture 1.0\n'
                     '! detector CCD\n'
                     '! fRatio 8.0\n'
+                    '! arraySize 2028x2038\n'
+                    '! pixelScale 0.4640\n'
                     'permID |provID     |trkSub  |mode|stn |obsTime                |ra         |dec        |astCat  |mag  |band|photCat |notes|remarks\n'
                     '       |           | N999r0q| CCD|K93 |2015-07-13T21:09:51.00Z| 15.500000 | -3.750000 |   Gaia1|21.6 |   G|   Gaia1|     |\n')
 
         message = generate_ades_psv_message(self.test_block_gaia.id, self.test_block_gaia.body.id)
-
-        i = 0
-        expected_lines = exp_msg.split('\n')
-        message_lines = message.split('\n')
-        while i < len(expected_lines):
-            self.assertEqual(expected_lines[i], message_lines[i])
-            i += 1
-
-        self.assertEqual(exp_msg, message)
-
-    def test_W86_QL(self):
-
-        exp_msg = ( '# version=2017\n'
-                    '# observatory\n'
-                    '! mpcCode W86\n'
-                    '# submitter\n'
-                    '! name T. Lister\n'
-                    '! institution LCO, 6740 Cortona Drive Suite 102, Goleta, CA 93117\n'
-                    '# observers\n'
-                    '! name T. Lister\n'
-                    '! name E. Gomez\n'
-                    '! name J. Chatelain\n'
-                    '! name S. Greenstreet\n'
-                    '# measurers\n'
-                    '! name T. Lister\n'
-                    '# telescope\n'
-                    '! name LCO LSC Node 1m0 Dome B at Cerro Tololo, Chile\n'
-                    '! design Ritchey-Chretien\n'
-                    '! aperture 1.0\n'
-                    '! detector CCD\n'
-                    '! fRatio 8.0\n'
-                    'permID |provID     |trkSub  |mode|stn |obsTime                |ra         |dec        |astCat  |mag  |band|photCat |notes|remarks\n'
-                    '       |2015 XS54  |        | CCD|W86 |2015-12-05T01:10:49.90Z| 15.500000 | -3.750000 |   2MASS|21.6 |   V|   PPMXL|     |\n')
-
-        message = generate_ades_psv_message(self.test_block2ql.id, self.test_block2ql.body.id)
 
         i = 0
         expected_lines = exp_msg.split('\n')
@@ -1365,7 +1307,7 @@ class TestGenerateADESPSVMessage(TestCase):
         sm.flags = '*'
         sm.save()
 
-        exp_msg = ( '# version=2017\n'
+        exp_msg = ( '# version=2022\n'
                     '# observatory\n'
                     '! mpcCode K93\n'
                     '# submitter\n'
@@ -1373,6 +1315,7 @@ class TestGenerateADESPSVMessage(TestCase):
                     '! institution LCO, 6740 Cortona Drive Suite 102, Goleta, CA 93117\n'
                     '# observers\n'
                     '! name T. Lister\n'
+                    '! name C. Holt\n'
                     '! name E. Gomez\n'
                     '! name J. Chatelain\n'
                     '! name S. Greenstreet\n'
@@ -1384,6 +1327,8 @@ class TestGenerateADESPSVMessage(TestCase):
                     '! aperture 1.0\n'
                     '! detector CCD\n'
                     '! fRatio 8.0\n'
+                    '! arraySize 2028x2038\n'
+                    '! pixelScale 0.4640\n'
                     'permID |provID     |trkSub  |mode|stn |obsTime                |ra         |dec        |astCat  |mag  |band|photCat |notes|remarks\n'
                     '       |           | N999r0q| CCD|K93 |2015-07-13T21:09:51.00Z|157.500000 |-32.750000 |   UCAC4|21.5 |   R|   UCAC4|*    |\n')
 
@@ -1400,7 +1345,7 @@ class TestGenerateADESPSVMessage(TestCase):
 
     def test_K93_gaiadr2(self):
 
-        exp_msg = ( '# version=2017\n'
+        exp_msg = ( '# version=2022\n'
                     '# observatory\n'
                     '! mpcCode K93\n'
                     '# submitter\n'
@@ -1408,6 +1353,7 @@ class TestGenerateADESPSVMessage(TestCase):
                     '! institution LCO, 6740 Cortona Drive Suite 102, Goleta, CA 93117\n'
                     '# observers\n'
                     '! name T. Lister\n'
+                    '! name C. Holt\n'
                     '! name E. Gomez\n'
                     '! name J. Chatelain\n'
                     '! name S. Greenstreet\n'
@@ -1419,6 +1365,8 @@ class TestGenerateADESPSVMessage(TestCase):
                     '! aperture 1.0\n'
                     '! detector CCD\n'
                     '! fRatio 8.0\n'
+                    '! arraySize 2028x2038\n'
+                    '! pixelScale 0.4640\n'
                     'permID |provID     |trkSub  |mode|stn |obsTime                |ra         |dec        |astCat  |mag  |band|photCat |notes|remarks\n'
                     '       |           | N999r0q| CCD|K93 |2015-07-13T21:09:51.00Z| 15.500000 | -3.750000 |   Gaia2|21.6 |   G|   Gaia2|     |\n')
 
@@ -1439,7 +1387,7 @@ class TestGenerateADESPSVMessage(TestCase):
         self.test_frame_gaiadr2.instrument = 'fa07'
         self.test_frame_gaiadr2.save()
 
-        exp_msg = ( '# version=2017\n'
+        exp_msg = ( '# version=2022\n'
                     '# observatory\n'
                     '! mpcCode V39\n'
                     '# submitter\n'
@@ -1447,6 +1395,7 @@ class TestGenerateADESPSVMessage(TestCase):
                     '! institution LCO, 6740 Cortona Drive Suite 102, Goleta, CA 93117\n'
                     '# observers\n'
                     '! name T. Lister\n'
+                    '! name C. Holt\n'
                     '! name E. Gomez\n'
                     '! name J. Chatelain\n'
                     '! name S. Greenstreet\n'
@@ -1458,6 +1407,8 @@ class TestGenerateADESPSVMessage(TestCase):
                     '! aperture 1.0\n'
                     '! detector CCD\n'
                     '! fRatio 8.0\n'
+                    '! arraySize 2028x2038\n'
+                    '! pixelScale 0.4640\n'
                     'permID |provID     |trkSub  |mode|stn |obsTime                |ra         |dec        |astCat  |mag  |band|photCat |notes|remarks\n'
                     '       |           | N999r0q| CCD|V39 |2015-07-13T21:09:51.00Z| 15.500000 | -3.750000 |   Gaia2|21.6 |   G|   Gaia2|     |\n')
 
@@ -1478,7 +1429,7 @@ class TestGenerateADESPSVMessage(TestCase):
         self.test_frame_gaiadr2.instrument = 'fa20'
         self.test_frame_gaiadr2.save()
 
-        exp_msg = ( '# version=2017\n'
+        exp_msg = ( '# version=2022\n'
                     '# observatory\n'
                     '! mpcCode Z24\n'
                     '# submitter\n'
@@ -1486,6 +1437,7 @@ class TestGenerateADESPSVMessage(TestCase):
                     '! institution LCO, 6740 Cortona Drive Suite 102, Goleta, CA 93117\n'
                     '# observers\n'
                     '! name T. Lister\n'
+                    '! name C. Holt\n'
                     '! name E. Gomez\n'
                     '! name J. Chatelain\n'
                     '! name S. Greenstreet\n'
@@ -1497,6 +1449,8 @@ class TestGenerateADESPSVMessage(TestCase):
                     '! aperture 1.0\n'
                     '! detector CCD\n'
                     '! fRatio 8.0\n'
+                    '! arraySize 2028x2038\n'
+                    '! pixelScale 0.4640\n'
                     'permID |provID     |trkSub  |mode|stn |obsTime                |ra         |dec        |astCat  |mag  |band|photCat |notes|remarks\n'
                     '       |           | N999r0q| CCD|Z24 |2015-07-13T21:09:51.00Z| 15.500000 | -3.750000 |   Gaia2|21.6 |   G|   Gaia2|     |\n')
 
@@ -1517,7 +1471,7 @@ class TestGenerateADESPSVMessage(TestCase):
         self.test_frame_gaiadr2.instrument = 'fa11'
         self.test_frame_gaiadr2.save()
 
-        exp_msg = ( '# version=2017\n'
+        exp_msg = ( '# version=2022\n'
                     '# observatory\n'
                     '! mpcCode Z31\n'
                     '# submitter\n'
@@ -1525,6 +1479,7 @@ class TestGenerateADESPSVMessage(TestCase):
                     '! institution LCO, 6740 Cortona Drive Suite 102, Goleta, CA 93117\n'
                     '# observers\n'
                     '! name T. Lister\n'
+                    '! name C. Holt\n'
                     '! name E. Gomez\n'
                     '! name J. Chatelain\n'
                     '! name S. Greenstreet\n'
@@ -1536,6 +1491,8 @@ class TestGenerateADESPSVMessage(TestCase):
                     '! aperture 1.0\n'
                     '! detector CCD\n'
                     '! fRatio 8.0\n'
+                    '! arraySize 2028x2038\n'
+                    '! pixelScale 0.4640\n'
                     'permID |provID     |trkSub  |mode|stn |obsTime                |ra         |dec        |astCat  |mag  |band|photCat |notes|remarks\n'
                     '       |           | N999r0q| CCD|Z31 |2015-07-13T21:09:51.00Z| 15.500000 | -3.750000 |   Gaia2|21.6 |   G|   Gaia2|     |\n')
 
