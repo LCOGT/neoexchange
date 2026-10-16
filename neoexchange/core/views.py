@@ -15,11 +15,13 @@ import os
 from shutil import move
 import copy
 from glob import glob
+from io import StringIO
 from operator import itemgetter
 from datetime import datetime, timedelta, date
 from math import floor, ceil, degrees, radians, pi, acos, pow, cos
 from astropy import units as u
 from astropy.io import fits
+from astropy.io import ascii
 from astropy.time import Time
 from astropy.table import Table, QTable
 from astropy.coordinates import SkyCoord
@@ -32,7 +34,7 @@ from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.messages.views import SuccessMessageMixin
-from django.core.exceptions import ObjectDoesNotExist, ValidationError
+from django.core.exceptions import ObjectDoesNotExist, ValidationError, FieldDoesNotExist
 from django.core.files.storage import default_storage
 from django.core.paginator import Paginator
 from django.db.models import Q, Prefetch
@@ -4764,7 +4766,7 @@ def create_latex_table(body_or_name, return_table=False, deluxetable=False, dbg=
     the Block.obstype; if this is the same for all Blocks, this is droppped.
     If [deluxetable] is True then the table is written out using the
     `aastex` io.ascii formatter instead to produce a deluxetable; longer
-    than 1 page tables will need a '\startlongtable' manually inserting
+    than 1 page tables will need a '\\startlongtable' manually inserting
     at the start of the table.
     """
     # Fields to retrieve, separate foreign keys with '__'
@@ -4852,7 +4854,7 @@ def create_latex_table(body_or_name, return_table=False, deluxetable=False, dbg=
                     if obs_filter in ['up', 'gp', 'rp', 'ip']:
                         obs_filter = obs_filter.replace('p', "'")
                     elif obs_filter == 'zs':
-                        obs_filter = '$\mathrm{z_{s}}$'
+                        obs_filter = r'$\mathrm{z_{s}}$'
                     elif obs_filter.upper().startswith('SLIT'):
                         slit_regex = r"SLIT_([\d.]+)X([\d.]+)AS"
                         match = re.match(slit_regex, obs_filter.upper())
