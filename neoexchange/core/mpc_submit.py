@@ -12,9 +12,9 @@ but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 """
-from django.template.loader import get_template
-from django.core.mail import send_mail
 from django.conf import settings
+from django.core.mail import send_mail
+from django.template.loader import get_template
 
 from core.frames import measurements_from_block
 
