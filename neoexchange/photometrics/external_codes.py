@@ -16,35 +16,46 @@ GNU General Public License for more details.
 import logging
 import os
 import re
-import numpy as np
-from math import floor, ceil
-from datetime import datetime, timedelta
-
-from subprocess import call, PIPE, Popen, TimeoutExpired
-from collections import OrderedDict
 import warnings
-from shutil import unpack_archive
+from collections import OrderedDict
+from datetime import datetime, timedelta
 from glob import glob
+from math import ceil, floor
+from shutil import unpack_archive
+from subprocess import PIPE, Popen, TimeoutExpired, call
 
 import astropy.units as u
-from astropy import wcs
+import numpy as np
+from astropy.coordinates import ICRS, SkyCoord
 from astropy.io import fits
 from astropy.io.votable import parse
-from astropy.coordinates import ICRS, SkyCoord
 from astropy.wcs import WCS, FITSFixedWarning, InvalidTransformError
 from astropy.wcs.utils import proj_plane_pixel_scales
-from numpy import loadtxt, split, empty, median, absolute, sqrt
+from numpy import absolute, empty, loadtxt, median, split, sqrt
+from photutils.aperture import CircularAnnulus, CircularAperture, SkyCircularAperture, aperture_photometry
 
-from core.models import detections_array_dtypes
-from core.utils import NeoException
-from core.models.frame import Frame
 from astrometrics.time_subs import timeit
-from photutils.aperture import aperture_photometry, CircularAnnulus, CircularAperture, SkyCircularAperture
-from core.blocksfind import get_ephem, ephem_interpolate
-from photometrics.catalog_subs import oracdr_catalog_mapping, banzai_catalog_mapping, \
-    banzai_ldac_catalog_mapping, swope_ldac_catalog_mapping, mro_ldac_catalog_mapping,\
-    fits_ldac_to_header, convert_value, get_header
-from photometrics.image_subs import create_weight_image, create_rms_image, get_saturate, get_fits_imagestats
+from core.blocksfind import ephem_interpolate, get_ephem
+from core.models import detections_array_dtypes
+from core.models.frame import Frame
+from core.utils import NeoException
+from photometrics.catalog_subs import (
+    banzai_catalog_mapping,
+    banzai_ldac_catalog_mapping,
+    convert_value,
+    fits_ldac_to_header,
+    get_header,
+    mro_ldac_catalog_mapping,
+    open_fits_catalog,
+    swope_ldac_catalog_mapping,
+)
+from photometrics.image_subs import (
+    create_rms_image,
+    create_weight_image,
+    get_fits_imagestats,
+    get_rot,
+    get_saturate,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -275,7 +286,7 @@ def determine_sextractor_options(fits_file, dest_dir, checkimage_type=[], catalo
 
     try:
         hdulist = fits.open(fits_file)
-    except IOError as e:
+    except OSError as e:
         logger.error(f"Unable to open FITS image {fits_file} (Reason={e})")
         return options
 
@@ -292,7 +303,7 @@ def determine_sextractor_options(fits_file, dest_dir, checkimage_type=[], catalo
 
     header_mapping, table_mapping = banzai_catalog_mapping()
 
-    for option in option_mapping.keys():
+    for option in option_mapping:
         keyword = header_mapping[option]
         if keyword == '<MAXLIN>':
             value = get_saturate(header)
@@ -558,8 +569,7 @@ def make_file_list(images, output_file_name):
     """
     #This also overwrites any existing file of the same name
     with open(output_file_name, 'w') as f:
-        for image in images:
-            f.write(f"{image}\n")
+        f.writelines(f"{image}\n" for image in images)
 
     return output_file_name
 
@@ -879,7 +889,7 @@ def add_l1filter(fits_file):
 
     try:
         hdulist = fits.open(fits_file, mode='update')
-    except:# IOError as e:
+    except:# OSError as e:
         logger.error(f"Unable to open FITS image {fits_file} (Reason={e})")
         return -99
 
@@ -1345,7 +1355,7 @@ def get_scamp_xml_info(scamp_xml_file):
         warnings.filterwarnings("ignore")
         try:
             votable = parse(scamp_xml_file)
-        except IOError as e:
+        except OSError as e:
             logger.error("Unable to open SCAMP VOTable XML file %s (Reason=%s)" % (scamp_xml_file, e))
             return None
 
@@ -1409,7 +1419,7 @@ def updateFITSWCS(fits_file, scamp_file, scamp_xml_file, fits_file_output):
         hdulist = fits.open(fits_file)
         header = hdulist[0].header
         data = hdulist[0].data
-    except IOError as e:
+    except OSError as e:
         logger.error("Unable to open FITS image %s (Reason=%s)" % (fits_file, e))
         return -1, None
 
@@ -1419,7 +1429,7 @@ def updateFITSWCS(fits_file, scamp_file, scamp_xml_file, fits_file_output):
 
     try:
         scamp_head_fh = open(scamp_file, 'r')
-    except IOError as e:
+    except OSError as e:
         logger.error("Unable to open SCAMP header file %s (Reason=%s)" % (scamp_file, e))
         return -3, None
 
@@ -1613,7 +1623,7 @@ def updateFITScalib(header, fits_file, catalog_type='BANZAI'):
 
     try:
         hdulist = fits.open(fits_file)
-    except IOError as e:
+    except OSError as e:
         logger.error(f"Unable to open FITS image {fits_file} (Reason={e})")
         return -1, None
 
@@ -1671,7 +1681,7 @@ def updateFITSdia(fits_file):
     try:
         hdulist = fits.open(fits_file, mode='update')
         header = hdulist[0].header
-    except (IOError, IndexError) as e:
+    except (OSError, IndexError) as e:
         logger.error("Unable to open FITS image %s (Reason=%s)" % (fits_file, e))
         return -1, None
 
@@ -1697,7 +1707,7 @@ def read_mtds_file(mtdsfile, dbg=False):
 
     try:
         mtds_fh = open(mtdsfile, 'r')
-    except IOError:
+    except OSError:
         return {}
 
     # Read header
@@ -2107,7 +2117,7 @@ def run_aststatistics(filename, keyword, hdu='SCI', binary='aststatistics', cent
             (out, errors) = cmd_call.communicate()
             returncode = cmd_call.returncode
         if returncode != 0:
-            logger.error(f"Error running astcrop to create subset")
+            logger.error("Error running astcrop to create subset")
             return None, -3
         filename = tempfile
         hdu = 'CROP'
