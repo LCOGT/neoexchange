@@ -30,7 +30,8 @@ into `pipelines` (9d1f2cfa), so the "committed" and "apophis2" descriptions now 
    Fix 2: 7d9a1ab8). Confirmed on all 86 frames. The SExtractor `.bkgsub.fits` check image is written before
    `proc-zeropoint` updates `L1ZP`, and HOTPANTS copies that stale header into e93. This is the "smooth" orange series.
    `proc-zeropoint` now writes the calibration into the check images too. The existing e93 files, Frames and tables,
-   including this Block's, are unchanged until the data repair (Fix 8), which waits on Fix 4 (item 4).
+   including this Block's, are unchanged until the data repair (Fix 8). Fix 4(a) landed 2026-10-15, so Fix 1 is the
+   only thing still ahead of it.
 4. **The target photometry and its zeropoint use different apertures.** The e93 target photometry uses **5″**
    apertures (`perform_aper_photometry` works in arcsec). Measured from the stars on each frame:
    - **Now (BANZAI zeropoint):** Didymos is too bright by 0.034–0.055 mag (median 0.043). That is almost constant: it
@@ -174,7 +175,8 @@ growth to choose the aperture.
 > and `L1ZPSRC`. 12fbc1d3 makes `updateFITScalib` write `0.0` values; it skipped them as falsy, so `L1COLERR=0.0`
 > from a constant-colour run never reached the files. Strictly, the check images carry whatever the e92 header held
 > when the e92 extract ran: BANZAI's values on a first pass, as here, or a previous NEOx pass's on a reprocess. The
-> e93 files and Frames made before this, including this Block's, still need the Fix 8 repair, which waits on Fix 4.
+> e93 files and Frames made before this, including this Block's, still need the Fix 8 repair (Fix 4(a) is done;
+> Fix 1 remains).
 > Fix 1 (the guard in the DIA step) and its e93-equals-e92 test are still open.
 
 The orange series in cell 43 ("5SNR aperture photometry ZP", the `ZP` column of `aper_p_Didymos5snr_712_06_13.ecsv`)
@@ -641,22 +643,32 @@ is close to S/N-optimal.
 - [x] **Fix 3 — `update_frame_zeropoint` signature.** Part of the planned `prep/apophis2-recovery` change (2): adopt
   `frame_filepath`, tolerate bare filenames, update `catalog_subs.py:2078,2081` and the tests. **Done:** e654595c,
   merged in 9d1f2cfa.
-- [ ] **Fix 4 — match the target aperture to the zeropoint aperture.** **Must land with or before Fixes 1–2 and the data
-  repair.** Choose one:
-  - (a) Measure Didymos on e93 with the zeropoint's aperture: 6 px = 1.602″ here, or in general
-    `PHOT_APERTURES/2 × pixscale`. Simplest; it is what PhotPipe does (with 5 px).
-  - (b) Seeing-scaled apertures (k × FWHM) for both stars and target, which needs multi-aperture catalogs.
-  - (c) Aperture correction from a curve of growth (Fix 5).
-
-  Whichever is chosen, `perform_aper_photometry` should record the zeropoint aperture it assumed.
+- [x] **Fix 4 — match the target aperture to the zeropoint aperture.** **Done 2026-10-15, option (a)**, with the
+  aperture recorded in the data rather than inferred from the config. (b) seeing-scaled apertures and (c) a
+  curve-of-growth correction (Fix 5) remain as follow-ons.
+  - `proc-zeropoint` writes `L1ZPAPER` (radius, pixels) after `L1ZPSRC` in the e92, the LDAC and the check images.
+    The value is SExtractor's own record of the aperture it measured with: `SEXAPED1` (the `PHOT_APERTURES`
+    diameter) is already in every LDAC header and `get_catalog_header` halves it into `aperture_radius_pixels`;
+    `update_zeropoint` copies that to `zeropoint_aperture_pixels` when it sets the zeropoint and `updateFITScalib`
+    writes it. So it cannot drift from the config. Read-only check on `Hera/20260712` frame 0069: 6.0 px = 1.6035″.
+  - `single_frame_aperture_photometry(aperture_radius_pix=None)` now measures with the frame's `L1ZPAPER`; the
+    2.5 × FWHM default is gone. A frame without `L1ZPAPER` raises `NeoException` instead of silently measuring with
+    something else (`pipeline_aper_photometry` reports it as a `CommandError`); pass a radius explicitly for frames
+    processed before this. The zeropoint aperture is always recorded (`zeropoint_aperture_pix` in the per-frame
+    table, `ZP aperture radius pix` in the Block table; −99 if absent), so a mismatch with a manual radius is visible.
+  - `pipeline_aper_photometry [radius_pix]`: the radius is now optional; file labels read `…_aper_radius_L1ZPAPER_…`
+    (`aperture_radius_label()` in `external_codes.py` is the one place that spells the label).
+  - Not done: a `Frame` field for the aperture (needs a migration). Existing e92/e93/LDAC files have no `L1ZPAPER`
+    (nothing was rerun); the Fix 8 repair should set it from the LDAC's `SEXAPED1`/2 when it copies the e92
+    calibration into the e93.
 - [ ] **Fix 5 (parked) — aperture correction.** `FITS_LDAC_MULTIAPER` catalogs already exist but `run_pipeline.py:95`
   only selects them for `-ef` frames. The star-flux-ratio method used in §2 and §4 is a working prototype: median
   ratio of bright, isolated, unsaturated stars between two apertures, measured per frame.
 - [x] **Fix 6 — commit the apophis2 config.** Review and commit the `sextractor_neox_ldac.conf` tuning
   (`PHOT_APERTURES 12`, `DETECT/ANALYSIS_THRESH 1.2`; Q20, Tim's to commit), so reductions are reproducible from any
   checkout. Consider writing the aperture into the e92 header (e.g. `L1ZPAPER`) during `proc-zeropoint`, so it is
-  recorded with the data rather than inferred. **Config committed:** fe1946d0, merged in 9d1f2cfa. The `L1ZPAPER`
-  header keyword is still open.
+  recorded with the data rather than inferred. **Config committed:** fe1946d0, merged in 9d1f2cfa. `L1ZPAPER` done with
+  Fix 4(a), 2026-10-15.
 - [ ] **Fix 7 (minor):** correct the index-4 comment and the multiaper aperture list, and add `ZP_sig` in quadrature to
   `magerr` (or document that it is left out).
 
@@ -664,7 +676,8 @@ is close to S/N-optimal.
 
 - [ ] **Fix 8:** a management command, e.g. `fix_e93_zeropoints --block <id> | --date <YYYYMMDD> [--dry-run]`. For
   each e93 `Frame`, find the e92 `Frame` (`-e93` → `-e92`). Copy `zeropoint`, `zeropoint_err`, `zeropoint_src` and the
-  colour fields, and patch the same keywords in the e93 FITS and `.rms.fits` headers. Report frames whose e92 has no
+  colour fields, and patch the same keywords in the e93 FITS and `.rms.fits` headers, plus `L1ZPAPER` from the LDAC's
+  `SEXAPED1`/2 (Fix 4). Report frames whose e92 has no
   good zeropoint rather than skipping them silently. Run it on every DIA-processed block, not only 35906.
 - [ ] **Fix 9:** regenerate the `aper_p_Didymos*.ecsv` tables only after Fix 4. Applying the corrected e92 zeropoint
   to the existing 5″ apertures would introduce a 0.09–0.27 mag (0.18 peak-to-peak) seeing-correlated bias (§4).
@@ -742,14 +755,26 @@ models. Run step 6 on this night first; the §6 simulation predicts what a corre
 
 ### Aperture units and selection (§7)
 
-- [ ] **Fix 16 — make the aperture unit explicit.**
-  - In `single_frame_aperture_photometry` and `perform_aper_photometry`, accept an astropy `Quantity`, or separate
-    `radius_arcsec` and `radius_pix` arguments.
-  - In `pipeline_aper_photometry.py`, replace the bare positional `aperture_radius` with `--radius-arcsec`,
-    `--radius-pix` or `--radius-fwhm`, defaulting to an FWHM multiple.
-  - Write the unit into the ECSV column metadata, and the filename label, alongside the zeropoint aperture (Fix 4).
-- [ ] **Fix 17 (minor):** fix the mixed-unit `CircularAnnulus((ra, dec), ...)` in the `background_subtract=True` branch
-  of `single_frame_aperture_photometry`, or remove that branch.
+- [x] **Fix 16 — make the aperture unit explicit.** **Done 2026-10-15**, pixels end to end:
+  - `single_frame_aperture_photometry(..., aperture_radius_pix=None)` measures with a pixel-coordinate
+    `CircularAperture` (ephemeris RA/Dec → x, y through the frame WCS), so a radius of 5 is 5 px whatever the WCS
+    scale. `None` kept the seeing-scaled default, 2.5 × FWHM, converted to pixels (superseded by Fix 4(a): `None` is
+    now the zeropoint aperture). The result records `aperture_radius_pix`, `aperture_radius_arcsec` and `pixel_scale`.
+  - `perform_aper_photometry` / `generate_ecsv_file_post_photometry` / `plot_magnitude` take `aperture_radius_pix`; the
+    table has `aperture radius pix`, `aperture radius arcsec` and `pixel scale` columns and the filename label reads
+    `…_aper_radius_5.0px_…`.
+  - `pipeline_aper_photometry` takes a `radius_pix` positional (required here, optional since Fix 4(a)), named and
+    documented as pixels, and prints the arcsec range it corresponds to on the frames.
+  - The parameter rename is deliberate: old `aperture_radius=` callers fail with `TypeError` instead of silently
+    measuring in arcsec. The DART FLI 1–10″ multi-aperture case is parked.
+  - Tests compute their expectations independently with a pixel aperture, and check a 3.375 px aperture against a
+    3.375 × pixel-scale arcsec sky aperture. The four `TestPerformAperPhotometry` photometry tests had been failing
+    since the `SNR` column was added; they pass again.
+  - Recording the zeropoint aperture alongside it: done with Fix 4(a) (`L1ZPAPER`).
+- [ ] **Fix 17 (minor):** the `background_subtract=True` branch of `single_frame_aperture_photometry` now centres its
+  `CircularAnnulus` in pixels (done with Fix 16), but the branch is otherwise untested and its per-pixel background
+  arithmetic looks wrong (`get_values()` array divided by the annulus area, then subtracted from the whole image).
+  Fix or remove it.
 - [ ] **Fix 18 — PhotPipe:**
   - Commit the local `LCOMUSCEP07` (and other MuSCAT) entries in `~/git/photometrypipeline/setup/telescopes.py`, so the
     circulated reduction is reproducible.

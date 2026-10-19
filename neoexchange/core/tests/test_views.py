@@ -29,8 +29,9 @@ from mock import patch
 import astropy.units as u
 from astropy.io import fits
 from astropy.wcs import WCS
+from astropy.wcs.utils import proj_plane_pixel_scales
 from astropy.table import QTable
-from photutils.aperture import CircularAperture, SkyCircularAperture
+from photutils.aperture import CircularAperture, SkyCircularAperture, aperture_photometry
 from numpy.testing import assert_allclose
 
 from neox.tests.mocks import MockDateTime, mock_check_request_status, mock_check_for_images, \
@@ -9294,6 +9295,8 @@ class TestPerformAperPhotometry(TestCase):
         #print(f"filter {frame_params['filter']}")
         i = 0
         self.test_banzai_files = []
+        # The fixture predates L1ZPAPER; give the copies the zeropoint aperture proc-zeropoint would have written
+        self.zp_aperture_pix = 6.0
         source_details = { 45234032 : {'mag' : 14.8447, 'err_mag' : 0.0054, 'flags' : 0},
                            45234584 : {'mag' : 14.8637, 'err_mag' : 0.0052, 'flags' : 3},
                            45235052 : {'mag' : 14.8447, 'err_mag' : 0.0051, 'flags' : 0}
@@ -9372,6 +9375,7 @@ class TestPerformAperPhotometry(TestCase):
                     hdulist[0].header['utstop'] = utstop.strftime("%H:%M:%S.%f")[0:12]
                     hdulist[0].header['crval1'] = ra[i]
                     hdulist[0].header['crval2'] = dec[i]
+                    hdulist[0].header['L1ZPAPER'] = (self.zp_aperture_pix, 'Radius of zeropoint aperture [pixels]')
                     hdulist.writeto(filename, overwrite=True, checksum=True)
 #                   hdulist.close()
                     self.test_banzai_files.append(os.path.basename(filename))
@@ -9387,6 +9391,7 @@ class TestPerformAperPhotometry(TestCase):
         self.row_2_test_file = os.path.join(self.test_output_dir, 'coj2m002-ep07-20240610-0125-e93.fits')
         self.header, cattype = get_header(self.row_2_test_file)
         self.wcs = self.header['wcs']
+        self.pixel_scale = proj_plane_pixel_scales(self.wcs).mean() * 3600.0
 
     def tearDown(self):
         # Generate an example test dir to compare root against and then remove it
@@ -9425,6 +9430,14 @@ class TestPerformAperPhotometry(TestCase):
         self.assertAlmostEqual(expected_table[column][0], row[column], precision)
         print(f'{column} OK')
 
+    def expected_sums(self, radius_pix):
+        """Independent pixel-aperture photometry of the third (0125) e93 frame at the interpolated
+        ephemeris position, for an aperture of <radius_pix> PIXELS"""
+        data = fits.getdata(self.row_2_test_file) / self.header['exptime']
+        rms = fits.getdata(self.row_2_test_file.replace('e93.fits', 'e93.rms.fits')) / self.header['exptime']
+        phot = aperture_photometry(data, CircularAperture((48.76999999999983, 48.2699999999529), r=radius_pix), error=rms)
+        return [phot['aperture_sum'][0]], [phot['aperture_sum_err'][0]]
+
     def test_perform_aperture_photometry_default(self):
 
         FLUX2MAG = 2.5/np.log(10)
@@ -9445,14 +9458,17 @@ class TestPerformAperPhotometry(TestCase):
         expected_row2['DEC'] = [sky_source_aperture.positions.dec.value]
         expected_row2['xcenter'] = [48.76999999999983] #*u.pix
         expected_row2['ycenter'] = [48.2699999999529] #* u.pix
-        expected_row2['aperture sum'] = [135.68437393971408]
-        expected_row2['aperture sum err'] = [11.646125295033322]
+        expected_row2['aperture sum'], expected_row2['aperture sum err'] = self.expected_sums(self.zp_aperture_pix)
         expected_row2['FWHM'] = [self.e93_frame.fwhm]
         expected_row2['ZP'] = [self.e93_frame.zeropoint]
         expected_row2['ZP_sig'] = [self.e93_frame.zeropoint_err]
         expected_row2['mag'] = -2.5*np.log10(expected_row2['aperture sum']) + self.e93_frame.zeropoint
         expected_row2['magerr'] = FLUX2MAG * expected_row2['aperture sum err'] / expected_row2['aperture sum']
-        expected_row2['aperture radius'] = [2.5*self.e93_frame.fwhm]
+        expected_row2['aperture radius pix'] = [self.zp_aperture_pix]
+        expected_row2['aperture radius arcsec'] = [self.zp_aperture_pix * self.pixel_scale]
+        expected_row2['ZP aperture radius pix'] = [self.zp_aperture_pix]
+        expected_row2['pixel scale'] = [self.pixel_scale]
+        expected_row2['SNR'] = expected_row2['aperture sum'] / expected_row2['aperture sum err']
         dataroot = self.test_output_dir
         results = perform_aper_photometry(self.test_block, dataroot)
         exp_dtypes = expected_row2.dtype
@@ -9475,7 +9491,10 @@ class TestPerformAperPhotometry(TestCase):
         self.compare_table_item(expected_row2, results[:][2], column = 'aperture sum err')
         self.compare_table_item(expected_row2, results[:][2], column = 'mag')
         self.compare_table_item(expected_row2, results[:][2], column = 'magerr')
-        self.compare_table_item(expected_row2, results[:][2], column = 'aperture radius')
+        self.compare_table_item(expected_row2, results[:][2], column = 'aperture radius pix')
+        self.compare_table_item(expected_row2, results[:][2], column = 'aperture radius arcsec')
+        self.compare_table_item(expected_row2, results[:][2], column = 'ZP aperture radius pix')
+        self.compare_table_item(expected_row2, results[:][2], column = 'pixel scale')
 
     def test_perform_aperture_photometry_default_ap_ignore_zp(self):
         FLUX2MAG = 2.5/np.log(10)
@@ -9495,14 +9514,17 @@ class TestPerformAperPhotometry(TestCase):
         expected_row2['DEC'] = [sky_source_aperture.positions.dec.value]
         expected_row2['xcenter'] = [48.76999999999983] #*u.pix
         expected_row2['ycenter'] = [48.2699999999529] #* u.pix
-        expected_row2['aperture sum'] = [135.68437393971408]
-        expected_row2['aperture sum err'] = [11.646125295033322]
+        expected_row2['aperture sum'], expected_row2['aperture sum err'] = self.expected_sums(self.zp_aperture_pix)
         expected_row2['FWHM'] = [self.e93_frame.fwhm]
         expected_row2['ZP'] = [self.e93_frame.zeropoint]
         expected_row2['ZP_sig'] = [self.e93_frame.zeropoint_err]
         expected_row2['mag'] = -2.5*np.log10(expected_row2['aperture sum'])
         expected_row2['magerr'] = FLUX2MAG * expected_row2['aperture sum err'] / expected_row2['aperture sum']
-        expected_row2['aperture radius'] = [2.5*self.e93_frame.fwhm]
+        expected_row2['aperture radius pix'] = [self.zp_aperture_pix]
+        expected_row2['aperture radius arcsec'] = [self.zp_aperture_pix * self.pixel_scale]
+        expected_row2['ZP aperture radius pix'] = [self.zp_aperture_pix]
+        expected_row2['pixel scale'] = [self.pixel_scale]
+        expected_row2['SNR'] = expected_row2['aperture sum'] / expected_row2['aperture sum err']
         dataroot = self.test_output_dir
         results = perform_aper_photometry(self.test_block, dataroot, account_zps= False)
 
@@ -9528,7 +9550,10 @@ class TestPerformAperPhotometry(TestCase):
         self.compare_table_item(expected_row2, results[:][2], column = 'aperture sum err')
         self.compare_table_item(expected_row2, results[:][2], column = 'mag')
         self.compare_table_item(expected_row2, results[:][2], column = 'magerr')
-        self.compare_table_item(expected_row2, results[:][2], column = 'aperture radius')
+        self.compare_table_item(expected_row2, results[:][2], column = 'aperture radius pix')
+        self.compare_table_item(expected_row2, results[:][2], column = 'aperture radius arcsec')
+        self.compare_table_item(expected_row2, results[:][2], column = 'ZP aperture radius pix')
+        self.compare_table_item(expected_row2, results[:][2], column = 'pixel scale')
 
     def test_perform_aperture_photometry_manual_ap_ignore_zp(self):
         FLUX2MAG = 2.5/np.log(10)
@@ -9548,16 +9573,19 @@ class TestPerformAperPhotometry(TestCase):
         expected_row2['DEC'] = [sky_source_aperture.positions.dec.value]
         expected_row2['xcenter'] = [48.76999999999983] #*u.pix
         expected_row2['ycenter'] = [48.2699999999529] #* u.pix
-        expected_row2['aperture sum'] = [99.9718286829744]
-        expected_row2['aperture sum err'] = [8.690970405159566]
+        expected_row2['aperture sum'], expected_row2['aperture sum err'] = self.expected_sums(3.0)
         expected_row2['FWHM'] = [self.e93_frame.fwhm]
         expected_row2['ZP'] = [self.e93_frame.zeropoint]
         expected_row2['ZP_sig'] = [self.e93_frame.zeropoint_err]
         expected_row2['mag'] = -2.5*np.log10(expected_row2['aperture sum'])
         expected_row2['magerr'] = FLUX2MAG * expected_row2['aperture sum err'] / expected_row2['aperture sum']
-        expected_row2['aperture radius'] = [3.0]
+        expected_row2['aperture radius pix'] = [3.0]
+        expected_row2['aperture radius arcsec'] = [3.0 * self.pixel_scale]
+        expected_row2['ZP aperture radius pix'] = [self.zp_aperture_pix]
+        expected_row2['pixel scale'] = [self.pixel_scale]
+        expected_row2['SNR'] = expected_row2['aperture sum'] / expected_row2['aperture sum err']
         dataroot = self.test_output_dir
-        results = perform_aper_photometry(self.test_block, dataroot, account_zps= False, aperture_radius= 3.0)
+        results = perform_aper_photometry(self.test_block, dataroot, account_zps= False, aperture_radius_pix= 3.0)
 
         exp_dtypes = expected_row2.dtype
         dtypes = results.dtype
@@ -9581,7 +9609,10 @@ class TestPerformAperPhotometry(TestCase):
         self.compare_table_item(expected_row2, results[:][2], column = 'aperture sum err')
         self.compare_table_item(expected_row2, results[:][2], column = 'mag')
         self.compare_table_item(expected_row2, results[:][2], column = 'magerr')
-        self.compare_table_item(expected_row2, results[:][2], column = 'aperture radius')
+        self.compare_table_item(expected_row2, results[:][2], column = 'aperture radius pix')
+        self.compare_table_item(expected_row2, results[:][2], column = 'aperture radius arcsec')
+        self.compare_table_item(expected_row2, results[:][2], column = 'ZP aperture radius pix')
+        self.compare_table_item(expected_row2, results[:][2], column = 'pixel scale')
 
     def test_perform_aperture_photometry_manual_ap_include_zp(self):
         FLUX2MAG = 2.5/np.log(10)
@@ -9601,16 +9632,19 @@ class TestPerformAperPhotometry(TestCase):
         expected_row2['DEC'] = [sky_source_aperture.positions.dec.value]
         expected_row2['xcenter'] = [48.76999999999983] #*u.pix
         expected_row2['ycenter'] = [48.2699999999529] #* u.pix
-        expected_row2['aperture sum'] = [99.9718286829744]
-        expected_row2['aperture sum err'] = [8.690970405159566]
+        expected_row2['aperture sum'], expected_row2['aperture sum err'] = self.expected_sums(3.0)
         expected_row2['FWHM'] = [self.e93_frame.fwhm]
         expected_row2['ZP'] = [self.e93_frame.zeropoint]
         expected_row2['ZP_sig'] = [self.e93_frame.zeropoint_err]
         expected_row2['mag'] = -2.5*np.log10(expected_row2['aperture sum']) + self.e93_frame.zeropoint
         expected_row2['magerr'] = FLUX2MAG * expected_row2['aperture sum err'] / expected_row2['aperture sum']
-        expected_row2['aperture radius'] = [3.0]
+        expected_row2['aperture radius pix'] = [3.0]
+        expected_row2['aperture radius arcsec'] = [3.0 * self.pixel_scale]
+        expected_row2['ZP aperture radius pix'] = [self.zp_aperture_pix]
+        expected_row2['pixel scale'] = [self.pixel_scale]
+        expected_row2['SNR'] = expected_row2['aperture sum'] / expected_row2['aperture sum err']
         dataroot = self.test_output_dir
-        results = perform_aper_photometry(self.test_block, dataroot, account_zps= True, aperture_radius= 3.0)
+        results = perform_aper_photometry(self.test_block, dataroot, account_zps= True, aperture_radius_pix= 3.0)
 
         exp_dtypes = expected_row2.dtype
         dtypes = results.dtype
@@ -9634,12 +9668,15 @@ class TestPerformAperPhotometry(TestCase):
         self.compare_table_item(expected_row2, results[:][2], column = 'aperture sum err')
         self.compare_table_item(expected_row2, results[:][2], column = 'mag')
         self.compare_table_item(expected_row2, results[:][2], column = 'magerr')
-        self.compare_table_item(expected_row2, results[:][2], column = 'aperture radius')
+        self.compare_table_item(expected_row2, results[:][2], column = 'aperture radius pix')
+        self.compare_table_item(expected_row2, results[:][2], column = 'aperture radius arcsec')
+        self.compare_table_item(expected_row2, results[:][2], column = 'ZP aperture radius pix')
+        self.compare_table_item(expected_row2, results[:][2], column = 'pixel scale')
 
-    def test_generate_ecsv_file_post_photomet_default(self):
+    def test_generate_ecsv_file_post_photometry_default(self):
         block_date_str = f"{self.test_block.block_start}"[:-9]
-        expected_file_name = os.path.join(self.test_output_dir, f"aperture_photometry_table_{block_date_str}_aper_radius_2.5*fwhm_zps_included.ecsv")
-        photometry_file_name = generate_ecsv_file_post_photomet(self.test_block, self.test_output_dir, overwrite = True)
+        expected_file_name = os.path.join(self.test_output_dir, f"aperture_photometry_table_{block_date_str}_aper_radius_L1ZPAPER_zps_included.ecsv")
+        photometry_file_name = generate_ecsv_file_post_photometry(self.test_block, self.test_output_dir, overwrite = True)
         photometry_file_contents = Table.read(photometry_file_name, format = 'ascii.ecsv')
         photometry_table = perform_aper_photometry(self.test_block, self.test_output_dir)
         self.assertTrue(os.path.exists(photometry_file_name))
@@ -9647,10 +9684,10 @@ class TestPerformAperPhotometry(TestCase):
         self.assertEqual(expected_file_name, photometry_file_name)
         self.assertEqual(str(photometry_file_contents), str(photometry_table))
 
-    def test_generate_ecsv_file_post_photomet_default_ap_ignore_zp(self):
+    def test_generate_ecsv_file_post_photometry_default_ap_ignore_zp(self):
         block_date_str = f"{self.test_block.block_start}"[:-9]
-        expected_file_name = os.path.join(self.test_output_dir, f"aperture_photometry_table_{block_date_str}_aper_radius_2.5*fwhm_zps_excluded.ecsv")
-        photometry_file_name = generate_ecsv_file_post_photomet(self.test_block, self.test_output_dir, overwrite = True, account_zps= False)
+        expected_file_name = os.path.join(self.test_output_dir, f"aperture_photometry_table_{block_date_str}_aper_radius_L1ZPAPER_zps_excluded.ecsv")
+        photometry_file_name = generate_ecsv_file_post_photometry(self.test_block, self.test_output_dir, overwrite = True, account_zps= False)
         photometry_file_contents = Table.read(photometry_file_name, format = 'ascii.ecsv')
         photometry_table = perform_aper_photometry(self.test_block, self.test_output_dir, account_zps= False)
         self.assertTrue(os.path.exists(photometry_file_name))
@@ -9658,23 +9695,23 @@ class TestPerformAperPhotometry(TestCase):
         self.assertEqual(expected_file_name, photometry_file_name)
         self.assertEqual(str(photometry_file_contents), str(photometry_table))
 
-    def test_generate_ecsv_file_post_photomet_manual_ap_ignore_zp(self):
+    def test_generate_ecsv_file_post_photometry_manual_ap_ignore_zp(self):
         block_date_str = f"{self.test_block.block_start}"[:-9]
-        expected_file_name = os.path.join(self.test_output_dir, f"aperture_photometry_table_{block_date_str}_aper_radius_3.0_zps_excluded.ecsv")
-        photometry_file_name = generate_ecsv_file_post_photomet(self.test_block, self.test_output_dir, overwrite = True,aperture_radius=3.0, account_zps= False)
+        expected_file_name = os.path.join(self.test_output_dir, f"aperture_photometry_table_{block_date_str}_aper_radius_3.0px_zps_excluded.ecsv")
+        photometry_file_name = generate_ecsv_file_post_photometry(self.test_block, self.test_output_dir, overwrite = True,aperture_radius_pix=3.0, account_zps= False)
         photometry_file_contents = Table.read(photometry_file_name, format = 'ascii.ecsv')
-        photometry_table = perform_aper_photometry(self.test_block, self.test_output_dir, aperture_radius= 3.0, account_zps= False)
+        photometry_table = perform_aper_photometry(self.test_block, self.test_output_dir, aperture_radius_pix= 3.0, account_zps= False)
         self.assertTrue(os.path.exists(photometry_file_name))
         self.assertTrue(os.path.getsize(photometry_file_name) > 0)
         self.assertEqual(expected_file_name, photometry_file_name)
         self.assertEqual(str(photometry_file_contents), str(photometry_table))
 
-    def test_generate_ecsv_file_post_photomet_manual_ap_include_zp(self):
+    def test_generate_ecsv_file_post_photometry_manual_ap_include_zp(self):
         block_date_str = f"{self.test_block.block_start}"[:-9]
-        expected_file_name = os.path.join(self.test_output_dir, f"aperture_photometry_table_{block_date_str}_aper_radius_3.0_zps_included.ecsv")
-        photometry_file_name = generate_ecsv_file_post_photomet(self.test_block, self.test_output_dir, overwrite = True,aperture_radius=3.0, account_zps= True)
+        expected_file_name = os.path.join(self.test_output_dir, f"aperture_photometry_table_{block_date_str}_aper_radius_3.0px_zps_included.ecsv")
+        photometry_file_name = generate_ecsv_file_post_photometry(self.test_block, self.test_output_dir, overwrite = True,aperture_radius_pix=3.0, account_zps= True)
         photometry_file_contents = Table.read(photometry_file_name, format = 'ascii.ecsv')
-        photometry_table = perform_aper_photometry(self.test_block, self.test_output_dir, aperture_radius= 3.0, account_zps= True)
+        photometry_table = perform_aper_photometry(self.test_block, self.test_output_dir, aperture_radius_pix= 3.0, account_zps= True)
         self.assertTrue(os.path.exists(photometry_file_name))
         self.assertTrue(os.path.getsize(photometry_file_name) > 0)
         self.assertEqual(expected_file_name, photometry_file_name)

@@ -1592,6 +1592,7 @@ def updateFITScalib(header, fits_file, catalog_type='BANZAI'):
                     ('zeropoint'     , 'Instrumental zeropoint [mag]'),
                     ('zeropoint_err' , 'Error on Instrumental zeropoint [mag]'),
                     ('zeropoint_src' , 'Source of Instrumental zeropoint'),
+                    ('zeropoint_aperture_pixels', 'Radius of zeropoint aperture [pixels]'),
                     ('color_used'    , 'Color used for calibration'),
                     ('color'         , 'Color coefficient [mag]'),
                     ('color_err'     , 'Error on color coefficient [mag]'),
@@ -1864,20 +1865,39 @@ def run_damit(call_name, cat_input_filename, primary_call, write_out=False, bina
     return retcode_or_cmdline
 
 
-def single_frame_aperture_photometry(fits_filepath, ra, dec, account_zps, aperture_radius = None, background_subtract = False):
+def aperture_radius_label(aperture_radius_pix):
+    """Label for the filenames of aperture photometry products: the radius in pixels, or 'L1ZPAPER' when
+    each frame's zeropoint aperture is used"""
+    if aperture_radius_pix is None:
+        return 'L1ZPAPER'
+    return f"{aperture_radius_pix}px"
+
+def single_frame_aperture_photometry(fits_filepath, ra, dec, account_zps, aperture_radius_pix=None, background_subtract=False):
     """For a single FITS file referenced by <fits_filepath>, perform aperture photometry to determine magnitude and
-    magnitude error. Use <ra> and <dec> to specify location of object on which to center aperture, use  <account_zps> as a
-    boolean variable to determine whether or not zeropoints should be adjusted for in magnitude. Select an aper. \<background_subtract\>
-    is a boolean for whether the code needs to do the background subtracting itself. Background subtraction routine is NOT tested/
-    fully developed, use default \<background_subtract\> to False until update"""
+    magnitude error. Use <ra> and <dec> to specify location of object on which to center aperture, use <account_zps> as a
+    boolean variable to determine whether or not zeropoints should be adjusted for in magnitude.
+    <aperture_radius_pix> is the aperture radius in PIXELS. The aperture is placed in pixel coordinates, so the frame's
+    WCS only sets its center (and the arcsec equivalent that is recorded). If None, the radius of the aperture the
+    frame's zeropoint was fitted with (the L1ZPAPER header keyword, written by proc-zeropoint) is used, so the target
+    is measured on the same scale as the zeropoint; a NeoException is raised if the frame has no L1ZPAPER.
+    <background_subtract> is a boolean for whether the code needs to do the background subtracting itself. Background
+    subtraction routine is NOT tested/fully developed, use default <background_subtract> to False until update.
+    The returned table records 'aperture_radius_pix', 'aperture_radius_arcsec', 'pixel_scale' (arcsec/pixel) and
+    'zeropoint_aperture_pix' (the L1ZPAPER radius, whether or not it was used; -99.0 if the frame has none)."""
     fits_file = fits.open(fits_filepath)
     header, cattype = get_header(fits_filepath)
     fits_filename = os.path.basename(fits_filepath)
     frame = Frame.objects.get(filename=fits_filename)
     FWHM = frame.fwhm
-    if aperture_radius == None:
-        aperture_radius = 2.5*FWHM
-    annulus_outer_radius = 7.5*FWHM
+    wcs = header['wcs']
+    pixel_scale = proj_plane_pixel_scales(wcs).mean() * 3600.0   # arcsec/pixel
+    zeropoint_aperture_pix = header.get('zeropoint_aperture_pixels', -99.0)
+    if aperture_radius_pix is None:
+        if zeropoint_aperture_pix <= 0:
+            raise NeoException(f"{fits_filename} has no zeropoint aperture (L1ZPAPER) to measure with; rerun proc-zeropoint on it or pass aperture_radius_pix")
+        aperture_radius_pix = zeropoint_aperture_pix
+    aperture_radius_arcsec = aperture_radius_pix * pixel_scale
+    annulus_outer_radius_pix = 7.5 * FWHM / pixel_scale
     source_data_for_photomet = fits_file[0].data/ header['exptime']
     #this should be replaced by something that matches other frametypes
     rms_image_name = (fits_filepath.replace('e93.fits', 'e93.rms.fits').replace('e92.fits', 'e92.rms.fits').replace('e91.fits', 'e91.rms.fits'))
@@ -1887,22 +1907,22 @@ def single_frame_aperture_photometry(fits_filepath, ra, dec, account_zps, apertu
     except FileNotFoundError:
         logger.warning(f'{rms_image_name} not found')
         return None
-    right_ascension = ra * u.deg
-    declination = dec * u.deg
-    positions = SkyCoord(right_ascension, declination, frame = "icrs")
-    source_aperture = SkyCircularAperture(positions, r = aperture_radius*u.arcsec)
-    wcs = header['wcs']
+    positions = SkyCoord(ra * u.deg, dec * u.deg, frame = "icrs")
+    x_center, y_center = positions.to_pixel(wcs)
+    source_aperture = CircularAperture((x_center, y_center), r = aperture_radius_pix)
     if background_subtract == True:
-        background_annulus = CircularAnnulus((ra, dec), aperture_radius, annulus_outer_radius)
+        background_annulus = CircularAnnulus((x_center, y_center), aperture_radius_pix, annulus_outer_radius_pix)
         background_annulus_mask = background_annulus.to_mask(method = 'exact')
         background_annulus_data_for_photomet = background_annulus_mask.get_values(source_data_for_photomet)
         background_flux_per_pixel = background_annulus_data_for_photomet/background_annulus.area
         background_subtracted_data_for_photomet = source_data_for_photomet - background_flux_per_pixel
-        source_flux = aperture_photometry(background_subtracted_data_for_photomet, source_aperture, wcs = wcs)
+        source_flux = aperture_photometry(background_subtracted_data_for_photomet, source_aperture)
         #needs: add SNR formula
     else:
         FLUX2MAG = 2.5/np.log(10)
-        source_flux = aperture_photometry(source_data_for_photomet, source_aperture, wcs = wcs, error = rms_data)
+        source_flux = aperture_photometry(source_data_for_photomet, source_aperture, error = rms_data)
+        # photutils only adds 'sky_center' for sky apertures; keep the column for the callers that read it
+        source_flux.add_column(SkyCoord([positions]), name = 'sky_center', index = 3)
         source_flux['FWHM'] = FWHM
         source_flux['ZP'] = frame.zeropoint
         source_flux['ZP_sig'] = frame.zeropoint_err
@@ -1914,7 +1934,10 @@ def single_frame_aperture_photometry(fits_filepath, ra, dec, account_zps, apertu
         source_flux["SNR"] = source_flux['aperture_sum'] / source_flux['aperture_sum_err']
 
         source_flux['filter'] = frame.filter
-        source_flux['aperture_radius'] = [aperture_radius]
+        source_flux['aperture_radius_pix'] = [aperture_radius_pix]
+        source_flux['aperture_radius_arcsec'] = [aperture_radius_arcsec]
+        source_flux['pixel_scale'] = [pixel_scale]
+        source_flux['zeropoint_aperture_pix'] = [zeropoint_aperture_pix]
     return source_flux
 
 def run_astcrop(filename, dest_dir, xmin, xmax, ymin, ymax, binary='astcrop', dbg=False):

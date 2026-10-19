@@ -54,6 +54,7 @@ from astrometrics.time_subs import jd_utc2datetime
 from photometrics.obsgeomplot import plot_ra_dec, plot_brightness, plot_helio_geo_dist, \
     plot_uncertainty, plot_hoursup, plot_gal_long_lat
 from photometrics.catalog_subs import sanitize_object_name
+from photometrics.external_codes import aperture_radius_label
 from photometrics.SA_scatter import readSources, plotScatter, plotFormat
 from photometrics.spectraplot import spectrum_plot, read_mean_tax
 import os
@@ -1539,10 +1540,7 @@ def plot_magnitude(block, filter, photometry_table, savepath, bad_subtractions, 
     ax1.xaxis.set_major_formatter(mdates.ConciseDateFormatter(ax0.xaxis.get_major_locator()))
     ax0.legend()
     ax1.legend()
-    if aperture_radius == None:
-        aper_rad_label = '2.5*fwhm'
-    else:
-        aper_rad_label = aperture_radius
+    aper_rad_label = aperture_radius_label(aperture_radius_pix)
     if account_zps == True:
         if err_threshold_mag == None and err_threshold_zp == None:
             filename = os.path.join(savepath, f"{filter}_magnitude_plot_{block_date_str}_Block_aper_radius_{aper_rad_label}_zps_included.png")

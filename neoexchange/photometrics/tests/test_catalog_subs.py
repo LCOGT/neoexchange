@@ -2098,6 +2098,14 @@ class FITSReadHeader(FITSUnitTest):
 
         self.compare_headers(expected_params, frame_header)
 
+    def test_banzai_header_zeropoint_aperture(self):
+        header = open_fits_catalog(self.test_banzaifilename)[0]
+
+        self.assertNotIn('zeropoint_aperture_pixels', get_catalog_header(header, "BANZAI"))
+
+        header['L1ZPAPER'] = 6.0
+        self.assertEqual(6.0, get_catalog_header(header, "BANZAI")['zeropoint_aperture_pixels'])
+
     def test_banzai_header_gaiadr2(self):
         obs_date = datetime.strptime('2016-06-06T22:48:14', '%Y-%m-%dT%H:%M:%S')
         expected_params = { 'site_code'  : 'K92',
@@ -3545,6 +3553,29 @@ class ExternalCodeUnitTest(TestCase):
                 print("Error removing temporary test directory", self.test_dir)
         else:
             print("NOT removing temporary test directory", self.test_dir)
+
+class TestUpdateZeropoint(SimpleTestCase):
+
+    def setUp(self):
+        self.header = {'zeropoint': -99.0, 'zeropoint_err': -99.0, 'zeropoint_src': 'N/A'}
+        self.table = Table({'obs_mag': [-10.0, -11.0], 'obs_mag_err': [0.01, 0.02]})
+
+    def test_records_aperture_the_fluxes_were_measured_in(self):
+        self.header['aperture_radius_pixels'] = 6.0
+
+        header, table = update_zeropoint(self.header, self.table, 28.0, 0.05)
+
+        self.assertEqual(28.0, header['zeropoint'])
+        self.assertEqual(0.05, header['zeropoint_err'])
+        self.assertEqual(6.0, header['zeropoint_aperture_pixels'])
+        assert_allclose([18.0, 17.0], table['obs_mag'])
+
+    def test_no_aperture_in_image_headers(self):
+        header, _ = update_zeropoint(self.header, self.table, 28.0, 0.05)
+
+        self.assertEqual(28.0, header['zeropoint'])
+        self.assertNotIn('zeropoint_aperture_pixels', header)
+
 
 class UpdateFrameZeropointTest(FITSUnitTest):
 

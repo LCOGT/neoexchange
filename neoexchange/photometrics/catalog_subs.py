@@ -747,6 +747,7 @@ def banzai_catalog_mapping():
                     'zeropoint'     : '<L1ZP>',
                     'zeropoint_err' : '<L1ZPERR>',
                     'zeropoint_src' : '<L1ZPSRC>',
+                    'zeropoint_aperture_pixels' : '<L1ZPAPER>',
                     'color_used'    : '<L1COLORU>',
                     'color'         : '<L1COLOR>',
                     'color_err'     : '<L1COLERR>',
@@ -804,6 +805,7 @@ def banzai_ldac_catalog_mapping():
                     'zeropoint'     : '<L1ZP>',
                     'zeropoint_err' : '<L1ZPERR>',
                     'zeropoint_src' : '<L1ZPSRC>',
+                    'zeropoint_aperture_pixels' : '<L1ZPAPER>',
                     'fwhm'          : '<L1FWHM>',
                     'astrometric_fit_rms'    : '<WCSRDRES>',
                     'astrometric_fit_status' : 'WCSERR',
@@ -935,6 +937,7 @@ def swope_ldac_catalog_mapping(fixed_values_map={}):
                     'zeropoint'     : '<L1ZP>',
                     'zeropoint_err' : '<L1ZPERR>',
                     'zeropoint_src' : '<L1ZPSRC>',
+                    'zeropoint_aperture_pixels' : '<L1ZPAPER>',
                     'fwhm'          : '<L1FWHM>',
                     'astrometric_fit_rms'    : '<WCSRDRES>',
                     'astrometric_fit_status' : '<WCSERR>',
@@ -1014,6 +1017,7 @@ def mro_ldac_catalog_mapping(fixed_values_map={}):
                     'zeropoint'     : '<L1ZP>',
                     'zeropoint_err' : '<L1ZPERR>',
                     'zeropoint_src' : '<L1ZPSRC>',
+                    'zeropoint_aperture_pixels' : '<L1ZPAPER>',
                     'fwhm'          : '<L1FWHM>',
                     'astrometric_fit_rms'    : '<WCSRDRES>',
                     'astrometric_fit_status' : '<WCSERR>',
@@ -1078,6 +1082,7 @@ def hotpants_catalog_mapping():
                     'zeropoint'     : '<L1ZP>',
                     'zeropoint_err' : '<L1ZPERR>',
                     'zeropoint_src' : '<L1ZPSRC>',
+                    'zeropoint_aperture_pixels' : '<L1ZPAPER>',
                     'color_used'    : '<L1COLORU>',
                     'color'         : '<L1COLOR>',
                     'color_err'     : '<L1COLERR>',
@@ -1915,6 +1920,10 @@ def update_zeropoint(header, table, avg_zeropoint, std_zeropoint, include_zperr=
     header['zeropoint'] = avg_zeropoint
     header['zeropoint_err'] = std_zeropoint
     header['zeropoint_src'] = 'py_zp_cvc-V0.2.1'
+    # The zeropoint is fitted to obs_mag, the flux in SExtractor's first fixed aperture, so record that
+    # aperture's radius with it (image headers have no SEXAPED1, so it can be absent)
+    if 'aperture_radius_pixels' in header:
+        header['zeropoint_aperture_pixels'] = header['aperture_radius_pixels']
 
     for source in table:
         source['obs_mag'] += delta_zp

@@ -85,6 +85,7 @@ from photometrics.catalog_subs import open_fits_catalog, get_catalog_header, \
     get_reference_catalog, reset_database_connection, sanitize_object_name, \
     find_block_for_frame
 from photometrics.external_codes import determine_stats_in_boxes, determine_bad_subtractions_in_box_stats, format_box_stats_for_pretty_print
+from photometrics.external_codes import aperture_radius_label
 from photometrics.photometry_subs import calc_asteroid_snr, calc_sky_brightness
 from photometrics.spectraplot import pull_data_from_spectrum, pull_data_from_text, spectrum_plot
 from core.frames import create_frame, ingest_frames, measurements_from_block
@@ -2361,7 +2362,7 @@ def sort_des_type(name, default='T'):
         dtype = 'P'
     elif n[-1] in ['P', 'C', 'D'] and n[:-1].isdigit():
         dtype = '#'
-    elif bool(re.search('\d', n)) or (not n.isupper() and sum(1 for c in n if c.isupper()) > 1):
+    elif bool(re.search(r'\d', n)) or (not n.isupper() and sum(1 for c in n if c.isupper()) > 1):
         dtype = 'C'
     elif n.replace('-', '').replace("'", "").isalpha() and not n.isupper():
         dtype = 'N'
@@ -2850,7 +2851,7 @@ def clean_crossid(astobj, dbg=False):
         active = False
     elif obj_id != '' and desig != '':
         # Confirmed
-        if 'C/' in desig or 'P/' in desig or bool(re.match('\d{1,4}P' ,desig)): # look for 1..4 digits and then a 'P'
+        if 'C/' in desig or 'P/' in desig or bool(re.match(r'\d{1,4}P', desig)): # look for 1..4 digits and then a 'P'
             # There is a reference to a CBET or IAUC so we assume it's "very
             # interesting" i.e. a comet
             if dbg:
@@ -5068,7 +5069,7 @@ def summarize_didymos_block_quality(groupid_prefix='65803_E10', dataroot=None, f
 
     return block_qc_table, block_summaries
 
-def perform_aper_photometry(block, dataroot, account_zps = True, aperture_radius = None):
+def perform_aper_photometry(block, dataroot, account_zps = True, aperture_radius_pix = None):
     """Run single_frame_aperture_photometry on every subtracted (e93) Frame of
     <block>, returning per-frame aperture photometry: the magnitude and its
     error, plus the aperture sum and error, aperture radius, zeropoint and
@@ -5079,8 +5080,13 @@ def perform_aper_photometry(block, dataroot, account_zps = True, aperture_radius
         dataroot: directory holding the FITS images for <block>.
         account_zps: if True, correct the measured magnitudes for the frame
             zeropoints; if False, leave them as instrumental magnitudes.
-        aperture_radius: aperture radius in arcseconds. If not given, defaults
-            to 2.5 * the FWHM of each frame.
+        aperture_radius_pix: aperture radius in pixels. If not given, each
+            frame is measured with the aperture its zeropoint was fitted with
+            (the L1ZPAPER header keyword written by proc-zeropoint; a
+            NeoException is raised if a frame has none). The radius used is
+            recorded in the 'aperture radius pix' and 'aperture radius arcsec'
+            columns and the zeropoint's in 'ZP aperture radius pix', so a
+            mismatch between the two is visible in the table.
 
     Background subtraction is assumed to have been done already and is not
     performed here.
@@ -5101,9 +5107,9 @@ def perform_aper_photometry(block, dataroot, account_zps = True, aperture_radius
         return 'no valid files'
     working_ephem = get_ephem(block)
     interpolated_ephem = ephem_interpolate(times, working_ephem)
-    ras, decs, xcenters, ycenters, aperture_sums, aperture_sum_errs, fwhms, zps, zp_errs, mags, magerrs, filter, aperture_radii, snr = [],[],[],[],[],[],[],[],[],[],[],[],[], [] #added snr
+    ras, decs, xcenters, ycenters, aperture_sums, aperture_sum_errs, fwhms, zps, zp_errs, mags, magerrs, filter, aperture_radii_pix, aperture_radii_arcsec, pixel_scales, snr, zp_aperture_radii_pix = [],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[]
     for i in range (0, len(paths_to_e93_frames)):
-        aper_photometry_of_ephem = single_frame_aperture_photometry(paths_to_e93_frames[i], interpolated_ephem[0][i], interpolated_ephem[1][i], aperture_radius= aperture_radius, account_zps = account_zps, background_subtract= False)
+        aper_photometry_of_ephem = single_frame_aperture_photometry(paths_to_e93_frames[i], interpolated_ephem[0][i], interpolated_ephem[1][i], aperture_radius_pix=aperture_radius_pix, account_zps = account_zps, background_subtract= False)
         if aper_photometry_of_ephem:
             ras.append(aper_photometry_of_ephem['sky_center'][0].ra.value)
             decs.append(aper_photometry_of_ephem['sky_center'][0].dec.value)
@@ -5117,8 +5123,11 @@ def perform_aper_photometry(block, dataroot, account_zps = True, aperture_radius
             mags.append(aper_photometry_of_ephem['mag'][0])
             magerrs.append(aper_photometry_of_ephem['magerr'][0])
             filter.append(aper_photometry_of_ephem['filter'][0])
-            aperture_radii.append(aper_photometry_of_ephem['aperture_radius'][0])
-            snr.append(aper_photometry_of_ephem['SNR'][0])  #added snr
+            aperture_radii_pix.append(aper_photometry_of_ephem['aperture_radius_pix'][0])
+            aperture_radii_arcsec.append(aper_photometry_of_ephem['aperture_radius_arcsec'][0])
+            pixel_scales.append(aper_photometry_of_ephem['pixel_scale'][0])
+            snr.append(aper_photometry_of_ephem['SNR'][0])
+            zp_aperture_radii_pix.append(aper_photometry_of_ephem['zeropoint_aperture_pix'][0])
         else:
             ras.append("")
             decs.append("")
@@ -5132,7 +5141,11 @@ def perform_aper_photometry(block, dataroot, account_zps = True, aperture_radius
             mags.append("")
             magerrs.append("")
             filter.append("")
-            aperture_radii.append("")
+            aperture_radii_pix.append("")
+            aperture_radii_arcsec.append("")
+            pixel_scales.append("")
+            snr.append("")
+            zp_aperture_radii_pix.append("")
 
     results = Table()
     results['path to frame'] = paths_to_e93_frames
@@ -5149,32 +5162,32 @@ def perform_aper_photometry(block, dataroot, account_zps = True, aperture_radius
     results['ZP_sig'] = zp_errs
     results['mag'] = mags
     results['magerr'] = magerrs
-    results['aperture radius'] = aperture_radii
-    results['SNR'] = snr #added basic snr
+    results['aperture radius pix'] = aperture_radii_pix
+    results['aperture radius arcsec'] = aperture_radii_arcsec
+    results['ZP aperture radius pix'] = zp_aperture_radii_pix
+    results['pixel scale'] = pixel_scales
+    results['SNR'] = snr
     return results
 
-def generate_ecsv_file_post_photomet(block, dataroot, overwrite, savepath = None, account_zps = True, aperture_radius = None):
+def generate_ecsv_file_post_photometry(block, dataroot, overwrite, savepath = None, account_zps = True, aperture_radius_pix = None):
     """Writes the aperture photometry table generated in perform_aper_photometry to a ascii.ecsv file for data storage
-    and accessibility. Input \<block\> on which to perform photometry, \<dataroot\> as the directory pointing to the FITS
-    files for frames in the block, and a boolean \<overwrite\> for whether this should replace old data on the same block.
-    Optionally, add a \<savepath\> as a directory for saving the file; otherwise will default to saving to \<dataroot\>.
+    and accessibility. Input <block> on which to perform photometry, <dataroot> as the directory pointing to the FITS
+    files for frames in the block, and a boolean <overwrite> for whether this should replace old data on the same block.
+    Optionally, add a <savepath> as a directory for saving the file; otherwise will default to saving to <dataroot>.
       """
     if savepath is None:
         savepath = dataroot
-    results_table = perform_aper_photometry(block, dataroot, account_zps = account_zps, aperture_radius = aperture_radius)
+    results_table = perform_aper_photometry(block, dataroot, account_zps = account_zps, aperture_radius_pix = aperture_radius_pix)
     times = results_table['times']
     stringified_times = []
     results_table.remove_column('times')
     for i in range (0, len(times)):
         stringified_times.append(f"{times[i]}")
     results_table['times'] = stringified_times
-    new_order = ['path to frame','times','filters','RA','DEC','xcenter','ycenter','aperture sum','aperture sum err','FWHM','ZP','ZP_sig','mag','magerr','aperture radius']
+    new_order = ['path to frame','times','filters','RA','DEC','xcenter','ycenter','aperture sum','aperture sum err','FWHM','ZP','ZP_sig','mag','magerr','aperture radius pix','aperture radius arcsec','ZP aperture radius pix','pixel scale']
     results_table = results_table[new_order]
     block_date_str = f"{block.block_start}"[:-9]
-    if aperture_radius == None:
-        aper_rad_label = '2.5*fwhm'
-    else:
-        aper_rad_label = aperture_radius
+    aper_rad_label = aperture_radius_label(aperture_radius_pix)
     if account_zps == True:
         results_table_filename = os.path.join(savepath, f"aperture_photometry_table_{block_date_str}_aper_radius_{aper_rad_label}_zps_included.ecsv")
     if account_zps == False:

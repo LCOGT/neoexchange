@@ -10,7 +10,9 @@ from astropy.time import Time
 from django.core.management.base import BaseCommand, CommandError, CommandParser
 
 from core.models.blocks import Block
+from core.utils import NeoException
 from core.views import perform_aper_photometry
+from photometrics.external_codes import aperture_radius_label
 
 
 class Command(BaseCommand):
@@ -21,7 +23,7 @@ class Command(BaseCommand):
         default_path = os.path.join(os.path.sep, 'apophis', 'eng', 'rocks')
 
         parser.add_argument('datadir', action="store", default=default_path, help='Path for processed data (e.g. %(default)s)')
-        parser.add_argument("aperture_radius",type = float, action = "store", help ="Define aperture radius for photometry")
+        parser.add_argument("radius_pix", type=float, nargs='?', default=None, help="Aperture radius in PIXELS. If omitted, each frame is measured with the aperture its zeropoint was fitted with (L1ZPAPER header keyword, written by proc-zeropoint). The equivalent in arcsec, from each frame's WCS pixel scale, is recorded alongside it in the output")
         parser.add_argument('--block',type = int, action = "store", help = "Block number of Observation")
         parser.add_argument("--groupid", type = int, default = None, help ="LCO group ID associated with the block")
         parser.add_argument("--request_number",type=int,default=None,help="LCO request number associated with the block")
@@ -70,14 +72,26 @@ class Command(BaseCommand):
         self.stdout.write(f"==== Pipeline processing Aperture photometry {time_now} ====")
 
 
-        results = perform_aper_photometry(block, options['datadir'], options['account_zps'], options['aperture_radius'])
+        radius_pix = options['radius_pix']
+        if radius_pix is None:
+            self.stdout.write("Aperture radius: each frame's zeropoint aperture (L1ZPAPER)")
+        else:
+            self.stdout.write(f"Aperture radius: {radius_pix} pixels")
+        try:
+            results = perform_aper_photometry(block, options['datadir'], options['account_zps'], aperture_radius_pix=radius_pix)
+        except NeoException as e:
+            raise CommandError(str(e))
         self.stdout.write(f"returned object: {type(results)}") 
         self.stdout.write(f"Returned value: {results}")
 
         if isinstance(results, Table):
+            radii_pix = [r for r in results['aperture radius pix'] if r != ""]
+            radii_arcsec = [r for r in results['aperture radius arcsec'] if r != ""]
+            if radii_arcsec:
+                self.stdout.write(f"Aperture radius {min(radii_pix):.3f}-{max(radii_pix):.3f} px = {min(radii_arcsec):.3f}-{max(radii_arcsec):.3f} arcsec on these frames")
 
             if options['output'] is None:
-                filename = f"aper_photometry_{options['block']}.ecsv"
+                filename = f"aper_photometry_{block.id}_r{aperture_radius_label(radius_pix)}.ecsv"
             else:
                 filename = options['output']
             output = os.path.join(options['output_dir'], filename)
