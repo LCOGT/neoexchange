@@ -14,7 +14,7 @@ GNU General Public License for more details.
 """
 
 from datetime import datetime, timedelta
-from unittest import skipIf, skip
+from unittest import expectedFailure, skipIf, skip
 from math import sqrt, log10, log
 import os
 from glob import glob
@@ -3576,6 +3576,54 @@ class TestUpdateZeropoint(SimpleTestCase):
         self.assertEqual(28.0, header['zeropoint'])
         self.assertNotIn('zeropoint_aperture_pixels', header)
 
+    def test_multi_aperture_catalog_leaves_aperture_unrecorded(self):
+        # SEXAPED1 describes the first aperture but the fit uses a later column of the 2-D obs_mag
+        self.header['aperture_radius_pixels'] = 2.565
+        table = Table({'obs_mag': [[-10.0, -10.5, -11.0], [-11.0, -11.5, -12.0]],
+                       'obs_mag_err': [[0.01, 0.01, 0.01], [0.02, 0.02, 0.02]]})
+
+        # include_zperr=False as the pipeline does (ZeropointProcessPipeline.do_pipeline)
+        header, table = update_zeropoint(self.header, table, 28.0, 0.05, include_zperr=False)
+
+        self.assertEqual(28.0, header['zeropoint'])
+        self.assertNotIn('zeropoint_aperture_pixels', header)
+        assert_allclose([[18.0, 17.5, 17.0], [17.0, 16.5, 16.0]], table['obs_mag'])
+
+
+class TestMultiApertureLDAC(SimpleTestCase):
+    """A Sinistro 2x2 (fa20, 0.78"/pix) LDAC extracted with sextractor_neox_ldac_multiaper.conf
+    (11 apertures, 5.13..51.33 px diameter) and then zeropointed by proc-zeropoint as BANZAI_LDAC."""
+
+    multiaper_diameters_px = [5.13, 10.27, 15.40, 20.53, 22.00, 25.67, 30.80, 35.93, 41.06, 46.20, 51.33]
+
+    def setUp(self):
+        self.test_filename = os.path.join('photometrics', 'tests', 'banzai_test_multiaper_ldac.fits')
+
+    def test_sextractor_records_only_four_apertures(self):
+        header, table, cattype = open_fits_catalog(self.test_filename)
+
+        # proc-zeropoint overrides the detected type with the origin's final_catalog_type (BANZAI_LDAC)
+        self.assertEqual('FITS_LDAC', cattype)
+        self.assertEqual((327, 11), table['FLUX_APER'].shape)
+        assert_allclose(self.multiaper_diameters_px[:4], [header[f'SEXAPED{i}'] for i in range(1, 5)], atol=1e-5)
+        self.assertNotIn('SEXAPED5', header)
+
+    def test_extract_catalog_gives_first_aperture_and_2d_mags(self):
+        header, table = extract_catalog(self.test_filename, 'BANZAI_LDAC', flag_filter=7)
+
+        self.assertEqual((292, 11), table['obs_mag'].shape)
+        self.assertAlmostEqual(self.multiaper_diameters_px[0] / 2.0, header['aperture_radius_pixels'], places=5)
+        self.assertAlmostEqual(24.555, header['zeropoint'], places=3)
+
+    def test_update_zeropoint_does_not_record_first_aperture_as_zp_aperture(self):
+        header, table = extract_catalog(self.test_filename, 'BANZAI_LDAC', flag_filter=7)
+        header['zeropoint'] = -99.0
+
+        header, table = update_zeropoint(header, table, 24.555, 0.066, include_zperr=False)
+
+        self.assertAlmostEqual(24.555, header['zeropoint'], places=3)
+        self.assertNotIn('zeropoint_aperture_pixels', header)
+
 
 class UpdateFrameZeropointTest(FITSUnitTest):
 
@@ -5274,3 +5322,17 @@ class TestGetOrCreateCatalogSources(TestCase):
 
         src = CatalogSources.objects.get(frame=self.frame)
         self.assertAlmostEqual(1.0, src.aperture_size, places=5)
+
+    @expectedFailure
+    def test_multi_aperture_real_catalog_records_fitted_aperture_radius(self):
+        # Fix 7: the ingested flux is aperture index 4 (22.00 px diameter), whose radius on this
+        # 0.78"/pix frame is 8.58", not aper_scaling * the first aperture (10.01"). Passes once the
+        # radius comes from the aperture list; test_multi_aperture_uses_fifth_aperture pins the
+        # current scaling and changes with it.
+        catfile = os.path.join('photometrics', 'tests', 'banzai_test_multiaper_ldac.fits')
+        header, table = extract_catalog(catfile, 'BANZAI_LDAC', flag_filter=7)
+
+        get_or_create_CatalogSources(table, self.frame, header)
+
+        src = CatalogSources.objects.filter(frame=self.frame).first()
+        self.assertAlmostEqual(11.0 * header['pixel_scale'], src.aperture_size, places=2)

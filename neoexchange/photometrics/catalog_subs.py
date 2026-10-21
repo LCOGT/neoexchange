@@ -1921,8 +1921,11 @@ def update_zeropoint(header, table, avg_zeropoint, std_zeropoint, include_zperr=
     header['zeropoint_err'] = std_zeropoint
     header['zeropoint_src'] = 'py_zp_cvc-V0.2.1'
     # The zeropoint is fitted to obs_mag, the flux in SExtractor's first fixed aperture, so record that
-    # aperture's radius with it (image headers have no SEXAPED1, so it can be absent)
-    if 'aperture_radius_pixels' in header:
+    # aperture's radius with it (image headers have no SEXAPED1, so it can be absent). A multi-aperture
+    # catalog has a 2-D obs_mag and the fit uses a later column (ZeropointProcessPipeline.cross_match_and_zp
+    # slices index 4), which SEXAPED1 does not describe: leave the aperture unrecorded rather than wrong.
+    multi_aperture = 'obs_mag' in table.colnames and table['obs_mag'].ndim == 2
+    if 'aperture_radius_pixels' in header and not multi_aperture:
         header['zeropoint_aperture_pixels'] = header['aperture_radius_pixels']
 
     for source in table:
