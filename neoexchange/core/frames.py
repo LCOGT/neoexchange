@@ -338,6 +338,10 @@ def block_status(block_id):
         return False
 
     obj_name = block.current_name()
+    # XXX this will can/will break if the Block's Body changes name by e.g. going from provisional NEOCP
+    # designation to a permanent one e.g. A11InDq->P/2026 T1
+    # Not sure how best to handle this, maybe retry with provisional name if no data is found for the
+    # current name, but that could be a rabbit hole.
 
     # Get authentication token for Valhalla
     logger.info(f"Checking request status for block/track# {block_id} / {tracking_num}")
@@ -370,7 +374,10 @@ def block_status(block_id):
                 logger.warning(f"Unable to find observation type for Block/track# {block_id} / {tracking_num}")
 
             images, num_archive_frames = check_for_archive_images(request_id=r['id'], obstype=obstype, obj=obj_name)
-            logger.info('Request no. %s x %s images (%s total all red. levels)' % (r['id'], len(images), num_archive_frames))
+            if len(images) == 0 and num_archive_frames == 0 and block.body is not None and block.body.provisional_name is not None:
+                logger.warning(f'No images found for block/track# {block_id} / {tracking_num}; retrying with provisional name {block.body.provisional_name}')
+                images, num_archive_frames = check_for_archive_images(request_id=r['id'], obstype=obstype, obj=block.body.provisional_name)
+            logger.info(f'Request no. {r["id"]} x {len(images)} images ({num_archive_frames} total all red. levels)')
             if images:
                 inst_configs = [x['instrument_configs'] for x in r['configurations']]
                 exposure_count = sum([x[0]['exposure_count'] for x in inst_configs])
