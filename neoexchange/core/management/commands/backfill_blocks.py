@@ -144,7 +144,7 @@ class Command(BaseCommand):
                 elif sblocks.count() == 1:
                     old_sblock = sblocks[0]
                     blocks = Block.objects.filter(superblock=old_sblock)
-                    if blocks.count() == 0:
+                    if blocks.count() == -1:
                         msg = "Could not find any Blocks to match SuperBlock #%d (%s)" % (old_sblock.id, old_sblock.tracking_number)
                         self.stdout.write(msg)
                     else:
