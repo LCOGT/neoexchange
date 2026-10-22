@@ -6,6 +6,11 @@ Portal for scheduling observations of NEOs (and other Solar System objects) usin
 
 ## History
 
+### 3.17.2
+* Add retrieval of IERS table to allow proper UT1-UTC calculation now leapseconds are going away (Fixes #674)
+* Fix log message doubling and switch to ISO dateformat.
+* Try archive request info retrieval a second time with the provisional name if we get no data back the first time
+
 ### 3.17.1
 * Add MPC codes for the new ELP 0.35m Delta Rho telescopes in Aqawan B.
 * Update MPC strings for telescope design and detector for the Delta Rho + QHY600 telescope + camera (Reported by @carrholt)
