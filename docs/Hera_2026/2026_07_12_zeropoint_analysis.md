@@ -658,15 +658,25 @@ is close to S/N-optimal.
     table, `ZP aperture radius pix` in the Block table; −99 if absent), so a mismatch with a manual radius is visible.
   - `pipeline_aper_photometry [radius_pix]`: the radius is now optional; file labels read `…_aper_radius_L1ZPAPER_…`
     (`aperture_radius_label()` in `external_codes.py` is the one place that spells the label).
-  - Multi-aperture catalogs (`FITS_LDAC_MULTIAPER`, 11 apertures): SExtractor records only `SEXAPED1-4`, and the fit
-    uses column 4 (22.00 px diameter = 11.0 px radius), not aperture 1. Since cc2433a3 + the follow-on commit,
-    `cross_match_and_zp()` reports the radius it fitted and `update_zeropoint()` records that instead of `SEXAPED1`/2;
-    `MULTIAPER_DIAMETERS_PX`/`MULTIAPER_ZP_INDEX` in `catalog_subs.py` are the single source of truth (a test checks
-    them against the config). Real-file fixture: `photometrics/tests/banzai_test_multiaper_ldac.fits` (tfn fa20,
-    2023-11-21, zeropointed in production via this path).
+  - Multi-aperture catalogs (`FITS_LDAC_MULTIAPER`): SExtractor records only `SEXAPED1-4`, and the fit uses one
+    later column (22.00 px diameter = 11.0 px radius in the Sinistro config), not aperture 1. Since cc2433a3,
+    706b4305 and the 2026-10-22 follow-on, the apertures come from the SExtractor config beside the catalog:
+    `get_catalog_apertures()` (`external_codes.py`) reads the `PHOT_APERTURES` line and the `#NEOX_ZP_APERTURE`
+    marker (which entry the zeropoint is fitted to) via `read_sextractor_apertures()` (`catalog_subs.py`), checks
+    them against the catalog's `SEXAPED1-4` (now `header['sextractor_aperture_diameters_pixels']`) and flux-column
+    count, and `do_pipeline` passes the index to `cross_match_and_zp()` and records the radius as `L1ZPAPER` and
+    `header['zp_aperture_index']` for the ingest. No aperture list lives in code any more (the earlier
+    `MULTIAPER_DIAMETERS_PX` was the Sinistro set and would have been silently wrong for the ef0x/MRO ladders).
+    `setup_working_dir()` now *copies* the configs into the reduction directory (it used to symlink them, so an
+    old catalog's config was the current checkout's, not the one that ran; the `SEXAPED1-4` check is what catches
+    that for directories reduced before the change — on re-reduction the stale symlink is replaced by a copy).
+    `default_findorb_config_files()` lost `ps_1996.dat`/`elp82.dat` at the same time: they were never in
+    `configs/` (the Dockerfile puts them in `/root/.find_orb`) and only worked as dangling symlinks. Real-file
+    fixture: `photometrics/tests/banzai_test_multiaper_ldac.fits` (tfn fa20, 2023-11-21, zeropointed in production
+    via this path).
   - Not done: a `Frame` field for the aperture (needs a migration). Existing e92/e93/LDAC files have no `L1ZPAPER`
     (nothing was rerun); the Fix 8 repair should set it from the LDAC's `SEXAPED1`/2 when it copies the e92
-    calibration into the e93 — for multi-aperture LDACs (2-D `FLUX_APER`) use `MULTIAPER_DIAMETERS_PX[MULTIAPER_ZP_INDEX]/2`.
+    calibration into the e93 — for multi-aperture LDACs (2-D `FLUX_APER`) use `get_catalog_apertures()`.
 - [ ] **Fix 5 (parked) — aperture correction.** `FITS_LDAC_MULTIAPER` catalogs already exist but `run_pipeline.py:95`
   only selects them for `-ef` frames. The star-flux-ratio method used in §2 and §4 is a working prototype: median
   ratio of bright, isolated, unsaturated stars between two apertures, measured per frame.
@@ -676,8 +686,8 @@ is close to S/N-optimal.
   recorded with the data rather than inferred. **Config committed:** fe1946d0, merged in 9d1f2cfa. `L1ZPAPER` done with
   Fix 4(a), 2026-10-15.
 - [ ] **Fix 7 (minor):** ~~correct the index-4 comment and the multiaper aperture list~~ (done with the multi-aperture
-  follow-on: the ingested `CatalogSources.aperture_size` is now the index-4 radius, 22.00/5.13 × the `SEXAPED1`
-  radius, rather than 5 × it — 8.58″ not 10.01″ on the fixture frame), and add `ZP_sig` in quadrature to `magerr`
+  follow-on: the ingested `CatalogSources.aperture_size` is now the fitted aperture's radius from the config,
+  `L1ZPAPER` × pixel scale — 8.58″ not 10.01″ on the fixture frame), and add `ZP_sig` in quadrature to `magerr`
   (or document that it is left out).
 
 ### Data repair (after Fixes 1–2 **and** Fix 4)
@@ -791,7 +801,10 @@ models. Run step 6 on this night first; the §6 simulation predicts what a corre
     curve-of-growth choice.
 
 - [ ] **Fix 19 (parked, future) — record every SExtractor aperture in the LDAC header.** Not needed for Hera; a
-  "nice to support" for multi-aperture / curve-of-growth work (photometrypipeline uses 20 apertures). SExtractor
+  "nice to support" for multi-aperture / curve-of-growth work (photometrypipeline uses 20 apertures). Partly
+  superseded 2026-10-22: the apertures are now read from the config beside the catalog (Fix 4 bullet above), so
+  this becomes the traceability step that makes the catalog self-describing (and independent of the copied config
+  beside it); `read_sextractor_apertures()` is the config parser it would reuse. SExtractor
   hard-codes four slots (`SEXAPED1-4`, unused ones written as `0.0`), and FITS keywords are 8 characters, so
   `SEXAPED10` cannot exist. Agreed scheme (2026-10-21): MPC "mutant hex" slot letters — `SEXAPED1-9` then
   `SEXAPEDA`…`SEXAPEDZ` for apertures 10–35 (`astrometrics/ast_subs.py` `int_to_mutant_hex_char`; refuse n > 35,
@@ -802,9 +815,9 @@ models. Run step 6 on this night first; the §6 simulation predicts what a corre
   with); written after `SEXAPED4` via a `write_ldac_header()` helper lifted from `updateFITScalib`
   (`external_codes.py:1662-1670`, rebuilds `LDAC_IMHEAD` with `TDIM1`); overwrite not append on rerun. Reader
   `get_ldac_apertures(header)` in `catalog_subs.py`: `SEXNAPER`/`SEXAPEDx` (ignoring `0.0`), else fall back to
-  `MULTIAPER_DIAMETERS_PX` for pre-existing files; `cross_match_and_zp()` and the ingest take the radius from it.
-  `MULTIAPER_ZP_INDEX` stays in code (not a keyword): `L1ZPAPER` records the fitted radius, so a reader can match it
-  to a column by value. Keywords live only in the LDAC, not the e92, so no PDS data-format impact. Tests: config
+  the config beside the catalog (`get_catalog_apertures()`) for pre-existing files. The fitted aperture would be
+  recorded too (e.g. `SEXZPAPE`, from the `#NEOX_ZP_APERTURE` marker): `L1ZPAPER` records the fitted radius, so a
+  reader can match it to a column by value. Keywords live only in the LDAC, not the e92, so no PDS data-format impact. Tests: config
   parser (single/multi/trailing comment), writer on a tempfile copy of `banzai_test_multiaper_ldac.fits`
   (placement, values, `fits_ldac_to_header` round-trip, checksum, `LDAC_OBJECTS` untouched), reader fallbacks,
   encode edges (9→`9`, 10→`A`, 35→`Z`, 36 refused), real `run_sextractor` only under `skipIf(no sex binary)`.

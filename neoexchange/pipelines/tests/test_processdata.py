@@ -66,8 +66,9 @@ class RecordingRefCat:
 
 
 class TestCrossMatchAndZpMultiAperture(SimpleTestCase):
-    """obs_mag from a sextractor_neox_ldac_multiaper.conf catalog is (N, 11): one column per
-    PHOT_APERTURES entry (5.13..51.33 px diameter)."""
+    """obs_mag from a multi-aperture catalog is (N, num_apertures): one column per PHOT_APERTURES
+    entry. The caller says which column to fit (ZeropointProcessPipeline.do_pipeline reads it from
+    the SExtractor config beside the catalog)."""
 
     def setUp(self):
         from pipelines.processdata import ZeropointProcessPipeline
@@ -79,24 +80,27 @@ class TestCrossMatchAndZpMultiAperture(SimpleTestCase):
         self.pipeline = ZeropointProcessPipeline()
         self.refcat = RecordingRefCat()
 
-    def test_fit_uses_fifth_aperture(self):
-        self.pipeline.cross_match_and_zp(self.table, self.refcat, 0.1, 'r', 'rp')
+    def test_fits_the_given_aperture(self):
+        results = self.pipeline.cross_match_and_zp(self.table, self.refcat, 0.1, 'r', 'rp', zp_aperture_index=4)
 
         assert_allclose([15.4, 16.4, 17.4], self.refcat.inst_mag)
+        self.assertEqual((24.5, 0.05, 0.0, 'g-i'), results)
 
-    def test_returns_the_aperture_radius_it_fitted(self):
-        # index 4 of the aperture list: 22.00 px diameter = 11.0 px radius. SEXAPED1-4 cannot
-        # record it, so the stage reports it for update_zeropoint() to write L1ZPAPER.
-        avg_zp, std_zp, C, cal_color, zp_aperture_pix = self.pipeline.cross_match_and_zp(self.table, self.refcat, 0.1, 'r', 'rp')
+    def test_fits_another_aperture(self):
+        self.pipeline.cross_match_and_zp(self.table, self.refcat, 0.1, 'r', 'rp', zp_aperture_index=2)
 
-        self.assertEqual((24.5, 0.05, 0.0, 'g-i'), (avg_zp, std_zp, C, cal_color))
-        self.assertAlmostEqual(11.0, zp_aperture_pix, places=5)
+        assert_allclose([15.2, 16.2, 17.2], self.refcat.inst_mag)
 
-    def test_single_aperture_reports_no_radius(self):
+    def test_multi_aperture_needs_an_index(self):
+        with self.assertRaisesRegex(NeoException, 'no zeropoint aperture index'):
+            self.pipeline.cross_match_and_zp(self.table, self.refcat, 0.1, 'r', 'rp')
+        self.assertIsNone(self.refcat.inst_mag)
+
+    def test_single_aperture_ignores_the_index(self):
         table = Table({'flags': [0, 0, 0], 'obs_ra': [240.20, 240.21, 240.22],
                        'obs_dec': [-22.20, -22.21, -22.22], 'obs_mag': [15.0, 16.0, 17.0]})
 
-        *_, zp_aperture_pix = self.pipeline.cross_match_and_zp(table, self.refcat, 0.1, 'r', 'rp')
+        results = self.pipeline.cross_match_and_zp(table, self.refcat, 0.1, 'r', 'rp', zp_aperture_index=4)
 
-        self.assertIsNone(zp_aperture_pix)
         assert_allclose([15.0, 16.0, 17.0], self.refcat.inst_mag)
+        self.assertEqual((24.5, 0.05, 0.0, 'g-i'), results)

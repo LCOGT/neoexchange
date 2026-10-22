@@ -36,7 +36,7 @@ from django.forms.models import model_to_dict
 
 # Import module to test
 from photometrics.external_codes import *
-from photometrics.catalog_subs import funpack_fits_file, get_header
+from photometrics.catalog_subs import funpack_fits_file, get_header, extract_catalog
 
 # Disable logging during testing
 import logging
@@ -564,6 +564,58 @@ class TestSExtractorRunner(ExternalCodeUnitTest):
         for config_file in expected_configs:
             test_file = os.path.join(self.test_dir, config_file)
             self.assertTrue(os.path.exists(test_file), msg=config_file + ' is missing')
+
+    def test_setup_sextractor_dir_copies_not_links(self):
+
+        status = setup_sextractor_dir(self.source_dir, self.test_dir, catalog_type='FITS_LDAC_MULTIAPER')
+
+        self.assertEqual(0, status)
+        for config_file in default_sextractor_config_files('FITS_LDAC_MULTIAPER'):
+            test_file = os.path.join(self.test_dir, config_file)
+            self.assertFalse(os.path.islink(test_file), msg=config_file + ' is a symlink')
+            with open(os.path.join(self.source_dir, config_file), 'rb') as src, open(test_file, 'rb') as dest:
+                self.assertEqual(src.read(), dest.read(), msg=config_file + ' differs from the source')
+
+    def test_setup_sextractor_dir_replaces_old_symlink(self):
+        # Re-reducing a directory set up before the configs were copied: the symlink into
+        # photometrics/configs must be replaced by a copy, and the source left untouched
+        config_file = 'sextractor_neox_ldac_multiaper.conf'
+        source_file = os.path.join(self.source_dir, config_file)
+        test_file = os.path.join(self.test_dir, config_file)
+        os.symlink(source_file, test_file)
+        with open(source_file, 'rb') as fh:
+            source_before = fh.read()
+        source_stat = os.stat(source_file)
+
+        status = setup_sextractor_dir(self.source_dir, self.test_dir, catalog_type='FITS_LDAC_MULTIAPER')
+
+        self.assertEqual(0, status)
+        self.assertFalse(os.path.islink(test_file))
+        with open(test_file, 'rb') as fh:
+            self.assertEqual(source_before, fh.read())
+        with open(source_file, 'rb') as fh:
+            self.assertEqual(source_before, fh.read())
+        self.assertEqual(source_stat.st_mtime_ns, os.stat(source_file).st_mtime_ns)
+
+    def test_setup_sextractor_dir_replaces_old_copy(self):
+        config_file = 'sextractor_neox_ldac_multiaper.conf'
+        test_file = os.path.join(self.test_dir, config_file)
+        with open(test_file, 'w') as fh:
+            fh.write("PHOT_APERTURES 1.0\n")
+
+        status = setup_sextractor_dir(self.source_dir, self.test_dir, catalog_type='FITS_LDAC_MULTIAPER')
+
+        self.assertEqual(0, status)
+        with open(os.path.join(self.source_dir, config_file), 'rb') as src, open(test_file, 'rb') as dest:
+            self.assertEqual(src.read(), dest.read())
+
+    def test_setup_working_dir_missing_config(self):
+
+        status = setup_working_dir(self.source_dir, self.test_dir, ['sextractor_neox_ldac.conf', 'no_such.conf'])
+
+        self.assertEqual(-3, status)
+        self.assertTrue(os.path.exists(os.path.join(self.test_dir, 'sextractor_neox_ldac.conf')))
+        self.assertFalse(os.path.lexists(os.path.join(self.test_dir, 'no_such.conf')))
 
     def test_run_sextractor_nofile(self):
 
@@ -2755,3 +2807,53 @@ class TestRunAstconvertt(ExternalCodeUnitTest):
 
         self.assertEquals(expected_status, status)
         self.assertTrue(os.path.exists(self.output_filename))
+
+
+class TestGetCatalogApertures(ExternalCodeUnitTest):
+    """A multi-aperture catalog only records its first four apertures (SEXAPED1-4); the full set,
+    and which one the zeropoint is fitted to, come from the SExtractor config that
+    setup_sextractor_dir() left beside the catalog"""
+
+    def setUp(self):
+        super().setUp()
+        self.catfile = os.path.join(self.test_dir, 'tfn1m014-fa20-20231121-0043-e92_ldac.fits')
+        shutil.copy(os.path.join('photometrics', 'tests', 'banzai_test_multiaper_ldac.fits'), self.catfile)
+        self.config_file = os.path.join(self.test_dir, 'sextractor_neox_ldac_multiaper.conf')
+        shutil.copy(os.path.join(self.source_dir, 'sextractor_neox_ldac_multiaper.conf'), self.config_file)
+        self.header, self.table = extract_catalog(self.catfile, 'BANZAI_LDAC', flag_filter=7)
+
+    def rewrite_apertures(self, apertures, zp_aperture):
+        with open(self.config_file) as fh:
+            lines = fh.readlines()
+        with open(self.config_file, 'w') as fh:
+            for line in lines:
+                if line.startswith('PHOT_APERTURES'):
+                    line = f'PHOT_APERTURES {apertures}\n'
+                elif line.startswith('#NEOX_ZP_APERTURE'):
+                    line = f'#NEOX_ZP_APERTURE {zp_aperture}\n'
+                fh.write(line)
+
+    def test_apertures_from_the_config(self):
+        diameters, zp_index = get_catalog_apertures(self.catfile, self.header, self.table)
+
+        assert_allclose([5.13, 10.27, 15.40, 20.53, 22.00, 25.67, 30.80, 35.93, 41.06, 46.20, 51.33], diameters)
+        self.assertEqual(4, zp_index)
+
+    def test_no_config_beside_the_catalog(self):
+        os.remove(self.config_file)
+
+        with self.assertRaisesRegex(NeoException, 'no sextractor_neox_ldac_multiaper.conf beside it'):
+            get_catalog_apertures(self.catfile, self.header, self.table)
+
+    def test_config_is_not_the_one_the_catalog_was_extracted_with(self):
+        # eleven apertures of the ef02 1"..20" ladder: the right number, but not the recorded SEXAPED1-4
+        self.rewrite_apertures('2.93,5.87,8.80,11.74,14.67,17.60,20.54,23.47,26.41,29.34,32.28', 14.67)
+
+        with self.assertRaisesRegex(NeoException, 'do not match the apertures recorded'):
+            get_catalog_apertures(self.catfile, self.header, self.table)
+
+    def test_config_has_a_different_number_of_apertures(self):
+        self.rewrite_apertures('5.13,10.27,15.40,20.53', 20.53)
+
+        with self.assertRaisesRegex(NeoException, 'has 4 PHOT_APERTURES but .* has 11 apertures'):
+            get_catalog_apertures(self.catfile, self.header, self.table)

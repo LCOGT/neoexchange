@@ -21,6 +21,7 @@ from collections import OrderedDict
 from datetime import datetime, timedelta
 from glob import glob
 from math import ceil, floor
+import shutil
 from shutil import unpack_archive
 from subprocess import PIPE, Popen, TimeoutExpired, call
 
@@ -47,6 +48,7 @@ from photometrics.catalog_subs import (
     get_header,
     mro_ldac_catalog_mapping,
     open_fits_catalog,
+    read_sextractor_apertures,
     swope_ldac_catalog_mapping,
 )
 from photometrics.image_subs import (
@@ -104,9 +106,35 @@ def default_sextractor_config_files(catalog_type='ASCII'):
     config_files += common_config_files
     return config_files
 
+def get_catalog_apertures(catfile, header, table):
+    """For a multi-aperture SExtractor catalog <catfile> (2-D obs_mag in <table>, <header> from
+    extract_catalog()), returns (diameters, zp_index): the PHOT_APERTURES diameters (pixels) of every
+    flux column, in column order, and the index of the one the zeropoint is fitted to. SExtractor only
+    records the first four apertures in the catalog (SEXAPED1-4), so they are read from the
+    multi-aperture config that setup_sextractor_dir() left beside the catalog, checked against the
+    catalog's recorded apertures and number of flux columns. A NeoException is raised if the config
+    is missing or is not the one the catalog was extracted with."""
+
+    config_file = os.path.join(os.path.dirname(catfile), default_sextractor_config_files('FITS_LDAC_MULTIAPER')[0])
+    if not os.path.exists(config_file):
+        raise NeoException(f"Multi-aperture catalog {catfile} has no {os.path.basename(config_file)} beside it to give its apertures")
+    diameters, zp_index = read_sextractor_apertures(config_file)
+
+    num_columns = table['obs_mag'].shape[1]
+    if len(diameters) != num_columns:
+        raise NeoException(f"{config_file} has {len(diameters)} PHOT_APERTURES but {catfile} has {num_columns} apertures")
+    recorded = header.get('sextractor_aperture_diameters_pixels', [])
+    if any(abs(recorded_diameter - diameter) > 0.005 for recorded_diameter, diameter in zip(recorded, diameters)):
+        raise NeoException(f"{config_file} PHOT_APERTURES {diameters[:len(recorded)]} do not match the apertures recorded in {catfile} (SEXAPED1-4: {recorded}); not the config it was extracted with")
+
+    return diameters, zp_index
+
 
 def default_findorb_config_files():
-    config_files = ['environ.def', 'ps_1996.dat', 'elp82.dat']
+    """Return a list of the needed files for find_orb. The JPL ephemeris files
+    (ps_1996.dat, elp82.dat) are not listed: find_orb reads them from ~/.find_orb,
+    where the Dockerfile installs them, and they have never been in configs/"""
+    config_files = ['environ.def']
     return config_files
 
 
@@ -127,7 +155,7 @@ def default_swarp_config_files():
 
 def setup_mtdlink_dir(source_dir, dest_dir):
     """Setup a temporary working directory for running MTDLINK in <dest_dir>. The
-    needed config files are symlinked from <source_dir>"""
+    needed config files are copied from <source_dir>"""
 
     mtdlink_config_files = default_mtdlink_config_files()
 
@@ -138,7 +166,7 @@ def setup_mtdlink_dir(source_dir, dest_dir):
 
 def setup_scamp_dir(source_dir, dest_dir, refcatalog='GAIA-DR3.cat'):
     """Setup a temporary working directory for running SCAMP in <dest_dir>. The
-    needed config files are symlinked from <source_dir>"""
+    needed config files are copied from <source_dir>"""
 
     scamp_config_files = default_scamp_config_files(refcatalog)
 
@@ -149,7 +177,7 @@ def setup_scamp_dir(source_dir, dest_dir, refcatalog='GAIA-DR3.cat'):
 
 def setup_sextractor_dir(source_dir, dest_dir, catalog_type='ASCII'):
     """Setup a temporary working directory for running SExtractor in <dest_dir>.
-    The needed config files are symlinked from <source_dir>"""
+    The needed config files are copied from <source_dir>"""
 
     sextractor_config_files = default_sextractor_config_files(catalog_type)
 
@@ -160,7 +188,7 @@ def setup_sextractor_dir(source_dir, dest_dir, catalog_type='ASCII'):
 
 def setup_hotpants_dir(source_dir, dest_dir):
     """Setup a temporary working directory for running HOTPANTS in <dest_dir>.
-    The needed config files are symlinked from <source_dir>"""
+    The needed config files are copied from <source_dir>"""
 
     return_value = setup_working_dir(source_dir, dest_dir, "")
 
@@ -168,7 +196,7 @@ def setup_hotpants_dir(source_dir, dest_dir):
 
 def setup_swarp_dir(source_dir, dest_dir):
     """Setup a temporary working directory for running SWarp in <dest_dir>.
-    The needed config files are symlinked from <source_dir>"""
+    The needed config files are copied from <source_dir>"""
 
     swarp_config_files = default_swarp_config_files()
 
@@ -218,8 +246,13 @@ def setup_findorb_environ_file(source_dir, site_code=500, start_time=datetime.ut
 def setup_working_dir(source_dir, dest_dir, config_files):
     """Sets up a temporary working directory for running programs in <dest_dir>.
     The temporary working directory is created if needed and the required config
-    files (given in a list in <config_files>) are symlinked from <source_dir> if
-    they don't already exist in <dest_dir>"""
+    files (given in a list in <config_files>) are copied from <source_dir>, so the
+    directory keeps the versions of the configs it was reduced with. Anything
+    already at a config's name in <dest_dir>, whether a file from an earlier
+    reduction or a symlink from one made before the configs were copied, is removed
+    first: copying through a stale symlink would overwrite the config in <source_dir>.
+    Returns 0 on success, -1 for a missing <source_dir>, -2 if <dest_dir> could not
+    be created and -3 if any config could not be copied."""
 
     source_dir = os.path.abspath(source_dir)
     if not os.path.exists(source_dir):
@@ -235,7 +268,7 @@ def setup_working_dir(source_dir, dest_dir, config_files):
             logger.error("Destination path '%s' could not be created" % dest_dir)
             return -2
 
-    num_bad_links = 0
+    num_bad_files = 0
     for config in config_files:
         config_src_filepath = os.path.join(source_dir, config)
         config_dest_filepath = os.path.join(dest_dir, config)
@@ -243,14 +276,16 @@ def setup_working_dir(source_dir, dest_dir, config_files):
             try:
                 os.unlink(config_dest_filepath)
             except OSError:
-                logger.warning("Could not unlink %s" % config_dest_filepath)
+                logger.error("Could not remove existing %s" % config_dest_filepath)
+                num_bad_files += 1
+                continue
         try:
-            os.symlink(config_src_filepath, config_dest_filepath)
+            shutil.copy(config_src_filepath, config_dest_filepath)
         except OSError:
-            logger.error("Could not create link for %s to %s" % ( config, config_dest_filepath))
-            num_bad_links += 1
+            logger.error("Could not copy %s to %s" % (config_src_filepath, config_dest_filepath))
+            num_bad_files += 1
     return_status = 0
-    if num_bad_links > 0:
+    if num_bad_files > 0:
         return_status = -3
     return return_status
 
@@ -420,7 +455,7 @@ def determine_hotpants_options(ref, sci, source_dir, dest_dir, dbgOptions=False)
     aligned_rms = align_to_sci(ref_rms, sci_rms, source_dir, dest_dir)
 
     if type(aligned_ref) != str or type(aligned_rms) != str:
-        logger.error(f"Error occurred in SWarp while aligning images.")
+        logger.error("Error occurred in SWarp while aligning images.")
         return -9
 
     # XXX replace with proper call to increment_red_level if red level present in filename

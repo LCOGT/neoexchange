@@ -25,9 +25,9 @@ from photometrics.catalog_subs import FITSHdrException, open_fits_catalog, \
     get_catalog_header, increment_red_level, get_reference_catalog, extract_catalog, \
     existing_catalog_coverage, reset_database_connection, get_header, \
     update_zeropoint, update_frame_zeropoint, get_or_create_CatalogSources, \
-    create_initial_MRO_wcs, MULTIAPER_DIAMETERS_PX, MULTIAPER_ZP_INDEX
+    create_initial_MRO_wcs
 from photometrics.photometry_subs import map_filter_to_calfilter
-from photometrics.external_codes import updateFITSWCS, updateFITScalib
+from photometrics.external_codes import updateFITSWCS, updateFITScalib, get_catalog_apertures
 
 logger = logging.getLogger(__name__)
 
@@ -460,8 +460,17 @@ class ZeropointProcessPipeline(PipelineProcess):
                     return
                 # Cross match with reference catalog and compute zeropoint
                 logger.info(f"Calibrating {header['filter']} instrumental mags. with {cal_filter} using {phot_cat_name} color_const= {color_const} solar= {solar}")
-                avg_zeropoint, std_zeropoint, C, cal_color, zp_aperture_pix = self.cross_match_and_zp(table, refcat, \
-                    std_zeropoint_tolerance, cal_filter, header['filter'], color_const, solar)
+                zp_aperture_index = None
+                zp_aperture_pix = None
+                if table['obs_mag'].ndim == 2:
+                    # Multi-aperture catalog: which column to fit, and its radius, come from the
+                    # SExtractor config beside the catalog (the catalog only records four apertures)
+                    aperture_diameters, zp_aperture_index = get_catalog_apertures(catfile, header, table)
+                    zp_aperture_pix = aperture_diameters[zp_aperture_index] / 2.0
+                    header['zp_aperture_index'] = zp_aperture_index
+                    logger.info(f"Multi-aperture catalog: fitting aperture {zp_aperture_index} ({zp_aperture_pix} px radius) of {aperture_diameters}")
+                avg_zeropoint, std_zeropoint, C, cal_color = self.cross_match_and_zp(table, refcat, \
+                    std_zeropoint_tolerance, cal_filter, header['filter'], color_const, solar, zp_aperture_index=zp_aperture_index)
                 logger.info(f"New zp={avg_zeropoint:} +/- {std_zeropoint:} {C:}")
                 self.log(f"New zp={avg_zeropoint:} +/- {std_zeropoint:} {C:}")
 
@@ -634,7 +643,7 @@ class ZeropointProcessPipeline(PipelineProcess):
         self.log(f"{prefix:} DB file {db_filename:}")
         return db_filename
 
-    def cross_match_and_zp(self, table, refcat, std_zeropoint_tolerance, cal_filter, obs_filter, color_const=True, solar=True):
+    def cross_match_and_zp(self, table, refcat, std_zeropoint_tolerance, cal_filter, obs_filter, color_const=True, solar=True, zp_aperture_index=None):
 
         phot = table[table['flags'] == 0]  # clean LCO catalog
         lco = coord.SkyCoord(phot['obs_ra'], phot['obs_dec'], unit='deg')
@@ -658,7 +667,7 @@ class ZeropointProcessPipeline(PipelineProcess):
             objids, distances = retstatus
         else:
             logger.warning("Crossmatching failed")
-            return None, None, None, None, None
+            return None, None, None, None
         end = time.time()
         logger.debug(f"TIME: cvc cross_match took {end-start:.1f} seconds")
 
@@ -671,12 +680,12 @@ class ZeropointProcessPipeline(PipelineProcess):
             warnings.filterwarnings("ignore", message='divide by zero encountered')
             start = time.time()
             inst_mag = phot['obs_mag']
-            # Radius of the aperture being fitted: None means the catalog's single aperture (SEXAPED1)
-            zp_aperture_pix = None
             if len(inst_mag.shape) == 2:
-                # Multi-aperture catalog: fit one column (22.00 px diameter in the multiaper config)
-                inst_mag = inst_mag[0:, MULTIAPER_ZP_INDEX]
-                zp_aperture_pix = MULTIAPER_DIAMETERS_PX[MULTIAPER_ZP_INDEX] / 2.0
+                # Multi-aperture catalog: one column per PHOT_APERTURES entry; the caller says which
+                # one to fit (do_pipeline reads it from the SExtractor config beside the catalog)
+                if zp_aperture_index is None:
+                    raise NeoException("Multi-aperture catalog but no zeropoint aperture index given")
+                inst_mag = inst_mag[:, zp_aperture_index]
 
             gmi_limits = [0.2, 3.0]
             if solar is True:
@@ -698,4 +707,4 @@ class ZeropointProcessPipeline(PipelineProcess):
         logger.debug(f"TIME: compute_zeropoint took {end-start:.1f} seconds")
         logger.debug(f"New zp={avg_zeropoint:} +/- {std_zeropoint:} {r.count():} {C:}")
 
-        return avg_zeropoint, std_zeropoint, C, cal_color_term, zp_aperture_pix
+        return avg_zeropoint, std_zeropoint, C, cal_color_term

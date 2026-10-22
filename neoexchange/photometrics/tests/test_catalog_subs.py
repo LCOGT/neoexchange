@@ -2007,6 +2007,7 @@ class FITSReadHeader(FITSUnitTest):
                             'astrometric_catalog'    : 'UCAC3',
                             'gain'          : self.test_header['GAIN'],
                             'saturation'    : self.test_header['SATURATE'],
+                            'sextractor_aperture_diameters_pixels' : [2.14, 6.42, 10.71, 14.99],
                           }
 
         header, table, cattype = open_fits_catalog(self.test_filename)
@@ -2043,6 +2044,7 @@ class FITSReadHeader(FITSUnitTest):
                             'wcs'                    : self.test_ldacwcs,
                             'aperture_radius_pixels' : 2.5,
                             'aperture_radius_arcsec' : 2.5*self.test_ldac_pixscale,
+                            'sextractor_aperture_diameters_pixels' : [5.0],
                           }
         expected_cattype = "FITS_LDAC"
 
@@ -2471,6 +2473,7 @@ class FITSReadHeader(FITSUnitTest):
                             'reduction_level' : 91,
                             'aperture_radius_pixels' : 11.47,
                             'aperture_radius_arcsec' : round(11.47*self.test_photpipe_ldac_pixscale, 4),
+                            'sextractor_aperture_diameters_pixels' : [22.94000053],
                           }
         expected_cattype = "PHOTPIPE_LDAC"
 
@@ -3055,7 +3058,8 @@ class TestExtractCatalog(FITSUnitTest):
                        'zeropoint_src': 'NOT_FIT(LCOGTCAL-V0.0.2-r8174)',
                        'wcs' : self.test_ldacwcs,
                        'aperture_radius_pixels' : 2.5,
-                       'aperture_radius_arcsec' : round(2.5*self.test_ldac_pixscale, 4)}
+                       'aperture_radius_arcsec' : round(2.5*self.test_ldac_pixscale, 4),
+                       'sextractor_aperture_diameters_pixels' : [5.0]}
 
         test_ldacfilename = shutil.copy(os.path.abspath(self.test_ldacfilename), self.temp_dir)
         header, table = extract_catalog(test_ldacfilename, 'FITS_LDAC', remove=True)
@@ -3093,7 +3097,8 @@ class TestExtractCatalog(FITSUnitTest):
                        'zeropoint_src': 'NOT_FIT(LCOGTCAL-V0.0.2-r8174)',
                        'wcs' : self.test_ldacwcs,
                        'aperture_radius_pixels' : 2.5,
-                       'aperture_radius_arcsec' : round(2.5*self.test_ldac_pixscale, 4)}
+                       'aperture_radius_arcsec' : round(2.5*self.test_ldac_pixscale, 4),
+                       'sextractor_aperture_diameters_pixels' : [5.0]}
 
         test_ldacfilename = shutil.copy(os.path.abspath(self.test_ldacfilename), self.temp_dir)
         header, table = extract_catalog(test_ldacfilename)
@@ -3131,7 +3136,8 @@ class TestExtractCatalog(FITSUnitTest):
                        'zeropoint_src': 'BANZAI',
                        'wcs' : self.test_photpipe_ldacwcs,
                        'aperture_radius_pixels' : 11.47,
-                       'aperture_radius_arcsec' : round(11.47*self.test_photpipe_ldac_pixscale, 4)}
+                       'aperture_radius_arcsec' : round(11.47*self.test_photpipe_ldac_pixscale, 4),
+                       'sextractor_aperture_diameters_pixels' : [22.94000053]}
 
         test_photpipefilename = shutil.copy(os.path.abspath(self.test_photpipefilename), self.temp_dir)
         header, table = extract_catalog(test_photpipefilename)
@@ -3593,15 +3599,58 @@ class TestUpdateZeropoint(SimpleTestCase):
         assert_allclose([[18.0, 17.5, 17.0], [17.0, 16.5, 16.0]], table['obs_mag'])
 
 
-class TestMultiApertureConstants(SimpleTestCase):
+class TestReadSextractorApertures(SimpleTestCase):
 
-    def test_matches_multiaper_config(self):
-        conf = os.path.join('photometrics', 'configs', 'sextractor_neox_ldac_multiaper.conf')
-        with open(conf) as fh:
-            apertures = next(line.split()[1] for line in fh if line.startswith('PHOT_APERTURES'))
+    def setUp(self):
+        self.test_dir = tempfile.mkdtemp(prefix='tmp_neox_')
+        self.addCleanup(shutil.rmtree, self.test_dir)
 
-        assert_allclose(MULTIAPER_DIAMETERS_PX, [float(x) for x in apertures.split(',')])
-        self.assertEqual(22.00, MULTIAPER_DIAMETERS_PX[MULTIAPER_ZP_INDEX])
+    def write_config(self, *lines):
+        config_file = os.path.join(self.test_dir, 'test.conf')
+        with open(config_file, 'w') as fh:
+            fh.write('\n'.join(lines) + '\n')
+        return config_file
+
+    def test_multiaper_config(self):
+        config_file = os.path.join('photometrics', 'configs', 'sextractor_neox_ldac_multiaper.conf')
+
+        diameters, zp_index = read_sextractor_apertures(config_file)
+
+        assert_allclose([5.13, 10.27, 15.40, 20.53, 22.00, 25.67, 30.80, 35.93, 41.06, 46.20, 51.33], diameters)
+        self.assertEqual(22.00, diameters[zp_index])
+
+    def test_single_aperture_config_needs_no_marker(self):
+        config_file = os.path.join('photometrics', 'configs', 'sextractor_neox_ldac.conf')
+
+        diameters, zp_index = read_sextractor_apertures(config_file)
+
+        self.assertEqual((1, 0), (len(diameters), zp_index))
+
+    def test_spaces_comments_and_commented_out_lines(self):
+        config_file = self.write_config('#PHOT_APERTURES 1.0,2.0  # an old set',
+                                        'PHOT_APERTURES\t2.94, 5.87,8.81 \t# diameters',
+                                        '# NEOX_ZP_APERTURE 5.87  # fitted',
+                                        'PHOT_AUTOPARAMS 2.5, 3.5')
+
+        self.assertEqual(([2.94, 5.87, 8.81], 1), read_sextractor_apertures(config_file))
+
+    def test_several_apertures_without_marker(self):
+        config_file = self.write_config('PHOT_APERTURES 4.0,6.0,8.0')
+
+        with self.assertRaisesRegex(NeoException, 'no #NEOX_ZP_APERTURE line'):
+            read_sextractor_apertures(config_file)
+
+    def test_marker_not_an_aperture(self):
+        config_file = self.write_config('PHOT_APERTURES 4.0,6.0,8.0', '#NEOX_ZP_APERTURE 7.0')
+
+        with self.assertRaisesRegex(NeoException, 'not one of its PHOT_APERTURES'):
+            read_sextractor_apertures(config_file)
+
+    def test_no_apertures(self):
+        config_file = self.write_config('#PHOT_APERTURES 4.0', 'DETECT_THRESH 3.0')
+
+        with self.assertRaisesRegex(NeoException, 'No PHOT_APERTURES'):
+            read_sextractor_apertures(config_file)
 
 
 class TestMultiApertureLDAC(SimpleTestCase):
@@ -3628,6 +3677,11 @@ class TestMultiApertureLDAC(SimpleTestCase):
         self.assertEqual((292, 11), table['obs_mag'].shape)
         self.assertAlmostEqual(self.multiaper_diameters_px[0] / 2.0, header['aperture_radius_pixels'], places=5)
         self.assertAlmostEqual(24.555, header['zeropoint'], places=3)
+
+    def test_extract_catalog_records_the_four_apertures_sextractor_wrote(self):
+        header, _ = extract_catalog(self.test_filename, 'BANZAI_LDAC', flag_filter=7)
+
+        assert_allclose(self.multiaper_diameters_px[:4], header['sextractor_aperture_diameters_pixels'], atol=1e-5)
 
     def test_update_zeropoint_does_not_record_first_aperture_as_zp_aperture(self):
         header, table = extract_catalog(self.test_filename, 'BANZAI_LDAC', flag_filter=7)
@@ -5307,19 +5361,27 @@ class TestGetOrCreateCatalogSources(TestCase):
                 'obs_mag': obs_mag, 'obs_mag_err': obs_mag_err}
         return Table(cols)
 
-    def test_multi_aperture_uses_fifth_aperture(self):
+    def test_multi_aperture_uses_the_fitted_aperture(self):
         mags = [[15.0 + 0.1 * i for i in range(8)]]
         errs = [[0.01 * (i + 1) for i in range(8)]]
         table = self.make_table(mags, errs)
+        # as the zeropoint stage leaves the header: column 4 fitted, with an 11.0 px radius
+        header = {'zp_aperture_index': 4, 'zeropoint_aperture_pixels': 11.0, 'pixel_scale': 0.389}
 
-        num_created, num_in_table = get_or_create_CatalogSources(table, self.frame, {'aperture_radius_arcsec': 1.0})
+        num_created, num_in_table = get_or_create_CatalogSources(table, self.frame, header)
 
         self.assertEqual((1, 1), (num_created, num_in_table))
         src = CatalogSources.objects.get(frame=self.frame)
         self.assertAlmostEqual(15.4, src.obs_mag, places=5)
         self.assertAlmostEqual(0.05, src.err_obs_mag, places=5)
-        # first-aperture radius (1") scaled up to the ingested aperture (22.00/5.13 px diameter)
-        self.assertAlmostEqual(22.00 / 5.13, src.aperture_size, places=5)
+        self.assertAlmostEqual(11.0 * 0.389, src.aperture_size, places=5)
+
+    def test_multi_aperture_needs_the_fitted_aperture(self):
+        table = self.make_table([[15.0, 15.1, 15.2]], [[0.01, 0.01, 0.01]])
+
+        with self.assertRaisesRegex(NeoException, "no 'zp_aperture_index'"):
+            get_or_create_CatalogSources(table, self.frame, {'aperture_radius_arcsec': 1.0})
+        self.assertEqual(0, CatalogSources.objects.count())
 
     def test_single_aperture_header_radius(self):
         table = self.make_table([15.5], [0.02])
@@ -5339,11 +5401,15 @@ class TestGetOrCreateCatalogSources(TestCase):
         self.assertAlmostEqual(1.0, src.aperture_size, places=5)
 
     def test_multi_aperture_real_catalog_records_fitted_aperture_radius(self):
-        # the ingested flux is aperture index 4 (22.00 px diameter), 8.58" radius on this 0.78"/pix frame
+        # as the zeropoint stage leaves the header: aperture index 4 (22.00 px diameter) fitted,
+        # 11.0 px = 8.58" radius on this 0.78"/pix frame
         catfile = os.path.join('photometrics', 'tests', 'banzai_test_multiaper_ldac.fits')
         header, table = extract_catalog(catfile, 'BANZAI_LDAC', flag_filter=7)
+        header['zp_aperture_index'] = 4
+        header['zeropoint_aperture_pixels'] = 11.0
 
         get_or_create_CatalogSources(table, self.frame, header)
 
         src = CatalogSources.objects.filter(frame=self.frame).first()
         self.assertAlmostEqual(11.0 * header['pixel_scale'], src.aperture_size, places=2)
+        self.assertAlmostEqual(table['obs_mag'][0][4], src.obs_mag, places=5)
