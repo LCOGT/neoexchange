@@ -20,7 +20,7 @@ import tempfile
 from glob import glob
 from math import degrees
 
-from django.test import TestCase, SimpleTestCase, override_settings
+from django.test import TestCase, SimpleTestCase
 from django.forms.models import model_to_dict
 from django.conf import settings
 from django.http import Http404
@@ -8119,7 +8119,7 @@ class TestFindSpec(TestCase):
     @patch('core.views.lco_api_call', mock_archive_spectra_header)
     def test_local_data_with_tarball(self):
 
-        with self.settings(MEDIA_ROOT=tempfile.mkdtemp()):
+        with tempfile.TemporaryDirectory(prefix='tmp_neox_') as media_root, self.settings(MEDIA_ROOT=media_root):
             expected_date = '20190727'
             expected_path = os.path.join(expected_date, self.test_body.current_name() + '_' + self.test_block.request_number)
             # os.makedirs(expected_date)
@@ -8696,7 +8696,8 @@ class TestCreateLatexTable(TestCase):
         self.assertEqual(13, Frame.objects.all().count())
         
         out_buf = create_latex_table(self.test_body, return_table=False)
-        with open(os.path.join(tempfile.mkdtemp(), 'Didymos_obs_no_obstype.tex'), 'w') as fd:
+        with tempfile.TemporaryDirectory(prefix='tmp_neox_') as tmp_dir, \
+                open(os.path.join(tmp_dir, 'Didymos_obs_no_obstype.tex'), 'w') as fd:
             out_buf.seek(0)
             shutil.copyfileobj(out_buf, fd)
 
@@ -8867,9 +8868,13 @@ class TestCreateLatexTable(TestCase):
         self.expected_colnames.remove('Observation Type')
         self.assertEqual(self.expected_colnames, data_table.colnames)
 
-@override_settings(MEDIA_ROOT=tempfile.mkdtemp())
 class TestDisplayDataproduct(TestCase):
     def setUp(self):
+        self.media_root = tempfile.mkdtemp(prefix='tmp_neox_')
+        self.addCleanup(shutil.rmtree, self.media_root)
+        media_settings = self.settings(MEDIA_ROOT=self.media_root)
+        media_settings.enable()
+        self.addCleanup(media_settings.disable)
         body_params = {
                          'provisional_name': None,
                          'provisional_packed': 'j5432',
