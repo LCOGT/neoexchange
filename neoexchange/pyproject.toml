@@ -12,6 +12,7 @@ ignore = [
     "UP030",   # explicit positional indices in .format()
     "UP031",   # '%' formatting -> .format()/f-string
     "UP032",   # .format() -> f-string
+    "DTZ",     # naive datetimes: the codebase uses naive UTC throughout (models, MJD conversions)
 ]
 
 [tool.ruff.lint.per-file-ignores]
