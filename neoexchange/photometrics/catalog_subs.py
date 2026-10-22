@@ -18,38 +18,39 @@ GNU General Public License for more details.
 import logging
 import os
 from glob import glob
+
 import numpy as np
+
 try:
-    from datetime import datetime, timedelta, UTC
+    from datetime import UTC, datetime, timedelta
 except ImportError:
     from datetime import datetime, timedelta, timezone
     UTC = timezone.utc
-from math import sqrt, log10, log, degrees, cos
-from collections import OrderedDict
-import time
-from requests.exceptions import ReadTimeout, ConnectTimeout, ConnectionError
-import re
 import random
+import re
+import time
 import warnings
+from collections import OrderedDict
+from math import cos, degrees, log, log10, sqrt
 
-import numpy as np
-from scipy.stats import skew, kurtosis
-from astropy.stats import sigma_clipped_stats
-from astropy.utils.exceptions import AstropyDeprecationWarning
-from astropy.io import fits
-from astropy.table import Table
-from astropy.coordinates import Angle
-from astroquery.vizier import Vizier
-import astropy.units as u
 import astropy.coordinates as coord
+import astropy.units as u
+from astropy import __version__ as astropyversion
+from astropy.coordinates import Angle
+from astropy.io import fits
+from astropy.stats import sigma_clipped_stats
+from astropy.table import Table
+from astropy.utils.exceptions import AstropyDeprecationWarning
 from astropy.wcs import WCS, FITSFixedWarning, InvalidTransformError
 from astropy.wcs.utils import proj_plane_pixel_scales
-from astropy import __version__ as astropyversion
+from astroquery.vizier import Vizier
 from django.db import transaction
+from requests.exceptions import ConnectionError, ConnectTimeout, ReadTimeout
+from scipy.stats import kurtosis, skew
 
 from astrometrics.ephem_subs import LCOGT_domes_to_site_codes, determine_darkness_times
-from astrometrics.time_subs import timeit, mjd_utc2datetime
-from core.models import CatalogSources, Frame, Block, SourceMeasurement
+from astrometrics.time_subs import mjd_utc2datetime, timeit
+from core.models import Block, CatalogSources, Frame, SourceMeasurement
 from core.utils import NeoException
 
 warnings.simplefilter('ignore', category = AstropyDeprecationWarning)
@@ -1201,8 +1202,8 @@ def open_fits_catalog(catfile, header_only=False):
 
     try:
         hdulist = fits.open(catfile)
-    except IOError as e:
-        logger.error("Unable to open FITS catalog %s (Reason=%s)" % (catfile, e))
+    except OSError as e:
+        logger.error(f"Unable to open FITS catalog {catfile} (Reason={e})")
         return header, table, cattype
 
     # Verify HDUs first
@@ -1210,7 +1211,7 @@ def open_fits_catalog(catfile, header_only=False):
         for hdu in hdulist:
             hdu.verify('exception')
     except OSError:
-        logger.error("Verification of FITS catalog {} failed".format(catfile))
+        logger.error(f"Verification of FITS catalog {catfile} failed")
         return header, table, 'CORRUPT'
 
     if len(hdulist) == 2:
@@ -1283,7 +1284,7 @@ def open_fits_catalog(catfile, header_only=False):
         else:
             logger.error(f"Could not find {hdr_name} HDU in file")
     else:
-        logger.error("Unexpected number of catalog HDUs (Expected 1-4, got %d)" % len(hdulist))
+        logger.error(f"Unexpected number of catalog HDUs (Expected 1-4, got {len(hdulist)})")
 
     hdulist.close()
 
@@ -1484,7 +1485,7 @@ def get_catalog_header(catalog_header, catalog_type='LCOGT', debug=False):
                 hdr_value = catalog_header[fits_keyword].replace('/', '').rstrip()
                 catalog_header[fits_keyword] = float(hdr_value)
 
-    for item in hdr_mapping.keys():
+    for item in hdr_mapping:
         fits_keyword = hdr_mapping[item]
         if fits_keyword in catalog_header:
             # Found, extract value
@@ -1664,7 +1665,7 @@ def get_catalog_items_old(header_items, table, catalog_type='LCOGT', flag_filter
         source_items = {}
         if 'flags' in tbl_mapping and source['flags'] <= flag_filter:
 
-            for item in tbl_mapping.keys():
+            for item in tbl_mapping:
                 value = source[item]
                 # Don't convert magnitude or magnitude error yet
                 if 'obs_mag' not in item:
@@ -1680,7 +1681,7 @@ def get_catalog_items_old(header_items, table, catalog_type='LCOGT', flag_filter
             source_items['obs_mag'] = convert_value('obs_mag', source_items['obs_mag'])
             # Convert MU_THRESHOLD (in magnitudes per sq. arcsec) into a THRESHOLD
             # in counts
-            if 'threshold' in tbl_mapping.keys() and 'MU_' in tbl_mapping['threshold'].upper():
+            if 'threshold' in tbl_mapping and 'MU_' in tbl_mapping['threshold'].upper():
                 source_items['threshold'] = convert_value('mu_threshold', (source_items['threshold'], header_items['pixel_scale']))
             if header_items.get('zeropoint', -99) != -99:
                 source_items['obs_mag'] += header_items['zeropoint']
@@ -1744,7 +1745,7 @@ def get_catalog_items_new(header_items, table, catalog_type='LCOGT', flag_filter
             good_flux_mask = good_flux_mask.any(axis=1)
         new_table = new_table[good_flux_mask]
     # Convert columns
-    if 'obs_ra_err' in tbl_mapping.keys() and 'obs_dec_err' in tbl_mapping.keys():
+    if 'obs_ra_err' in tbl_mapping and 'obs_dec_err' in tbl_mapping:
         new_table['obs_ra_err'] = np.sqrt(new_table['obs_ra_err'])
         new_table['obs_dec_err'] = np.sqrt(new_table['obs_dec_err'])
     if 'obs_mag' in new_table.colnames and 'obs_mag_err' in new_table.colnames:
@@ -1752,7 +1753,7 @@ def get_catalog_items_new(header_items, table, catalog_type='LCOGT', flag_filter
         new_table['obs_mag_err'] = FLUX2MAG * (new_table['obs_mag_err'] / new_table['obs_mag'])
         warnings.simplefilter("ignore", RuntimeWarning)
         new_table['obs_mag'] = -2.5 * np.log10(new_table['obs_mag'] / header_items['exptime'])
-    if 'threshold' in tbl_mapping.keys() and 'MU_' in tbl_mapping['threshold'].upper():
+    if 'threshold' in tbl_mapping and 'MU_' in tbl_mapping['threshold'].upper():
         scale = header_items['pixel_scale'] * header_items['pixel_scale']
         new_table['threshold'] = np.power(10, (new_table['threshold']/-2.5)) * scale
     if header_items.get('zeropoint', -99) != -99 and 'obs_mag' in new_table.colnames:
@@ -1776,7 +1777,7 @@ def update_ldac_catalog_wcs(fits_image_file, fits_catalog, overwrite=True):
     try:
         header = fits.getheader(fits_image_file)
         new_wcs = WCS(header)
-    except IOError as e:
+    except OSError as e:
         logger.error("Error reading WCS from %s. Error was: %s" % (fits_image_file, e))
         return -1
     if header.get('WCSERR', 99) > 0:
@@ -1786,7 +1787,7 @@ def update_ldac_catalog_wcs(fits_image_file, fits_catalog, overwrite=True):
     # Extract FITS LDAC catalog
     try:
         hdulist = fits.open(fits_catalog)
-    except IOError as e:
+    except OSError as e:
         logger.error("Unable to open FITS catalog %s (Reason=%s)" % (fits_catalog, e))
         return -3
     if len(hdulist) != 3:
@@ -2107,7 +2108,7 @@ def read_reference_frame_header(reffile):
         params['sitecode'] = LCOGT_domes_to_site_codes(file_chunks['site'], 'clma', file_chunks['tel_class'] + 'a')
     except OSError:
         logger.warning(f"Couldn't read from {reffile}")
-        pass
+
     return params
 
 @timeit
@@ -2554,8 +2555,8 @@ def extract_sci_image(file_path, catalog_path):
 
     try:
         hdulist = fits.open(file_path)
-    except IOError as e:
-        logger.error("Unable to open FITS catalog %s (Reason=%s)" % (catfile, e))
+    except OSError as e:
+        logger.error(f"Unable to open FITS catalog {fits_filename_path} (Reason={e})")
 
     try:
         sci_index = hdulist.index_of('SCI')
@@ -2771,7 +2772,7 @@ def create_initial_MRO_wcs(fits_file):
     status = 0
     try:
         hdulist = fits.open(fits_file, mode='update')
-    except IOError as e:
+    except OSError as e:
         logger.error("Unable to open FITS catalog %s (Reason=%s)" % (fits_file, e))
         return -1
 

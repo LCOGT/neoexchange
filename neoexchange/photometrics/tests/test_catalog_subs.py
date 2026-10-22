@@ -5226,6 +5226,7 @@ class TestReadReferenceFrameHeader(SimpleTestCase):
                             'fwhm' : self.header['FWHMMDIN'],
                             'frametype': Frame.REFERENCE_FRAMETYPE,
         }
+        expected_params['midpoint'] = expected_params['midpoint'].replace(microsecond=0)  # Remove microseconds for comparison
 
         params = read_reference_frame_header(self.test_reffilename)
 
