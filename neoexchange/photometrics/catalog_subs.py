@@ -56,6 +56,14 @@ warnings.simplefilter('ignore', category = AstropyDeprecationWarning)
 logger = logging.getLogger(__name__)
 
 
+# PHOT_APERTURES (diameters, pixels) of photometrics/configs/sextractor_neox_ldac_multiaper.conf, in
+# FLUX_APER column order, and the column the zeropoint is fitted to and CatalogSources are ingested
+# from. SExtractor only records the first four as SEXAPED1-4, so the fitted aperture has to come
+# from here (a test checks this list against the config file).
+MULTIAPER_DIAMETERS_PX = [5.13, 10.27, 15.40, 20.53, 22.00, 25.67, 30.80, 35.93, 41.06, 46.20, 51.33]
+MULTIAPER_ZP_INDEX = 4
+
+
 def reset_database_connection():
     """Reset the Django DB connection. This will cause Django to reconnect and
     get around the OperationalError: (2006, 'MySQL server has gone away')
@@ -1912,7 +1920,7 @@ def determine_fwhm(header, table):
 
     return fwhm
 
-def update_zeropoint(header, table, avg_zeropoint, std_zeropoint, include_zperr=True):
+def update_zeropoint(header, table, avg_zeropoint, std_zeropoint, include_zperr=True, zp_aperture_pix=None):
 
     delta_zp = avg_zeropoint
     if header['zeropoint'] > 0:
@@ -1920,12 +1928,15 @@ def update_zeropoint(header, table, avg_zeropoint, std_zeropoint, include_zperr=
     header['zeropoint'] = avg_zeropoint
     header['zeropoint_err'] = std_zeropoint
     header['zeropoint_src'] = 'py_zp_cvc-V0.2.1'
-    # The zeropoint is fitted to obs_mag, the flux in SExtractor's first fixed aperture, so record that
-    # aperture's radius with it (image headers have no SEXAPED1, so it can be absent). A multi-aperture
-    # catalog has a 2-D obs_mag and the fit uses a later column (ZeropointProcessPipeline.cross_match_and_zp
-    # slices index 4), which SEXAPED1 does not describe: leave the aperture unrecorded rather than wrong.
+    # Record the radius of the aperture the zeropoint was fitted with. [zp_aperture_pix] is what the
+    # fit reports (ZeropointProcessPipeline.cross_match_and_zp); without it, a single-aperture
+    # catalog's obs_mag is SExtractor's first fixed aperture, SEXAPED1 (image headers have none, so it
+    # can be absent). A multi-aperture catalog has a 2-D obs_mag fitted at MULTIAPER_ZP_INDEX, which
+    # SEXAPED1 does not describe: leave the aperture unrecorded rather than wrong.
     multi_aperture = 'obs_mag' in table.colnames and table['obs_mag'].ndim == 2
-    if 'aperture_radius_pixels' in header and not multi_aperture:
+    if zp_aperture_pix is not None:
+        header['zeropoint_aperture_pixels'] = zp_aperture_pix
+    elif 'aperture_radius_pixels' in header and not multi_aperture:
         header['zeropoint_aperture_pixels'] = header['aperture_radius_pixels']
 
     for source in table:
@@ -2170,10 +2181,10 @@ def get_or_create_CatalogSources(table, frame, header={}):
 
     num_in_table = len(table)
     num_cat_sources = CatalogSources.objects.filter(frame=frame).count()
-    # Index of flux array to ingest (the 5th aperture), and its radius in units of
-    # header['aperture_radius_arcsec']
-    flux_aper_index = 4
-    aper_scaling = 5
+    # Multi-aperture catalogs: ingest the column the zeropoint was fitted to, and scale the
+    # header's first-aperture radius (SEXAPED1) up to that aperture
+    flux_aper_index = MULTIAPER_ZP_INDEX
+    aper_scaling = MULTIAPER_DIAMETERS_PX[flux_aper_index] / MULTIAPER_DIAMETERS_PX[0]
     if num_cat_sources == 0:
         new_sources = []
         for source in table:
@@ -2185,9 +2196,7 @@ def get_or_create_CatalogSources(table, frame, header={}):
                 # Array of fluxes/mags
                 obs_mag = source['obs_mag'][flux_aper_index]
                 obs_mag_err = source['obs_mag_err'][flux_aper_index]
-                aper_size = header.get('aperture_radius_arcsec', 1.0)
-                # Correct aperture radius to the ingested aperture
-                aper_size =  aper_size * aper_scaling # header['pixel_scale'] * 11
+                aper_size = header.get('aperture_radius_arcsec', 1.0) * aper_scaling
             new_source = CatalogSources(frame=frame, obs_x=source['ccd_x'], obs_y=source['ccd_y'],
                                         obs_ra=source['obs_ra'], obs_dec=source['obs_dec'], obs_mag=obs_mag,
                                         err_obs_ra=source['obs_ra_err'], err_obs_dec=source['obs_dec_err'],
@@ -2212,9 +2221,7 @@ def get_or_create_CatalogSources(table, frame, header={}):
                 # Array of fluxes/mags
                 obs_mag = source['obs_mag'][flux_aper_index]
                 obs_mag_err = source['obs_mag_err'][flux_aper_index]
-                aper_size = header.get('aperture_radius_arcsec', 3.0)
-                # Correct aperture radius to the ingested aperture
-                aper_size = aper_size * aper_scaling
+                aper_size = header.get('aperture_radius_arcsec', 3.0) * aper_scaling
             source_params = {   'frame': frame,
                                 'obs_x': source['ccd_x'],
                                 'obs_y': source['ccd_y'],

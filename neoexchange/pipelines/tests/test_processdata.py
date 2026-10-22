@@ -1,5 +1,3 @@
-from unittest import expectedFailure
-
 import numpy as np
 from astropy.coordinates import SkyCoord
 from astropy.table import Table
@@ -86,12 +84,19 @@ class TestCrossMatchAndZpMultiAperture(SimpleTestCase):
 
         assert_allclose([15.4, 16.4, 17.4], self.refcat.inst_mag)
 
-    @expectedFailure
     def test_returns_the_aperture_radius_it_fitted(self):
-        # The fitted column is index 4 of the aperture list (22.00 px diameter = 11.0 px radius).
-        # SEXAPED1-4 cannot record it, so the stage has to report it for update_zeropoint() to
-        # write L1ZPAPER. Not implemented yet.
-        result = self.pipeline.cross_match_and_zp(self.table, self.refcat, 0.1, 'r', 'rp')
+        # index 4 of the aperture list: 22.00 px diameter = 11.0 px radius. SEXAPED1-4 cannot
+        # record it, so the stage reports it for update_zeropoint() to write L1ZPAPER.
+        avg_zp, std_zp, C, cal_color, zp_aperture_pix = self.pipeline.cross_match_and_zp(self.table, self.refcat, 0.1, 'r', 'rp')
 
-        self.assertEqual(5, len(result))
-        self.assertAlmostEqual(11.0, result[4], places=5)
+        self.assertEqual((24.5, 0.05, 0.0, 'g-i'), (avg_zp, std_zp, C, cal_color))
+        self.assertAlmostEqual(11.0, zp_aperture_pix, places=5)
+
+    def test_single_aperture_reports_no_radius(self):
+        table = Table({'flags': [0, 0, 0], 'obs_ra': [240.20, 240.21, 240.22],
+                       'obs_dec': [-22.20, -22.21, -22.22], 'obs_mag': [15.0, 16.0, 17.0]})
+
+        *_, zp_aperture_pix = self.pipeline.cross_match_and_zp(table, self.refcat, 0.1, 'r', 'rp')
+
+        self.assertIsNone(zp_aperture_pix)
+        assert_allclose([15.0, 16.0, 17.0], self.refcat.inst_mag)

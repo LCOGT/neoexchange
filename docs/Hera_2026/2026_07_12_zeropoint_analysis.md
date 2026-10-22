@@ -658,9 +658,15 @@ is close to S/N-optimal.
     table, `ZP aperture radius pix` in the Block table; −99 if absent), so a mismatch with a manual radius is visible.
   - `pipeline_aper_photometry [radius_pix]`: the radius is now optional; file labels read `…_aper_radius_L1ZPAPER_…`
     (`aperture_radius_label()` in `external_codes.py` is the one place that spells the label).
+  - Multi-aperture catalogs (`FITS_LDAC_MULTIAPER`, 11 apertures): SExtractor records only `SEXAPED1-4`, and the fit
+    uses column 4 (22.00 px diameter = 11.0 px radius), not aperture 1. Since cc2433a3 + the follow-on commit,
+    `cross_match_and_zp()` reports the radius it fitted and `update_zeropoint()` records that instead of `SEXAPED1`/2;
+    `MULTIAPER_DIAMETERS_PX`/`MULTIAPER_ZP_INDEX` in `catalog_subs.py` are the single source of truth (a test checks
+    them against the config). Real-file fixture: `photometrics/tests/banzai_test_multiaper_ldac.fits` (tfn fa20,
+    2023-11-21, zeropointed in production via this path).
   - Not done: a `Frame` field for the aperture (needs a migration). Existing e92/e93/LDAC files have no `L1ZPAPER`
     (nothing was rerun); the Fix 8 repair should set it from the LDAC's `SEXAPED1`/2 when it copies the e92
-    calibration into the e93.
+    calibration into the e93 — for multi-aperture LDACs (2-D `FLUX_APER`) use `MULTIAPER_DIAMETERS_PX[MULTIAPER_ZP_INDEX]/2`.
 - [ ] **Fix 5 (parked) — aperture correction.** `FITS_LDAC_MULTIAPER` catalogs already exist but `run_pipeline.py:95`
   only selects them for `-ef` frames. The star-flux-ratio method used in §2 and §4 is a working prototype: median
   ratio of bright, isolated, unsaturated stars between two apertures, measured per frame.
@@ -669,8 +675,10 @@ is close to S/N-optimal.
   checkout. Consider writing the aperture into the e92 header (e.g. `L1ZPAPER`) during `proc-zeropoint`, so it is
   recorded with the data rather than inferred. **Config committed:** fe1946d0, merged in 9d1f2cfa. `L1ZPAPER` done with
   Fix 4(a), 2026-10-15.
-- [ ] **Fix 7 (minor):** correct the index-4 comment and the multiaper aperture list, and add `ZP_sig` in quadrature to
-  `magerr` (or document that it is left out).
+- [ ] **Fix 7 (minor):** ~~correct the index-4 comment and the multiaper aperture list~~ (done with the multi-aperture
+  follow-on: the ingested `CatalogSources.aperture_size` is now the index-4 radius, 22.00/5.13 × the `SEXAPED1`
+  radius, rather than 5 × it — 8.58″ not 10.01″ on the fixture frame), and add `ZP_sig` in quadrature to `magerr`
+  (or document that it is left out).
 
 ### Data repair (after Fixes 1–2 **and** Fix 4)
 
@@ -781,6 +789,50 @@ models. Run step 6 on this night first; the §6 simulation predicts what a corre
   - Report the `n_target`/`n_bkg` bug upstream.
   - For trailed targets, prefer `-fixed_aprad` (≳ 1.5–2 × worst FWHM + half the trail) or Fix 11 over the automatic
     curve-of-growth choice.
+
+- [ ] **Fix 19 (parked, future) — record every SExtractor aperture in the LDAC header.** Not needed for Hera; a
+  "nice to support" for multi-aperture / curve-of-growth work (photometrypipeline uses 20 apertures). SExtractor
+  hard-codes four slots (`SEXAPED1-4`, unused ones written as `0.0`), and FITS keywords are 8 characters, so
+  `SEXAPED10` cannot exist. Agreed scheme (2026-10-21): MPC "mutant hex" slot letters — `SEXAPED1-9` then
+  `SEXAPEDA`…`SEXAPEDZ` for apertures 10–35 (`astrometrics/ast_subs.py` `int_to_mutant_hex_char`; refuse n > 35,
+  lowercase is not FITS-legal; `SEXAPED0` stays unused), plus `SEXNAPER` (count) so readers need not probe and
+  are not fooled by the `0.0` placeholders. Plan, ~a day: `record_sextractor_apertures(ldac, dest_dir,
+  catalog_type)` in `external_codes.py` called at the end of `run_sextractor()` for LDAC types; apertures parsed from
+  the `PHOT_APERTURES` line of the config `setup_sextractor_dir` copied into `dest_dir` (the config SExtractor ran
+  with); written after `SEXAPED4` via a `write_ldac_header()` helper lifted from `updateFITScalib`
+  (`external_codes.py:1662-1670`, rebuilds `LDAC_IMHEAD` with `TDIM1`); overwrite not append on rerun. Reader
+  `get_ldac_apertures(header)` in `catalog_subs.py`: `SEXNAPER`/`SEXAPEDx` (ignoring `0.0`), else fall back to
+  `MULTIAPER_DIAMETERS_PX` for pre-existing files; `cross_match_and_zp()` and the ingest take the radius from it.
+  `MULTIAPER_ZP_INDEX` stays in code (not a keyword): `L1ZPAPER` records the fitted radius, so a reader can match it
+  to a column by value. Keywords live only in the LDAC, not the e92, so no PDS data-format impact. Tests: config
+  parser (single/multi/trailing comment), writer on a tempfile copy of `banzai_test_multiaper_ldac.fits`
+  (placement, values, `fits_ldac_to_header` round-trip, checksum, `LDAC_OBJECTS` untouched), reader fallbacks,
+  encode edges (9→`9`, 10→`A`, 35→`Z`, 36 refused), real `run_sextractor` only under `skipIf(no sex binary)`.
+  Do not backfill old LDACs (that would re-infer from the config, which is what this removes).
+- [ ] **Fix 20 (parked, future) — comet photometry through a fixed physical-size aperture.** Not needed for Hera
+  (long-standing parallel to-do, raised 2026-10-21). Comet photometry is normally done through an aperture of fixed
+  projected size at the comet, e.g. ρ = 10,000 km, which scales with the geocentric distance Δ:
+  r_arcsec = 206265 × ρ_km / (Δ_AU × 1.495978707e8), so 10,000 km is 13.8″ at Δ = 1 AU and 138″ at 0.1 AU. Split
+  into two halves. **Geometry half (cheap, ~half a day, independently testable against a known Δ):** add
+  `aperture_radius_km` to `perform_aper_photometry()` (`core/views.py:5072`) and `--aperture_km` to
+  `pipeline_aper_photometry` (mutually exclusive with `radius_pix`). `get_ephem(block)` (`core/blocksfind.py:308`) is
+  already a Horizons table with a `delta` column, and `ephem_interpolate(times, table, extra_quantity='delta')`
+  already interpolates extra columns, so Δ per frame is a one-argument change; convert with each frame's pixel scale
+  and pass the result through the existing per-frame `aperture_radius_pix` of `single_frame_aperture_photometry()`
+  (`external_codes.py:1885`), so `L1ZPAPER` still records the zeropoint aperture and the target aperture is recorded
+  separately — add `aperture_radius_km` and `delta_au` columns to the returned table and a `10000km` variant of
+  `aperture_radius_label()` for the ECSV/plot filenames. **Calibration half (the real work, reuses Fix 5):** a
+  14–140″ aperture is nothing like the 6 px zeropoint aperture, so the Fix 4 "target aperture = ZP aperture" logic
+  does not apply; the zeropoint has to be re-derived for the large aperture (curve of growth from bright isolated
+  unsaturated stars, the Fix 5 prototype, applied to the ZP rather than the target) or the coma flux is
+  under-corrected. The background annulus must move out with the aperture and avoid the coma/tail (comets need a
+  far-field sky estimate, not the current local annulus), and the aperture centre should be a centroid of the inner
+  coma rather than the bare ephemeris position, which `single_frame_aperture_photometry()` does not do today.
+  Nearby-star contamination within a 1–2′ aperture is also much more likely and needs at least flagging. Scope note:
+  Afρ (A'Hearn et al. 1984) follows directly once the ρ-aperture flux is calibrated, as it only needs r_h, Δ and the
+  Sun's magnitude in the filter, so it should be the output of this fix rather than a separate one. Recommended
+  order: geometry half first behind `--aperture_km`, then the large-aperture zeropoint as the follow-on — the same
+  curve-of-growth machinery serves comets, Fix 5 and the parked Fix 19.
 
 ### Circulated results
 

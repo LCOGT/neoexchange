@@ -14,7 +14,7 @@ GNU General Public License for more details.
 """
 
 from datetime import datetime, timedelta
-from unittest import expectedFailure, skipIf, skip
+from unittest import skipIf, skip
 from math import sqrt, log10, log
 import os
 from glob import glob
@@ -3576,6 +3576,15 @@ class TestUpdateZeropoint(SimpleTestCase):
         self.assertEqual(28.0, header['zeropoint'])
         self.assertNotIn('zeropoint_aperture_pixels', header)
 
+    def test_fitted_aperture_from_the_fit_wins(self):
+        self.header['aperture_radius_pixels'] = 2.565
+        table = Table({'obs_mag': [[-10.0, -10.5, -11.0], [-11.0, -11.5, -12.0]],
+                       'obs_mag_err': [[0.01, 0.01, 0.01], [0.02, 0.02, 0.02]]})
+
+        header, _ = update_zeropoint(self.header, table, 28.0, 0.05, include_zperr=False, zp_aperture_pix=11.0)
+
+        self.assertEqual(11.0, header['zeropoint_aperture_pixels'])
+
     def test_multi_aperture_catalog_leaves_aperture_unrecorded(self):
         # SEXAPED1 describes the first aperture but the fit uses a later column of the 2-D obs_mag
         self.header['aperture_radius_pixels'] = 2.565
@@ -3588,6 +3597,17 @@ class TestUpdateZeropoint(SimpleTestCase):
         self.assertEqual(28.0, header['zeropoint'])
         self.assertNotIn('zeropoint_aperture_pixels', header)
         assert_allclose([[18.0, 17.5, 17.0], [17.0, 16.5, 16.0]], table['obs_mag'])
+
+
+class TestMultiApertureConstants(SimpleTestCase):
+
+    def test_matches_multiaper_config(self):
+        conf = os.path.join('photometrics', 'configs', 'sextractor_neox_ldac_multiaper.conf')
+        with open(conf) as fh:
+            apertures = next(line.split()[1] for line in fh if line.startswith('PHOT_APERTURES'))
+
+        assert_allclose(MULTIAPER_DIAMETERS_PX, [float(x) for x in apertures.split(',')])
+        self.assertEqual(22.00, MULTIAPER_DIAMETERS_PX[MULTIAPER_ZP_INDEX])
 
 
 class TestMultiApertureLDAC(SimpleTestCase):
@@ -5304,7 +5324,8 @@ class TestGetOrCreateCatalogSources(TestCase):
         src = CatalogSources.objects.get(frame=self.frame)
         self.assertAlmostEqual(15.4, src.obs_mag, places=5)
         self.assertAlmostEqual(0.05, src.err_obs_mag, places=5)
-        self.assertAlmostEqual(5.0, src.aperture_size, places=5)
+        # first-aperture radius (1") scaled up to the ingested aperture (22.00/5.13 px diameter)
+        self.assertAlmostEqual(22.00 / 5.13, src.aperture_size, places=5)
 
     def test_single_aperture_header_radius(self):
         table = self.make_table([15.5], [0.02])
@@ -5323,12 +5344,8 @@ class TestGetOrCreateCatalogSources(TestCase):
         src = CatalogSources.objects.get(frame=self.frame)
         self.assertAlmostEqual(1.0, src.aperture_size, places=5)
 
-    @expectedFailure
     def test_multi_aperture_real_catalog_records_fitted_aperture_radius(self):
-        # Fix 7: the ingested flux is aperture index 4 (22.00 px diameter), whose radius on this
-        # 0.78"/pix frame is 8.58", not aper_scaling * the first aperture (10.01"). Passes once the
-        # radius comes from the aperture list; test_multi_aperture_uses_fifth_aperture pins the
-        # current scaling and changes with it.
+        # the ingested flux is aperture index 4 (22.00 px diameter), 8.58" radius on this 0.78"/pix frame
         catfile = os.path.join('photometrics', 'tests', 'banzai_test_multiaper_ldac.fits')
         header, table = extract_catalog(catfile, 'BANZAI_LDAC', flag_filter=7)
 

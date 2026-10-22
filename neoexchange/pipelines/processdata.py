@@ -25,7 +25,7 @@ from photometrics.catalog_subs import FITSHdrException, open_fits_catalog, \
     get_catalog_header, increment_red_level, get_reference_catalog, extract_catalog, \
     existing_catalog_coverage, reset_database_connection, get_header, \
     update_zeropoint, update_frame_zeropoint, get_or_create_CatalogSources, \
-    create_initial_MRO_wcs
+    create_initial_MRO_wcs, MULTIAPER_DIAMETERS_PX, MULTIAPER_ZP_INDEX
 from photometrics.photometry_subs import map_filter_to_calfilter
 from photometrics.external_codes import updateFITSWCS, updateFITScalib
 
@@ -460,7 +460,7 @@ class ZeropointProcessPipeline(PipelineProcess):
                     return
                 # Cross match with reference catalog and compute zeropoint
                 logger.info(f"Calibrating {header['filter']} instrumental mags. with {cal_filter} using {phot_cat_name} color_const= {color_const} solar= {solar}")
-                avg_zeropoint, std_zeropoint, C, cal_color = self.cross_match_and_zp(table, refcat, \
+                avg_zeropoint, std_zeropoint, C, cal_color, zp_aperture_pix = self.cross_match_and_zp(table, refcat, \
                     std_zeropoint_tolerance, cal_filter, header['filter'], color_const, solar)
                 logger.info(f"New zp={avg_zeropoint:} +/- {std_zeropoint:} {C:}")
                 self.log(f"New zp={avg_zeropoint:} +/- {std_zeropoint:} {C:}")
@@ -476,7 +476,8 @@ class ZeropointProcessPipeline(PipelineProcess):
                         header['color'] = C
                         header['color_err'] = -99
                     logger.debug("Calling update_zeropoint")
-                    header, table = update_zeropoint(header, table, avg_zeropoint, std_zeropoint, include_zperr=False)
+                    header, table = update_zeropoint(header, table, avg_zeropoint, std_zeropoint, include_zperr=False,
+                                                     zp_aperture_pix=zp_aperture_pix)
 
                     # get the fits filename from the catfile in order to get the Block from the Frame
                     if 'e91_ldac.fits' in os.path.basename(catfile):
@@ -657,7 +658,7 @@ class ZeropointProcessPipeline(PipelineProcess):
             objids, distances = retstatus
         else:
             logger.warning("Crossmatching failed")
-            return None, None, None, None
+            return None, None, None, None, None
         end = time.time()
         logger.debug(f"TIME: cvc cross_match took {end-start:.1f} seconds")
 
@@ -669,10 +670,13 @@ class ZeropointProcessPipeline(PipelineProcess):
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore", message='divide by zero encountered')
             start = time.time()
-            inst_mag =  phot['obs_mag']
+            inst_mag = phot['obs_mag']
+            # Radius of the aperture being fitted: None means the catalog's single aperture (SEXAPED1)
+            zp_aperture_pix = None
             if len(inst_mag.shape) == 2:
-                # Slice out 4th index # (diameter=5")
-                inst_mag = inst_mag[0:, 4]
+                # Multi-aperture catalog: fit one column (22.00 px diameter in the multiaper config)
+                inst_mag = inst_mag[0:, MULTIAPER_ZP_INDEX]
+                zp_aperture_pix = MULTIAPER_DIAMETERS_PX[MULTIAPER_ZP_INDEX] / 2.0
 
             gmi_limits = [0.2, 3.0]
             if solar is True:
@@ -694,4 +698,4 @@ class ZeropointProcessPipeline(PipelineProcess):
         logger.debug(f"TIME: compute_zeropoint took {end-start:.1f} seconds")
         logger.debug(f"New zp={avg_zeropoint:} +/- {std_zeropoint:} {r.count():} {C:}")
 
-        return avg_zeropoint, std_zeropoint, C, cal_color_term
+        return avg_zeropoint, std_zeropoint, C, cal_color_term, zp_aperture_pix
