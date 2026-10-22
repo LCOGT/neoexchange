@@ -3540,13 +3540,7 @@ class ExternalCodeUnitTest(TestCase):
         remove = True
         if remove:
             try:
-                files_to_remove = glob(os.path.join(self.test_dir, '*'))
-                for file_to_rm in files_to_remove:
-                    os.remove(file_to_rm)
-            except OSError:
-                print("Error removing files in temporary test directory", self.test_dir)
-            try:
-                os.rmdir(self.test_dir)
+                shutil.rmtree(self.test_dir)
                 if self.debug_print:
                     print("Removed", self.test_dir)
             except OSError:
@@ -5011,7 +5005,6 @@ class TestRoboMean(SimpleTestCase):
 class TestSkysclim(SimpleTestCase):
 
     def setUp(self):
-        self.test_dir = tempfile.mkdtemp(prefix='tmp_neox_')
         self.test_banzaifilename = os.path.join('photometrics', 'tests', 'banzai_test_frame.fits')
         self.data =fits.getdata(self.test_banzaifilename)
         random.seed(42)

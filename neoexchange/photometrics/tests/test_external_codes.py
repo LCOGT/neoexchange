@@ -51,6 +51,8 @@ class ExternalCodeUnitTest(TestCase):
 
     def setUp(self):
         self.test_dir = tempfile.mkdtemp(prefix='tmp_neox_')
+        # A cleanup still runs when a subclass setUp() raises, which tearDown() does not
+        self.addCleanup(self.remove_test_dir)
 
         # Path to the config files
         self.source_dir = os.path.abspath(os.path.join('photometrics', 'configs'))
@@ -85,17 +87,11 @@ class ExternalCodeUnitTest(TestCase):
 
         self.remove = True
 
-    def tearDown(self):
-        if self.remove:
+    def remove_test_dir(self):
+        if getattr(self, 'remove', True):
             try:
-                files_to_remove = glob(os.path.join(self.test_dir, '*'))
-                for file_to_rm in files_to_remove:
-                    os.remove(file_to_rm)
-            except OSError:
-                print("Error removing files in temporary test directory", self.test_dir)
-            try:
-                os.rmdir(self.test_dir)
-                if self.debug_print:
+                shutil.rmtree(self.test_dir)
+                if getattr(self, 'debug_print', False):
                     print("Removed", self.test_dir)
             except OSError:
                 print("Error removing temporary test directory", self.test_dir)
@@ -2057,17 +2053,14 @@ class TestFrameAperturePhotometry(ExternalCodeUnitTest):
         self.ephem_dec = -25.0549843
         #self.ephem_ra = 262.9291150055555
         #self.ephem_dec = -28.491441521497585
-        self.remove = False
-        self.debug_print = True
-
-                
+        self.remove = True
+        self.debug_print = False
 
     def test_rms_file_not_present(self):
         #Remove RMS file for this test
         os.remove(self.test_hotpants_file_rms_COPIED)
         expected_results = None
         results = single_frame_aperture_photometry(self.test_hotpants_file_COPIED, self.ephem_ra, self.ephem_dec, account_zps= True)
-        print(self.test_hotpants_file_COPIED)
         self.assertEqual(expected_results, results)
 
 

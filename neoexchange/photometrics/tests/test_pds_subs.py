@@ -256,6 +256,9 @@ class TestCreateObsArea(TestCase):
 
         self.maxDiff = None
 
+    def tearDown(self):
+        shutil.rmtree(self.test_dir)
+
     def compare_xml(self, expected, xml_element):
         """Compare the expected XML string <expected> with the passed etree.Element
         in <xml_element>
@@ -927,6 +930,9 @@ class TestCreateFileAreaTable(SimpleTestCase):
 
         self.maxDiff = None
 
+    def tearDown(self):
+        shutil.rmtree(self.test_dir)
+
     def compare_xml(self, expected, xml_element):
         """Compare the expected XML string <expected> with the passed etree.Element
         in <xml_element>
@@ -1197,6 +1203,9 @@ class TestCreateFileAreaBinTable(SimpleTestCase):
         self.test_dir = tempfile.mkdtemp(prefix='tmp_neox_')
 
         self.maxDiff = None
+
+    def tearDown(self):
+        shutil.rmtree(self.test_dir)
 
     def compare_xml(self, expected, xml_element):
         """Compare the expected XML string <expected> with the passed etree.Element

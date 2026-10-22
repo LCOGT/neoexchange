@@ -3618,6 +3618,9 @@ class TestUpdateMPCObs(TestCase):
         self.test_mpcobs_page4 = BeautifulSoup(test_fh, "html.parser")
         test_fh.close()
 
+    def tearDown(self):
+        shutil.rmtree(self.test_dir)
+
     @classmethod
     def setUpTestData(cls):
         WSAE9A6_params = { 'provisional_name' : 'WSAE9A6',
