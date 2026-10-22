@@ -180,7 +180,7 @@ LOGGING = {
     'formatters': {
         'verbose': {
             'format' : "[%(asctime)s] %(levelname)s %(message)s",
-            'datefmt' : "%d/%b/%Y %H:%M:%S"
+            'datefmt' : "%Y-%m-%d %H:%M:%S"
         },
         'simple': {
             'format': '%(levelname)s %(message)s'
@@ -204,32 +204,34 @@ LOGGING = {
         }
     },
     'loggers': {
-        # 'django.request': {
-        #     'handlers': ['mail_admins'],
-        #     'level': 'ERROR',
-        #     'propagate': True,
-        # },
-        'django.request': {
-            'handlers':['console'],
-            'propagate': True,
-            'level':'ERROR',
+        '': {
+            'handlers': ['console'],
+            'level': 'ERROR',
         },
         'core' : {
             'handlers' : ['console'],
             'level'    : 'INFO',
+            # required to avoid double logging with root logger
+            'propagate': False,
         },
         'astrometrics' : {
             'handlers' : ['console'],
             'level'    : 'ERROR',
+            # required to avoid double logging with root logger
+            'propagate': False,
         },
         'photometrics' : {
             'handlers' : ['console'],
             'level'    : 'ERROR',
+            # required to avoid double logging with root logger
+            'propagate': False,
         },
         'neox': {
             'handlers': ['console'],
-            'level' : 'ERROR'
-        }
+            'level' : 'ERROR',
+            # required to avoid double logging with root logger
+            'propagate': False,
+        },
     }
 }
 
