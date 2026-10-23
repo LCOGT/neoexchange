@@ -496,9 +496,13 @@ class MeasurementViewBody(View):
         else:
             is_paginated = False
 
-        if page is None or int(page) < 1:
+        try:
+            page = int(page)
+        except (TypeError, ValueError):
             page = 1
-        elif int(page) > paginator.num_pages:
+        if page < 1:
+            page = 1
+        elif page > paginator.num_pages:
             page = paginator.num_pages
         page_obj = paginator.page(page)
 
@@ -4551,9 +4555,13 @@ class GuideMovie(View):
         else:
             is_paginated = False
 
-        if page is None or int(page) < 1:
+        try:
+            page = int(page)
+        except (TypeError, ValueError):
             page = 1
-        elif int(page) > paginator.num_pages:
+        if page < 1:
+            page = 1
+        elif page > paginator.num_pages:
             page = paginator.num_pages
         page_obj = paginator.page(page)
 
