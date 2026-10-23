@@ -1388,6 +1388,30 @@ class TestDetermineMTDLINKOptions(ExternalCodeUnitTest):
         self.assertEqual(expected_options, options)
 
 
+class TestRedLevelFromFilename(SimpleTestCase):
+
+    def test_lco_frame(self):
+        self.assertEqual(92, red_level_from_filename('/data/cpt1m010-fa16-20260712-0069-e92.fits', 91))
+
+    def test_check_image(self):
+        self.assertEqual(92, red_level_from_filename('cpt1m010-fa16-20260712-0069-e92.rms.fits', 91))
+
+    def test_chisel_suffix(self):
+        self.assertEqual(91, red_level_from_filename('tfn1m014-fa20-20221104-0207-e91-chisel.fits', 93))
+
+    def test_output_suffix(self):
+        self.assertEqual(10, red_level_from_filename('/tmp/tmp_neox_x/example-sbig-e10_output.fits', 91))
+
+    def test_dia_frame(self):
+        self.assertEqual(93, red_level_from_filename('coj2m0-hotpants-test-e93.fits', 93))
+
+    def test_swope_frame_uses_default(self):
+        self.assertEqual(71, red_level_from_filename('rccd1234c3.fits', 71))
+
+    def test_directory_tag_ignored(self):
+        self.assertEqual(91, red_level_from_filename('/data/foo-e92/rccd1234c3.fits', 91))
+
+
 class TestUpdateFITSWCS(TestCase):
 
     def setUp(self):
@@ -1481,7 +1505,7 @@ class TestUpdateFITSWCS(TestCase):
         self.assertEqual(status, 0)
 
         expected = {
-                     'crval1' : 1.783286919001E+02, 'crval2' : 1.169387882835E+01,
+                     'crval1' : 2.155048059444E+02, 'crval2' : -3.960612040000E+01,
                      'crpix1' : 2.047592457311E+03, 'crpix2' : 2.048419571848E+03,
                      'cd1_1'  : 1.082433886779E-04,  'cd1_2' : 6.824629998000E-07,
                      'cd2_1'  : 7.053875928440E-07,  'cd2_2' : -1.082408809463E-04,
@@ -1492,7 +1516,7 @@ class TestUpdateFITSWCS(TestCase):
                      'wcsnref' : 606, 'wcsmatch' : 64,
                      'wccattyp' : 'UCAC4@CDS',
                      'wcsrdres' : '0.21947/0.20434',
-                     'wcsdelra' : 37.1754196, 'wcsdelde' : -51.2994992,
+                     'wcsdelra' : -2.4999998400403456, 'wcsdelde' : 1.8000000000085947,
                      'wcserr' : 0,
                      'cunit1' : 'deg', 'cunit2' : 'deg'
                     }
@@ -1525,7 +1549,7 @@ class TestUpdateFITSWCS(TestCase):
         self.assertEqual(status, 0)
 
         expected = {
-                     'crval1' : 1.783286919001E+02, 'crval2' : 1.169387882835E+01,
+                     'crval1' : 2.155048059444E+02, 'crval2' : -3.960612040000E+01,
                      'crpix1' : 2.047592457311E+03, 'crpix2' : 2.048419571848E+03,
                      'cd1_1'  : 1.082433886779E-04,  'cd1_2' : 6.824629998000E-07,
                      'cd2_1'  : 7.053875928440E-07,  'cd2_2' : -1.082408809463E-04,
@@ -1536,7 +1560,7 @@ class TestUpdateFITSWCS(TestCase):
                      'wcsnref' : 606, 'wcsmatch' : 64,
                      'wccattyp' : 'UCAC4@CDS',
                      'wcsrdres' : '0.21947/0.20434',
-                     'wcsdelra' : 37.1754196, 'wcsdelde' : -51.2994992,
+                     'wcsdelra' : -2.4999998400403456, 'wcsdelde' : 1.8000000000085947,
                      'wcserr' : 0,
                      'cunit1' : 'deg', 'cunit2' : 'deg'
                     }
@@ -1557,7 +1581,7 @@ class TestUpdateFITSWCS(TestCase):
         self.assertEqual(status, 0)
 
         expected = {
-                     'crval1' : 2.283330189100E+02, 'crval2' : 3.839546339622E+01,
+                     'crval1' : 2.729538337947E+02, 'crval2' : 1.279735388650E+00,
                      'crpix1' : 7.621032903029E+02, 'crpix2' : 5.105117960168E+02,
                      'cd1_1'  : -1.024825024633E-06, 'cd1_2' : 3.162727554070E-04,
                      'cd2_1'  : -3.162997037181E-04, 'cd2_2' : -1.075429228793E-06,
@@ -1568,8 +1592,8 @@ class TestUpdateFITSWCS(TestCase):
                      'wcsnref' : 280, 'wcsmatch' : 106,
                      'wccattyp' : 'GAIA-DR2@CDS',
                      'wcsrdres' : '0.31469/0.30167', # ASTRRMS1*3600/ASTRRMS2*3600 from .head file
-                     'wcsdelra' : 44.619981558,
-                     'wcsdelde' : -37.1150613409,
+                     'wcsdelra' : -2.9999761199633213,
+                     'wcsdelde' : 2.4000000119997367,
                      'wcserr' : 0,
                      'cunit1' : 'deg',
                      'cunit2' : 'deg'
@@ -1592,7 +1616,7 @@ class TestUpdateFITSWCS(TestCase):
 
         expected = {
                      'pcrecipe' : 'BANZAI', 'pprecipe' : 'NEOEXCHANGE',
-                     'crval1' : 2.283330189100E+02, 'crval2' : 3.839546339622E+01,
+                     'crval1' : 2.729538337947E+02, 'crval2' : 1.279735388650E+00,
                      'crpix1' : 7.621032903029E+02, 'crpix2' : 5.105117960168E+02,
                      'cd1_1'  : -1.024825024633E-06, 'cd1_2' : 3.162727554070E-04,
                      'cd2_1'  : -3.162997037181E-04, 'cd2_2' : -1.075429228793E-06,
@@ -1603,7 +1627,7 @@ class TestUpdateFITSWCS(TestCase):
                      'wcsnref'  : 280, 'wcsmatch' : 106,
                      'wccattyp' : 'GAIA-DR2@CDS',
                      'wcsrdres' : '0.31469/0.30167', # ASTRRMS1*3600/ASTRRMS2*3600 from .head file
-                     'wcsdelra' : 44.619981558, 'wcsdelde' : -37.1150613409,
+                     'wcsdelra' : -2.9999761199633213, 'wcsdelde' : 2.4000000119997367,
                      'wcserr' : 0,
                      'cunit1' : 'deg', 'cunit2' : 'deg'
                     }
@@ -1620,7 +1644,7 @@ class TestUpdateFITSWCS(TestCase):
 
         self.assertEqual(status, 0)
 
-        expected = { 'crval1' : 2.283330189100E+02, 'crval2' : 3.839546339622E+01,
+        expected = { 'crval1' : 2.729538337947E+02, 'crval2' : 1.279735388650E+00,
                      'crpix1' : 7.620000000000E+02, 'crpix2' : 5.105000000000E+02,
                      'cd1_1'  : -1.083049787920E-06, 'cd1_2' : 3.162568176201E-04,
                      'cd2_1'  : -3.162568176201E-04, 'cd2_2' : -1.083049787920E-06,
@@ -1650,7 +1674,7 @@ class TestUpdateFITSWCS(TestCase):
                      'wcsimcat' : 'tfn0m414-kb99-20180529-0202-e91_ldac.fits',
                      'wcsnref' : 280, 'wcsmatch' : 103, 'wccattyp' : 'GAIA-DR2@CDS',
                      'wcsrdres' : '0.30803/0.34776', # ASTRRMS1*3600/ASTRRMS2*3600 from .head file
-                     'wcsdelra' : 44.619981558, 'wcsdelde' : -37.1150613409,
+                     'wcsdelra' : -2.9999761199633213, 'wcsdelde' : 2.4000000119997367,
                      'wcserr' : 0,
                      'cunit1' : 'deg', 'cunit2' : 'deg',
                      'ctype1' : 'RA---TPV', 'ctype2' : 'DEC--TPV',

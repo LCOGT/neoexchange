@@ -1444,6 +1444,16 @@ def get_scamp_xml_info(scamp_xml_file):
     return info
 
 
+def red_level_from_filename(filename, default):
+    """Returns the reduction level encoded as `-eNN` in the basename of <filename>
+    (e.g. 'cpt1m010-fa16-20260712-0069-e92.fits' -> 92, also for '-e92.rms.fits',
+    '-e91-chisel.fits' or '-e10_output.fits'). Returns <default> when there is no
+    such tag, e.g. Swope frames."""
+
+    match = re.search(r'-e(\d{2})(?=[._-]|$)', os.path.basename(filename))
+    return int(match.group(1)) if match else default
+
+
 def updateFITSWCS(fits_file, scamp_file, scamp_xml_file, fits_file_output):
     """Update the WCS information in a fits file with a bad WCS solution
     using the SCAMP generated FITS-like .head ascii file.
@@ -1542,11 +1552,7 @@ def updateFITSWCS(fits_file, scamp_file, scamp_xml_file, fits_file_output):
     secpix = round(scamp_info['pixel_scale'], 6)
 
     # header keywords we have
-    file_bits = fits_file_output.split(os.extsep)
-    new_red_level = 91
-    if len(file_bits) == 2:
-        filename_noext = file_bits[0]
-        new_red_level = int(filename_noext[-2:])
+    new_red_level = red_level_from_filename(fits_file_output, 91)
     # Swope files don't have a RLEVEL header so assume one corresponding to the proc level
     if new_red_level != header.get('rlevel', 71):
         print(f"Updating header RLEVEL to: {new_red_level}")
@@ -1759,11 +1765,7 @@ def updateFITSdia(fits_file, sci_file=None):
             return -2, None
 
     # header keywords we have
-    file_bits = fits_file.split(os.extsep)
-    new_red_level = 93
-    if len(file_bits) == 2:
-        filename_noext = file_bits[0]
-        new_red_level = int(filename_noext[-2:])
+    new_red_level = red_level_from_filename(fits_file, 93)
     # Swope files don't have a RLEVEL header so assume one corresponding to the proc level
     if new_red_level != header.get('rlevel', 71):
         print(f"Updating header RLEVEL to: {new_red_level}")
