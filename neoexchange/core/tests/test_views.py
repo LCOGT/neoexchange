@@ -9290,3 +9290,29 @@ class TestPtrneos(TestCase):
                             "Galactic latitude (deg)"
                         ] }
         self.assertJSONEqual(response.content.decode('utf-8'), expected_data)
+
+class TestPaginationBadPageParam(TestCase):
+    """Regression tests: a non-integer ``?page=`` value (e.g. from a vulnerability
+    scanner) must fall back to page 1 rather than raising ValueError."""
+
+    def setUp(self):
+        self.body = Body.objects.create(provisional_name='N999r0q', name='2019 XS', origin='M',
+                                        source_type='N', elements_type='MPC_MINOR_PLANET', active=True)
+        proposal = Proposal.objects.create(code='LCOTesting', title='LCOTesting')
+        self.sblock = SuperBlock.objects.create(body=self.body, proposal=proposal,
+                                                block_start=datetime(2021, 11, 10, 3, 40),
+                                                block_end=datetime(2021, 11, 10, 9, 22),
+                                                groupid='2019 XS_V37-20211110', tracking_number='1335839')
+        self.bad_page = "'nvOpzp; AND 1=1 OR (<'\">iKO)),"
+
+    def test_measurements_bad_page(self):
+        response = self.client.get(reverse('measurement', kwargs={'pk': self.body.pk}), {'page': self.bad_page})
+        self.assertEqual(response.status_code, 200)
+
+    def test_measurements_negative_page(self):
+        response = self.client.get(reverse('measurement', kwargs={'pk': self.body.pk}), {'page': '-3'})
+        self.assertEqual(response.status_code, 200)
+
+    def test_guidemovie_bad_page(self):
+        response = self.client.get(reverse('guidemovie', kwargs={'pk': self.sblock.pk}), {'page': self.bad_page})
+        self.assertEqual(response.status_code, 200)
