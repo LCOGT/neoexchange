@@ -1817,6 +1817,96 @@ class TestUpdateFITScalib(TestCase):
         self.assertEqual('N/A', new_header['L1COLORU'])
 
 
+class TestUpdateFITSdia(TestCase):
+
+    def setUp(self):
+        self.test_dir = tempfile.mkdtemp(prefix='tmp_neox_')
+
+        # The e92 science frame and the e93 HOTPANTS output are modified so copy them
+        self.sci_file = os.path.join(self.test_dir, 'coj2m0-hotpants-test-e92.fits')
+        shutil.copy(os.path.abspath(os.path.join('photometrics', 'tests', 'banzai_test_frame.fits')), self.sci_file)
+        self.dia_file = os.path.join(self.test_dir, 'coj2m0-hotpants-test-e93.fits')
+        shutil.copy(os.path.abspath(os.path.join('photometrics', 'tests', 'hotpants_test_frame.fits')), self.dia_file)
+
+        self.sci_calib = OrderedDict([('L1ZP', (28.012, 'Instrumental zeropoint [mag]')),
+                                      ('L1ZPERR', (0.0123, 'Error on Instrumental zeropoint [mag]')),
+                                      ('L1ZPSRC', ('py_zp_cvc-V0.1', 'Source of Instrumental zeropoint')),
+                                      ('L1ZPAPER', (11.0, 'Radius of zeropoint aperture [pixels]')),
+                                      ('L1COLORU', ('N/A', 'Color used for calibration')),
+                                      ('L1COLOR', (0.0, 'Color coefficient [mag]')),
+                                      ('L1COLERR', (0.0, 'Error on color coefficient [mag]')),
+                                      ('L1PHTCAT', ('GAIA-DR3', 'Photometric catalog used'))])
+        self.remove = True
+
+        logging.disable(logging.CRITICAL)
+
+    def tearDown(self):
+        if self.remove:
+            shutil.rmtree(self.test_dir, ignore_errors=True)
+
+    def _write_sci_calib(self):
+        with fits.open(self.sci_file, mode='update') as hdul:
+            for keyword, (value, comment) in self.sci_calib.items():
+                hdul[0].header.set(keyword, value, comment, after='L1ELLIPA')
+
+    def test_missing_file(self):
+        status, header = updateFITSdia(os.path.join(self.test_dir, 'banana-e93.fits'))
+
+        self.assertEqual(-1, status)
+        self.assertIsNone(header)
+
+    def test_missing_sci_file(self):
+        status, header = updateFITSdia(self.dia_file, sci_file=os.path.join(self.test_dir, 'banana-e92.fits'))
+
+        self.assertEqual(-2, status)
+        self.assertIsNone(header)
+
+    def test_rlevel_and_recipe(self):
+        status, header = updateFITSdia(self.dia_file)
+
+        self.assertEqual(0, status)
+        self.assertEqual(93, header['RLEVEL'])
+        self.assertEqual('NEOEXCHANGE DIA', header['PPRECIPE'])
+        new_header = fits.getheader(self.dia_file)
+        self.assertEqual(93, new_header['RLEVEL'])
+        self.assertEqual('NEOEXCHANGE DIA', new_header['PPRECIPE'])
+        self.assertNotIn('L1ZP', new_header)
+
+    def test_e93_calibration_matches_e92(self):
+        """The e93 inherits the stale e92 check-image calibration from HOTPANTS; after updateFITSdia it
+        must carry the e92's own values, including the 0.0 ones"""
+        self._write_sci_calib()
+        with fits.open(self.dia_file, mode='update') as hdul:
+            hdul[0].header.set('L1ZP', 27.5, 'Instrumental zeropoint [mag]', after='L1ELLIPA')
+            hdul[0].header.set('L1ZPSRC', 'BANZAI', 'Source of Instrumental zeropoint', after='L1ZP')
+            hdul[0].header.set('L1COLERR', 0.112, 'Error on color coefficient [mag]', after='L1ZPSRC')
+
+        status, _ = updateFITSdia(self.dia_file, sci_file=self.sci_file)
+
+        self.assertEqual(0, status)
+        sci_header = fits.getheader(self.sci_file)
+        new_header = fits.getheader(self.dia_file)
+        for keyword, (value, comment) in self.sci_calib.items():
+            self.assertEqual(sci_header[keyword], new_header[keyword], keyword)
+            self.assertEqual(value, new_header[keyword], keyword)
+            self.assertEqual(comment, new_header.comments[keyword], keyword)
+        self.assertEqual(93, new_header['RLEVEL'])
+        self.assertEqual('NEOEXCHANGE DIA', new_header['PPRECIPE'])
+        self.assertEqual('i', new_header['PHOTNORM'])
+
+    def test_sci_without_calibration_leaves_e93_unchanged(self):
+        with fits.open(self.dia_file, mode='update') as hdul:
+            hdul[0].header.set('L1ZP', 27.5, 'Instrumental zeropoint [mag]', after='L1ELLIPA')
+
+        status, _ = updateFITSdia(self.dia_file, sci_file=self.sci_file)
+
+        self.assertEqual(0, status)
+        new_header = fits.getheader(self.dia_file)
+        self.assertEqual(27.5, new_header['L1ZP'])
+        self.assertNotIn('L1ZPERR', new_header)
+        self.assertEqual(93, new_header['RLEVEL'])
+
+
 class TestGetSCAMPXMLInfo(SimpleTestCase):
 
     def setUp(self):

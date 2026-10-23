@@ -175,9 +175,12 @@ growth to choose the aperture.
 > and `L1ZPSRC`. 12fbc1d3 makes `updateFITScalib` write `0.0` values; it skipped them as falsy, so `L1COLERR=0.0`
 > from a constant-colour run never reached the files. Strictly, the check images carry whatever the e92 header held
 > when the e92 extract ran: BANZAI's values on a first pass, as here, or a previous NEOx pass's on a reprocess. The
-> e93 files and Frames made before this, including this Block's, still need the Fix 8 repair (Fix 4(a) is done;
-> Fix 1 remains).
-> Fix 1 (the guard in the DIA step) and its e93-equals-e92 test are still open.
+> e93 files and Frames made before this, including this Block's, still need the Fix 8 repair (Fix 4(a) and
+> Fix 1 are done).
+> **Fix 1 done 2026-10-22:** `updateFITSdia(fits_file, sci_file=None)` copies the e92's `L1ZP`, `L1ZPERR`,
+> `L1ZPSRC`, `L1ZPAPER`, `L1COLORU`, `L1COLOR`, `L1COLERR` and `L1PHTCAT` into the e93 before the e93 Frame is
+> made, so a subtraction run from a check image written before Fix 2 no longer inherits BANZAI's zeropoint.
+> `TestUpdateFITSdia` checks e93 `L1ZP` == e92 `L1ZP`.
 
 The orange series in cell 43 ("5SNR aperture photometry ZP", the `ZP` column of `aper_p_Didymos5snr_712_06_13.ecsv`)
 scatters by 0.020 mag, against 0.051 for the e92 calviacat zeropoint, and is less tied to seeing (r = −0.45 against
@@ -634,12 +637,15 @@ is close to S/N-optimal.
   colour keywords from `banzai_ldac_catalog_mapping`. **Done:** 7d9a1ab8 updates all four check images, found by
   file existence rather than a new `dia` input, so a zeropoint-only rerun over an old tempdir is covered too;
   12fbc1d3 for the `0.0` values. No test yet for this block; see Fix 1.
-- [ ] **Fix 1 — guard the e93 calibration.** In `updateFITSdia(fits_file, sci_file=None)` (`external_codes.py:1665`)
-  or `run_hotpants_subtraction` (`core/views.py:3575`), which already has the `sci` (e92) path: after HOTPANTS, and
-  *before* `get_catalog_header`/`make_new_catalog_entry`, set or check the e93 calibration keywords against the
-  **e92** header. This is still needed for subtractions run from check images written before Fix 2, and it overlaps
-  with the Fix 8 repair command. Add a test that e93 `L1ZP` == e92 `L1ZP`.
-  - Comment the dependency on HOTPANTS `-n i`. With `-n t`, e93 would be on the reference's ZP = 25 scale instead.
+- [x] **Fix 1 — guard the e93 calibration.** **Done 2026-10-22.** `updateFITSdia(fits_file, sci_file=None)`
+  (`external_codes.py`) copies the calibration keywords (`DIA_CALIB_KEYWORDS`, via `copy_calib_keywords`) from the
+  e92 header into the e93 after HOTPANTS and before `get_catalog_header`/`make_new_catalog_entry`;
+  `run_hotpants_subtraction` passes `sci`. If the e92 has no `L1ZP` the e93 is left as it is, with a warning.
+  Returns -2 when the e92 cannot be opened, so no e93 Frame is made. `TestUpdateFITSdia` tests e93 `L1ZP` ==
+  e92 `L1ZP` (including the 0.0 colour values). Still needed for subtractions run from check images written
+  before Fix 2; the Fix 8 repair command can reuse `copy_calib_keywords` for existing e93 and `.rms.fits` files.
+  - The dependency on HOTPANTS `-n i` is commented in `determine_hotpants_options` and the `updateFITSdia`
+    docstring. With `-n t`, e93 would be on the reference's ZP = 25 scale instead.
 - [x] **Fix 3 — `update_frame_zeropoint` signature.** Part of the planned `prep/apophis2-recovery` change (2): adopt
   `frame_filepath`, tolerate bare filenames, update `catalog_subs.py:2078,2081` and the tests. **Done:** e654595c,
   merged in 9d1f2cfa.

@@ -3589,8 +3589,8 @@ def run_hotpants_subtraction(ref, sci_dir, configs_dir, dest_dir, sci_files=None
             status = 0
         if status != 0:
             return status
-        # Update reduction level in the subtracted frame and RMS files
-        status, header = updateFITSdia(hotpants_filepath)
+        # Update reduction level and copy the e92 photometric calibration into the subtracted frame
+        status, header = updateFITSdia(hotpants_filepath, sci_file=sci)
         # Create Frame entry for e93 frame
         block = find_block_for_frame(sci)
         if block and status == 0:

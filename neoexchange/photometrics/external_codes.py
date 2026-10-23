@@ -499,6 +499,9 @@ def determine_hotpants_options(ref, sci, source_dir, dest_dir, dbgOptions=False)
 
     fin = sqrt(50000.) #noise image only fillvalue (0.0e+00)
 
+    # `-n i` normalises the difference image to the science image, so the e92 photometric
+    # calibration applies to the e93 (updateFITSdia relies on this). `-n t` would put it on
+    # the reference image's scale.
     options = f'-inim {sci_bkgsub} -tmplim {aligned_ref} -outim {output_diff_image} ' \
               f'-tni {aligned_rms} -ini {sci_rms} -oni {output_noise_image} ' \
               f'-hki -n i -c t -v 0 ' \
@@ -1709,8 +1712,34 @@ def updateFITScalib(header, fits_file, catalog_type='BANZAI'):
 
     return status, fits_header
 
-def updateFITSdia(fits_file):
-    """Update reduction level and post-processing in the passed <fits_file>
+DIA_CALIB_KEYWORDS = ('L1ZP', 'L1ZPERR', 'L1ZPSRC', 'L1ZPAPER', 'L1COLORU', 'L1COLOR', 'L1COLERR', 'L1PHTCAT')
+
+
+def copy_calib_keywords(sci_header, header):
+    """Copies the photometric calibration keywords (DIA_CALIB_KEYWORDS) that are
+    present in <sci_header> into <header>, keeping their comments. Returns the
+    list of keywords copied."""
+
+    copied = []
+    for keyword in DIA_CALIB_KEYWORDS:
+        if keyword in sci_header:
+            card = sci_header.cards[keyword]
+            header.set(keyword, card.value, card.comment)
+            copied.append(keyword)
+    return copied
+
+
+def updateFITSdia(fits_file, sci_file=None):
+    """Update reduction level and post-processing in the passed <fits_file>.
+    If [sci_file] (the e92 science frame that was subtracted) is given, its
+    photometric calibration keywords are copied into <fits_file>.
+
+    HOTPANTS writes the header of its input image (the e92 .bkgsub check image)
+    into the difference image, so the e93 carries whatever calibration the check
+    image held when SExtractor made it: BANZAI's e91 zeropoint on a first pass.
+    Copying from the e92 is only valid because the subtraction is run with
+    `-n i`, which scales the difference to the science image; with `-n t` the
+    e93 would be on the reference image's scale instead.
     """
 
     try:
@@ -1719,6 +1748,15 @@ def updateFITSdia(fits_file):
     except (OSError, IndexError) as e:
         logger.error("Unable to open FITS image %s (Reason=%s)" % (fits_file, e))
         return -1, None
+
+    sci_header = None
+    if sci_file is not None:
+        try:
+            sci_header = fits.getheader(sci_file)
+        except (OSError, IndexError) as e:
+            logger.error("Unable to open science FITS image %s (Reason=%s)" % (sci_file, e))
+            hdulist.close()
+            return -2, None
 
     # header keywords we have
     file_bits = fits_file.split(os.extsep)
@@ -1731,6 +1769,10 @@ def updateFITSdia(fits_file):
         print(f"Updating header RLEVEL to: {new_red_level}")
         header['RLEVEL'] = new_red_level
     header['PPRECIPE'] = 'NEOEXCHANGE DIA'
+    if sci_header is not None:
+        copied = copy_calib_keywords(sci_header, header)
+        if 'L1ZP' not in copied:
+            logger.warning(f"No zeropoint in {sci_file}; calibration of {fits_file} left unchanged")
     hdulist.close()
 
     return 0, header
