@@ -6,6 +6,9 @@ Portal for scheduling observations of NEOs (and other Solar System objects) usin
 
 ## History
 
+### 3.17.3
+* Add fix for attempted SQL injection attacks through the paginator.
+
 ### 3.17.2
 * Add retrieval of IERS table to allow proper UT1-UTC calculation now leapseconds are going away (Fixes #674)
 * Fix log message doubling and switch to ISO dateformat.

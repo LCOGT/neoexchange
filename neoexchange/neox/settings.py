@@ -8,7 +8,7 @@ import sys
 import rollbar
 from django.utils.crypto import get_random_string
 
-VERSION = '3.17.2'
+VERSION = '3.17.3'
 
 CURRENT_PATH = os.path.dirname(os.path.realpath(__file__))
 PRODUCTION = True if CURRENT_PATH.startswith('/var/www') else False
