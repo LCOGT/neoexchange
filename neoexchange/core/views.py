@@ -485,7 +485,7 @@ class MeasurementViewBody(View):
 
         # Toggle Pagination
         if page == '0':
-            self.paginate_by = len(measurements)
+            self.paginate_by = max(len(measurements), 1)
         # add more rows for denser formats
         elif 'mpc' in request.path or 'ades' in request.path:
             self.paginate_by = 30
@@ -4547,7 +4547,7 @@ class GuideMovie(View):
 
         # Toggle Pagination
         if page == '0':
-            self.paginate_by = len(block_list)
+            self.paginate_by = max(len(block_list), 1)
         paginator = Paginator(block_list, self.paginate_by, orphans=self.orphans)
 
         if paginator.num_pages > 1:

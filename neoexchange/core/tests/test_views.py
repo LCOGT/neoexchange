@@ -9316,3 +9316,11 @@ class TestPaginationBadPageParam(TestCase):
     def test_guidemovie_bad_page(self):
         response = self.client.get(reverse('guidemovie', kwargs={'pk': self.sblock.pk}), {'page': self.bad_page})
         self.assertEqual(response.status_code, 200)
+
+    def test_measurements_show_all_no_measurements(self):
+        response = self.client.get(reverse('measurement', kwargs={'pk': self.body.pk}), {'page': '0'})
+        self.assertEqual(response.status_code, 200)
+
+    def test_guidemovie_show_all_no_blocks(self):
+        response = self.client.get(reverse('guidemovie', kwargs={'pk': self.sblock.pk}), {'page': '0'})
+        self.assertEqual(response.status_code, 200)
