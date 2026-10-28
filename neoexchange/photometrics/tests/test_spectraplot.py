@@ -21,6 +21,7 @@ from collections import OrderedDict
 
 from django.test import TestCase
 from astropy import units as u
+from astropy.io import fits
 from astropy.io.fits import Header
 from astropy.tests.helper import assert_quantity_allclose
 import numpy as np
@@ -57,12 +58,15 @@ class TestReadSpectra(TestCase):
             shutil.copy(test_file_path, self.test_dir)
 
         self.fitsfile = os.path.join(self.test_dir, self.fitsfile)
-        self.banzai_fitsfile = os.path.join(self.test_dir, self.banzai_fitsfile)
         self.asciifile = os.path.join(self.test_dir, self.asciifile)
         self.txtfile = os.path.join(self.test_dir, self.txtfile)
         self.datfile = os.path.join(self.test_dir, self.datfile)
         # Rename original file to include the 'ctiostan' so flux scaling is correct
         shutil.move(os.path.join(self.test_dir, os.path.basename(datfilepath)), self.datfile)
+        # Rename to match real BANZAI-FLOYDS product naming so flux scaling is correct
+        banzai_fitsfile = os.path.join(self.test_dir, 'test-e91-1d.fits')
+        shutil.move(os.path.join(self.test_dir, self.banzai_fitsfile), banzai_fitsfile)
+        self.banzai_fitsfile = banzai_fitsfile
 
         self.remove = True
         self.debug_print = False
@@ -119,16 +123,46 @@ class TestReadSpectra(TestCase):
         self.assertEqual(exp_x_units, x_data[0].unit)
 
     def test_read_banzai_fits_y(self):
-        exp_y = 10.494265/10**20
-        exp_y_units = u.erg/(u.cm**2)/u.s/u.AA
+        # test_1d.fits predates banzai-floyds 0.21.0 so its fluxes are in units of 1e-16
+        exp_y = 29.228462775390067e-16 * u.erg/(u.cm**2)/u.s/u.AA
         exp_y_len = 2367
 
         with self.settings(MEDIA_ROOT=self.test_dir):
             y_data = pull_data_from_spectrum(self.banzai_fitsfile)[1]
 
         self.assertEqual(exp_y_len, len(y_data))
-        self.assertAlmostEqual(exp_y, y_data[-1].value, self.tolerance)
-        self.assertEqual(exp_y_units, y_data[-1].unit)
+        assert_quantity_allclose(y_data[-1], exp_y, rtol=1e-6)
+
+    def test_read_banzai_fits_y_current_scale(self):
+        exp_y = 29.228462775390067e-16 * u.erg/(u.cm**2)/u.s/u.AA
+        exp_err = 3.3157739879321957e-16 * u.erg/(u.cm**2)/u.s/u.AA
+        current_fitsfile = os.path.join(self.test_dir, 'test_current-e91-1d.fits')
+        with fits.open(self.banzai_fitsfile) as hdul:
+            hdul['SPECTRUM'].data['flux'] *= 1e-16
+            hdul['SPECTRUM'].data['fluxerror'] *= 1e-16
+            hdul.writeto(current_fitsfile)
+
+        with self.settings(MEDIA_ROOT=self.test_dir):
+            x_data, y_data, hdr, err_data = pull_data_from_spectrum(current_fitsfile)
+
+        assert_quantity_allclose(y_data[-1], exp_y, rtol=1e-6)
+        assert_quantity_allclose(err_data[-1], exp_err, rtol=1e-6)
+
+    def test_banzai_old_scale_faint_not_normalized(self):
+        # A faint target in pre-0.21.0 units has a median inside the 'Normalized' range
+        flux, error = get_y_units(np.full(10, 0.5), 'products/faint-e91-1d.fits.fz', np.full(10, 0.1))
+
+        assert_quantity_allclose(flux[0], 0.5e-16 * u.erg/(u.cm**2)/u.s/u.AA)
+        assert_quantity_allclose(error[0], 0.1e-16 * u.erg/(u.cm**2)/u.s/u.AA)
+
+    def test_read_unrecognized_fits(self):
+        empty_fitsfile = os.path.join(self.test_dir, 'empty.fits')
+        fits.PrimaryHDU().writeto(empty_fitsfile)
+
+        with self.settings(MEDIA_ROOT=self.test_dir):
+            result = pull_data_from_spectrum(empty_fitsfile)
+
+        self.assertEqual((None, None, None, None), result)
 
     def test_read_txt_x(self):
         exp_x = 3600

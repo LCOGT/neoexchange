@@ -69,15 +69,19 @@ def get_y_units(y_data, filename, y_error=[]):
         y_units = u.erg/(u.cm**2)/u.s/u.AA
         y_factor = 10**16
 
+    elif '-1d.fits' in filename:  # from FLOYDS-BANZAI
+        y_units = u.erg/(u.cm**2)/u.s/u.AA
+        # banzai-floyds < 0.21.0 left fluxes in the ESO standards' native 1e-16 erg/s/cm^2/A
+        # units; real fluxes are always far below 1e-5. This check must come before the
+        # 'Normalized' one, as faint targets in those old units fall in its range.
+        if np.nanmedian(np.abs(y_data)) > 1e-5:
+            y_factor = 10**16
+
     elif .001 < np.median(y_data) < 10:  # Probably Normalized
         y_units = u.def_unit("Normalized_Reflectance", u.dimensionless_unscaled)
 
     elif '_2df_ex.fits' in filename:  # from FLOYDS-IRAF
         y_factor = 10**20
-        y_units = u.erg/(u.cm**2)/u.s/u.AA
-
-    elif '-1d.fits' in filename:  # from FLOYDS-BANZAI
-        y_factor = 1
         y_units = u.erg/(u.cm**2)/u.s/u.AA
 
     else:
@@ -142,16 +146,7 @@ def pull_data_from_spectrum(spectra):
         logger.warning(e)
         return None, None, None, None
 
-    if len(hdul) == 1:
-        # Old style FLOYDS
-        data = hdul[0].data
-        hdr = hdul[0].header
-
-        yyy = data[0][0]
-        err = data[3][0]
-        w = WCS(hdr, naxis=1, relax=False, fix=False)
-        lam = w.wcs_pix2world(np.arange(len(yyy)), 0)[0]
-    elif len(hdul) == 5:
+    if 'SPECTRUM' in hdul:
         # New style FLOYDS-BANZAI
         banzai_spectrum = hdul['SPECTRUM'].data
         hdr = hdul['PRIMARY'].header
@@ -159,7 +154,18 @@ def pull_data_from_spectrum(spectra):
         yyy = banzai_spectrum['flux']
         err = banzai_spectrum['fluxerror']
         lam = banzai_spectrum['wavelength']
+    elif hdul[0].data is not None and hdul[0].data.ndim == 3:
+        # Old style FLOYDS-IRAF multispec (bands, apertures, pixels)
+        data = hdul[0].data
+        hdr = hdul[0].header
 
+        yyy = data[0][0]
+        err = data[3][0]
+        w = WCS(hdr, naxis=1, relax=False, fix=False)
+        lam = w.wcs_pix2world(np.arange(len(yyy)), 0)[0]
+    else:
+        logger.warning(f"No recognizable spectrum found in {spectra}")
+        return None, None, None, None
 
     wavelength = get_x_units(lam)
     flux, error = get_y_units(yyy, spectra, err)
