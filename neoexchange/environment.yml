@@ -28,7 +28,6 @@ dependencies:
   - Jinja2<3.0
   - bokeh==2.3.0
   - pillow
-  - aplpy
   - rollbar
   - sty
   - awscli

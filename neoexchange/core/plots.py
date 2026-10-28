@@ -217,27 +217,6 @@ def make_visibility_plot(request, pk, plot_type, start_date=None, site_code='-1'
         return HttpResponse(PIXEL_GIF_DATA, content_type='image/gif')
 
 
-# def make_plot(request):
-#     import aplpy
-#
-#     fits_file = 'cpt1m010-kb70-20160428-0148-e91.fits'
-#     fits_filepath = os.path.join('/tmp', 'tmp_neox_9nahRl', fits_file)
-#
-#     sources = CatalogSources.objects.filter(frame__filename__contains=fits_file[0:28]).values_list('obs_ra', 'obs_dec')
-#
-#     fig = aplpy.FITSFigure(fits_filepath)
-#     fig.show_grayscale(pmin=0.25, pmax=98.0)
-#     ra = [X[0] for X in sources]
-#     dec = [X[1] for X in sources]
-#
-#     fig.show_markers(ra, dec, edgecolor='green', facecolor='none', marker='o', s=15, alpha=0.5)
-#
-#     buffer = io.BytesIO()
-#     fig.save(buffer, format='png')
-#     fig.save(fits_filepath.replace('.fits', '.png'), format='png')
-#
-#     return HttpResponse(buffer.getvalue(), content_type="Image/png")
-
 def make_standards_plot(request):
     """creates stellar standards plot to be added to page"""
 
