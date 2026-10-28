@@ -30,8 +30,8 @@ into `pipelines` (9d1f2cfa), so the "committed" and "apophis2" descriptions now 
    Fix 2: 7d9a1ab8). Confirmed on all 86 frames. The SExtractor `.bkgsub.fits` check image is written before
    `proc-zeropoint` updates `L1ZP`, and HOTPANTS copies that stale header into e93. This is the "smooth" orange series.
    `proc-zeropoint` now writes the calibration into the check images too. The existing e93 files, Frames and tables,
-   including this Block's, are unchanged until the data repair (Fix 8). Fix 4(a) landed 2026-10-15, so Fix 1 is the
-   only thing still ahead of it.
+   including this Block's, are unchanged until the data repair (Fix 8). Fix 4(a) landed 2026-10-15 and Fix 1 on
+   2026-10-22; the Fix 8 command is written (2026-10-23) and waits to be run.
 4. **The target photometry and its zeropoint use different apertures.** The e93 target photometry uses **5″**
    apertures (`perform_aper_photometry` works in arcsec). Measured from the stars on each frame:
    - **Now (BANZAI zeropoint):** Didymos is too bright by 0.034–0.055 mag (median 0.043). That is almost constant: it
@@ -176,7 +176,7 @@ growth to choose the aperture.
 > from a constant-colour run never reached the files. Strictly, the check images carry whatever the e92 header held
 > when the e92 extract ran: BANZAI's values on a first pass, as here, or a previous NEOx pass's on a reprocess. The
 > e93 files and Frames made before this, including this Block's, still need the Fix 8 repair (Fix 4(a) and
-> Fix 1 are done).
+> Fix 1 are done; the Fix 8 command `fix_e93_zeropoints` is written, not yet run).
 > **Fix 1 done 2026-10-22:** `updateFITSdia(fits_file, sci_file=None)` copies the e92's `L1ZP`, `L1ZPERR`,
 > `L1ZPSRC`, `L1ZPAPER`, `L1COLORU`, `L1COLOR`, `L1COLERR` and `L1PHTCAT` into the e93 before the e93 Frame is
 > made, so a subtraction run from a check image written before Fix 2 no longer inherits BANZAI's zeropoint.
@@ -698,11 +698,20 @@ is close to S/N-optimal.
 
 ### Data repair (after Fixes 1–2 **and** Fix 4)
 
-- [ ] **Fix 8:** a management command, e.g. `fix_e93_zeropoints --block <id> | --date <YYYYMMDD> [--dry-run]`. For
-  each e93 `Frame`, find the e92 `Frame` (`-e93` → `-e92`). Copy `zeropoint`, `zeropoint_err`, `zeropoint_src` and the
-  colour fields, and patch the same keywords in the e93 FITS and `.rms.fits` headers, plus `L1ZPAPER` from the LDAC's
-  `SEXAPED1`/2 (Fix 4). Report frames whose e92 has no
-  good zeropoint rather than skipping them silently. Run it on every DIA-processed block, not only 35906.
+- [x] **Fix 8 — repair command.** **Written 2026-10-23, not yet run on data:**
+  `fix_e93_zeropoints <datadir> --block <id> [--dry-run]` (`sync_e93_calibration()` in `core/views.py`). For each e93
+  `Frame` of the Block it finds the e92 `Frame` (`-e93` → `-e92`) and copies `zeropoint`, `zeropoint_err`,
+  `zeropoint_src`, the colour fields and `photometric_catalog` into the e93 Frame and, via `updateFITScalib`, into the
+  e93 FITS, its `.rms.fits`, the e92 FITS and the e92 LDAC in `<datadir>`. `L1ZPAPER` goes into all four: taken from
+  the e92 or LDAC header if already there, else derived as proc-zeropoint does (`determine_zp_aperture_radius()`:
+  `SEXAPED1`/2 for single-aperture LDACs, the config's `#NEOX_ZP_APERTURE` entry via `get_catalog_apertures()` for
+  multi-aperture ones, which needs the config beside the catalog). Idempotent: always re-syncs from the e92, so it can
+  be rerun after a proc-zeropoint rerun. e92s without a NEOx zeropoint (`zeropoint_src` BANZAI/empty, or
+  `zeropoint` ≤ 0), missing e92 Frames and missing files are reported per frame, not skipped silently; a frame whose
+  aperture cannot be derived is written without `L1ZPAPER` and flagged (aperture photometry then needs an explicit
+  radius). Tests: `core/tests/test_fix_e93_zeropoints.py` (18). The e92 check images (`.bkgsub`/`.rms`/`.apers`/
+  `.bkgd`) are not touched; Fix 1 makes them irrelevant for new subtractions. **To do:** run it on every
+  DIA-processed block (35906 first), then Fix 9.
 - [ ] **Fix 9:** regenerate the `aper_p_Didymos*.ecsv` tables only after Fix 4. Applying the corrected e92 zeropoint
   to the existing 5″ apertures would introduce a 0.09–0.27 mag (0.18 peak-to-peak) seeing-correlated bias (§4).
 

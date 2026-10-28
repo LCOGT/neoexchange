@@ -79,11 +79,11 @@ from astrometrics.time_subs import extract_mpc_epoch, parse_neocp_date, \
     parse_neocp_decimal_date, get_semester_dates, jd_utc2datetime, datetime2st
 from photometrics.external_codes import run_sextractor, run_swarp, run_hotpants, run_scamp, updateFITSWCS,\
     read_mtds_file, unpack_tarball, run_findorb, get_scamp_xml_info, single_frame_aperture_photometry,\
-    updateFITSdia
+    updateFITSdia, updateFITScalib, get_catalog_apertures
 from photometrics.catalog_subs import open_fits_catalog, get_catalog_header, \
     determine_filenames, increment_red_level, funpack_fits_file, update_ldac_catalog_wcs, FITSHdrException, \
     get_reference_catalog, reset_database_connection, sanitize_object_name, \
-    find_block_for_frame
+    find_block_for_frame, get_header, extract_catalog
 from photometrics.external_codes import determine_stats_in_boxes, determine_bad_subtractions_in_box_stats, format_box_stats_for_pretty_print
 from photometrics.external_codes import aperture_radius_label
 from photometrics.photometry_subs import calc_asteroid_snr, calc_sky_brightness
@@ -91,7 +91,7 @@ from photometrics.spectraplot import pull_data_from_spectrum, pull_data_from_tex
 from core.frames import create_frame, ingest_frames, measurements_from_block
 from core.mpc_submit import email_report_to_mpc
 from core.archive_subs import lco_api_call
-from core.utils import search
+from core.utils import search, NeoException
 from core.blocksfind import find_frames, get_ephem, ephem_interpolate, \
     find_didymos_blocks_by_groupid, frame_quality_stats, _ordered_filters, \
     DEFAULT_RMS_LIMIT, DEFAULT_MIN_FIT_STARS
@@ -3608,6 +3608,128 @@ def run_hotpants_subtraction(ref, sci_dir, configs_dir, dest_dir, sci_files=None
                 logger.warning(f"No Block found for {sci}")
                 status = -3
     return status
+
+
+def determine_zp_aperture_radius(e92_filepath, ldac_filepath):
+    """Returns the radius in pixels of the aperture the e92 zeropoint was fitted
+    with, and a message when it had to be derived. The e92's own L1ZPAPER (or
+    the LDAC's) is used when present; otherwise it is derived from the LDAC the
+    way proc-zeropoint does: SEXAPED1/2 for a single-aperture catalog, or the
+    config's marked aperture (get_catalog_apertures) for a multi-aperture one.
+    Returns (None, reason) when neither file can supply it."""
+
+    for filepath in (e92_filepath, ldac_filepath):
+        if os.path.exists(filepath):
+            header, _ = get_header(filepath)
+            if isinstance(header, dict) and header.get('zeropoint_aperture_pixels') is not None:
+                return header['zeropoint_aperture_pixels'], None
+
+    if not os.path.exists(ldac_filepath):
+        return None, f"no L1ZPAPER in the e92 and no LDAC {os.path.basename(ldac_filepath)} to derive it from"
+    try:
+        header, table = extract_catalog(ldac_filepath)
+    except FITSHdrException as e:
+        return None, f"could not read LDAC {os.path.basename(ldac_filepath)} ({e})"
+    if header is None or table is None:
+        return None, f"could not read LDAC {os.path.basename(ldac_filepath)}"
+    if table['obs_mag'].ndim == 2:
+        try:
+            diameters, zp_index = get_catalog_apertures(ldac_filepath, header, table)
+        except NeoException as e:
+            return None, str(e)
+        return diameters[zp_index] / 2.0, f"L1ZPAPER derived from the multi-aperture LDAC (aperture {zp_index + 1} of {len(diameters)})"
+    radius = header.get('aperture_radius_pixels')
+    if radius is None:
+        return None, f"LDAC {os.path.basename(ldac_filepath)} has no SEXAPED1 to derive L1ZPAPER from"
+    return radius, "L1ZPAPER derived from the LDAC's SEXAPED1"
+
+
+def sync_e93_calibration(block, datadir, dry_run=False):
+    """Copies the photometric calibration of each e92 Frame of <block> into
+    its e93 (difference image) Frame and files, which until Fix 1/Fix 2 carried
+    the BANZAI e91 zeropoint HOTPANTS inherited from the check images. For each
+    e93 Frame: zeropoint, zeropoint_err, zeropoint_src, the colour fields and
+    the photometric catalog are copied into the Frame, the e93 FITS and its
+    .rms.fits in <datadir>; the zeropoint aperture radius is written as L1ZPAPER
+    into those and into the e92 FITS and LDAC where it is missing. e92 Frames
+    without a NEOx zeropoint are reported and nothing is copied from them.
+    With [dry_run] nothing is written. Returns a list of per-frame dicts with
+    'e93', 'e92', 'status' ('ok' or the reason), 'old_zeropoint',
+    'new_zeropoint', 'zeropoint_src', 'zp_aperture_pix', 'files_updated' and
+    'messages'."""
+
+    results = []
+    e93_frames = Frame.objects.filter(block=block, frametype=Frame.NEOX_SUB_FRAMETYPE).order_by('midpoint', 'filename')
+    for e93_frame in e93_frames:
+        result = {'e93': e93_frame.filename, 'e92': None, 'status': 'ok', 'old_zeropoint': e93_frame.zeropoint,
+                  'new_zeropoint': None, 'zeropoint_src': None, 'zp_aperture_pix': None, 'files_updated': [], 'messages': []}
+        results.append(result)
+
+        e92_filename = e93_frame.filename.replace('e93', 'e92')
+        try:
+            e92_frame = Frame.objects.get(block=block, filename=e92_filename, frametype=Frame.NEOX_RED_FRAMETYPE)
+        except Frame.DoesNotExist:
+            result['status'] = 'no e92 Frame'
+            result['messages'].append(f"no e92 Frame {e92_filename} in Block {block.id}")
+            continue
+        except Frame.MultipleObjectsReturned:
+            result['status'] = 'multiple e92 Frames'
+            result['messages'].append(f"multiple e92 Frames {e92_filename} in Block {block.id}")
+            continue
+        result['e92'] = e92_filename
+
+        if e92_frame.zeropoint is None or e92_frame.zeropoint <= 0 or e92_frame.zeropoint_src in (None, '', 'BANZAI'):
+            result['status'] = 'e92 has no NEOx zeropoint'
+            result['messages'].append(f"e92 Frame has zeropoint={e92_frame.zeropoint} zeropoint_src={e92_frame.zeropoint_src!r}; nothing copied")
+            continue
+
+        e92_filepath = os.path.join(datadir, e92_filename)
+        ldac_filepath = os.path.join(datadir, e92_filename.replace('.fits', '_ldac.fits'))
+        zp_aperture_pix, message = determine_zp_aperture_radius(e92_filepath, ldac_filepath)
+        if message:
+            result['messages'].append(message)
+        if zp_aperture_pix is None:
+            result['messages'].append("e93 written without L1ZPAPER; aperture photometry will need an explicit radius")
+        result['zp_aperture_pix'] = zp_aperture_pix
+
+        calibration = {'zeropoint': e92_frame.zeropoint,
+                       'zeropoint_err': e92_frame.zeropoint_err,
+                       'zeropoint_src': e92_frame.zeropoint_src,
+                       'zeropoint_aperture_pixels': zp_aperture_pix,
+                       'color_used': e92_frame.color_used,
+                       'color': e92_frame.color,
+                       'color_err': e92_frame.color_err,
+                       'photometric_catalog': e92_frame.photometric_catalog}
+        result['new_zeropoint'] = e92_frame.zeropoint
+        result['zeropoint_src'] = e92_frame.zeropoint_src
+
+        e93_filepath = os.path.join(datadir, e93_frame.filename)
+        files = [(e93_filepath, 'BANZAI'),
+                 (e93_filepath.replace('.fits', '.rms.fits'), 'BANZAI'),
+                 (e92_filepath, 'BANZAI'),
+                 (ldac_filepath, 'BANZAI_LDAC')]
+        for filepath, catalog_type in files:
+            if not os.path.exists(filepath):
+                result['messages'].append(f"{os.path.basename(filepath)} not found in {datadir}")
+                continue
+            if not dry_run:
+                status, _ = updateFITScalib(calibration, filepath, catalog_type)
+                if status != 0:
+                    result['messages'].append(f"updateFITScalib failed for {os.path.basename(filepath)} (status {status})")
+                    continue
+            result['files_updated'].append(os.path.basename(filepath))
+
+        if not dry_run:
+            e93_frame.zeropoint = e92_frame.zeropoint
+            e93_frame.zeropoint_err = e92_frame.zeropoint_err
+            e93_frame.zeropoint_src = e92_frame.zeropoint_src
+            e93_frame.color_used = e92_frame.color_used
+            e93_frame.color = e92_frame.color
+            e93_frame.color_err = e92_frame.color_err
+            e93_frame.photometric_catalog = e92_frame.photometric_catalog
+            e93_frame.save()
+
+    return results
 
 
 def make_new_catalog_entry(new_ldac_catalog, header, block, frame_type=Frame.BANZAI_LDAC_CATALOG):
