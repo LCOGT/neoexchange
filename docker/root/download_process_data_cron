@@ -25,4 +25,4 @@ echo "================= $(date +"%F %T %Z") =================" >> ${log}
 
 cd $PYTHONPATH/neoexchange
 echo "date_options= ${date_options}" >> ${log}
-python3 manage.py download_process_data --skip-download --keep-temp-dir ${date_options} >> ${log} 2>&1 
+python3.11 manage.py download_process_data --skip-download --keep-temp-dir ${date_options} >> ${log} 2>&1

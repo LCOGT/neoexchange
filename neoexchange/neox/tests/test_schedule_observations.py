@@ -1398,7 +1398,7 @@ class ScheduleObservations(FunctionalTest):
         slot_length = self.browser.find_element_by_id('id_slot_length').get_attribute('value')
         self.assertIn('32.5', slot_length)
         num_exp = self.browser.find_element_by_id('id_no_of_exps_row').find_element_by_class_name('kv-value').text
-        self.assertIn('16', num_exp)
+        self.assertIn('18', num_exp)
         exp_length = self.browser.find_element_by_id('id_exp_length').get_attribute('value')
         self.assertIn('95.0', exp_length)
         moon_sep = self.browser.find_element_by_id('id_moon_row').find_element_by_class_name('kv-value').text
@@ -1413,7 +1413,7 @@ class ScheduleObservations(FunctionalTest):
 
         # The page refreshes and we get correct slot length
         slot_length = self.browser.find_element_by_id('id_slot_length').get_attribute('value')
-        self.assertIn('4.0', slot_length)
+        self.assertIn('3.5', slot_length)
 
         # Bart wants to change the min moon dist to 160.
         self.browser.find_element_by_id("advanced-switch").click()

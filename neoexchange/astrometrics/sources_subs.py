@@ -27,7 +27,7 @@ import email
 from re import sub, compile
 from math import degrees, sqrt, copysign, ceil
 from time import sleep
-from datetime import date, datetime, timedelta
+from datetime import datetime, timedelta
 from socket import error, timeout
 from random import randint
 import requests
@@ -1729,6 +1729,12 @@ def make_location(params):
     elif params['site_code'] == 'V39':
         location['telescope'] = '1m0a'
         location['enclosure'] = 'domb'
+    elif params['site_code'] == 'V45':
+        location['telescope'] = '0m4a'
+        location['enclosure'] = 'aqwb'
+    elif params['site_code'] == 'V47':
+        location['telescope'] = '0m4b'
+        location['enclosure'] = 'aqwb'
     elif params['site_code'] == 'Z31':
         location['telescope'] = '1m0a'
         location['enclosure'] = 'doma'
@@ -2214,7 +2220,9 @@ def configure_defaults(params):
                   'T04' : 'OGG',
                   'Q58' : 'COJ',  # Code for 0m4a
                   'Q59' : 'COJ',
-                  'V38' : 'ELP',
+                  'V38' : 'ELP',  # Code for aqwa-0m4a
+                  'V45' : 'ELP',  # Code for aqwb-0m4a
+                  'V47' : 'ELP',  # Code for aqwb-0m4b
                   'L09' : 'CPT'}  # Code for 0m4a
 
     params['pondtelescope'] = '1m0'
@@ -2239,7 +2247,7 @@ def configure_defaults(params):
             if params.get('filter', None):
                 del(params['filter'])
             params['spectra_slit'] = 'slit_6.0as'
-    elif params['site_code'] in ['Z17', 'Z21', 'T04', 'T03', 'Q58', 'Q59', 'V38', 'L09', 'W89', 'W79', '0M4']:
+    elif params['site_code'] in ['Z17', 'Z21', 'T04', 'T03', 'Q58', 'Q59', 'V38', 'V45', 'V47', 'L09', 'W89', 'W79', '0M4']:
         params['instrument'] = '0M4-SCICAM-QHY600'
         params['pondtelescope'] = '0m4'
         params['binning'] = 1
@@ -2252,6 +2260,12 @@ def configure_defaults(params):
         if params['site_code'] == 'V38':
             # elp-aqwa-0m4a kb80
             params['observatory'] = 'aqwa'
+        elif params['site_code'] == 'V45':
+            # elp-aqwb-0m4a sq44
+            params['observatory'] = 'aqwb'
+        elif params['site_code'] == 'V47':
+            # elp-aqwb-0m4b sq46
+            params['observatory'] = 'aqwb'
     elif params.get('bin_mode', None) == '2k_2x2':
         params['binning'] = 2
 
@@ -3189,9 +3203,18 @@ def translate_constraints(constraints):
         elif ">" in c:
             field, value = c.split(">")
             translated.append(f"{field.strip()}|GT|{value.strip()}")
+        elif "==" in c:
+            field, value = c.split("==")
+            translated.append(f"{field.strip()}|EQ|{value.strip()}")
+        elif "!=" in c:
+            field, value = c.split("!=")
+            translated.append(f"{field.strip()}|NE|{value.strip()}")
         elif "IS DEFINED" in c:
             field, value = c.split("IS DEFINED")
             translated.append(f"{field.strip()}|DF")
+        elif "NOT DEFINED" in c:
+            field, value = c.split("NOT DEFINED")
+            translated.append(f"{field.strip()}|ND")
         else:
             raise ValueError(f"Unsupported constraint format: {c}")
 
@@ -3200,7 +3223,7 @@ def translate_constraints(constraints):
 
     return quote(json_str)
 
-def make_jpl_sbobs_query(obs_date, site_code='W86', max_objects=100, min_obs_time=30, min_Vmag=None, max_Vmag=None, max_rotper=None):
+def make_jpl_sbobs_query(obs_date, site_code='W86', max_objects=100, min_obs_time=30, min_elev=30, min_Vmag=None, max_Vmag=None, max_rotper=None):
     """
     Make a query URL for the JPL SBobs API (https://ssd-api.jpl.nasa.gov/doc/sbwobs.html). The following constraints are
     applied in addition to those from the passed parameters:
@@ -3223,6 +3246,8 @@ def make_jpl_sbobs_query(obs_date, site_code='W86', max_objects=100, min_obs_tim
         Maximum number of objects to return
     min_obs_time : int/float
         Minimum number of minutes needed for observing (truncated to integer)
+    min_elev : int/float
+        Minimum altitude/elevation that the object must reach (default: 30)
     min_Vmag : float or None
         Objects must be fainter than this V band magnitude
     max_Vmag : float or None
@@ -3245,6 +3270,8 @@ def make_jpl_sbobs_query(obs_date, site_code='W86', max_objects=100, min_obs_tim
         url += "&sb-group=neo&elong-min=45&glat-min=10"
         # Need to be visible for at least time time (in minutes)
         url += f"&time-min={int(min_obs_time)}"
+        # Need to be above this altitude
+        url += f"&elev-min={min_elev}"
         # Try and decode the site code into a LCO telescope class and then use
         # this to set mag limits
         if min_Vmag is None or max_Vmag is None:
@@ -3295,12 +3322,19 @@ def fetch_jpl_sbobs(obs_date, site_code='W86', max_objects=100, min_Vmag=None, m
     query_url = make_jpl_sbobs_query(obs_date, site_code, max_objects, min_Vmag=min_Vmag, max_Vmag=max_Vmag, max_rotper=max_rotper)
     #print(f"query_url={query_url}")
     if query_url:
-        resp = requests.get(query_url)
-        if resp.ok:
-            data = resp.json()
-            #print(data['total_objects'], data['shown_objects'])
-            if 'signature' in data and data['signature']['version'] == '1.0':
-                results = data
+        try:
+            resp = requests.get(query_url, timeout=60)
+            if resp.ok:
+                data = resp.json()
+                #print(data['total_objects'], data['shown_objects'])
+                if 'signature' in data and data['signature']['version'] == '1.0':
+                    results = data
+                else:
+                    logger.warning("Unexpected version signature found")
             else:
-                logger.warning("Unexpected version signature found")
+                logger.warning(f"Got status code: {resp.status_code}")
+        except requests.exceptions.Timeout:
+            logger.warning(f"Request timed out with url= {query_url}")
+        except requests.exceptions.RequestException as e:
+            logger.warning(f"Request caused error: {e}")
     return results

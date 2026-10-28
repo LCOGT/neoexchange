@@ -331,27 +331,31 @@ def block_status(block_id):
         try:
             tracking_num = block.superblock.tracking_number
         except AttributeError:
-            logger.error("Superblock for Block with id %s does not exist" % block_id)
+            logger.error(f"Superblock for Block with id {block_id} does not exist")
             return False
     except ObjectDoesNotExist:
-        logger.error("Block with id %s does not exist" % block_id)
+        logger.error(f"Block with id {block_id} does not exist")
         return False
 
     obj_name = block.current_name()
+    # XXX this will can/will break if the Block's Body changes name by e.g. going from provisional NEOCP
+    # designation to a permanent one e.g. A11InDq->P/2026 T1
+    # Not sure how best to handle this, maybe retry with provisional name if no data is found for the
+    # current name, but that could be a rabbit hole.
 
     # Get authentication token for Valhalla
-    logger.info("Checking request status for block/track# %s / %s" % (block_id, tracking_num))
+    logger.info(f"Checking request status for block/track# {block_id} / {tracking_num}")
     data = check_request_status(tracking_num)
     # data is a full LCO request dict for this tracking number (now called 'id').
     if not data:
-        logger.warning("Got no data for block/track# %s / %s" % (block_id, tracking_num))
+        logger.warning(f"Got no data for block/track# {block_id} / {tracking_num}")
         return False
     # Check if the request was not found
-    if data.get('detail', 'None') == u'Not found.':
-        logger.warning("Request not found for block/track# %s / %s" % (block_id, tracking_num))
+    if data.get('detail', 'None') == 'Not found.':
+        logger.warning(f"Request not found for block/track# {block_id} / {tracking_num}")
         return False
     # Check if credentials provided
-    if data.get('detail', 'None') == u'Invalid token header. No credentials provided.':
+    if data.get('detail', 'None') == 'Invalid token header. No credentials provided.':
         logger.error("No VALHALLA_TOKEN set")
         return False
 
@@ -367,10 +371,13 @@ def block_status(block_id):
                     # types of frames
                     obstype = ''
             except AttributeError:
-                logger.warning("Unable to find observation type for Block/track# %s / %s" % (block_id, tracking_num))
+                logger.warning(f"Unable to find observation type for Block/track# {block_id} / {tracking_num}")
 
             images, num_archive_frames = check_for_archive_images(request_id=r['id'], obstype=obstype, obj=obj_name)
-            logger.info('Request no. %s x %s images (%s total all red. levels)' % (r['id'], len(images), num_archive_frames))
+            if len(images) == 0 and num_archive_frames == 0 and block.body is not None and block.body.provisional_name is not None:
+                logger.warning(f'No images found for block/track# {block_id} / {tracking_num}; retrying with provisional name {block.body.provisional_name}')
+                images, num_archive_frames = check_for_archive_images(request_id=r['id'], obstype=obstype, obj=block.body.provisional_name)
+            logger.info(f'Request no. {r["id"]} x {len(images)} images ({num_archive_frames} total all red. levels)')
             if images:
                 inst_configs = [x['instrument_configs'] for x in r['configurations']]
                 exposure_count = sum([x[0]['exposure_count'] for x in inst_configs])
@@ -379,20 +386,20 @@ def block_status(block_id):
                 last_image_dict = images[0]
                 last_image_header = lco_api_call(last_image_dict.get('headers', None))
                 if last_image_header is None:
-                    logger.error('Image header was not returned for %s' % last_image_dict)
+                    logger.error(f'Image header was not returned for {last_image_dict}')
                     return False
                 # At some point in Feb 2022, archive started returning data with DATE-OBS rather than DATE_OBS
                 dateobs_keyword = 'DATE-OBS'
                 if dateobs_keyword not in last_image_header['data']:
                     dateobs_keyword = 'DATE_OBS'
                     if dateobs_keyword not in last_image_header['data']:
-                        logger.error("Neither DATE-OBS or DATE_OBS found in header")
+                        logger.error(f"Neither {dateobs_keyword} or DATE_OBS found in header")
                         return False
 
                 try:
                     last_image = datetime.strptime(last_image_header['data'][dateobs_keyword][:19], '%Y-%m-%dT%H:%M:%S')
                 except ValueError:
-                    logger.error('Image datetime stamp is badly formatted %s' % last_image_header['data'][dateobs_keyword])
+                    logger.error(f'Image datetime stamp is badly formatted {last_image_header["data"][dateobs_keyword]}')
                     return False
                 if not block.when_observed or last_image > block.when_observed:
                     block.when_observed = last_image
@@ -418,7 +425,7 @@ def block_status(block_id):
                     block.num_observed = len(block_ids)
                 block.save()
                 status = True
-                logger.info("Block #%d (%s) updated" % (block.id, block))
+                logger.info(f"Block #{block.id} ({block}) updated")
             else:
-                logger.info("No update to block %s" % block)
+                logger.info(f"No update to block {block}")
     return status

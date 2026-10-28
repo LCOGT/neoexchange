@@ -6,6 +6,33 @@ Portal for scheduling observations of NEOs (and other Solar System objects) usin
 
 ## History
 
+### 3.17.3
+* Add fix for attempted SQL injection attacks through the paginator.
+
+### 3.17.2
+* Add retrieval of IERS table to allow proper UT1-UTC calculation now leapseconds are going away (Fixes #674)
+* Fix log message doubling and switch to ISO dateformat.
+* Try archive request info retrieval a second time with the provisional name if we get no data back the first time
+
+### 3.17.1
+* Add MPC codes for the new ELP 0.35m Delta Rho telescopes in Aqawan B.
+* Update MPC strings for telescope design and detector for the Delta Rho + QHY600 telescope + camera (Reported by @carrholt)
+* Specify and allow minimum elevation for the JPL SBObs frontend, which eliminates the non-visible objects previously returned (The default min_elev specified in the JPL API docs doesn't seem to be actually applied)
+* Fix `neox/tests/base.by` for removal of Numpy `long` which was breaking all the functional tests
+
+### 3.17.0
+* Long-term maintenance update to Rocky Linux 9 for the base Docker container image, Python 3.11 and Astropy 5.3.x.
+
+### 3.16.4
+* Add ability to return JSON versions of targets and ephemerides from the search and ephem endpoints for PTR support.
+
+### 3.16.3
+* Add ability to update NEOexchange with new targets from the JPL SBObs endpoint in ptr_neos() method.
+* Add timeout and various failure modes catches for the JPL SBObs endpoint (Issue #661)
+
+### 3.16.2
+* Add CORS header support via `corsheaders` package and middleware
+
 ### 3.16.1
 * Add command line management command to update a Body from find_orb elements (Issue #649)
 

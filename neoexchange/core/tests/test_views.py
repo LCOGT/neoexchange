@@ -21,12 +21,12 @@ import tempfile
 from glob import glob
 from math import degrees
 
-from django.test import TestCase, SimpleTestCase, override_settings
+from django.test import TestCase, SimpleTestCase, override_settings, RequestFactory, tag
 from django.forms.models import model_to_dict
 from django.conf import settings
 from django.http import Http404
 from bs4 import BeautifulSoup
-from mock import patch
+from mock import patch, Mock
 from astropy.wcs import WCS
 from numpy.testing import assert_allclose
 
@@ -1346,7 +1346,7 @@ class TestScheduleCheck(TestCase):
         self.expected_resp = {
                             'target_name': self.body_mp.current_name(),
                             'magnitude': 19.09694937750832,
-                            'speed': 2.904310588055287,
+                            'speed': 2.904310509257155,
                             'slot_length': 20.0,
                             'filter_pattern': 'w',
                             'pattern_iterations': 10.0,
@@ -1383,10 +1383,10 @@ class TestScheduleCheck(TestCase):
                             'lco_site': 'COJ',
                             'lco_tel': '1M0',
                             'max_alt': 67,
-                            'moon_alt': -59.5216514230195,
+                            'moon_alt': -59.521709881359314,
                             'moon_phase': 1.2020664612667709,
                             'moon_sep': 170.4033428302428,
-                            'trail_len': 1.9362070587035247,
+                            'trail_len': 1.9362070061714365,
                             'typical_seeing': 2.0,
                             'ipp_value': 1.0,
                             'para_angle': False,
@@ -1998,7 +1998,7 @@ class TestScheduleCheck(TestCase):
                         'lco_site': 'COJ',
                         'lco_tel': '2M0',
                         'max_alt': 67,
-                        'moon_alt': -59.52147932253441,
+                        'moon_alt': -59.52153777625064,
                         'moon_phase': 1.2020671312553743,
                         'moon_sep': 170.40334265453788,
                         'trail_len': 0.4840515969823632,
@@ -2084,7 +2084,7 @@ class TestScheduleCheck(TestCase):
                         'lco_site': 'COJ',
                         'lco_tel': '2M0',
                         'max_alt': 67,
-                        'moon_alt': -59.52147932253441,
+                        'moon_alt': -59.52153777625064,
                         'moon_phase': 1.2020671312553743,
                         'moon_sep': 170.40334265453788,
                         'trail_len': 0.4840515969823632,
@@ -7434,7 +7434,7 @@ class TestFindBestFluxStandard(TestCase):
 
     def test_FTN(self):
         expected_standard = StaticSource.objects.get(name='HR9087')
-        expected_params = { 'separation_rad' : 0.9379758789119819}
+        expected_params = { 'separation_rad' : 0.9379927810794447}
         # Python 3.5 dict merge; see PEP 448
         expected_params = {**expected_params, **model_to_dict(expected_standard)}
 
@@ -7450,7 +7450,7 @@ class TestFindBestFluxStandard(TestCase):
 
     def test_FTS(self):
         expected_standard = StaticSource.objects.get(name='CD-34d241')
-        expected_params = { 'separation_rad' : 0.11565764559405214}
+        expected_params = { 'separation_rad' : 0.11563944900531758}
         # Python 3.5 dict merge; see PEP 448
         expected_params = {**expected_params, **model_to_dict(expected_standard)}
 
@@ -7578,7 +7578,7 @@ class TestFindBestSolarAnalog(TestCase):
         expected_ra = 4.334041503242261
         expected_dec = -0.3877173805762358
         expected_standard = StaticSource.objects.get(name='HD 140990')
-        expected_params = {'separation_deg': 10.838361371951908}
+        expected_params = {'separation_deg': 10.83836138304881}
         # Python 3.5 dict merge; see PEP 448
         expected_params = {**expected_params, **model_to_dict(expected_standard)}
 
@@ -9212,3 +9212,115 @@ class TestDisplayDataproduct(TestCase):
         dp = DataProduct.objects.filter(filetype=DataProduct.ALCDEF_TXT)
         response = display_textfile(request, dp[0].id)
         self.assertEqual(b"some text here", response.content)
+
+
+class TestPtrneos(TestCase):
+
+    def setUp(self):
+        self.factory = RequestFactory()
+        self.site_code = 'Z24'
+        self.obs_date = '2025-10-10'
+
+        self.maxDiff = None
+
+    @patch('core.views.fetch_jpl_sbobs')
+    def test_null_response(self, mocked_fetch):
+        mocked_fetch.return_value = {}
+        # Call sequence     re_path(r'^ptrneos/site/(?P<site_code>[A-Z,0-9]{3})/date/(?P<obs_date>\d{4}-\d{2}-\d{2})/', ptr_neos, name='ptr_neos'),
+
+        request = self.factory.get('/ptrneos/site/{self.site_code}/date/{self.obs_date}/')
+
+        response = ptr_neos(request, self.site_code, self.obs_date)
+
+        self.assertEqual(response.status_code, 200)
+
+    @patch('core.views.fetch_jpl_sbobs')
+    def test_fake_json_api_response(self, mocked_fetch):
+        mocked_fetch.return_value = {}
+        request = self.factory.get('/ptrneos/site/{self.site_code}/date/{self.obs_date}/?format=json')
+
+        response = ptr_neos(request, self.site_code, self.obs_date)
+
+        self.assertEqual(response.status_code, 200)
+        expected_data = {'obs_date': self.obs_date, 'site_code': self.site_code, 'errors': 'No data returned from JPL SBOBS endpoint',
+                         'data': [], 'colnames' :  [
+                            "Designation",
+                            "Full name",
+                            "Rise time",
+                            "Transit time",
+                            "Set time",
+                            "Max. time observable",
+                            "R.A.",
+                            "Dec.",
+                            "Vmag",
+                            "Helio. range (au)",
+                            "Topo.range (au)",
+                            "Object-Observer-Sun (deg)",
+                            "Object-Observer-Moon (deg)",
+                            "Galactic latitude (deg)"
+                        ] }
+        self.assertJSONEqual(response.content.decode('utf-8'), expected_data)
+
+    @patch('core.views.fetch_jpl_sbobs')
+    def test_fake_json_api_response_no_objs(self, mocked_fetch):
+        mocked_fetch.return_value = {'signature' : {'version': '1.0', 'source': 'NASA/JPL Small-Body Observability API'},
+                                     'data' : [],
+                                     'total_objects' : '0'}
+        request = self.factory.get('/ptrneos/site/{self.site_code}/date/{self.obs_date}/?format=json')
+
+        response = ptr_neos(request, self.site_code, self.obs_date)
+
+        self.assertEqual(response.status_code, 200)
+        expected_data = {'obs_date': self.obs_date, 'site_code': self.site_code,
+                         'errors': 'No valid objects returned from JPL SBOBS endpoint',
+                         'data': [], 'colnames' :  [
+                            "Designation",
+                            "Full name",
+                            "Rise time",
+                            "Transit time",
+                            "Set time",
+                            "Max. time observable",
+                            "R.A.",
+                            "Dec.",
+                            "Vmag",
+                            "Helio. range (au)",
+                            "Topo.range (au)",
+                            "Object-Observer-Sun (deg)",
+                            "Object-Observer-Moon (deg)",
+                            "Galactic latitude (deg)"
+                        ] }
+        self.assertJSONEqual(response.content.decode('utf-8'), expected_data)
+
+class TestPaginationBadPageParam(TestCase):
+    """Regression tests: a non-integer ``?page=`` value (e.g. from a vulnerability
+    scanner) must fall back to page 1 rather than raising ValueError."""
+
+    def setUp(self):
+        self.body = Body.objects.create(provisional_name='N999r0q', name='2019 XS', origin='M',
+                                        source_type='N', elements_type='MPC_MINOR_PLANET', active=True)
+        proposal = Proposal.objects.create(code='LCOTesting', title='LCOTesting')
+        self.sblock = SuperBlock.objects.create(body=self.body, proposal=proposal,
+                                                block_start=datetime(2021, 11, 10, 3, 40),
+                                                block_end=datetime(2021, 11, 10, 9, 22),
+                                                groupid='2019 XS_V37-20211110', tracking_number='1335839')
+        self.bad_page = "'nvOpzp; AND 1=1 OR (<'\">iKO)),"
+
+    def test_measurements_bad_page(self):
+        response = self.client.get(reverse('measurement', kwargs={'pk': self.body.pk}), {'page': self.bad_page})
+        self.assertEqual(response.status_code, 200)
+
+    def test_measurements_negative_page(self):
+        response = self.client.get(reverse('measurement', kwargs={'pk': self.body.pk}), {'page': '-3'})
+        self.assertEqual(response.status_code, 200)
+
+    def test_guidemovie_bad_page(self):
+        response = self.client.get(reverse('guidemovie', kwargs={'pk': self.sblock.pk}), {'page': self.bad_page})
+        self.assertEqual(response.status_code, 200)
+
+    def test_measurements_show_all_no_measurements(self):
+        response = self.client.get(reverse('measurement', kwargs={'pk': self.body.pk}), {'page': '0'})
+        self.assertEqual(response.status_code, 200)
+
+    def test_guidemovie_show_all_no_blocks(self):
+        response = self.client.get(reverse('guidemovie', kwargs={'pk': self.sblock.pk}), {'page': '0'})
+        self.assertEqual(response.status_code, 200)

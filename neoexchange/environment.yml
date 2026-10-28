@@ -40,6 +40,5 @@ dependencies:
   - Cython
   - pip:
     - pyslalib
-    - fits2image
     - numpy==1.21.4; sys_platform != 'win32'
     - numpy==1.22.4+mkl; sys_platform == 'win32'

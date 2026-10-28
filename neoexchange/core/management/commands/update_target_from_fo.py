@@ -35,7 +35,10 @@ class Command(BaseCommand):
         obj_id = None
         if options['target']:
             obj_id = str(options['target']).replace('_', ' ')
-            body = Body.objects.get(name=obj_id)
+            try:
+                body = Body.objects.get(name=obj_id)
+            except Body.DoesNotExist:
+                body = Body.objects.get(provisional_name=obj_id)
 
         self.stdout.write(f"Reading elements from: {options['elements_file']}")
         if os.path.exists(options['elements_file']):
@@ -45,7 +48,11 @@ class Command(BaseCommand):
             if len(new_elements) > 0:
                 if obj_id is None:
                     obj_id = new_elements["name"]
-                    body = Body.objects.get(name=obj_id)
+                    try:
+                        body = Body.objects.get(name=obj_id)
+                    except Body.DoesNotExist:
+                        body = Body.objects.get(provisional_name=obj_id)
+
                     self.stdout.write(f"Determined name= {obj_id}")
                 if body:
                     # Overwrite origin with original or LCO

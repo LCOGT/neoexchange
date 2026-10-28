@@ -4416,6 +4416,35 @@ class TestConfigureDefaults(TestCase):
 
         params = configure_defaults(test_params)
 
+    def test_elp_point4m_num2(self):
+        test_params = self.obs_params
+        test_params['site_code'] = 'V45'
+
+        expected_params = { 'instrument':  '0M4-SCICAM-QHY600',
+                            'pondtelescope': '0m4',
+                            'observatory': 'aqwb',
+                            'site': 'ELP',
+                            'binning': 1}
+        expected_params.update(test_params)
+
+        params = configure_defaults(test_params)
+
+        self.assertEqual(expected_params, params)
+
+
+    def test_elp_point4m_num3(self):
+        test_params = self.obs_params
+        test_params['site_code'] = 'V47'
+
+        expected_params = { 'instrument':  '0M4-SCICAM-QHY600',
+                            'pondtelescope': '0m4',
+                            'observatory': 'aqwb',
+                            'site': 'ELP',
+                            'binning': 1}
+        expected_params.update(test_params)
+
+        params = configure_defaults(test_params)
+
         self.assertEqual(expected_params, params)
 
     def test_lsc_point4m_num1(self):
@@ -7283,7 +7312,7 @@ class TestMakeJPLSBobsQuery(SimpleTestCase):
         # Split the very long string; Python will automatically concatenate all within the ()s
         self.base_url = ('https://ssd-api.jpl.nasa.gov/sbwobs.api?mpc-code=K92&obs-time=2025-09-03&maxoutput=100'
                          '&output-sort=vmag&fmt-ra-dec=false&mag-required=true&sb-group=neo&elong-min=45&glat-min=10'
-                         '&time-min=30&vmag-min=12.0&vmag-max=19.0')
+                         '&time-min=30&elev-min=30&vmag-min=12.0&vmag-max=19.0')
         self.obs_date = datetime(2025, 9, 3, 20, 0, 0)
 
         self.maxDiff = None
@@ -7306,6 +7335,13 @@ class TestMakeJPLSBobsQuery(SimpleTestCase):
         expected_url = self.base_url
 
         url = make_jpl_sbobs_query(self.obs_date, 'K92')
+
+        self.assertEqual(expected_url, url)
+
+    def test_K92_lower_alt_limit(self):
+        expected_url = self.base_url.replace('elev-min=30', 'elev-min=20')
+
+        url = make_jpl_sbobs_query(self.obs_date, 'K92', min_elev=20)
 
         self.assertEqual(expected_url, url)
 

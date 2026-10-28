@@ -43,7 +43,7 @@ from django.core.paginator import Paginator
 from django.core import serializers
 from django.db.models import Q, Prefetch
 from django.forms.models import model_to_dict
-from django.http import Http404, HttpResponse, HttpResponseRedirect
+from django.http import Http404, HttpResponse, HttpResponseRedirect, JsonResponse
 from django.shortcuts import render, redirect
 from django.template.loader import get_template
 from django.urls import reverse, reverse_lazy
@@ -76,7 +76,7 @@ from astrometrics.sources_subs import fetchpage_and_make_soup, packed_to_normal,
     fetch_mpcdb_page, parse_mpcorbit, submit_block_to_scheduler, parse_mpcobs,\
     fetch_NEOCP_observations, PackedError, fetch_filter_list, fetch_mpcobs, validate_text,\
     read_mpcorbit_file, fetch_jpl_physparams_altdes, store_jpl_sourcetypes, store_jpl_desigs,\
-    store_jpl_physparams, fetch_jpl_sbobs
+    store_jpl_physparams, fetch_jpl_sbobs, random_delay
 from astrometrics.time_subs import extract_mpc_epoch, parse_neocp_date, \
     parse_neocp_decimal_date, get_semester_dates, jd_utc2datetime, datetime2st
 from photometrics.external_codes import run_sextractor, run_scamp, updateFITSWCS,\
@@ -283,6 +283,37 @@ class BodySearchView(ListView):
         object_list = list(set(object_list))
         standard_list = list(set(standard_list))
         return object_list + standard_list
+    
+    def get(self, request, *args, **kwargs):
+        format = self.request.GET.get("format", "")
+        if format == 'json':
+            queryset = self.get_queryset()
+            data = []
+            for body in queryset:
+                target  = {
+                    'name': body.current_name(),
+                    'type': getattr(body, 'source_type', None),
+                    'active': getattr(body, 'active', None),
+                    'provisional_name': getattr(body, 'provisional_name', None),
+                    'schema': getattr(body, 'elements_type', None),
+                    'absolute_magnitude': getattr(body, 'abs_mag', None),
+                    'slope': getattr(body, 'slope', 0.15),
+                    'epochofel': body.epochofel_mjd(),
+                    'orbinc': getattr(body, 'orbinc', None),
+                    'longascnode': getattr(body, 'longascnode', None),
+                    'argofperih': getattr(body, 'argofperih', None),
+                    'eccentricity': getattr(body, 'eccentricity', None),
+                    'meandist': getattr(body, 'meandist', None),
+                    'meananom': getattr(body, 'meananom', None),
+                    'perihdist': getattr(body, 'perihdist', None),
+                    'epochofperih': getattr(body, 'epochofperih', None),
+                    'orbit_rms': getattr(body, 'orbit_rms', None),
+                    'num_obs': getattr(body, 'num_obs', None),
+                    'arc_length': getattr(body, 'arc_length', None),
+                }
+                data.append(target)
+            return JsonResponse(data, status=200, safe=False) 
+        return super(BodySearchView, self).get(request, *args, **kwargs)
 
 
 class BodyVisibilityView(DetailView):
@@ -454,7 +485,7 @@ class MeasurementViewBody(View):
 
         # Toggle Pagination
         if page == '0':
-            self.paginate_by = len(measurements)
+            self.paginate_by = max(len(measurements), 1)
         # add more rows for denser formats
         elif 'mpc' in request.path or 'ades' in request.path:
             self.paginate_by = 30
@@ -465,9 +496,13 @@ class MeasurementViewBody(View):
         else:
             is_paginated = False
 
-        if page is None or int(page) < 1:
+        try:
+            page = int(page)
+        except (TypeError, ValueError):
             page = 1
-        elif int(page) > paginator.num_pages:
+        if page < 1:
+            page = 1
+        elif page > paginator.num_pages:
             page = paginator.num_pages
         page_obj = paginator.page(page)
 
@@ -827,12 +862,21 @@ def ephemeris(request):
             body_elements, dark_start, dark_end, data['site_code'], 900, data['alt_limit'])
     else:
         return render(request, 'core/home.html', {'form': form})
+    if request.GET.get('format','') == 'json':
+        data = { 
+            'target': data['target'].current_name(),
+            'site_code': form['site_code'].value(),
+            'ephemeris': ephem_lines
+            }
+        data['colnames'] = ['datetime_utc', 'ra', 'dec', 'mag', 'sky_motion', 'sky_motion_pa', 'altitude', 'moon_phase', 'moon_obj_sep', 'moon_alt', 'slot_score', 'ha']
+        return JsonResponse(data, status=200, safe=False) 
     return render(request, 'core/ephem.html',
-                  {'target': data['target'],
-                   'ephem_lines': ephem_lines,
-                   'site_code': form['site_code'].value(),
-                   }
-                  )
+            {
+                'target': data['target'],
+                'ephem_lines': ephem_lines,
+                'site_code': form['site_code'].value(),
+            }
+        )
 
 
 class LookUpBodyMixin(object):
@@ -2196,19 +2240,57 @@ def look_project(request):
     return render(request, 'core/lookproject.html', params)
 
 def ptr_neos(request, site_code, obs_date):
+    """Endpoint for PTR to fetch observable NEOs
 
+    Args:
+        request (HttpRequest): Request object from url router in neox/urls.py
+        site_code (str): MPC site code to query for (e.g. 'Z24')
+        obs_date (str): Date string to search for in the form 'YYYY-MM-DD'
+
+        Two optional parameters can be given in the url:
+        * format: If this is set to 'format=json' then a JSON version of
+                  the results is returned instead of the rendered template.
+        * update_neox: If this is set to 'update_neox=true', then it will fetch
+                       any new objects returned from the fetch_jpl_sbobs() that
+                       are in NEOx. This will take ~6 seconds x no. of new objects
+    Raises:
+        Http404: Error page.
+
+    Returns:
+        HttpResponse: Either the rendered template with the `params` dict or a JSON version.
+    """
     try:
         obs_date = datetime.strptime(obs_date, "%Y-%m-%d")
     except ValueError:
         raise Http404("Could not parse observation date")
 
     data = fetch_jpl_sbobs(obs_date, site_code)
-
     params = {
         'obs_date': obs_date,
         'site_code': site_code,
-        'data': data['data']
+        'errors' : None,
+        'data' : []
     }
+    if len(data) == 0:
+        # Check for no data at all before checking for no objects
+        params['data'] = []
+        params['errors'] = 'No data returned from JPL SBOBS endpoint'
+    else:
+        if len(data.get('data', [])) == 0:
+            params['errors'] = 'No valid objects returned from JPL SBOBS endpoint'
+        else:
+            params['data'] = data['data']
+            # Check if downloading new objects is desired
+            if request.GET.get('update_neox', 'false') == 'true':
+                objects = [x[0] for x in data['data']]
+                known_objects = Body.objects.filter(name__in=objects).values_list('name', flat=True)
+                new_objects = list(set(objects) - set(known_objects))
+                for new_object in new_objects:
+                    # Get new object from MPC, wait 1..3 seconds between requests
+                    updated = update_MPC_orbit(new_object)
+                    random_delay(1, 3)
+                logger.info(f"Downloaded {len(new_objects)} new objects from MPC")
+
     if request.GET.get('format', '') == 'json':
             datanames =  [
                 "Designation",
@@ -2226,7 +2308,8 @@ def ptr_neos(request, site_code, obs_date):
                 "Object-Observer-Moon (deg)",
                 "Galactic latitude (deg)"
             ]
-            jsonparams = {'obs_date': obs_date.strftime("%Y-%m-%d"), 'site_code': site_code, 'data': data['data'], 'colnames': datanames}
+            jsonparams = {'obs_date': obs_date.strftime("%Y-%m-%d"), 'site_code': site_code,
+                          'errors' : params['errors'], 'data': params['data'], 'colnames': datanames}
             return HttpResponse(json.dumps(jsonparams), content_type='application/json')
     return render(request, 'core/ptrneos.html', params)
 
@@ -3173,9 +3256,12 @@ def ingest_new_object(orbit_file, obs_file=None, dbg=False):
     if obs_file is None:
         obs_file = orbit_file.replace('neocp', 'dat')
 
-    # If not found, try new-style obs file name
+    # If not found, try new-style obs file names
     if os.path.exists(obs_file) is False:
         obs_file = orbit_file.replace('.neocp', '_mpc.dat')
+    # If still not found, try another new-style obs file name
+    if os.path.exists(obs_file) is False:
+        obs_file = orbit_file.replace('.neocp', '_mpc.txt')
 
     local_discovery = False
     try:
@@ -3923,7 +4009,7 @@ def plot_all_spec(source):
         obj = sanitize_object_name(calibsource.name.lower())
         spec_file = os.path.join(base_dir, "f{}.dat".format(obj))
         wav, flux, err = pull_data_from_text(spec_file)
-        if wav:
+        if len(wav) != 0:
             label = calibsource.name
             new_spec = {'label': label,
                         'spec': flux,
@@ -4463,7 +4549,7 @@ class GuideMovie(View):
 
         # Toggle Pagination
         if page == '0':
-            self.paginate_by = len(block_list)
+            self.paginate_by = max(len(block_list), 1)
         paginator = Paginator(block_list, self.paginate_by, orphans=self.orphans)
 
         if paginator.num_pages > 1:
@@ -4471,9 +4557,13 @@ class GuideMovie(View):
         else:
             is_paginated = False
 
-        if page is None or int(page) < 1:
+        try:
+            page = int(page)
+        except (TypeError, ValueError):
             page = 1
-        elif int(page) > paginator.num_pages:
+        if page < 1:
+            page = 1
+        elif page > paginator.num_pages:
             page = paginator.num_pages
         page_obj = paginator.page(page)
 
@@ -4682,7 +4772,7 @@ def find_best_solar_analog(ra_rad, dec_rad, site, ha_sep=4.0, num=None, solar_st
     return close_standard, close_params, close_standards[:5]
 
 
-def compare_NEOx_horizons_ephems(body, d, sitecode='500', debug=True):
+def compare_NEOx_horizons_ephems(body, d, sitecode='500', perturb=True, debug=True):
     """Compare the NEOexchange and HORIZONS positions at datetime <d> for
     <body> (can be either a core.models.Body instance or string) from MPC site
     code [sitecode; defaults to 500 (geocenter).
@@ -4690,10 +4780,10 @@ def compare_NEOx_horizons_ephems(body, d, sitecode='500', debug=True):
     of the separation (as Astropy Angle instances in u.arcsec in the sense of
     the values that need to be added to the NEOx position to the HORIZONS one)"""
 
-    if type(body) != Body:
+    if not isinstance(body, Body):
         body = Body.objects.get(name=body)
 
-    neox_emp = compute_ephem(d, model_to_dict(body), sitecode, perturb=True, display=debug)
+    neox_emp = compute_ephem(d, model_to_dict(body), sitecode, perturb=perturb, display=debug)
     horizons_emp = horizons_ephem(body.current_name(), d, d+timedelta(minutes=1), sitecode, '1m')
 
     sep_r = None

@@ -31,7 +31,7 @@ if [ -n "$(ls -A ${logroot}/${date_options}/*_lc_file_list.txt)" ]; then
     echo "Uploading:" >> ${log}
     echo "${files}" >> ${log}
     echo "to S3 bucket ${AWS_STORAGE_BUCKET_NAME}" >> ${log}
-    python3 manage.py upload_data ${logroot}/${date_options}/'*_lc_file_list.txt' --ext .gif,ALCDEF.txt --list >> ${log} 2>&1
+    python3.11 manage.py upload_data ${logroot}/${date_options}/'*_lc_file_list.txt' --ext .gif,ALCDEF.txt --list >> ${log} 2>&1
 else
     echo "No lightcurve data in ${logroot}/${date_options}" >> ${log}
 fi

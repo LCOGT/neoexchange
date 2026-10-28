@@ -303,6 +303,14 @@ class Body(models.Model):
             return False
 
     def compute_distances(self, d=None):
+        """Computes the geocentric and heliocentric distance of the Body at time [d]; defaults to 'now'
+
+        :param d: datetime to compute distances for, defaults to None, in which case it will compute for the current time
+        :type d: datetime, optional
+        :return: Geocentric and heliocentric distance in AU or False if there is no epoch of elements or if the ephemeris computation fails
+        :rtype: tuple(float, float) or bool
+        """
+
         d = d or datetime.utcnow()
         if self.epochofel:
             orbelems = model_to_dict(self)

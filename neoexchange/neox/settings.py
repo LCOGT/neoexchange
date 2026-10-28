@@ -1,13 +1,14 @@
 # -*- coding: utf-8 -*-
 # Django settings for neox project.
 
-import os, ast
+import ast
+import os
 import sys
-from django.utils.crypto import get_random_string
+
 import rollbar
+from django.utils.crypto import get_random_string
 
-
-VERSION = '3.16.1'
+VERSION = '3.17.3'
 
 CURRENT_PATH = os.path.dirname(os.path.realpath(__file__))
 PRODUCTION = True if CURRENT_PATH.startswith('/var/www') else False
@@ -92,6 +93,7 @@ STATICFILES_FINDERS = (
  )
 
 MIDDLEWARE = (
+    "corsheaders.middleware.CorsMiddleware",
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -149,6 +151,8 @@ LOGIN_REDIRECT_URL = '/'
 
 # GRAPPELLI_INDEX_DASHBOARD = 'neox.dashboard.CustomIndexDashboard'
 
+CORS_ORIGIN_ALLOW_ALL=True
+
 INSTALLED_APPS = (
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -158,6 +162,7 @@ INSTALLED_APPS = (
     'django.contrib.admin',
     'django.contrib.messages',
     'reversion',
+    "corsheaders",
     'core.apps.CoreConfig',
     'analyser.apps.AstrometerConfig',
 )
@@ -176,7 +181,7 @@ LOGGING = {
     'formatters': {
         'verbose': {
             'format' : "[%(asctime)s] %(levelname)s %(message)s",
-            'datefmt' : "%d/%b/%Y %H:%M:%S"
+            'datefmt' : "%Y-%m-%d %H:%M:%S"
         },
         'simple': {
             'format': '%(levelname)s %(message)s'
@@ -200,32 +205,34 @@ LOGGING = {
         }
     },
     'loggers': {
-        # 'django.request': {
-        #     'handlers': ['mail_admins'],
-        #     'level': 'ERROR',
-        #     'propagate': True,
-        # },
-        'django.request': {
-            'handlers':['console'],
-            'propagate': True,
-            'level':'ERROR',
+        '': {
+            'handlers': ['console'],
+            'level': 'ERROR',
         },
         'core' : {
             'handlers' : ['console'],
             'level'    : 'INFO',
+            # required to avoid double logging with root logger
+            'propagate': False,
         },
         'astrometrics' : {
             'handlers' : ['console'],
             'level'    : 'ERROR',
+            # required to avoid double logging with root logger
+            'propagate': False,
         },
         'photometrics' : {
             'handlers' : ['console'],
             'level'    : 'ERROR',
+            # required to avoid double logging with root logger
+            'propagate': False,
         },
         'neox': {
             'handlers': ['console'],
-            'level' : 'ERROR'
-        }
+            'level' : 'ERROR',
+            # required to avoid double logging with root logger
+            'propagate': False,
+        },
     }
 }
 
@@ -301,6 +308,9 @@ if 'test' in sys.argv:
         },
     }
     USE_S3 = False
+    # Pin the IERS Earth orientation table (for UT1-UTC) to a copy in the repo so
+    # ephemeris test results don't depend on the machine's astropy cache
+    os.environ.setdefault('NEOX_IERS_A_FILE', os.path.join(BASE_DIR, 'astrometrics', 'tests', 'iers', 'finals2000A.all'))
 
 USE_FIREFOXDRIVER = True
 
