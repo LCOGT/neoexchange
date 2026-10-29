@@ -1,10 +1,13 @@
+from unittest.mock import patch
+
 import numpy as np
 from astropy.coordinates import SkyCoord
 from astropy.table import Table
-from django.test import SimpleTestCase
+from django.test import SimpleTestCase, TestCase
 from numpy.ma import masked_array
 from numpy.testing import assert_allclose
 
+from core.models.async_process import AsyncError
 from core.utils import NeoException
 
 
@@ -104,3 +107,52 @@ class TestCrossMatchAndZpMultiAperture(SimpleTestCase):
 
         assert_allclose([15.0, 16.0, 17.0], self.refcat.inst_mag)
         self.assertEqual((24.5, 0.05, 0.0, 'g-i'), results)
+
+
+class TestSExtractorProcessPipelineFailures(TestCase):
+    """proc-extract must record a failure when SExtractor does not run (for
+    example because the config setup failed), rather than completing and
+    leaving every later step of the chain to fail on the missing catalog."""
+
+    def setUp(self):
+        # Imported here, not at module level: importing the proxy models before the
+        # test database is built breaks the migration state (no pipelines migrations)
+        from pipelines.processdata import SExtractorProcessPipeline
+        self.cls = SExtractorProcessPipeline
+        self.inputs = {f: self.cls.inputs[f]['default'] for f in self.cls.inputs}
+        self.inputs.update({'fits_file': '/data/20260712/coj2m002-ep08-20260712-0109-e91.fits',
+                            'datadir': '/data/Hera/20260712/'})
+        self.pipe = self.cls.create_timestamped(self.inputs)
+
+    def test_sextractor_failure_raises(self):
+        with patch.object(self.cls, 'setup', return_value=self.inputs['fits_file']), \
+             patch.object(self.cls, 'process', return_value=-4), \
+             self.assertRaises(AsyncError) as cm:
+            self.pipe.do_pipeline('/tmp', **self.inputs)
+
+        self.assertEqual("SExtractor failed on coj2m002-ep08-20260712-0109-e91.fits (status -4)", str(cm.exception))
+
+    def test_missing_image_raises(self):
+        with patch.object(self.cls, 'setup', return_value=-1), \
+             patch.object(self.cls, 'process') as process, \
+             self.assertRaises(AsyncError) as cm:
+            self.pipe.do_pipeline('/tmp', **self.inputs)
+
+        process.assert_not_called()
+        self.assertEqual("No image found for coj2m002-ep08-20260712-0109-e91.fits (status -1)", str(cm.exception))
+
+    def test_existing_catalog_completes(self):
+        with patch.object(self.cls, 'setup', return_value=0), \
+             patch.object(self.cls, 'process') as process:
+            self.pipe.do_pipeline('/tmp', **self.inputs)
+
+        process.assert_not_called()
+        self.assertIn('Pipeline Completed', self.pipe.logs)
+
+    def test_run_reports_failure(self):
+        with patch.object(self.cls, 'setup', return_value=self.inputs['fits_file']), \
+             patch.object(self.cls, 'process', return_value=-4), \
+             self.assertRaises(AsyncError) as cm:
+            self.pipe.run()
+
+        self.assertIn("SExtractor failed on coj2m002-ep08-20260712-0109-e91.fits (status -4)", str(cm.exception))

@@ -153,6 +153,10 @@ class SExtractorProcessPipeline(PipelineProcess):
 
                     # # Create a new Frame entry for the new_ldac_catalog (e91_ldac.fits)
                     num_new_frames_created = make_new_catalog_entry(filepath_or_status, header, block)
+                else:
+                    raise AsyncError(f"SExtractor failed on {os.path.basename(fits_file)} (status {filepath_or_status})")
+            elif filepath_or_status != 0:
+                raise AsyncError(f"No image found for {os.path.basename(fits_file)} (status {filepath_or_status})")
         except NeoException as ex:
             logger.error('Error with source extraction: {}'.format(ex))
             self.log('Error with source extraction: {}'.format(ex))

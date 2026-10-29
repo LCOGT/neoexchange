@@ -19,6 +19,7 @@ import tempfile
 from unittest import skipIf
 import warnings
 import shutil
+import threading
 from copy import deepcopy
 
 import astropy.units as u
@@ -616,6 +617,73 @@ class TestSExtractorRunner(ExternalCodeUnitTest):
         self.assertEqual(-3, status)
         self.assertTrue(os.path.exists(os.path.join(self.test_dir, 'sextractor_neox_ldac.conf')))
         self.assertFalse(os.path.lexists(os.path.join(self.test_dir, 'no_such.conf')))
+        self.assertEqual([], glob(os.path.join(self.test_dir, '*.tmp')))
+
+    def test_setup_working_dir_leaves_identical_copy_alone(self):
+        config_file = 'sextractor_neox_ldac.conf'
+        test_file = os.path.join(self.test_dir, config_file)
+        self.assertEqual(0, setup_working_dir(self.source_dir, self.test_dir, [config_file]))
+        stat_before = os.stat(test_file)
+
+        self.assertEqual(0, setup_working_dir(self.source_dir, self.test_dir, [config_file]))
+
+        stat_after = os.stat(test_file)
+        self.assertEqual(stat_before.st_ino, stat_after.st_ino)
+        self.assertEqual(stat_before.st_mtime_ns, stat_after.st_mtime_ns)
+
+    def test_setup_working_dir_concurrent_workers(self):
+        # Several dramatiq workers set up the same reduction directory at the same
+        # time (coj2m002-ep08-20260712-0109 was lost to the unlink/relink race).
+        # Every call must succeed and a reader must never find the config missing
+        # or partly written; alternating between two sources forces replacements.
+        config_file = 'sextractor_neox_ldac.conf'
+        source_file = os.path.join(self.source_dir, config_file)
+        alt_source_dir = os.path.join(self.test_dir, 'alt_configs')
+        os.makedirs(alt_source_dir)
+        with open(source_file, 'rb') as fh:
+            content_a = fh.read()
+        content_b = content_a + b"# alternate configuration\n"
+        with open(os.path.join(alt_source_dir, config_file), 'wb') as fh:
+            fh.write(content_b)
+        test_file = os.path.join(self.test_dir, config_file)
+        self.assertEqual(0, setup_working_dir(self.source_dir, self.test_dir, [config_file]))
+
+        statuses = []
+        bad_reads = []
+        stop = threading.Event()
+
+        def writer(index):
+            sources = (self.source_dir, alt_source_dir) if index % 2 else (alt_source_dir, self.source_dir)
+            for i in range(40):
+                statuses.append(setup_working_dir(sources[i % 2], self.test_dir, [config_file]))
+
+        def reader():
+            while not stop.is_set():
+                try:
+                    with open(test_file, 'rb') as fh:
+                        content = fh.read()
+                except OSError as e:
+                    bad_reads.append(repr(e))
+                    continue
+                if content not in (content_a, content_b):
+                    bad_reads.append(f"partial read of {len(content)} bytes")
+
+        writers = [threading.Thread(target=writer, args=(i,)) for i in range(6)]
+        readers = [threading.Thread(target=reader) for _ in range(3)]
+        for thread in readers + writers:
+            thread.start()
+        for thread in writers:
+            thread.join()
+        stop.set()
+        for thread in readers:
+            thread.join()
+
+        self.assertEqual({0}, set(statuses))
+        self.assertEqual([], bad_reads[:5])
+        with open(test_file, 'rb') as fh:
+            self.assertIn(fh.read(), (content_a, content_b))
+        self.assertFalse(os.path.islink(test_file))
+        self.assertEqual([], glob(os.path.join(self.test_dir, '*.tmp')))
 
     def test_run_sextractor_nofile(self):
 

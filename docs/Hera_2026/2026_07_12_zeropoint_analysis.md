@@ -712,6 +712,19 @@ is close to S/N-optimal.
   radius). Tests: `core/tests/test_fix_e93_zeropoints.py` (18). The e92 check images (`.bkgsub`/`.rms`/`.apers`/
   `.bkgd`) are not touched; Fix 1 makes them irrelevant for new subtractions. **To do:** run it on every
   DIA-processed block (35906 first), then Fix 9.
+- [ ] **Fix 21 — frames lost to the config-setup race; re-reduce them.** The 2026-10-28 dry run of Fix 8 showed
+  Block 35906 has no e92/e93 for `coj2m002-ep08-20260712-0109`. The dramatiq log (`dramatiq_20260625.log`, 13 Jul
+  21:12:08) shows why: `setup_working_dir()` did `unlink` + `symlink` of `sextractor_neox_ldac.conf` in the shared
+  `Hera/20260712/` directory for every frame, and the workers for ep08-0110 and 0111 started `proc-extract` in the
+  same second, so 0109's `symlink` failed ("Could not create link"), `run_sextractor` returned −4 without running
+  SExtractor, and every later step failed on the missing catalog. `proc-extract` nonetheless recorded `complete`
+  (only the scamp step shows `failed`), so nothing flagged it. 14 such errors in the 2026 worker logs; among the 2026
+  DIA blocks the only e91s without an e92 are this one and `coj2m002-ep08-20260717-0063` (Block 36005).
+  **Code fixed 2026-10-28 (uncommitted):** `setup_working_dir()` leaves an identical copy alone and otherwise copies to
+  a temporary name and `os.replace()`s it into place (atomic; a stale symlink is replaced, not written through), with
+  a threaded test; `SExtractorProcessPipeline.do_pipeline` raises `AsyncError` on a non-zero SExtractor or
+  missing-image status so the step is recorded `failed` and appears in `run_pipeline`'s summary.
+  **To do:** `run_pipeline --overwrite` + HOTPANTS for the two e91s, then `fix_e93_zeropoints` again on 35906 and 36005.
 - [ ] **Fix 9:** regenerate the `aper_p_Didymos*.ecsv` tables only after Fix 4. Applying the corrected e92 zeropoint
   to the existing 5″ apertures would introduce a 0.09–0.27 mag (0.18 peak-to-peak) seeing-correlated bias (§4).
 

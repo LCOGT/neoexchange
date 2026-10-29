@@ -13,9 +13,11 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 """
 
+import filecmp
 import logging
 import os
 import re
+import tempfile
 import warnings
 from collections import OrderedDict
 from datetime import datetime, timedelta
@@ -244,15 +246,19 @@ def setup_findorb_environ_file(source_dir, site_code=500, start_time=datetime.ut
 
 
 def setup_working_dir(source_dir, dest_dir, config_files):
-    """Sets up a temporary working directory for running programs in <dest_dir>.
-    The temporary working directory is created if needed and the required config
-    files (given in a list in <config_files>) are copied from <source_dir>, so the
-    directory keeps the versions of the configs it was reduced with. Anything
-    already at a config's name in <dest_dir>, whether a file from an earlier
-    reduction or a symlink from one made before the configs were copied, is removed
-    first: copying through a stale symlink would overwrite the config in <source_dir>.
-    Returns 0 on success, -1 for a missing <source_dir>, -2 if <dest_dir> could not
-    be created and -3 if any config could not be copied."""
+    """Sets up a working directory for running programs in <dest_dir>.
+    The directory is created if needed and the required config files (given in
+    a list in <config_files>) are copied from <source_dir>, so the directory
+    keeps the versions of the configs it was reduced with. A config already
+    present as an identical regular file is left alone. Anything else at that
+    name (a copy from an earlier reduction, or a symlink from one made before the
+    configs were copied) is replaced atomically, by copying to a temporary name
+    in <dest_dir> and renaming over it: several workers setting up the same
+    directory at once then never see the config missing or partly written, and
+    a stale symlink is replaced rather than written through (which would
+    overwrite the config in <source_dir>).
+    Returns 0 on success, -1 for a missing <source_dir>, -2 if <dest_dir> could
+    not be created and -3 if any config could not be copied."""
 
     source_dir = os.path.abspath(source_dir)
     if not os.path.exists(source_dir):
@@ -260,30 +266,36 @@ def setup_working_dir(source_dir, dest_dir, config_files):
         return -1
 
     if not os.path.exists(dest_dir):
+        oldumask = os.umask(0o002)
         try:
-            oldumask = os.umask(0o002)
-            os.makedirs(dest_dir)
-            os.umask(oldumask)
+            os.makedirs(dest_dir, exist_ok=True)
         except OSError:
             logger.error("Destination path '%s' could not be created" % dest_dir)
             return -2
+        finally:
+            os.umask(oldumask)
 
     num_bad_files = 0
     for config in config_files:
         config_src_filepath = os.path.join(source_dir, config)
         config_dest_filepath = os.path.join(dest_dir, config)
-        if os.path.lexists(config_dest_filepath):
-            try:
-                os.unlink(config_dest_filepath)
-            except OSError:
-                logger.error("Could not remove existing %s" % config_dest_filepath)
-                num_bad_files += 1
-                continue
         try:
-            shutil.copy(config_src_filepath, config_dest_filepath)
+            if os.path.isfile(config_dest_filepath) and not os.path.islink(config_dest_filepath) \
+                    and filecmp.cmp(config_src_filepath, config_dest_filepath, shallow=False):
+                continue
+        except OSError:
+            pass
+        tmp_filepath = None
+        try:
+            fd, tmp_filepath = tempfile.mkstemp(prefix=config + '.', suffix='.tmp', dir=dest_dir)
+            os.close(fd)
+            shutil.copy(config_src_filepath, tmp_filepath)
+            os.replace(tmp_filepath, config_dest_filepath)
         except OSError:
             logger.error("Could not copy %s to %s" % (config_src_filepath, config_dest_filepath))
             num_bad_files += 1
+            if tmp_filepath is not None and os.path.exists(tmp_filepath):
+                os.unlink(tmp_filepath)
     return_status = 0
     if num_bad_files > 0:
         return_status = -3
