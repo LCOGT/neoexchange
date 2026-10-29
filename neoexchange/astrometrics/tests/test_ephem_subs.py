@@ -20,6 +20,7 @@ import tempfile
 from glob import glob
 import mock
 import json
+import requests
 
 from django.test import SimpleTestCase, TestCase, tag
 from django.forms.models import model_to_dict
@@ -3674,6 +3675,41 @@ class TestDetermineHorizonsId(SimpleTestCase):
         horizons_id = determine_horizons_id(lines, obj_name)
 
         self.assertEqual(expected_id, horizons_id)
+
+
+class TestHorizonsEphem(SimpleTestCase):
+
+    def setUp(self):
+        self.start = datetime(2026, 10, 29)
+        self.end = self.start + timedelta(days=31)
+        response = requests.Response()
+        response.status_code = 503
+        self.http_503 = requests.exceptions.HTTPError('503 Server Error: Service Temporarily Unavailable', response=response)
+
+    @mock.patch('astrometrics.ephem_subs.Horizons')
+    def test_http_error(self, mock_horizons):
+        mock_horizons.return_value.ephemerides.side_effect = self.http_503
+
+        ephem = horizons_ephem('2015 RL36', self.start, self.end, 'E10', '5m', alt_limit=20)
+
+        self.assertIsNone(ephem)
+
+    @mock.patch('astrometrics.ephem_subs.Horizons')
+    def test_http_error_after_ambiguous_name(self, mock_horizons):
+        choices = '\n'.join(['Ambiguous target name; provide unique id:',
+                             '    Record #  Epoch-yr  >MATCH DESIG<  Primary Desig  Name  ',
+                             '    --------  --------  -------------  -------------  -------------------------',
+                             '    90000219    2002    11P            11P             Tempel-Swift-LINEAR',
+                             '    90000220    2019    11P            11P             Tempel-Swift-LINEAR',
+                             '    90000221    2021    11P            11P             Tempel-Swift-LINEAR',
+                             ''])
+        mock_horizons.return_value.ephemerides.side_effect = [ValueError(choices), self.http_503]
+
+        ephem = horizons_ephem('11P', self.start, self.end, '-1', include_moon=True)
+
+        self.assertIsNone(ephem)
+        self.assertEqual(2, mock_horizons.call_count)
+        self.assertEqual(90000221, mock_horizons.call_args.kwargs['id'])
 
 
 class TestLCOGT_tels_to_sitecode(SimpleTestCase):

@@ -683,6 +683,8 @@ def horizons_ephem(obj_name, start, end, site_code, ephem_step_size='1h', alt_li
         logger.error("Unable to connect to HORIZONS")
     except requests.exceptions.ConnectionError as e:
         logger.error("Unable to connect to HORIZONS")
+    except requests.exceptions.HTTPError as e:
+        logger.warning(f"HORIZONS request for {obj_name} failed: HTTP {e.response.status_code}")
     except timeout as sock_e:
         logger.warning(f"HORIZONS retrieval failed with socket Error {sock_e.errno}: {sock_e.strerror}")
     except ValueError as e:
@@ -706,6 +708,8 @@ def horizons_ephem(obj_name, start, end, site_code, ephem_step_size='1h', alt_li
                         ephem = convert_horizons_table(ephem, include_moon)
                     except ValueError as e:
                         logger.warning("Error querying HORIZONS. Error message: {}".format(e))
+                    except requests.exceptions.RequestException as e:
+                        logger.warning(f"HORIZONS request for {obj_name} (id {horizons_id}) failed: {e}")
                 else:
                     logger.warning("Unable to determine the HORIZONS id")
         else:

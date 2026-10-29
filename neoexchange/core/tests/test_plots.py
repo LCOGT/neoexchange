@@ -1,5 +1,5 @@
 import os
-from unittest import skipIf
+from unittest import skipIf, mock
 from datetime import datetime, timedelta
 
 from django.test import TestCase
@@ -160,3 +160,25 @@ class TestMakeVisibilityPlot(TestCase):
         self.assertEqual('image/png', response['Content-Type'])
         self.assertEqual(b'\x89PNG\r\n', response.content[0:6])
         self.assertTrue(default_storage.exists(plot_filename))
+
+    def assertPlaceholderGIF(self, response):
+        self.assertTrue(isinstance(response, HttpResponse))
+        self.assertEqual('image/gif', response['Content-Type'])
+        self.assertEqual(b'GIF89a', response.content[0:6])
+
+    @mock.patch('core.plots.horizons_ephem', return_value=None)
+    def test_horizons_down_radec(self, mock_horizons):
+        response = make_visibility_plot(None, self.test_body.pk, 'radec', self.start_time)
+
+        self.assertPlaceholderGIF(response)
+        self.assertEqual(1, mock_horizons.call_count)
+
+    @mock.patch('core.plots.horizons_ephem')
+    def test_horizons_down_for_hoursup_second_query(self, mock_horizons):
+        # First (1h step) query succeeds, the follow-up 5m step query fails
+        mock_horizons.side_effect = [mock.MagicMock(), None]
+
+        response = make_visibility_plot(None, self.test_body.pk, 'hoursup', self.start_time, 'V37')
+
+        self.assertPlaceholderGIF(response)
+        self.assertEqual(2, mock_horizons.call_count)
