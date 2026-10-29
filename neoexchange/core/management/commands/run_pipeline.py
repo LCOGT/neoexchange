@@ -50,6 +50,7 @@ class Command(BaseCommand):
         parser.add_argument('--color_const', default=False, type=self.str2bool, nargs='?', const=True, help='Whether to assume a constant color or fit for color term %(default)s')
         parser.add_argument('--solar', default=True, type=self.str2bool, nargs='?', const=True, help='Whether to only include stars of near-solar (+/-0.2 mag) color %(default)s')
         parser.add_argument('--dia', default=False, type=self.str2bool, nargs='?', const=True, help='Whether to process for DIA and produce extra imagetypes %(default)s')
+        parser.add_argument('--filename', action="store", help="Specific filename to reduce")
 
     def file_mapping(self, origin='LCO'):
         mapping = {'LCO' : { 'proc-astromfit' : ('e91.fits', 'e91_ldac.fits'),
@@ -104,6 +105,12 @@ class Command(BaseCommand):
             origin = 'MRO'
         mapping = self.file_mapping(origin)
         # Process all files through all pipeline steps
+        if options['filename']:
+            # Specific filename wanted, loop through and see if it's there
+            fits_files = [f for f in fits_files if options['filename'] in f]
+            if not fits_files:
+                raise CommandError(f"Specific filename {options['filename']} not found in directory")
+            print(f"Filtered down to {len(fits_files)} FITS files")
         runners = []
         processes = []
         for fits_filepath in fits_files:
