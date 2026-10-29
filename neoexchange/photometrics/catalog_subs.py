@@ -129,26 +129,27 @@ def get_vizier_catalog_table(ra, dec, set_width, set_height, cat_name="UCAC4", s
         else:
             query_service = Vizier(row_limit=set_row_limit, column_filters={"r2mag": rmag_limit, "r1mag": rmag_limit}, columns=['RAJ2000', 'DEJ2000', 'r2mag', 'fl'])
 
-        vizier_servers_list = [ 'vizier.cds.unistra.fr', 'vizier.nao.ac.jp', 'vizier.cfa.harvard.edu', 'vizier.hia.nrc.ca'] # Preferred first
-        query_service.VIZIER_SERVER = vizier_servers_list[0]
-
+        vizier_servers_list = ['vizier.cfa.harvard.edu', 'vizier.cds.unistra.fr', 'vizier.nao.ac.jp', 'vizier.hia.nrc.ca'] # Preferred first: nearest, then the primary; the other mirrors are less reliable
         query_service.TIMEOUT = 60
-        try:
-            result = query_service.query_region(coord.SkyCoord(ra, dec, unit=(u.deg, u.deg), frame='icrs'), width=set_width, height=set_height, catalog=cat_mapping[cat_name])
-        except (ReadTimeout, ConnectionError):
-            logger.warning("Timeout seen querying {}".format(query_service.VIZIER_SERVER))
-            query_service.TIMEOUT = 120
-            result = query_service.query_region(coord.SkyCoord(ra, dec, unit=(u.deg, u.deg), frame='icrs'), width=set_width, height=set_height, catalog=cat_mapping[cat_name])
-        except ConnectTimeout:
-            old_server = query_service.VIZIER_SERVER
-            query_service.VIZIER_SERVER = vizier_servers_list[-1]
-            logger.warning("Timeout querying {}. Switching to {}".format(old_server, query_service.VIZIER_SERVER))
-            result = query_service.query_region(coord.SkyCoord(ra, dec, unit=(u.deg, u.deg), frame='icrs'), width=set_width, height=set_height, catalog=cat_mapping[cat_name])
-        if result is None or len(result) == 0:
-            old_server = query_service.VIZIER_SERVER
-            query_service.VIZIER_SERVER = vizier_servers_list[-1]
-            logger.warning("Error querying {}. Switching to {}".format(old_server, query_service.VIZIER_SERVER))
-            result = query_service.query_region(coord.SkyCoord(ra, dec, unit=(u.deg, u.deg), frame='icrs'), width=set_width, height=set_height, catalog=cat_mapping[cat_name])
+        # Work along the mirror list on a connection/timeout error or an empty answer. An empty
+        # answer from every mirror is left to the catalog-fallback logic below; only a failure
+        # to get any answer at all is an error.
+        # (ConnectTimeout is a subclass of ConnectionError, so they can't be told apart by
+        # separate except clauses.)
+        result = None
+        for vizier_server in vizier_servers_list:
+            query_service.VIZIER_SERVER = vizier_server
+            try:
+                result = query_service.query_region(coord.SkyCoord(ra, dec, unit=(u.deg, u.deg), frame='icrs'), width=set_width, height=set_height, catalog=cat_mapping[cat_name])
+            except (ConnectTimeout, ReadTimeout, ConnectionError) as e:
+                logger.warning("{} querying {}. Trying next server".format(e.__class__.__name__, vizier_server))
+                continue
+            if result is None or len(result) == 0:
+                logger.warning("Empty result from {}. Trying next server".format(vizier_server))
+                continue
+            break
+        if result is None:
+            raise ConnectionError("Could not get a response from any Vizier server ({})".format(', '.join(vizier_servers_list)))
         # resulting catalog table
         # if resulting catalog table is empty or the r mag column has only masked values, try the other catalog and redo
         # the query; if the resulting catalog table is still empty, fill the table with zeros
@@ -162,6 +163,7 @@ def get_vizier_catalog_table(ra, dec, set_width, set_height, cat_name="UCAC4", s
             if "PPMXL" in cat_name:
                 cat_name = "UCAC4"
                 query_service = Vizier(row_limit=set_row_limit, column_filters={"r2mag": rmag_limit, "r1mag": rmag_limit}, columns=['RAJ2000', 'DEJ2000', 'rmag', 'e_rmag'])
+                query_service.VIZIER_SERVER = vizier_server
                 result = query_service.query_region(coord.SkyCoord(ra, dec, unit=(u.deg, u.deg), frame='icrs'), width=set_width, height=set_height, catalog=cat_mapping[cat_name])
                 if len(result) > 0:
                     cat_table = result[0]
@@ -172,6 +174,7 @@ def get_vizier_catalog_table(ra, dec, set_width, set_height, cat_name="UCAC4", s
             else:
                 cat_name = "PPMXL"
                 query_service = Vizier(row_limit=set_row_limit, column_filters={"r2mag": rmag_limit, "r1mag": rmag_limit}, columns=['RAJ2000', 'DEJ2000', 'r2mag', 'fl'])
+                query_service.VIZIER_SERVER = vizier_server
                 result = query_service.query_region(coord.SkyCoord(ra, dec, unit=(u.deg, u.deg), frame='icrs'), width=set_width, height=set_height, catalog=cat_mapping[cat_name])
                 if len(result) > 0:
                     cat_table = result[0]
@@ -194,6 +197,7 @@ def get_vizier_catalog_table(ra, dec, set_width, set_height, cat_name="UCAC4", s
                 query_service = Vizier(row_limit=set_row_limit, column_filters={"Gmag": rmag_limit, "Plx": ">0"}, columns=['RAJ2000', 'DEJ2000', 'e_RAJ2000', 'e_DEJ2000', 'Gmag', 'e_Gmag', 'Dup'])
             else:
                 query_service = Vizier(row_limit=set_row_limit, column_filters={"r2mag": rmag_limit, "r1mag": rmag_limit}, columns=['RAJ2000', 'DEJ2000', 'r2mag', 'fl'])
+            query_service.VIZIER_SERVER = vizier_server
             result = query_service.query_region(coord.SkyCoord(ra, dec, unit=(u.deg, u.deg), frame='icrs'), width=set_width, catalog=cat_mapping[cat_name])
 
             # resulting catalog table

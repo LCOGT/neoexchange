@@ -942,6 +942,80 @@ class ZeropointUnitTest(TestCase):
         self.fail("write test for no internet")
 
 
+class TestVizierFailover(SimpleTestCase):
+    """get_vizier_catalog_table() should work along the mirror list when a server
+    fails or answers empty, and keep using the server that answered."""
+
+    servers = ('vizier.cfa.harvard.edu', 'vizier.cds.unistra.fr', 'vizier.nao.ac.jp', 'vizier.hia.nrc.ca')
+
+    def setUp(self):
+        # astroquery.vizier.Vizier is an instance; get_vizier_catalog_table() calls it to make
+        # fresh instances, so the class must be patched for the mock to be seen
+        from astroquery.vizier.core import VizierClass
+        from requests.exceptions import ConnectTimeout, ReadTimeout
+        self.Vizier = VizierClass
+        self.connect_timeout = ConnectTimeout("Connection to vizier timed out. (connect timeout=60)")
+        self.read_timeout = ReadTimeout("Read timed out")
+        self.calls = []
+
+    def make_result(self, num_rows=3):
+        table = Table({'RAJ2000': [228.3] * num_rows, 'DEJ2000': [38.4] * num_rows,
+                       'Gmag': [15.0] * num_rows, 'e_Gmag': [0.01] * num_rows,
+                       'r2mag': [15.0] * num_rows}, masked=True)
+        return [table]
+
+    def scripted_query(self, responses):
+        """Return a fake Vizier.query_region that records (server, catalog) per
+        call and plays back <responses> in order (exceptions are raised)."""
+        responses = list(responses)
+
+        def fake_query_region(service, *args, **kwargs):
+            self.calls.append((service.VIZIER_SERVER, kwargs.get('catalog')))
+            response = responses.pop(0)
+            if isinstance(response, Exception):
+                raise response
+            return response
+        return fake_query_region
+
+    def test_connect_timeout_moves_from_cfa_to_cds(self):
+        fake = self.scripted_query([self.connect_timeout, self.make_result()])
+        with patch.object(self.Vizier, 'query_region', new=fake):
+            cat_table, cat_name = get_vizier_catalog_table(228.33, 38.40, "4.5m", "3.0m", "GAIA-DR3")
+
+        self.assertEqual('GAIA-DR3', cat_name)
+        self.assertEqual(3, len(cat_table))
+        self.assertEqual([(self.servers[0], 'I/355/gaiadr3'), (self.servers[1], 'I/355/gaiadr3')], self.calls)
+
+    def test_all_mirrors_unreachable_raises(self):
+        from requests.exceptions import ConnectionError
+        fake = self.scripted_query([self.connect_timeout, self.read_timeout, self.connect_timeout, ConnectionError("refused")])
+        with patch.object(self.Vizier, 'query_region', new=fake), \
+                self.assertRaises(ConnectionError) as cm:
+            get_vizier_catalog_table(228.33, 38.40, "4.5m", "3.0m", "GAIA-DR3")
+
+        self.assertIn('any Vizier server', str(cm.exception))
+        self.assertEqual(list(self.servers), [server for server, _ in self.calls])
+
+    def test_empty_answer_moves_to_next_mirror(self):
+        fake = self.scripted_query([[], self.make_result(2)])
+        with patch.object(self.Vizier, 'query_region', new=fake):
+            cat_table, cat_name = get_vizier_catalog_table(228.33, 38.40, "4.5m", "3.0m", "GAIA-DR3")
+
+        self.assertEqual('GAIA-DR3', cat_name)
+        self.assertEqual(2, len(cat_table))
+        self.assertEqual(list(self.servers[:2]), [server for server, _ in self.calls])
+
+    def test_empty_everywhere_falls_back_to_other_catalog_on_same_server(self):
+        fake = self.scripted_query([[], [], [], [], self.make_result(4)])
+        with patch.object(self.Vizier, 'query_region', new=fake):
+            cat_table, cat_name = get_vizier_catalog_table(228.33, 38.40, "4.5m", "3.0m", "GAIA-DR3")
+
+        self.assertEqual('PPMXL', cat_name)
+        self.assertEqual(4, len(cat_table))
+        self.assertEqual(5, len(self.calls))
+        self.assertEqual((self.servers[-1], 'I/317'), self.calls[-1])
+
+
 class TestGetReferenceCatalog(TestCase):
 
     def setUp(self):
