@@ -9324,3 +9324,16 @@ class TestPaginationBadPageParam(TestCase):
     def test_guidemovie_show_all_no_blocks(self):
         response = self.client.get(reverse('guidemovie', kwargs={'pk': self.sblock.pk}), {'page': '0'})
         self.assertEqual(response.status_code, 200)
+
+
+class TestRobotsTxt(TestCase):
+
+    def test_robots_txt(self):
+        response = self.client.get('/robots.txt')
+
+        self.assertEqual(200, response.status_code)
+        self.assertEqual('text/plain', response['Content-Type'])
+        lines = response.content.decode().splitlines()
+        self.assertIn('User-agent: *', lines)
+        self.assertIn('Disallow: /visibility_plot/', lines)
+        self.assertIn('Disallow: /target/*/lc/', lines)

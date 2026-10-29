@@ -17,7 +17,7 @@ from django.urls import path, re_path
 from django.contrib.staticfiles import views
 from django.contrib import admin
 from django.contrib.auth.views import LoginView, LogoutView
-from django.views.generic import ListView
+from django.views.generic import ListView, TemplateView
 
 from core.models import Body, Block, SourceMeasurement, SuperBlock, StaticSource
 from core.views import BodySearchView, BodyDetailView, BlockDetailView, ScheduleParameters, \
@@ -42,6 +42,7 @@ admin.autodiscover()
 
 urlpatterns = [
     path('', home, name='home'),
+    path('robots.txt', TemplateView.as_view(template_name='robots.txt', content_type='text/plain'), name='robots'),
     # path('makeplot/', make_plot, name='makeplot'),
     # path('plotframe/', TemplateView.as_view(template_name='core/frame_plot.html')),
     path('make-standards-plot/', make_standards_plot, name='make-standards-plot'),

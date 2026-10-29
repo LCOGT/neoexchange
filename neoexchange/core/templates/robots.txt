@@ -1,0 +1,13 @@
+User-agent: *
+# Pages that query JPL HORIZONS or generate plots/movies on every request
+Disallow: /visibility_plot/
+Disallow: /target/*/lc/
+Disallow: /target/*/spectra/
+Disallow: /target/*/visibility/
+Disallow: /block/*/spectra/
+Disallow: /block/*/guidemovie/
+Disallow: /make-
+Disallow: /ephemeris/
+Disallow: /ptrneos/
+Disallow: /admin/
+Disallow: /accounts/
