@@ -6,6 +6,11 @@ Portal for scheduling observations of NEOs (and other Solar System objects) usin
 
 ## History
 
+### 3.17.4
+* Stop reporting Http404s to Rollbar 
+* Add robots.txt to keep crawlers off HORIZONS-backed and plot pages
+* Return None instead of raising when JPL HORIZONS returns an HTTP error (Fixes #677)
+
 ### 3.17.3
 * Add fix for attempted SQL injection attacks through the paginator.
 
