@@ -96,6 +96,12 @@ def run_process(process):
 
     if failure_message is not None:
         logger.error('task failed: {}'.format(failure_message))
+        # The full message is in the log above; the model field is a bounded CharField and
+        # full_clean() in save() rejects anything longer, which would leave the process
+        # stuck in its previous status instead of 'failed'.
+        max_length = process._meta.get_field('failure_message').max_length
+        if len(failure_message) > max_length:
+            failure_message = failure_message[:max_length-3] + '...'
         process.failure_message = failure_message
         process.status = ASYNC_STATUS_FAILED
         process.save()
