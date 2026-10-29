@@ -41,6 +41,7 @@ class Command(BaseCommand):
         parser.add_argument('datadir', action="store", default=None, help='Path for processed data (e.g. /data/eng/rocks)')
         parser.add_argument('--filter', type=str, default='', help='Filter to analyze. Default is all unique filters')
         parser.add_argument('--execute', action="store_true", help="Whether to execute the subtraction")
+        parser.add_argument('--filename', action="store", help="Specific frame to subtract (substring of the e92 filename, e.g. coj2m002-ep08-20260717-0063)")
 
     def handle(self, *args, **options):
         warnings.simplefilter("ignore", FITSFixedWarning)
@@ -134,6 +135,11 @@ class Command(BaseCommand):
 
                 ## Find and process science frames
                 sci_files = sorted(glob(sci_dir + f'{frame.filename[0:14]}*e92.fits'))
+                if options['filename']:
+                    sci_files = [sci_file for sci_file in sci_files if options['filename'] in os.path.basename(sci_file)]
+                    if len(sci_files) == 0:
+                        self.stdout.write(f"No e92 frames matching '{options['filename']}' found in {sci_dir}")
+                        continue
                 self.stdout.write(f"Found {len(sci_files)} e92 frames with correct rootname in {sci_dir}, processing using {os.path.basename(dest_ref_name)}")
                 start = time.time()
                 if options['execute']:
