@@ -172,6 +172,12 @@ ROLLBAR = {
     'access_token': os.environ.get('ROLLBAR_TOKEN',''),
     'environment' : os.environ.get('ROLLBAR_ENVIRONMENT', rollbar_default_env),
     'root': BASE_DIR,
+    # Crawlers enumerating /target/<id>/, /block/<id>/ etc. generate a flood of
+    # 404s; they're not server faults so don't report them (pyrollbar's
+    # default is to send them as warnings).
+    'exception_level_filters': [
+        ('django.http.Http404', 'ignored'),
+    ],
 }
 rollbar.init(**ROLLBAR)
 

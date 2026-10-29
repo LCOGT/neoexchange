@@ -9337,3 +9337,14 @@ class TestRobotsTxt(TestCase):
         self.assertIn('User-agent: *', lines)
         self.assertIn('Disallow: /visibility_plot/', lines)
         self.assertIn('Disallow: /target/*/lc/', lines)
+
+
+class TestRollbar404Filter(SimpleTestCase):
+
+    def test_http404_ignored(self):
+        import rollbar
+        self.assertTrue(rollbar._is_ignored(Http404('No Minor Body found matching the query')))
+
+    def test_other_exceptions_reported(self):
+        import rollbar
+        self.assertFalse(rollbar._is_ignored(ValueError('real problem')))
