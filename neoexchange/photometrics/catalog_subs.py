@@ -129,7 +129,7 @@ def get_vizier_catalog_table(ra, dec, set_width, set_height, cat_name="UCAC4", s
         else:
             query_service = Vizier(row_limit=set_row_limit, column_filters={"r2mag": rmag_limit, "r1mag": rmag_limit}, columns=['RAJ2000', 'DEJ2000', 'r2mag', 'fl'])
 
-        vizier_servers_list = ['vizier.cfa.harvard.edu', 'vizier.cds.unistra.fr', 'vizier.nao.ac.jp', 'vizier.hia.nrc.ca'] # Preferred first: nearest, then the primary; the other mirrors are less reliable
+        vizier_servers_list = ['vizier.cfa.harvard.edu', 'vizier.cds.unistra.fr', 'vizier.idia.ac.za', 'vizier.nao.ac.jp', 'vizier.hia.nrc.ca'] # Preferred first: nearest, then the primary, then the CDS-run IDIA mirror; NAO and HIA are less reliable
         query_service.TIMEOUT = 60
         # Work along the mirror list on a connection/timeout error or an empty answer. An empty
         # answer from every mirror is left to the catalog-fallback logic below; only a failure

@@ -946,7 +946,7 @@ class TestVizierFailover(SimpleTestCase):
     """get_vizier_catalog_table() should work along the mirror list when a server
     fails or answers empty, and keep using the server that answered."""
 
-    servers = ('vizier.cfa.harvard.edu', 'vizier.cds.unistra.fr', 'vizier.nao.ac.jp', 'vizier.hia.nrc.ca')
+    servers = ('vizier.cfa.harvard.edu', 'vizier.cds.unistra.fr', 'vizier.idia.ac.za', 'vizier.nao.ac.jp', 'vizier.hia.nrc.ca')
 
     def setUp(self):
         # astroquery.vizier.Vizier is an instance; get_vizier_catalog_table() calls it to make
@@ -988,7 +988,7 @@ class TestVizierFailover(SimpleTestCase):
 
     def test_all_mirrors_unreachable_raises(self):
         from requests.exceptions import ConnectionError
-        fake = self.scripted_query([self.connect_timeout, self.read_timeout, self.connect_timeout, ConnectionError("refused")])
+        fake = self.scripted_query([self.connect_timeout, self.read_timeout, self.connect_timeout, self.read_timeout, ConnectionError("refused")])
         with patch.object(self.Vizier, 'query_region', new=fake), \
                 self.assertRaises(ConnectionError) as cm:
             get_vizier_catalog_table(228.33, 38.40, "4.5m", "3.0m", "GAIA-DR3")
@@ -1006,13 +1006,13 @@ class TestVizierFailover(SimpleTestCase):
         self.assertEqual(list(self.servers[:2]), [server for server, _ in self.calls])
 
     def test_empty_everywhere_falls_back_to_other_catalog_on_same_server(self):
-        fake = self.scripted_query([[], [], [], [], self.make_result(4)])
+        fake = self.scripted_query([[], [], [], [], [], self.make_result(4)])
         with patch.object(self.Vizier, 'query_region', new=fake):
             cat_table, cat_name = get_vizier_catalog_table(228.33, 38.40, "4.5m", "3.0m", "GAIA-DR3")
 
         self.assertEqual('PPMXL', cat_name)
         self.assertEqual(4, len(cat_table))
-        self.assertEqual(5, len(self.calls))
+        self.assertEqual(6, len(self.calls))
         self.assertEqual((self.servers[-1], 'I/317'), self.calls[-1])
 
 
