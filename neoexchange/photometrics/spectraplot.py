@@ -151,9 +151,12 @@ def pull_data_from_spectrum(spectra):
         banzai_spectrum = hdul['SPECTRUM'].data
         hdr = hdul['PRIMARY'].header
 
-        yyy = banzai_spectrum['flux']
-        err = banzai_spectrum['fluxerror']
-        lam = banzai_spectrum['wavelength']
+        # Current banzai-floyds pads the ends with NaN (mask=1) points. Left in, smooth()
+        # and the cubic interp1d in spectrum_plot() turn the whole reflectance spectrum NaN.
+        good = np.isfinite(banzai_spectrum['flux']) & np.isfinite(banzai_spectrum['fluxerror'])
+        yyy = banzai_spectrum['flux'][good]
+        err = banzai_spectrum['fluxerror'][good]
+        lam = banzai_spectrum['wavelength'][good]
     elif hdul[0].data is not None and hdul[0].data.ndim == 3:
         # Old style FLOYDS-IRAF multispec (bands, apertures, pixels)
         data = hdul[0].data

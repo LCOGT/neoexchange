@@ -148,6 +148,36 @@ class TestReadSpectra(TestCase):
         assert_quantity_allclose(y_data[-1], exp_y, rtol=1e-6)
         assert_quantity_allclose(err_data[-1], exp_err, rtol=1e-6)
 
+    def _make_nan_padded_banzai(self):
+        nan_fitsfile = os.path.join(self.test_dir, 'test_nanpad-e91-1d.fits')
+        with fits.open(self.banzai_fitsfile) as hdul:
+            for col in ('flux', 'fluxerror'):
+                hdul['SPECTRUM'].data[col][:5] = np.nan
+                hdul['SPECTRUM'].data[col][-5:] = np.nan
+            hdul.writeto(nan_fitsfile)
+        return nan_fitsfile
+
+    def test_read_banzai_fits_nan_padded(self):
+        nan_fitsfile = self._make_nan_padded_banzai()
+
+        with self.settings(MEDIA_ROOT=self.test_dir):
+            x_data, y_data, hdr, err_data = pull_data_from_spectrum(nan_fitsfile)
+
+        self.assertEqual(2367 - 10, len(x_data))
+        self.assertEqual(len(x_data), len(y_data))
+        self.assertEqual(len(x_data), len(err_data))
+        self.assertTrue(np.all(np.isfinite(y_data)))
+        self.assertTrue(np.all(np.isfinite(err_data)))
+
+    def test_reflectance_banzai_nan_padded(self):
+        nan_fitsfile = self._make_nan_padded_banzai()
+
+        with self.settings(MEDIA_ROOT=self.test_dir):
+            label, refl, wav, err = spectrum_plot(nan_fitsfile, analog=nan_fitsfile)
+
+        self.assertTrue(np.all(np.isfinite(refl)))
+        self.assertAlmostEqual(1.0, np.median(refl), 2)
+
     def test_banzai_old_scale_faint_not_normalized(self):
         # A faint target in pre-0.21.0 units has a median inside the 'Normalized' range
         flux, error = get_y_units(np.full(10, 0.5), 'products/faint-e91-1d.fits.fz', np.full(10, 0.1))
