@@ -31,7 +31,7 @@ into `pipelines` (9d1f2cfa), so the "committed" and "apophis2" descriptions now 
    `proc-zeropoint` updates `L1ZP`, and HOTPANTS copies that stale header into e93. This is the "smooth" orange series.
    `proc-zeropoint` now writes the calibration into the check images too. The existing e93 files, Frames and tables,
    including this Block's, are unchanged until the data repair (Fix 8). Fix 4(a) landed 2026-10-15 and Fix 1 on
-   2026-10-22; the Fix 8 command is written (2026-10-23) and waits to be run.
+   2026-10-22; the Fix 8 command was written 2026-10-23 and run on this Block on 2026-10-29 (344/344 repaired).
 4. **The target photometry and its zeropoint use different apertures.** The e93 target photometry uses **5″**
    apertures (`perform_aper_photometry` works in arcsec). Measured from the stars on each frame:
    - **Now (BANZAI zeropoint):** Didymos is too bright by 0.034–0.055 mag (median 0.043). That is almost constant: it
@@ -175,8 +175,8 @@ growth to choose the aperture.
 > and `L1ZPSRC`. 12fbc1d3 makes `updateFITScalib` write `0.0` values; it skipped them as falsy, so `L1COLERR=0.0`
 > from a constant-colour run never reached the files. Strictly, the check images carry whatever the e92 header held
 > when the e92 extract ran: BANZAI's values on a first pass, as here, or a previous NEOx pass's on a reprocess. The
-> e93 files and Frames made before this, including this Block's, still need the Fix 8 repair (Fix 4(a) and
-> Fix 1 are done; the Fix 8 command `fix_e93_zeropoints` is written, not yet run).
+> e93 files and Frames made before this needed the Fix 8 repair; it was run on this Block on 2026-10-29 (Fix 4(a),
+> Fix 1 and Fix 8 are all done for Blocks 35906 and 36005; the other DIA blocks were scanned and ruled out of scope).
 > **Fix 1 done 2026-10-22:** `updateFITSdia(fits_file, sci_file=None)` copies the e92's `L1ZP`, `L1ZPERR`,
 > `L1ZPSRC`, `L1ZPAPER`, `L1COLORU`, `L1COLOR`, `L1COLERR` and `L1PHTCAT` into the e93 before the e93 Frame is
 > made, so a subtraction run from a check image written before Fix 2 no longer inherits BANZAI's zeropoint.
@@ -698,7 +698,7 @@ is close to S/N-optimal.
 
 ### Data repair (after Fixes 1–2 **and** Fix 4)
 
-- [x] **Fix 8 — repair command.** **Written 2026-10-23, not yet run on data:**
+- [x] **Fix 8 — repair command.** **Written 2026-10-23 (38609203); run on Block 35906 2026-10-29, see below:**
   `fix_e93_zeropoints <datadir> --block <id> [--dry-run]` (`sync_e93_calibration()` in `core/views.py`). For each e93
   `Frame` of the Block it finds the e92 `Frame` (`-e93` → `-e92`) and copies `zeropoint`, `zeropoint_err`,
   `zeropoint_src`, the colour fields and `photometric_catalog` into the e93 Frame and, via `updateFITScalib`, into the
@@ -710,8 +710,27 @@ is close to S/N-optimal.
   `zeropoint` ≤ 0), missing e92 Frames and missing files are reported per frame, not skipped silently; a frame whose
   aperture cannot be derived is written without `L1ZPAPER` and flagged (aperture photometry then needs an explicit
   radius). Tests: `core/tests/test_fix_e93_zeropoints.py` (18). The e92 check images (`.bkgsub`/`.rms`/`.apers`/
-  `.bkgd`) are not touched; Fix 1 makes them irrelevant for new subtractions. **To do:** run it on every
-  DIA-processed block (35906 first), then Fix 9.
+  `.bkgd`) are not touched; Fix 1 makes them irrelevant for new subtractions.
+  **Run 2026-10-29 on Block 35906** (`/apophis/eng/rocks/Hera/20260712/`): 344 of 344 e93 Frames repaired (343 from
+  the 2026-10-28 dry run plus the re-reduced ep08-0109, Fix 21). Every `L1ZPAPER` was derived from the LDAC's
+  `SEXAPED1` (6.0 px); none of the files had it before. Corrections are −0.17 to −0.33 mag for ep06 and −0.05 to
+  −0.19 mag for ep08/ep09. Verified independently afterwards: all 344 e92/e93 Frame pairs agree on
+  zeropoint/err/src, every e93 Frame now has `photometric_catalog = PS1`, and all 344 e93 + 344 `.rms` headers match
+  their e92 with `L1ZPAPER = 6.0` in every e92, e93 and rms file. The idempotency `--dry-run` afterwards reported
+  344 × old == new and no "derived" lines.
+  **Run 2026-10-29 on Block 36005** (`Hera/20260717/`): 36 of 36 repaired, same pattern, and the second dry run is
+  clean. 21 of its 36 e91s have `WCSERR = 4` (all ep07, all ep08, ep09 0056/0057/0063; ep06 none): BANZAI's WCS
+  solve failed, so those e91s carry no `L1ZP` at all and the e93s inherited the `-99.0` placeholder, i.e. they were
+  uncalibrated rather than mis-calibrated. NEOx's SCAMP fit succeeded on all 36 (GAIA-DR3) with PS1 zeropoints of
+  0.011–0.015 mag error, so the repaired e93s do not depend on the BANZAI result. Corrections for the 15 frames
+  that did have a BANZAI zeropoint are −0.22 to −0.52 mag.
+  **Scope closed 2026-10-30.** A read-only scan of the other blocks with e93 Frames: the 2024-07 Didymos blocks
+  (30225/30258/30324) are DB-consistent but their e93 *files* lack `L1ZP`/`L1ZPSRC`/`L1ZPAPER`; 28950 (2024-06-10)
+  has 12 repairable + 34 blocked and only 46 of 90 e93 files on disk; the short 2026-07-08 blocks 35736/35772/35738
+  have 14 repairable + 7 blocked. "Blocked" means the e92 itself fell back to a BANZAI zeropoint (34/181 in 28950,
+  9/515 in 30225, 81/517 in 30258, all 12 in 35738), so Fix 8 reports rather than repairs them; a `proc-zeropoint`
+  rerun would be needed first. Decision: not worth it; the 2024 data and the short 2026 blocks are out of scope
+  for the Hera program, so Fix 8 is complete for the two blocks that matter. Next: Fix 9.
 - [ ] **Fix 21 — frames lost to the config-setup race; re-reduce them.** The 2026-10-28 dry run of Fix 8 showed
   Block 35906 has no e92/e93 for `coj2m002-ep08-20260712-0109`. The dramatiq log (`dramatiq_20260625.log`, 13 Jul
   21:12:08) shows why: `setup_working_dir()` did `unlink` + `symlink` of `sextractor_neox_ldac.conf` in the shared
@@ -720,18 +739,45 @@ is close to S/N-optimal.
   SExtractor, and every later step failed on the missing catalog. `proc-extract` nonetheless recorded `complete`
   (only the scamp step shows `failed`), so nothing flagged it. 14 such errors in the 2026 worker logs; among the 2026
   DIA blocks the only e91s without an e92 are this one and `coj2m002-ep08-20260717-0063` (Block 36005).
-  **Code fixed 2026-10-28 (uncommitted):** `setup_working_dir()` leaves an identical copy alone and otherwise copies to
+  **Code fixed 2026-10-28 (1f312be6):** `setup_working_dir()` leaves an identical copy alone and otherwise copies to
   a temporary name and `os.replace()`s it into place (atomic; a stale symlink is replaced, not written through), with
   a threaded test; `SExtractorProcessPipeline.do_pipeline` raises `AsyncError` on a non-zero SExtractor or
   missing-image status so the step is recorded `failed` and appears in `run_pipeline`'s summary.
-  **To do:** `run_pipeline --overwrite` + HOTPANTS for the two e91s, then `fix_e93_zeropoints` again on 35906 and 36005.
-- [ ] **Fix 9:** regenerate the `aper_p_Didymos*.ecsv` tables only after Fix 4. Applying the corrected e92 zeropoint
+  **Re-reduced 2026-10-29:** both frames via `run_pipeline --filename <frame> --overwrite` (option added in ed807851) and
+  `make_subtractions <reqnum> <dir> --execute --filename <frame>` (c18da4b2), run into `Hera/<date>/` as the originals
+  were. e92 and e93 Frames exist, and the e93s already carry the e92 calibration (L1ZP 23.9339/24.1550, L1ZPAPER 6.0)
+  through the Fix 1 path, so Fix 8 has nothing to repair for them. Side findings fixed on the way: a failure message
+  longer than 255 characters raised a `ValidationError` in `AsyncProcess.save()` and left the step un-failed
+  (d97a6187, now truncated); the Vizier mirror failover could never trigger because `ConnectTimeout` is a
+  `ConnectionError` (5a74eceb, now walks CfA → CDS → IDIA → NAO → HIA; IDIA added in 3a6d60b6). The first rerun
+  attempt needed Vizier only because it used the default `--tempdir Temp_cvc`; with `--tempdir Hera/<date>` the cached
+  `GAIA-DR3_*.cat` is reused and no network is needed.
+  `fix_e93_zeropoints` was then run on 35906 and 36005 (Fix 8 entry). **To do:** delete the stray `Temp_cvc/` dirs
+  under the 20260712 Field#06 and 20260717 Field#11 directories.
+- [x] **Fix 9:** regenerate the `aper_p_Didymos*.ecsv` tables only after Fix 4. Applying the corrected e92 zeropoint
   to the existing 5″ apertures would introduce a 0.09–0.27 mag (0.18 peak-to-peak) seeing-correlated bias (§4).
+  **Done 2026-10-30** (output in `/apophis/tlister/hera_pipe_aper_phot_35906`):
+  `pipeline_aper_photometry /apophis/eng/rocks/Hera/20260712/ --block 35906 --account_zps` with no radius, so every
+  frame was measured with its `L1ZPAPER` aperture (6.0 px = 1.60–1.61″; 0 rows where the aperture differs from the
+  zeropoint's). Table `didymos_photometry/aper_photometry_35906_rL1ZPAPER.ecsv`, 344 rows, time-sorted: 86 each of
+  ep06 gp, ep07 rp, ep08 ip, ep09 zs, including the re-reduced ep08-0109. Zeropoints are all NEOx/PS1 (gp 24.41–24.69,
+  rp 24.64–24.86, ip 23.98–24.18, zs 23.78–23.94); against the old rp table they are −0.047 to −0.230 (median −0.106),
+  i.e. the Fix 8 correction. Median mags gp 20.81, rp 20.27, ip 20.07, zs 20.11; per-filter scatter 0.06–0.11 mag;
+  median error 0.03 (rp) to 0.08 (zs); median SNR 37 (rp) to 13 (zs). New minus (old instrumental + old ZP) for the
+  rp frames: median +0.025, range −0.10 to +0.21, not a simple function of FWHM. One bad row, `ep07-0090`: aperture
+  sum −1365 (the old table had −8769 there too), mag NaN. Its e93 is a failed subtraction — 14 % of pixels below
+  −1000 and the 512-px quadrant holding Didymos has median −4685; the e92 itself has `L1SIGMA` 97 against 47 for its
+  neighbours and `L1MEDIAN` 801 against 714, so something (cloud, gradient) hit that exposure. Exclude it from the
+  lightcurve. The negative `magerr`/`SNR` printed for that row are cosmetic (no guard for a negative sum).
 
 ### Documentation
 
-- [ ] **Fix 10:** in `2026_07_12_photometry_summary.md` §1, change the aperture radii from "px" to "arcsec" (13/8/5/4″).
-  Do the same for the notebooks' "pixels"/"px" print labels (§7).
+- [x] **Fix 10:** in `2026_07_12_photometry_summary.md` §1, change the aperture radii from "px" to "arcsec" (13/8/5/4″).
+  Do the same for the notebooks' "pixels"/"px" print labels (§7). **Done 2026-10-30:** summary §1 (intro, SNR table)
+  and take-away 2 now say ″ with the pixel equivalents; in `2026_07_12_photometry.ipynb` the four plot titles gained
+  ″, the r = 13″ plot title "15" became "13″", and the "pixels"/"px" print labels became "arcsec" (in the stored
+  outputs too — the numbers are unchanged, only the unit word was wrong); `2026_07_12_photometry_local.ipynb` already
+  had ″ in its titles and got the same "15"→"13″" and "px"→"arcsec" changes. Nothing was re-run.
 
 ### Moving-target photometry (§6)
 

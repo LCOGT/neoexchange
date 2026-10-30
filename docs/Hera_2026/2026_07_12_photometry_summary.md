@@ -14,16 +14,16 @@ Source: `docs/Hera_2026/2026_07_12_photometry.ipynb`
 
 ### 1. Aperture size on the e93 (subtracted) frames — cells 2–14
 
-Aperture photometry on the subtracted frames at radii 13, 8, 5 and 4 px. (The r = 13 light-curve plot is mislabelled "Aperture radius = 15".)
+Aperture photometry on the subtracted frames at radii 13, 8, 5 and 4″ (48.7, 30.0, 18.7 and 15.0 px at 0.267″/px; see the zeropoint analysis §7 — the notebook labels said "px" but the code applies the radius in arcsec). The r = 13″ light-curve plot was titled "Aperture radius = 15"; the labels in both notebooks were corrected 2026-10-30.
 
 Using the table's `SNR` column:
 
 | radius | mean SNR |
 |--------|----------|
-| 13 px  | 3.7      |
-| 8 px   | 7.5      |
-| 5 px   | 13.4     |
-| 4 px   | ~15–21 per frame |
+| 13″    | 3.7      |
+| 8″     | 7.5      |
+| 5″     | 13.4     |
+| 4″     | ~15–21 per frame |
 
 Sky / subtraction-residual noise dominates, so smaller apertures win. A second "rough" SNR estimate, `apsum / sqrt(apsum_err)`, gives 14 / 22 / 31 for r = 13 / 8 / 5 — that formula is not really an SNR, but the trend is the same.
 
@@ -72,7 +72,7 @@ Overlay of DB frame ZPs, exposure-time-corrected ZPs (+2.5 log10 210), e93 r = 5
 ## Take-aways for reducing light-curve scatter
 
 1. The dominant driver of e93 light-curve scatter is **bad subtractions** (~20 % of frames), not photon noise. Catching them needs `badness_threshold ≈ 400`, not the default 1000 — and a *negative*-mean criterion may be more diagnostic than the current one.
-2. Use a **4–5 px aperture** on the subtracted frames; 13 px is ~3.5× worse in SNR.
+2. Use a **4–5″ aperture** on the subtracted frames; 13″ is ~3.5× worse in SNR. (All four are far larger than the PSF; the matched 6 px = 1.6″ aperture of Fix 4/Fix 9 supersedes this.)
 3. The last ~15 frames (≥ 0128) degrade with airmass, and ~18 frames have star-contamination flags in the e92 photometry. Both sets overlap with the e93 failures, so the same frames are hurting both reduction routes.
 4. Intended follow-ups listed in cell 20 that were never done:
    - per-frame SNR and mag-scatter plots from NEOx aperture photometry
