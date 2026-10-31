@@ -22,6 +22,8 @@ from glob import glob
 from math import degrees
 
 from django.test import TestCase, SimpleTestCase, override_settings, RequestFactory, tag
+from django.contrib.auth.models import AnonymousUser
+from django.template.loader import render_to_string
 from django.forms.models import model_to_dict
 from django.conf import settings
 from django.http import Http404
@@ -9348,3 +9350,49 @@ class TestRollbar404Filter(SimpleTestCase):
     def test_other_exceptions_reported(self):
         import rollbar
         self.assertFalse(rollbar._is_ignored(ValueError('real problem')))
+
+
+class TestLoginRedirectToPreviousPage(TestCase):
+
+    def setUp(self):
+        self.factory = RequestFactory()
+        self.password = 'simpson'
+        self.user = User.objects.create_user(username='bart', password=self.password, email='bart@simpson.com')
+
+    def _render_header_login_link(self, path):
+        request = self.factory.get(path)
+        request.user = AnonymousUser()
+        soup = BeautifulSoup(render_to_string('base.html', request=request), 'html.parser')
+        return soup.find('a', id='login-link')['href']
+
+    def test_login_link_includes_next(self):
+        href = self._render_header_login_link('/lookproject/')
+
+        self.assertEqual(reverse('auth_login') + '?next=/lookproject/', href)
+
+    def test_login_link_next_keeps_query_string(self):
+        href = self._render_header_login_link('/block/list/?page=2')
+
+        self.assertEqual(reverse('auth_login') + '?next=/block/list/%3Fpage%3D2', href)
+
+    def test_login_link_no_next_on_login_page(self):
+        href = self._render_header_login_link(reverse('auth_login'))
+
+        self.assertEqual(reverse('auth_login'), href)
+
+    def test_login_link_no_next_on_logout_page(self):
+        href = self._render_header_login_link(reverse('auth_logout'))
+
+        self.assertEqual(reverse('auth_login'), href)
+
+    def test_login_redirects_to_next(self):
+        response = self.client.post(reverse('auth_login'),
+                                    {'username': self.user.username, 'password': self.password, 'next': '/lookproject/'})
+
+        self.assertRedirects(response, '/lookproject/', fetch_redirect_response=False)
+
+    def test_login_ignores_offsite_next(self):
+        response = self.client.post(reverse('auth_login'),
+                                    {'username': self.user.username, 'password': self.password, 'next': 'https://evil.example.com/'})
+
+        self.assertRedirects(response, settings.LOGIN_REDIRECT_URL, fetch_redirect_response=False)

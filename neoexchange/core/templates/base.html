@@ -78,7 +78,8 @@
                                                                 </li>
                                                                 {% else %}
                                                                 <li>
-                                                                        <a target="_parent" href="{% url 'auth_login' as loginurl %}{{ loginurl }}">Login</a>
+                                                                        {% url 'auth_login' as loginurl %}{% url 'auth_logout' as logouturl %}
+                                                                        <a target="_parent" href="{{ loginurl }}{% if request.path != loginurl and request.path != logouturl %}?next={{ request.get_full_path|urlencode }}{% endif %}" id="login-link">Login</a>
                                                                 </li>
                                                                 {% endif %}
                                                         </ul>
