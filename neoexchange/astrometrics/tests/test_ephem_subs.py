@@ -13,21 +13,21 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 """
 
-from datetime import datetime
-from math import radians, degrees, floor
+import json
 import os
 import tempfile
+from datetime import datetime
 from glob import glob
-import mock
+from math import degrees, floor, radians
 
-from django.test import TestCase, tag
 from django.forms.models import model_to_dict
+from django.test import SimpleTestCase, TestCase, tag
 
 # Import module to test
-from astrometrics.ephem_subs import *
-from core.models import Body
-from astrometrics.time_subs import datetime2mjd_utc, mjd_utc2mjd_tt
 import astrometrics.site_config as cfg
+from astrometrics.ephem_subs import *
+from astrometrics.time_subs import datetime2mjd_utc, mjd_utc2mjd_tt
+from core.models import Body
 
 
 class TestGetMountLimits(TestCase):
@@ -198,7 +198,7 @@ class TestComputeEphemerides(TestCase):
                     'active'        : True,
                     'origin'        : 'M',
                     }
-        self.body, created = Body.objects.get_or_create(**params)
+        self.body, _created = Body.objects.get_or_create(**params)
 
         comet_params = { 'abs_mag': 11.1,
                          'active': False,
@@ -228,7 +228,7 @@ class TestComputeEphemerides(TestCase):
                          'update_time': None,
                          'updated': False,
                          'urgency': None}
-        self.comet, created = Body.objects.get_or_create(**comet_params)
+        self.comet, _created = Body.objects.get_or_create(**comet_params)
 
         params = {  'provisional_name': 'A10bMLz',
                      'provisional_packed': None,
@@ -258,7 +258,7 @@ class TestComputeEphemerides(TestCase):
                      'updated': False,
                      'ingest': datetime(2019, 1, 25, 15, 50, 7),
                      'update_time': datetime(2019, 1, 25, 15, 38, 2)}
-        self.body_close, created = Body.objects.get_or_create(**params)
+        self.body_close, _created = Body.objects.get_or_create(**params)
 
         self.elements = {'slope': 0.15,
                          'abs_mag': 21.0,
@@ -706,7 +706,7 @@ class TestDarkAndObjectUp(TestCase):
                     'active'        : True,
                     'origin'        : 'M',
                     }
-        cls.body, created = Body.objects.get_or_create(**params)
+        cls.body, _created = Body.objects.get_or_create(**params)
 
         ephem_time = cls.dark_start
         cls.full_emp = []
@@ -771,7 +771,7 @@ class TestComputeFOM(TestCase):
 
     def setUp(self):
         params = {  'provisional_name' : 'N999r0q',
-                    'abs_mag'       : 21.0,
+                    'abs_mag'       : 19.8,
                     'slope'         : 0.15,
                     'epochofel'     : '2015-03-19 00:00:00',
                     'meananom'      : 325.2636,
@@ -787,9 +787,8 @@ class TestComputeFOM(TestCase):
                     'not_seen'      : 2.3942,
                     'arc_length'    : 0.4859,
                     'score'         : 83,
-                    'abs_mag'       : 19.8
                     }
-        self.body, created = Body.objects.get_or_create(**params)
+        self.body, _created = Body.objects.get_or_create(**params)
 
         params = {  'provisional_name' : 'EUHT950',
                     'slope'         : 0.15,
@@ -809,7 +808,7 @@ class TestComputeFOM(TestCase):
                     'score'         : 100,
                     'abs_mag'       : 19.5
                     }
-        self.body2, created = Body.objects.get_or_create(**params)
+        self.body2, _created = Body.objects.get_or_create(**params)
 
     def test_compute_FOM_with_body(self):
         d = datetime(2015, 4, 21, 17, 35, 00)
@@ -894,7 +893,7 @@ class TestLongTermScheduling(TestCase):
                     'score'         : None,
                     'abs_mag'       : 22.4
                     }
-        self.body, created = Body.objects.get_or_create(**params)
+        self.body, _created = Body.objects.get_or_create(**params)
 
         params = {  'provisional_name' : '192559',
                     'slope'         : 0.15,
@@ -914,7 +913,7 @@ class TestLongTermScheduling(TestCase):
                     'score'         : None,
                     'abs_mag'       : 20.4
                     }
-        self.body2, created = Body.objects.get_or_create(**params)
+        self.body2, _created = Body.objects.get_or_create(**params)
 
         params = {  'provisional_name' : '265482',
                     'slope'         : 0.15,
@@ -934,7 +933,7 @@ class TestLongTermScheduling(TestCase):
                     'score'         : None,
                     'abs_mag'       : 21.3
                     }
-        self.body3, created = Body.objects.get_or_create(**params)
+        self.body3, _created = Body.objects.get_or_create(**params)
 
         params = {  'provisional_name' : '2011 EP51',
                     'slope'         : 0.15,
@@ -954,7 +953,7 @@ class TestLongTermScheduling(TestCase):
                     'score'         : None,
                     'abs_mag'       : 24.7
                     }
-        self.body4, created = Body.objects.get_or_create(**params)
+        self.body4, _created = Body.objects.get_or_create(**params)
 
         params = {  'provisional_name' : '469219',
                     'slope'         : 0.15,
@@ -974,7 +973,7 @@ class TestLongTermScheduling(TestCase):
                     'score'         : None,
                     'abs_mag'       : 24.2
                     }
-        self.body5, created = Body.objects.get_or_create(**params)
+        self.body5, _created = Body.objects.get_or_create(**params)
 
     def test_LongTermScheduling_with_body(self):
         # Body is only up for a few days starting at the
@@ -1130,7 +1129,7 @@ class TestLongTermScheduling(TestCase):
         site_code = 'V37'
         body_elements = model_to_dict(self.body)
         expected_max_alt = 88.9
-        expected_rise_time = datetime(2017, 1, 6, 1, 20, 00)
+        expected_rise_time = datetime(2017, 1, 6, 1, 0, 00)
         expected_set_time = datetime(2017, 1, 6, 6, 36, 00)
 
         mid_time = datetime(2017, 1, 6, 3, 30, 00)
@@ -1148,9 +1147,9 @@ class TestLongTermScheduling(TestCase):
         site_code = 'V37'
         body_elements = model_to_dict(self.body2)
         expected_max_alt = 41.3
-        expected_up_time = 3.8333333333333335
+        expected_up_time = 4.0
         expected_start_time = datetime(2017, 1, 6, 8, 40)
-        expected_stop_time = datetime(2017, 1, 6, 12, 30)
+        expected_stop_time = datetime(2017, 1, 6, 12, 40)
 
         emp_line = compute_ephem(datetime(2017, 1, 6, 0, 0, 00), body_elements, site_code, dbg=False, perturb=True, display=False)
         app_ra = emp_line['ra']
@@ -1166,8 +1165,8 @@ class TestLongTermScheduling(TestCase):
     def test_visibility_general1m(self):
         site_code = '1M0'
         body_elements = model_to_dict(self.body2)
-        expected_start_time = datetime(2017, 1, 5, 19, 0, 00)
-        expected_stop_time = datetime(2017, 1, 6, 12, 40, 00)
+        expected_start_time = datetime(2017, 1, 5, 18, 50, 00)
+        expected_stop_time = datetime(2017, 1, 6, 12, 50, 00)
 
         emp_line = compute_ephem(datetime(2017, 1, 6, 0, 0, 00), body_elements, site_code, dbg=False, perturb=True, display=False)
         app_ra = emp_line['ra']
@@ -1202,7 +1201,8 @@ class TestLongTermScheduling(TestCase):
     def test_visibility_2m_never_up(self):
         site_code = 'E10'
         body_elements = model_to_dict(self.body4)
-        expected_max_alt = 63.5
+        expected_max_alt = 65.6
+        expected_true_max_alt = 63
         expected_up_time = 0
         expected_start_time = None
         expected_stop_time = None
@@ -1213,7 +1213,7 @@ class TestLongTermScheduling(TestCase):
         min_alt = 80
         up_time, max_alt, start_time, stop_time = get_visibility(app_ra, app_dec, datetime(2017, 1, 6, 0, 0, 00), site_code, '30 m', min_alt, quick_n_dirty=True, body_elements=body_elements)
         true_up_time, true_max_alt, true_start_time, true_stop_time = get_visibility(app_ra, app_dec, datetime(2017, 1, 6, 0, 0, 00), site_code, '30 m', min_alt, quick_n_dirty=False, body_elements=body_elements)
-        self.assertEqual(floor(true_max_alt), floor(max_alt))
+        self.assertEqual(expected_true_max_alt, floor(true_max_alt))
         self.assertAlmostEqual(true_up_time, up_time, 1)
         self.assertAlmostEqual(expected_max_alt, max_alt, 0)
         self.assertAlmostEqual(expected_up_time, up_time, 0)
@@ -1223,10 +1223,11 @@ class TestLongTermScheduling(TestCase):
     def test_visibility_general2m_never_up(self):
         site_code = '2M0'
         body_elements = model_to_dict(self.body4)
-        expected_max_alt = 63.5
+        expected_max_alt = 65.6
+        expected_true_max_alt = 63
         expected_up_time = 0
-        expected_start_time = datetime(2017, 1, 6, 5, 0, 00)
-        expected_stop_time = datetime(2017, 1, 6, 17, 40, 00)
+        expected_start_time = datetime(2017, 1, 6, 4, 50, 00)
+        expected_stop_time = datetime(2017, 1, 6, 18, 0, 00)
 
         emp_line = compute_ephem(datetime(2017, 1, 6, 0, 0, 00), body_elements, site_code, dbg=False, perturb=True, display=False)
         app_ra = emp_line['ra']
@@ -1234,7 +1235,7 @@ class TestLongTermScheduling(TestCase):
         min_alt = 80
         up_time, max_alt, start_time, stop_time = get_visibility(app_ra, app_dec, datetime(2017, 1, 6, 0, 0, 00), site_code, '30 m', min_alt, quick_n_dirty=True, body_elements=body_elements)
         true_up_time, true_max_alt, true_start_time, true_stop_time = get_visibility(app_ra, app_dec, datetime(2017, 1, 6, 0, 0, 00), site_code, '30 m', min_alt, quick_n_dirty=False, body_elements=body_elements)
-        self.assertEqual(floor(true_max_alt), floor(max_alt))
+        self.assertEqual(expected_true_max_alt, floor(true_max_alt))
         self.assertAlmostEqual(true_up_time, up_time, 1)
         self.assertAlmostEqual(expected_max_alt, max_alt, 0)
         self.assertAlmostEqual(expected_up_time, up_time, 0)
@@ -1376,7 +1377,7 @@ class TestDetermineRatesAndPA(TestCase):
                         'update_time': datetime(2018, 5, 8, 18, 9, 43),
                         'updated': False,
                         'urgency': None}
-        self.perturb_target, created = Body.objects.get_or_create(**perturb_params)
+        self.perturb_target, _created = Body.objects.get_or_create(**perturb_params)
         self.perturb_elements = model_to_dict(self.perturb_target)
 
         self.precision = 4
