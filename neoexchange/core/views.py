@@ -5066,7 +5066,8 @@ def summarize_block_quality(dataroot, blocks, filters=None, frame_diagnostics=Fa
         if block_summary:
             # e91 count and the e92/e93 breakdown come from a single query
             neox_frames, num_e91, num_neox = find_frames(block,
-                frametype=[Frame.NEOX_RED_FRAMETYPE, Frame.NEOX_SUB_FRAMETYPE])
+                frametype=[Frame.BANZAI_RED_FRAMETYPE, Frame.NEOX_RED_FRAMETYPE, Frame.NEOX_SUB_FRAMETYPE])
+            num_e91 = num_neox.get(Frame.BANZAI_RED_FRAMETYPE, 0)
             num_e92 = num_neox.get(Frame.NEOX_RED_FRAMETYPE, 0)
             num_e93 = num_neox.get(Frame.NEOX_SUB_FRAMETYPE, 0)
 
@@ -5087,7 +5088,9 @@ def summarize_block_quality(dataroot, blocks, filters=None, frame_diagnostics=Fa
                        'block_length_hrs' : block_length_hrs,
                        'num_e91' : int(num_e91), 'num_e92' : num_e92, 'num_e93' : num_e93,
                        'filters' : {}}
-            for label, frametype in (('e92', Frame.NEOX_RED_FRAMETYPE), ('e93', Frame.NEOX_SUB_FRAMETYPE)):
+            for label, frametype in (('e91', Frame.BANZAI_RED_FRAMETYPE),
+                                     ('e92', Frame.NEOX_RED_FRAMETYPE),
+                                     ('e93', Frame.NEOX_SUB_FRAMETYPE)):
                 type_frames = [f for f in neox_frames if f.frametype == frametype]
                 if filters is not None:
                     type_frames = [f for f in type_frames if f.filter in filters]
@@ -5100,12 +5103,17 @@ def summarize_block_quality(dataroot, blocks, filters=None, frame_diagnostics=Fa
             end_str = block_end.strftime('%H:%M') if block_end else '-'
             print(f"{groupid} Block {block.id}: Req# {block.request_number} {block.site.upper()} "
                   f"{start_str}->{end_str} ({length_str}) #e91={num_e91:>4d} #e92={num_e92:>4d} #e93={num_e93:>4d}")
-            for label in ('e92', 'e93'):
+            line_width = 0
+            for label in ('e91', 'e92', 'e93'):
                 for obs_filter, stats in summary['filters'].get(label, {}).items():
-                    print(f"  {label} {obs_filter:<4s} n={stats['num_frames']:>3d} "
-                          f"astromOK={stats['num_good_astrometry']:>3d} zpOK={stats['num_good_zeropoint']:>3d} "
-                          f"FWHM={stats['fwhm_mean']:>6.3f} +/- {stats['fwhm_std']:<6.3f} "
-                          f"ZP={stats['zp_mean']:>7.4f} +/- {stats['zp_std']:<6.4f}")
+                    line = (f"  {label} {obs_filter:<4s} n={stats['num_frames']:>3d} "
+                            f"astromOK={stats['num_good_astrometry']:>3d} zpOK={stats['num_good_zeropoint']:>3d} "
+                            f"FWHM={stats['fwhm_mean']:>6.3f} +/- {stats['fwhm_std']:<6.3f} "
+                            f"ZP={stats['zp_mean']:>7.4f} +/- {stats['zp_std']:<6.4f}")
+                    line_width = max(line_width, len(line))
+                    print(line)
+                if line_width:
+                    print("-" * (line_width + 2))
 
         # --- Frame-level SCAMP diagnostics (needs data on disk) ----------------
         if frame_diagnostics:
