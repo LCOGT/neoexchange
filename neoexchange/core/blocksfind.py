@@ -1,15 +1,17 @@
 import logging
 import os
-from astropy.wcs import WCS, FITSFixedWarning, InvalidTransformError
+import warnings
+from datetime import datetime, timedelta
+
+import numpy as np
 from astropy.io import fits
 from astropy.time import Time
-from datetime import datetime,timedelta
-import warnings
-import calendar
-from photutils.centroids import centroid_sources, centroid_2dg
-import numpy as np
+from astropy.wcs import WCS, FITSFixedWarning
+from photutils.centroids import centroid_sources
+
 from astrometrics.ephem_subs import horizons_ephem
-from core.models import Body,Block,SuperBlock,Frame
+from core.models import Block, Body, Frame
+
 warnings.simplefilter('ignore', category=FITSFixedWarning)
 
 logger = logging.getLogger(__name__)
@@ -142,8 +144,7 @@ def blocks_summary(blocks):
     for block in blocks:
         sblock = block.superblock
         proposal_code = "none"
-        if sblock:
-            if sblock.proposal:
+        if sblock and sblock.proposal:
                 proposal_code=sblock.proposal.code
         print(f"{block.request_number}: {block.block_start}->{block.block_end} {block.num_exposures:>3d}x{block.exp_length}s observed={block.num_observed} {block.site.upper()} ({proposal_code})")
         red_frames = block.frame_set.filter(frametype=Frame.NEOX_RED_FRAMETYPE)
