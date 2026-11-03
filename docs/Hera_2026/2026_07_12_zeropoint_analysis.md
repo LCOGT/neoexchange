@@ -57,6 +57,13 @@ into `pipelines` (9d1f2cfa), so the "committed" and "apophis2" descriptions now 
      exposes a fixed radius with no unit.
    - **PhotPipe's curve of growth is sound for round sources, but not by default for this trailed target.** It chose
      5 px and accepted a 0.058 mag target-versus-star differential loss that varies with seeing.
+8. **Independent third zeropoint: Gaia DR3 synthetic photometry agrees (§9, added 2026-11-02).** A GSPC (SDSS r)
+   zeropoint fitted to the same e92 LDAC 6 px photometry on all 86 ep07 frames is **−0.0048 mag** from the NEOx
+   PS1 zeropoint with a frame-to-frame spread of only **0.0006 mag**. The offset is the PS1-vs-SDSS system
+   difference at the ~0.01 mag level GSPC is standardised to; the spread says the per-frame zeropoint variations
+   (24.79 → 24.86 → 24.64 over the night) are real transparency changes that an independent catalogue reproduces, so
+   zeropoint noise contributes ≲ 0.001 mag to the lightcurve scatter. BHTOM's CCDPhot, the original idea for this
+   check, is not usable (`bhtom_ccdphot_assessment.md`); GSPC is the calibration system it uses.
 
 ---
 
@@ -610,6 +617,63 @@ is close to S/N-optimal.
 - **FWHM definitions differ:** `Frame.fwhm` is 1.16× SExtractor `FWHM_IMAGE`, and PhotPipe's `FWHM"` column is
   different again (1.85″ for 0058, against 1.44″ `L1FWHM`). Don't mix them when modelling apertures.
 - **Notebook cell 43:** already fixed. `phot_times` now comes from `merged_table` after sorting by `julian_date`.
+
+## 9. Independent zeropoint check with Gaia DR3 synthetic photometry (2026-11-02)
+
+Motivation: a third zeropoint route, independent of Pan-STARRS, in case the agreement between NEOx (calviacat/PS1)
+and PhotPipe (PS1→SDSS) in §2 hides a shared problem. BHTOM's CCDPhot was assessed first and rejected
+(`bhtom_ccdphot_assessment.md`: closed server-side pipeline, proprietary-data terms, no per-star output, no
+2 m/MuSCAT registration); its calibration catalogue, Gaia DR3 Synthetic Photometry (GSPC, Gaia Collaboration
+2022, arXiv:2206.06215), can be used directly instead.
+
+**Method** (`combined_4band_20261102/scripts/gspc_zp.py` under `didymos_photometry/`):
+- GSPC from VizieR `I/360/syntphot` on the **IDIA mirror** (`vizier.idia.ac.za`; CDS and the CfA/NAO/HIA mirrors
+  were down): an 8′ cone at the field centre (240.238°, −22.241°) gives 278 sources, 257 after requiring the g and r
+  "standardised" flags and e_r < 0.03; r = 14.3–17.7 (GSPC stops at G ≈ 17.65). Cached as `gspc_240.238_-22.241.tsv`.
+  Asking for the `E(BP/RP)corr` column in `-out` makes the IDIA ASU query return nothing, so no C* cut was applied.
+  Query endpoint: `https://vizier.idia.ac.za/viz-bin/asu-tsv?-source=I/360/syntphot&-c=<ra>%20<dec>&-c.rm=8&…`
+  (`-c.rm` is a *radius* in arcmin; `-c.bm=N` is a box of full side N′, `WxH` allowed — checked on IDIA
+  2026-11-02). Because the Hera blocks are statically pointed at a per-night reference field and sidereally
+  tracked (`OBJECT='Didymos COJ 2026 Field #06'`, `SRCTYPE='EXTRASOLAR'`), one query per block covers every
+  frame and a 9.1′ box (2048 × 0.267″) would be the tight choice; the 8′ cone is a superset. Ephemeris-tracked
+  blocks (`SRCTYPE='MINORPLANET'`, `TRACFRAC=1.0` or `0.5`) would instead need the union of the frame centres.
+- Instrumental magnitudes are the **same ones calviacat used**: `FLUX_APER` (6 px radius, `SEXAPED1 = 12`) from each
+  `…-e92_ldac.fits`, `−2.5 log10(flux / EXPTIME)`; stars with `FLAGS == 0`, S/N > 20, peak < 0.7 × `SATURATE`,
+  `CLASS_STAR > 0.5`, matched to GSPC within 1.5″.
+- Per frame: inverse-variance mean of (r_GSPC − m_inst) with 3σ clipping; 61–78 stars (median 70). Compared with the
+  frame's `L1ZP` (`py_zp_cvc-V0.2.1`, PS1, `color_const=True`).
+
+**Result (86 ep07 r′ frames; table `gspc_zp/gspc_zp_35906_ep07_r.ecsv`, plot `gspc_zp_35906_ep07_r.png`):**
+
+| | GSPC (SDSS r) | NEOx (PS1 r) |
+|---|---|---|
+| per-star scatter about the frame ZP | 0.010 mag | — |
+| ZP error | 0.0011 mag (scatter/√n) | `L1ZPERR` 0.0102 mag |
+| frame-to-frame ZP scatter | 0.0098 | 0.0096 |
+| **ZP_GSPC − ZP_NEOx** | **−0.0048 mag median, robust sd 0.0006, range −0.0062 to −0.0033** | |
+| colour term dZP/d(g−r) | +0.0095 ± 0.0026 mag/mag (stars have g−r ≈ 0.69) | — |
+
+- The two zeropoints track each other through the whole night, including the ~0.03 mag drops at frames 0085–0090
+  and the 0.2 mag decline after 0120: `corr(dZP, FWHM) = −0.11`, `corr(dZP, ZP) = −0.05`. The per-frame zeropoint
+  structure is therefore real transparency variation, and **zeropoint noise adds ≲ 0.001 mag to the lightcurve**.
+- The −0.005 mag offset is a photometric-system difference, not a bug: PhotPipe's PS1→SDSS transformation for this
+  field is +0.005 (§2), and GSPC's standardisation to SDSS is quoted at the ~0.01 mag level, so the three routes
+  agree within GSPC's own systematic floor. The colour term is negligible for a colour-constant calibration.
+- `L1ZPERR` (0.010) is numerically the per-star scatter, ten times the error of the mean for ~70 stars. This is the
+  Fix 13 point: it should not be added to every lightcurve point as if it were an independent per-frame error.
+- Not done: g′/i′/z_s (GSPC has SDSS z, not z_s), and the same check on the 2026-07-17 block. The script takes a
+  camera and band argument, so both are a few minutes of running time once wanted.
+- Deferred: a **native z_s GSPC zeropoint**. The Gaia DR3 "photometric relationships" page
+  (cu5pho_ssec_photRelations) only transforms G/BP/RP ↔ SDSS12/JKC/2MASS/Hipparcos/Tycho/GSC2.3 at σ ≥ 0.04 mag
+  (`G−z` vs BP−RP: 0.041) — worse than the GSPC floor and still SDSS z, so it does not help. MuSCAT3 z_s
+  (Astrodon short-z, ≈820–920 nm) is closer to PS1 z_P1 (≈818–922 nm), which calviacat already uses, than to
+  the open-ended SDSS z; GSPC SDSS z will sit a colour-dependent ~0.01–0.02 mag from the PS1-z calibration for
+  solar-colour stars. The proper route is GaiaXPy synthetic photometry of the field stars through a
+  user-defined z_s passband (Astrodon z_s × MuSCAT3 QE × atmosphere; curve from LCO/Astrodon, Narita et al.
+  2020), using XP continuous spectra from the ESA Gaia archive (DataLink; archive access not yet verified from
+  the workstation during the CDS outage; VizieR mirrors do not carry XP spectra). About a day's work. Only
+  needed if absolute z_s magnitudes/colours are to be published — the lightcurve combination removes the per-band
+  offset empirically, so it is irrelevant to the scatter problem.
 
 ---
 
