@@ -887,7 +887,7 @@ class TestSwarpRunner(ExternalCodeUnitTest):
         inlist = os.path.join(self.test_dir, 'images.in')
         inweight = os.path.join(self.test_dir, 'weight.in')
 
-        expected_cmdline = f"./swarp -c swarp_neox.conf @{inlist} -BACK_SIZE 32 -IMAGEOUT_NAME reference.fits -VMEM_DIR {self.test_dir} -RESAMPLE_DIR {self.test_dir} -WEIGHT_IMAGE @{inweight} -WEIGHTOUT_NAME reference.weight.fits"
+        expected_cmdline = f"./swarp -c swarp_neox.conf @{inlist} -BACK_SIZE 32 -IMAGEOUT_NAME reference.fits -VMEM_DIR {self.test_dir} -RESAMPLE_DIR {self.test_dir} -WEIGHT_IMAGE @{inweight} -WEIGHTOUT_NAME reference.weight.fits -PROJECTION_TYPE TPV"
 
         with fits.open(self.test_banzai_file_COPIED) as hdulist:
             # Add in a 'L1ZP' keyword into the header
@@ -1011,7 +1011,7 @@ class TestSwarpAlignRunner(ExternalCodeUnitTest):
         weightname = outname.replace('.fits', '.weight.fits')
         headname = outname.replace('.fits', '.head')
 
-        expected_cmdline = f"./swarp -c swarp_neox.conf {self.test_fits_file} -BACK_SIZE 32 -IMAGEOUT_NAME {outname} -NTHREADS 1 -VMEM_DIR {self.test_dir} -RESAMPLE_DIR {self.test_dir} -SUBTRACT_BACK N -WEIGHTOUT_NAME {weightname} -WEIGHT_TYPE NONE -COMBINE_TYPE CLIPPED"
+        expected_cmdline = f"./swarp -c swarp_neox.conf {self.test_fits_file} -BACK_SIZE 32 -IMAGEOUT_NAME {outname} -NTHREADS 1 -VMEM_DIR {self.test_dir} -RESAMPLE_DIR {self.test_dir} -SUBTRACT_BACK N -WEIGHTOUT_NAME {weightname} -WEIGHT_TYPE NONE -COMBINE_TYPE CLIPPED -PROJECTION_TYPE TPV"
         cmdline = run_swarp_align(self.test_fits_file, self.test_fits_file, self.source_dir, self.test_dir, outname, binary='./swarp', dbg=True)
 
         self.maxDiff = None
