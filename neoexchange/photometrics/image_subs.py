@@ -329,7 +329,7 @@ def create_rms_image(fits_file):
     return rms_file
 
 
-def create_hotpants_mask(fits_file, dest_dir, halfwidth):
+def create_hotpants_mask(fits_file, dest_dir, halfwidth, bkgsub_file=None, template_file=None, sci_min=None, template_max=None):
     """Create an input mask image for HOTPANTS (`-imi`) from the science
     image <fits_file>: pixels at or above the saturation level
     (`get_saturate()`) and any non-zero pixels of a BPM HDU, if present, are
@@ -340,6 +340,16 @@ def create_hotpants_mask(fits_file, dest_dir, halfwidth):
     its wings and wreck that region's kernel fit. Growing the mask by the
     substamp half-width (the `-rss` value) makes every pixel within a
     substamp of saturation ineligible as a centre, whichever cell it is in.
+
+    If <bkgsub_file> (the background-subtracted science image), <template_file>
+    (the reference aligned to it) and both thresholds are given, pixels
+    brighter than <sci_min> in the science image where the template is below
+    <template_max> are also masked (before the growth): structure that exists
+    only in the science image (stars smeared by a tracking jump, satellite
+    trails, ghosts) can sit below saturation inside a substamp and dominate
+    the kernel fit just as a saturated star does. Any pixel bright enough to
+    pass <sci_min> on a real star has a template counterpart far above
+    <template_max>, so stars are never masked by this term.
 
     The mask is written to <dest_dir>/<basename>.mask.fits (non-zero = bad)
     and its path returned; negative status codes are returned on error.
@@ -369,6 +379,27 @@ def create_hotpants_mask(fits_file, dest_dir, halfwidth):
         pass
     hdulist.close()
 
+    sci_only = None
+    if bkgsub_file is not None and template_file is not None and sci_min is not None and template_max is not None:
+        images = []
+        for image_file in (bkgsub_file, template_file):
+            try:
+                with fits.open(image_file) as image_hdulist:
+                    try:
+                        images.append(image_hdulist['SCI'].data)
+                    except KeyError:
+                        images.append(image_hdulist[0].data)
+            except OSError as e:
+                logger.error("Unable to open FITS image %s (Reason=%s)" % (image_file, e))
+                return -13
+        bkgsub_data, template_data = images
+        if bkgsub_data.shape != mask.shape or template_data.shape != mask.shape:
+            logger.error("Science (%s), background-subtracted (%s) and template (%s) images differ in shape" %
+                         (mask.shape, bkgsub_data.shape, template_data.shape))
+            return -14
+        sci_only = (bkgsub_data > sci_min) & (template_data < template_max)
+        mask |= sci_only
+
     halfwidth = int(halfwidth)
     if halfwidth > 0:
         mask = maximum_filter(mask.astype(np.uint8), size=2 * halfwidth + 1)
@@ -386,6 +417,10 @@ def create_hotpants_mask(fits_file, dest_dir, halfwidth):
     header['L1FRMTYP'] = ('MASK', 'Type of processed image')
     header['MASKSAT'] = (satlev, 'Saturation level masked (counts)')
     header['MASKGROW'] = (halfwidth, 'Mask grown by this many pixels per side')
+    if sci_only is not None:
+        header['MASKSCI'] = (float(sci_min), 'Science-only structure: science above this (counts)')
+        header['MASKTMPL'] = (float(template_max), 'Science-only structure: template below this (counts)')
+        header['MASKNSCI'] = (int(sci_only.sum()), 'Science-only pixels masked before growth')
     fits.PrimaryHDU(mask.astype('int16'), header).writeto(mask_file, overwrite=True, checksum=True)
 
     return mask_file

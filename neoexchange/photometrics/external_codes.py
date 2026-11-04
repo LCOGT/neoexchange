@@ -519,8 +519,13 @@ def determine_hotpants_options(ref, sci, source_dir, dest_dir, dbgOptions=False)
     # HOTPANTS's own -iu threshold runs on the background-subtracted image and does not
     # protect substamp selection from a saturated star just outside a stamp cell, so pass
     # an explicit saturation/BPM mask grown by the substamp half-width (see
-    # create_hotpants_mask).
-    sci_mask = create_hotpants_mask(sci, dest_dir, rss)
+    # create_hotpants_mask). Structure present only in the science image (stars smeared by
+    # a tracking jump, satellite trails, ghosts) wrecks a region's fit the same way while
+    # staying below saturation, so pixels far above the science noise where the template
+    # holds no source go into the mask too (thresholds as noise multiples: ~5000 and
+    # ~100 counts on the 2026-07-12 MuSCAT4 data, see docs/Hera_2026/hotpants_dia_investigation.md).
+    sci_mask = create_hotpants_mask(sci, dest_dir, rss, bkgsub_file=sci_bkgsub, template_file=aligned_ref,
+                                    sci_min=scibkg + 140 * scibkgstd, template_max=refbkg + 13 * refbkgstd)
     if type(sci_mask) != str:
         logger.error(f"Could not create HOTPANTS mask for {sci} (status={sci_mask})")
         return -10

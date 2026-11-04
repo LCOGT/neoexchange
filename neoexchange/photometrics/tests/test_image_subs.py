@@ -287,6 +287,67 @@ class TestCreateHotpantsMask(ExternalCodeUnitTest):
         self.assertGreater(expected_min, 0)
         self.assertGreaterEqual(mask.sum(), expected_min)
 
+    def make_plain_frame(self, filename, data):
+        """Write a single-HDU test frame"""
+        filepath = os.path.join(self.test_dir, filename)
+        fits.PrimaryHDU(data.astype('float32')).writeto(filepath)
+        return filepath
+
+    def test_science_only_structure_masked(self):
+        data = zeros((50, 60))
+        bkgsub = zeros((50, 60))
+        template = zeros((50, 60))
+        bkgsub[10, 10] = 6000.0     # trail: bright in science, nothing in the template
+        bkgsub[40, 50] = 6000.0     # star: bright in both
+        template[40, 50] = 2000.0
+        frame = self.make_frame('frame.fits', data)
+        bkgsub_file = self.make_plain_frame('frame.bkgsub.fits', bkgsub)
+        template_file = self.make_plain_frame('template.fits', template)
+
+        mask_file = create_hotpants_mask(frame, self.test_dir, 1, bkgsub_file=bkgsub_file, template_file=template_file,
+                                         sci_min=5000.0, template_max=100.0)
+
+        with fits.open(mask_file) as hdul:
+            mask = hdul[0].data
+            self.assertEqual(9, mask.sum())
+            self.assertTrue(mask[9:12, 9:12].all())
+            self.assertEqual(0, mask[40, 50])
+            self.assertEqual(5000.0, hdul[0].header['MASKSCI'])
+            self.assertEqual(100.0, hdul[0].header['MASKTMPL'])
+            self.assertEqual(1, hdul[0].header['MASKNSCI'])
+
+    def test_science_only_needs_all_inputs(self):
+        data = zeros((50, 60))
+        bkgsub = zeros((50, 60))
+        bkgsub[10, 10] = 6000.0
+        frame = self.make_frame('frame.fits', data)
+        bkgsub_file = self.make_plain_frame('frame.bkgsub.fits', bkgsub)
+
+        mask_file = create_hotpants_mask(frame, self.test_dir, 1, bkgsub_file=bkgsub_file, sci_min=5000.0, template_max=100.0)
+
+        with fits.open(mask_file) as hdul:
+            self.assertEqual(0, hdul[0].data.sum())
+            self.assertNotIn('MASKSCI', hdul[0].header)
+
+    def test_science_only_shape_mismatch(self):
+        frame = self.make_frame('frame.fits', zeros((50, 60)))
+        bkgsub_file = self.make_plain_frame('frame.bkgsub.fits', zeros((50, 60)))
+        template_file = self.make_plain_frame('template.fits', zeros((40, 60)))
+
+        status = create_hotpants_mask(frame, self.test_dir, 1, bkgsub_file=bkgsub_file, template_file=template_file,
+                                      sci_min=5000.0, template_max=100.0)
+
+        self.assertEqual(-14, status)
+
+    def test_science_only_missing_template(self):
+        frame = self.make_frame('frame.fits', zeros((50, 60)))
+        bkgsub_file = self.make_plain_frame('frame.bkgsub.fits', zeros((50, 60)))
+
+        status = create_hotpants_mask(frame, self.test_dir, 1, bkgsub_file=bkgsub_file, template_file='banana.fits',
+                                      sci_min=5000.0, template_max=100.0)
+
+        self.assertEqual(-13, status)
+
 
 class TestCreateRMSImage(ExternalCodeUnitTest):
     def setUp(self):
