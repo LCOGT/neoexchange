@@ -2025,9 +2025,14 @@ def get_sitecam_params(site, bin_mode=None):
     elif site in valid_point4m_codes:
         site_code = site
         setup_overhead = cfg.tel_overhead['point4m_setup_overhead']
-        exp_overhead = cfg.inst_overhead['point4m_exp_overhead']
-        pixel_scale = cfg.tel_field['point4m_pixscale']
-        fov = cfg.tel_field['point4m_fov']
+        if bin_mode == 'central30_1x1':
+            exp_overhead = cfg.inst_overhead['point4m_qhy_center_exp_overhead']
+            pixel_scale = cfg.tel_field['point4m_qhy_center_pixscale']
+            fov = cfg.tel_field['point4m_qhy_center_fov']
+        else:
+            exp_overhead = cfg.inst_overhead['point4m_qhy_exp_overhead']
+            pixel_scale = cfg.tel_field['point4m_qhy_pixscale']
+            fov = cfg.tel_field['point4m_qhy_fov']
         max_exp_length = 300.0
         alt_limit = cfg.tel_alt['point4m_alt_limit']
     elif site in valid_site_codes or site == '1M0':

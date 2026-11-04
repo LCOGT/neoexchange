@@ -2016,11 +2016,11 @@ class TestGetSiteCamParams(TestCase):
         ccd_fov = sitecam['fov']
         max_exp_time = sitecam['max_exp_length']
         self.assertEqual(site_code.upper(), chk_site_code)
-        self.assertEqual(0.571, pixel_scale)
-        self.assertEqual(self.point4m_fov, ccd_fov)
+        self.assertEqual(0.7386, pixel_scale)
+        self.assertEqual(self.point4m_qhy_fov, ccd_fov)
         self.assertEqual(self.max_exp, max_exp_time)
         self.assertEqual(self.point4m_setup_overhead, setup_overhead)
-        self.assertEqual(self.point4m_exp_overhead, exp_overhead)
+        self.assertEqual(self.point4m_qhy_exp_overhead, exp_overhead)
 
     def test_point4m_site8(self):
         site_code = 'V38'
@@ -2064,11 +2064,11 @@ class TestGetSiteCamParams(TestCase):
         ccd_fov = sitecam['fov']
         max_exp_time = sitecam['max_exp_length']
         self.assertEqual(site_code.upper(), chk_site_code)
-        self.assertEqual(0.571, pixel_scale)
-        self.assertEqual(self.point4m_fov, ccd_fov)
+        self.assertEqual(0.7386, pixel_scale)
+        self.assertEqual(self.point4m_qhy_fov, ccd_fov)
         self.assertEqual(self.max_exp, max_exp_time)
         self.assertEqual(self.point4m_setup_overhead, setup_overhead)
-        self.assertEqual(self.point4m_exp_overhead, exp_overhead)
+        self.assertEqual(self.point4m_qhy_exp_overhead, exp_overhead)
 
     def test_1m_cpt_site_sinistro1(self):
         site_code = 'K92'
