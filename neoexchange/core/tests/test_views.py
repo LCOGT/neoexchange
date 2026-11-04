@@ -7535,7 +7535,7 @@ class TestDownloadMeasurementsFile(TestCase):
 
     def test_V37_ades(self):
         expected_response = '\n'.join([self.psv_header,
-        '       |2019 XS    |        | CCD|V37 |2021-11-10T04:47:23.87Z| 41.790514 | -4.340474 | 0.28|  0.28|   Gaia2|14.3 |0.083 |   G|   Gaia2|  3.00|1.0824|1.7449|     |', '',''])
+        '       |2019 XS    |        | CCD|V37 |2021-11-10T04:47:23.87Z| 41.790514 | -4.340474 | 0.28|  0.28|   Gaia2|14.3 |0.083 |   G|   Gaia2|  3.00|1.082 |1.7449|     |', '',''])
 
         request = ''
         response = download_measurements_file(self.ades_template, self.test_body, '.psv', request)
@@ -7551,7 +7551,7 @@ class TestDownloadMeasurementsFile(TestCase):
         self.assertEqual(expected_response, response.content.decode())
 
     def test_V39_ades(self):
-        expected_response = '\n'.join([self.psv_header,'       |2019 XS    |        | CCD|V39 |2021-11-10T04:47:23.87Z| 41.790514 | -4.340474 | 0.28|  0.28|   Gaia2|14.3 |0.083 |   G|   Gaia2|  3.00|1.0824|1.7449|     |', '',''])
+        expected_response = '\n'.join([self.psv_header,'       |2019 XS    |        | CCD|V39 |2021-11-10T04:47:23.87Z| 41.790514 | -4.340474 | 0.28|  0.28|   Gaia2|14.3 |0.083 |   G|   Gaia2|  3.00|1.082 |1.7449|     |', '',''])
 
         self.test_frame.sitecode = 'V39'
         self.test_frame.instrument = 'fa07'
