@@ -20,6 +20,12 @@ Files under `/apophis/eng/rocks/Hera/20260712/`.
 - **Fix (code, 2026-11-04):** `create_hotpants_mask()` (`photometrics/image_subs.py`) masks `e92 ≥ SATURATE` plus
   any BPM pixels, grown by the substamp half-width (`-rss`, ≈32 px), and `determine_hotpants_options()` passes it
   as `-imi`. Region 05 is repaired on every frame tested; the other regions are unchanged to <0.01 mag at Didymos.
+- **The two frames the saturation mask does not repair (0086, 0090)** carry bright streaks — stars smeared across
+  the frame by a telescope tracking jump during the exposure (Tim), satellite trails not excluded — that stay
+  *below* saturation, land inside a substamp and dominate the region's joint kernel fit (§4a). A "science-only"
+  term (bright in the science image where the template holds no source) added to the mask repairs both, makes no
+  frame worse night-wide and cannot blank a target (`-imi` only removes pixels from the kernel fit). Implemented
+  as part of Fix 23 (second commit).
 - **ZUDS:** no upstream changes since the commit the local checkout is on (16a8f03, 2020-08-06). Our call is a
   faithful copy of `zuds/hotpants.py` except for the parts that needed ZUDS's own infrastructure (the mask, the
   weight-map noise images) and two option choices (`-ko 4 -bgo 0`); the missing mask is the one that matters.
@@ -42,7 +48,7 @@ flagging a region when `FSIG > 3` or its `KSUM` differs from the frame's median 
 - region 05 bad in **68 / 86** frames (`KSUM05` 0.60–2.14, `FSIG05` 3.2–134); median `FSIG05` 12.5 against 1.05–1.11
   elsewhere;
 - region 01 bad in 0086 (`KSUM` 0.25, `FSIG` 300), regions 03/04/05 bad in 0090 (the frame with the cloud/gradient,
-  `L1SIGMA` 97) — 0086, 0089, 0090 are the three sharpest frames (FWHM 1.31–1.36″ vs template 1.44″);
+  `L1SIGMA` 97) — not a seeing effect: both frames carry bright sub-saturation streaks (§4a);
 - `KSUM` ≈ 2.8–2.9 is *expected*: the template is ten 60 s frames scaled to ZP 25 (`normalize()`), i.e. a 60 s
   equivalent image, against 210 s science frames: 210/60 ÷ 10^(0.4 (25 − 24.8)) = 2.9. Not a bug.
 
@@ -108,7 +114,7 @@ differences / √2, as in Fix 22.
 
 | | production | P1 mask | P2 mask + `-ft 10` |
 |---|---|---|---|
-| frames with a failed region | 68 (region 05 in 67) | **2** (0086 region 01, 0090 region 04 — the two sharpest frames) | 3 (region 05 on 0105/0106/0108, FWHM 1.10″, `KSUM` 2.0–2.5 but `FSIG` ≈1.3) |
+| frames with a failed region | 68 (region 05 in 67) | **2** (0086 region 01, 0090 regions 03/04 — the streaked frames, §4a) | 3 (region 05 on 0105/0106/0108, FWHM 1.10″, `KSUM` 2.0–2.5 but `FSIG` ≈1.3) |
 | median `FSIG05` | 12.5 | 1.13 | 1.10 |
 | Didymos: p2p scatter | 0.0377 | 0.0377 | 0.0367 |
 | Didymos: MAD about a 7-point running median | 0.050 | 0.050 | 0.056 |
@@ -118,8 +124,58 @@ HOTPANTS fits each region independently and Didymos never left region 04, so the
 without touching a single Didymos measurement: the r′ curve's scatter is set by photon/sky noise and the
 unflagged-region residuals, not by the failed tile. `-ft 10` does perturb the centre-region kernel (six frames move,
 two by ≈0.1 mag, and the running-median scatter gets slightly worse) for no net gain, so it is not adopted. The two
-remaining failures are the sharp frames where the template (median FWHM 1.44″) is being *sharpened* (`-c t` forced);
-0090 is the cloud-affected frame already excluded from the lightcurve.
+remaining failures (0086, 0090) are not a seeing effect — see §4a; 0090 is the cloud-affected frame already excluded
+from the lightcurve.
+
+### 4a. The two residual failures: sub-saturation streaks (0086, 0090)
+
+Looked at on 2026-11-04 after the commit, prompted by Tim's look at 0086 (`/data/tlister/hotpants_demo/`:
+`side_by_side.py <frame>`, `trail_exp.py <frame>`, figures `out/*_region01.png`, `out/*_fullframe.png`).
+
+- **0086, region 01 (`[683:1365, 1:683]`)**: the aligned template has no coverage in the bottom 123 rows (the
+  pointing offset is larger than 0063's 64 rows) and a broad bright arc, 80–98 k counts and *below* the 117 760
+  saturation level, runs across the bottom of the science frame — a bright star smeared by a telescope jump during
+  the exposure (every bright star in 0086 has a matching streak; Tim), not a satellite. 22 of the 36 stamp cells find no usable substamp;
+  of the 14 that do, the one centred at (1091, 142) has 954 pixels of 5 000–84 500-count science-only flux inside its
+  61 px box (template there: 162 counts). HOTPANTS vetoes a substamp only for masked or over-limit pixels, so the
+  stamp is accepted, the region's first joint least-squares solution is dominated by it (all 14 stamp sigmas 100–5 300
+  against ≈1 in a healthy region), and the relative clip (`mean + 2σ`) rejects nothing → `KSUM` 0.25, `FSIG` 300.
+- **0090**: a wide, partly saturated streak (same origin, or a satellite) crosses regions 03, 04 (Didymos's tile)
+  and 05, plus thinner ones. The saturation mask covers only the saturated part of the trail (x < 350), which is why it repaired region
+  05 but not 03/04 (`FSIG` 62 → 1.2, but 57 → 62 and 847 → 847).
+- **Experiment T** — add to the committed mask the science-only bright structure,
+  `(sci > 4·template + 1000) ∧ (sci > 5000)` grown by `rss`: 0086 → all nine regions `FSIG` ≤ 1.42; 0090 → regions
+  03/04/05 `FSIG` 1.02/1.12/1.21 and `KSUM` 2.7, but region 02 (where the trail's bright end lies) goes 1.17 → 6.9
+  with 19.5 % of the region masked and only 8 substamps — the criterion needs tuning before it could be adopted.
+- `-imi` does **not** blank output pixels: the 1e-30 fill count is the same in the production, committed-mask and
+  experiment e93s (0086: 114 679 / 114 753 / 114 755), so a science-only mask would only keep a transient out of
+  the kernel stamps (which is what one wants) — it would not erase a bright target from the e93.
+- Night census: only 0086 and 0090 have > 3 300 science-only bright pixels (the other 84 frames sit at 2 750–3 950,
+  the bleed column of the region-05 star); Didymos peaks at ≈430 counts above background in these frames, far below
+  the 5 000-count criterion.
+- **Night-wide (all 86 frames, `night/run_night_trail*.py` → `night_trail*_results.json`)**, C = committed mask,
+  T = C ∪ `(sci > 4·template + 1000) ∧ (sci > 5000)`, T2 = C ∪ `(sci > 5000) ∧ (template < 100)` (template sky
+  0.3 ± 7.6 counts, i.e. "bright in the science image where the template holds no source"), both grown by `rss`:
+
+| | C (committed) | T | T2 |
+|---|---|---|---|
+| frames with a failed region (`FSIG` > 3) | 2 (0086 r01, 0090 r03/r04) | 5 (0104/0105/0106/0108/0112, regions 06/08, `FSIG` up to 20) | **0** |
+| regions worse than C by > 0.3 in `FSIG` | — | 9 (the five sharp frames + 0090 r02) | 1 (0090 r02: 1.17 → 2.09) |
+| regions better than C by > 0.3 | — | 0086 r01, 0090 r03/r04 (+ 9 marginal ones) | 0086 r01 (300 → 1.4), 0090 r03 (62 → 1.0), r04 (847 → 1.1) |
+| max \|ΔKSUM\| vs C on the other 84 frames | — | 0.32 | 0.03 |
+| mask fraction, median / max | 0.6 % / 8 % | 4.3 % / 13.9 % | 3.2 % / 8.0 % |
+| Didymos points changed > 0.02 mag vs C | — | 0090 only (+0.095) | 0090 only (+0.095) |
+| Didymos p2p / running-median MAD | 0.0377 / 0.0501 | 0.0345 / 0.0477 | 0.0354 / 0.0474 |
+
+  T fails because on the sharpest frames (1.10″ against the 1.44″ template) a bright star's *core* exceeds 4× the
+  broader template core and gets masked. T2 cannot touch a star (any pixel with > 5 000 science counts has a
+  template counterpart of ≳ 1 700 counts) and only flags science-only structure: trails, ghosts and the bleed column.
+  Its one side effect, 0090 region 02 at `FSIG` 2.1, is within the tolerance of the other regions. The single
+  Didymos change is 0090, whose tile was broken before and is now fitted — the frame is excluded from the
+  lightcurve anyway. **T2 is implemented** (`create_hotpants_mask(..., bkgsub_file, template_file, sci_min,
+  template_max)`, called from `determine_hotpants_options()` with `sci_min = scibkg + 140·σ_sci` and
+  `template_max = refbkg + 13·σ_ref`, i.e. ≈5 200 and ≈100 counts on this night); the mask header records
+  `MASKSCI`/`MASKTMPL`/`MASKNSCI`.
 
 ## 5. ZUDS and HOTPANTS upstream
 
@@ -144,10 +200,11 @@ there and `X2NRM` is huge in regions 00/01/06; harmless for a centre-field targe
 
 ## 6. What changed and what is left
 
-**Done (Fix 23):** `create_hotpants_mask(fits_file, dest_dir, halfwidth)` in `photometrics/image_subs.py`;
-`determine_hotpants_options()` calls it with the `-rss` value and adds `-imi <e92>.mask.fits`. Tests:
-`TestCreateHotpantsMask` (`test_image_subs.py`), updated `TestDetermineHotpantsOptions`/`TestHotpantsRunner`
-expectations (self-subtraction regression pixels moved by < 4 counts).
+**Done (Fix 23):** `create_hotpants_mask(fits_file, dest_dir, halfwidth, ...)` in `photometrics/image_subs.py`:
+saturation ∪ BPM ∪ science-only structure (§4a, T2), grown by `-rss`; `determine_hotpants_options()` calls it and
+adds `-imi <e92>.mask.fits`. Tests: `TestCreateHotpantsMask` (`test_image_subs.py`, 12 tests), updated
+`TestDetermineHotpantsOptions`/`TestHotpantsRunner` expectations (self-subtraction regression pixels moved by
+< 4 counts; the science-only term is inert on a self-subtraction).
 
 **Candidates, not adopted without a decision:**
 - `-ft 10` (or `-nsx/-nsy 10`): more substamps; repaired 0086/0090 in the five-frame tests but over the whole
@@ -156,8 +213,8 @@ expectations (self-subtraction regression pixels moved by < 4 counts).
 - `-bgo 0`: both inputs are background-subtracted; a constant per region is the physically right model. Repaired
   0090's centre region in the five-frame test; not run night-wide.
 - Let HOTPANTS choose the convolution direction (drop `-c t`), or convolve the image only when the science FWHM is
-  below the template's: the two residual failures (0086, 0090) and the three `-ft 10` marginals are all frames
-  sharper than the 1.44″ template. Needs the photometry side to understand a convolved target (§3, variant K).
+  below the template's: the three `-ft 10` marginals (0105/0106/0108) are the sharpest frames of the night (1.10″
+  against the 1.44″ template). Needs the photometry side to understand a convolved target (§3, variant K).
 - Finite noise maps: write `BIG_RMS` instead of ∞ in `create_rms_image` before SWarp resamples the template rms;
   add `BIG_RMS` at saturation in the science rms.
 - Mask the template's zero-coverage strip (`-tmi` from the aligned weight map) and make

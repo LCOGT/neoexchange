@@ -836,8 +836,11 @@ and PhotPipe (PS1→SDSS) in §2 hides a shared problem. BHTOM's CCDPhot was ass
   86 r′ frames because HOTPANTS was given no mask: its substamp search only checks for bad pixels inside its own
   stamp cell, so the saturated star at (1780, 880) seeded a substamp on its wings from the next cell. Code: new
   `create_hotpants_mask()` (saturation ∪ BPM, grown by `-rss`) passed as `-imi` from `determine_hotpants_options()`.
-  Full write-up, ZUDS comparison and the un-adopted options (`-ft 10`, `-bgo 0`, noise maps, template coverage) in
-  `hotpants_dia_investigation.md`. Existing e93s/photometry not regenerated yet (impact measured there, §4).
+  The two frames that still failed (0086, 0090: stars smeared by a tracking jump during the exposure) needed a
+  second mask term, science-only structure (bright in the science image where the template holds no source), which
+  repairs them and changes nothing else night-wide (§4a there). Full write-up, ZUDS comparison and the un-adopted
+  options (`-ft 10`, `-bgo 0`, noise maps, template coverage) in `hotpants_dia_investigation.md`. Existing
+  e93s/photometry not regenerated yet (impact measured there, §4).
 - [x] **Fix 9:** regenerate the `aper_p_Didymos*.ecsv` tables only after Fix 4. Applying the corrected e92 zeropoint
   to the existing 5″ apertures would introduce a 0.09–0.27 mag (0.18 peak-to-peak) seeing-correlated bias (§4).
   **Done 2026-10-30** (output in `/apophis/tlister/hera_pipe_aper_phot_35906`):
