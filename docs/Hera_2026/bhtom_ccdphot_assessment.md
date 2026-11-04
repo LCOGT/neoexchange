@@ -1,8 +1,8 @@
-# BHTOM "CCDPhot" as a third zeropoint cross-check for the LCO/MuSCAT3 Didymos frames
+# BHTOM "CCDPhot" as a third zeropoint cross-check for the LCO/MuSCAT4 Didymos frames
 
 Assessment date 2026-11-02. Question asked: can BHTOM's CCDPhot reduction code serve as a third, independent
 cross-check of the NEOexchange (calviacat/PS1) and photometrypipeline (PS1→SDSS) zeropoints for Block 35906
-(COJ 2 m, MuSCAT3 g′r′i′z_s, 2026-07-12), and does it still work while CDS VizieR is down?
+(COJ 2 m, MuSCAT4 g′r′i′z_s, 2026-07-12), and does it still work while CDS VizieR is down?
 
 Research was done by web/document/code reading (no uploads, no accounts created). Legend: 
  - **[V]** = verified directly (page, code or PDF read, or a live network probe on 2026-11-02 21:55–22:08 UTC);
@@ -16,7 +16,7 @@ and the Gaia TAP sync endpoint returned an HTML page to a hand-built query (so "
 ## Verdict (short)
 
 **Not viable within a week, and of limited value for this purpose even with time.** CCDPhot is a closed,
-server-side pipeline: it cannot be run locally; the COJ 2 m/MuSCAT3 camera would need admin approval; the
+server-side pipeline: it cannot be run locally; the COJ 2 m/MuSCAT4 camera would need admin approval; the
 Hera frames would have to be uploaded to a third-party server whose terms assert ownership of derived
 products, broad download rights for all registered users and co-authorship expectations; moving targets are
 not supported; and the output is a zeropoint relative to an undocumented DAOPHOT instrumental-magnitude
@@ -104,7 +104,7 @@ genuinely independent third check is to compute a **Gaia DR3 Synthetic Photometr
   (issue #213). **[V]**
 - Filter naming: you *force* a catalogue filter (`GaiaSP/g`, `GaiaSP/ugriz`, …) or let `GaiaSP/any`/Auto pick
   the lowest-scatter band; the FITS `FILTER` keyword is recorded but the standardisation band is the catalogue
-  band you choose. For MuSCAT3 g′ r′ i′ → `GaiaSP/g,r,i`; **z_s has no match — `GaiaSP/z` is SDSS z, so expect a
+  band you choose. For MuSCAT4 g′ r′ i′ → `GaiaSP/g,r,i`; **z_s has no match — `GaiaSP/z` is SDSS z, so expect a
   systematic offset for z_s.** **[V for naming; I for the z_s offset]**
 - Method: CPCS fits a linear relation between instrumental and catalogue magnitudes of matched field stars
   (match radius default 2″, configurable), keeping the lowest-scatter catalogue/filter in auto mode (CPCS manual

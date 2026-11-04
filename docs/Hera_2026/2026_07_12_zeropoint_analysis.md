@@ -1,6 +1,6 @@
 # Didymos 2026-07-12 — zeropoint cross-check analysis
 
-Block **35906**, `coj2m002-ep07` (COJ 2 m / MuSCAT3 r′), 86 × 210 s frames (0058–0143), pixel scale 0.267″/px.
+Block **35906**, `coj2m002-ep07` (COJ 2 m / MuSCAT4 r′), 86 × 210 s frames (0058–0143), pixel scale 0.267″/px.
 Notebook: `docs/Hera_2026/2026_07_12_photometry_local.ipynb`, section "Zeropoint cross checks" (cell index 43–44).
 Analysis done 2026-10-05.
 
@@ -665,11 +665,11 @@ and PhotPipe (PS1→SDSS) in §2 hides a shared problem. BHTOM's CCDPhot was ass
   camera and band argument, so both are a few minutes of running time once wanted.
 - Deferred: a **native z_s GSPC zeropoint**. The Gaia DR3 "photometric relationships" page
   (cu5pho_ssec_photRelations) only transforms G/BP/RP ↔ SDSS12/JKC/2MASS/Hipparcos/Tycho/GSC2.3 at σ ≥ 0.04 mag
-  (`G−z` vs BP−RP: 0.041) — worse than the GSPC floor and still SDSS z, so it does not help. MuSCAT3 z_s
+  (`G−z` vs BP−RP: 0.041) — worse than the GSPC floor and still SDSS z, so it does not help. MuSCAT4 z_s
   (Astrodon short-z, ≈820–920 nm) is closer to PS1 z_P1 (≈818–922 nm), which calviacat already uses, than to
   the open-ended SDSS z; GSPC SDSS z will sit a colour-dependent ~0.01–0.02 mag from the PS1-z calibration for
   solar-colour stars. The proper route is GaiaXPy synthetic photometry of the field stars through a
-  user-defined z_s passband (Astrodon z_s × MuSCAT3 QE × atmosphere; curve from LCO/Astrodon, Narita et al.
+  user-defined z_s passband (Astrodon z_s × MuSCAT4 QE × atmosphere; curve from LCO/Astrodon, Narita et al.
   2020), using XP continuous spectra from the ESA Gaia archive (DataLink; archive access not yet verified from
   the workstation during the CDS outage; VizieR mirrors do not carry XP spectra). About a day's work. Only
   needed if absolute z_s magnitudes/colours are to be published — the lightcurve combination removes the per-band
@@ -795,7 +795,7 @@ and PhotPipe (PS1→SDSS) in §2 hides a shared problem. BHTOM's CCDPhot was ass
   9/515 in 30225, 81/517 in 30258, all 12 in 35738), so Fix 8 reports rather than repairs them; a `proc-zeropoint`
   rerun would be needed first. Decision: not worth it; the 2024 data and the short 2026 blocks are out of scope
   for the Hera program, so Fix 8 is complete for the two blocks that matter. Next: Fix 9.
-- [ ] **Fix 21 — frames lost to the config-setup race; re-reduce them.** The 2026-10-28 dry run of Fix 8 showed
+- [x] **Fix 21 — frames lost to the config-setup race; re-reduce them.** The 2026-10-28 dry run of Fix 8 showed
   Block 35906 has no e92/e93 for `coj2m002-ep08-20260712-0109`. The dramatiq log (`dramatiq_20260625.log`, 13 Jul
   21:12:08) shows why: `setup_working_dir()` did `unlink` + `symlink` of `sextractor_neox_ldac.conf` in the shared
   `Hera/20260712/` directory for every frame, and the workers for ep08-0110 and 0111 started `proc-extract` in the
@@ -818,6 +818,20 @@ and PhotPipe (PS1→SDSS) in §2 hides a shared problem. BHTOM's CCDPhot was ass
   `GAIA-DR3_*.cat` is reused and no network is needed.
   `fix_e93_zeropoints` was then run on 35906 and 36005 (Fix 8 entry). **To do:** delete the stray `Temp_cvc/` dirs
   under the 20260712 Field#06 and 20260717 Field#11 directories.
+- [x] **Fix 22 — combine the four simultaneous MuSCAT4 bands into one lightcurve (2026-11-03).** The r′ curve alone
+  is noise-limited (p2p 0.033 mag, §9), so `photometrics/lightcurve_subs.py:combine_simultaneous_bands()` shifts
+  g′/i′/z_s onto the r′ scale by a per-night colour offset (median pairwise difference with the simultaneous r′ frame,
+  checked against the S-type Veres et al. 2015 colours via `expected_color_offsets()`), matches frames across cameras
+  by midpoint time (±half the r′ cadence; cameras run ASYNCHRONOUS so they drift), adds `ZP_sig` in quadrature
+  (Fix 7/13), drops >4σ outliers from a leave-one-out running median and takes the inverse-variance mean per epoch.
+  Driven by `pipeline_aper_photometry --block N --from-table <ecsv>` (or on fresh photometry); writes per-filter
+  and combined "DART format" files, a combined ECSV with the offsets in its meta, a 3-panel PNG, and registers the
+  DART/PNG files as `DataProduct`s (DART_TXT, PNG_LIGHTCURVE_COMBINED_UNPHASED) on the Block. On 35906: offsets
+  g′ +0.537, i′ −0.190, z_s −0.155 (priors +0.600/−0.195/−0.141), 87 epochs (83 with all four bands; the r′-less
+  epoch 0089 recovered from the other cameras), p2p 0.026 mag with the one single-band z_s epoch, 0.024 without
+  (`--min-bands 2`), median error 0.022 mag vs 0.033/0.029 for r′ alone. Outputs under
+  `didymos_photometry/combined_4band_prod/`. Not done: ALCDEF of the combined curve; folding `ZP_sig` into
+  `single_frame_aperture_photometry` itself.
 - [x] **Fix 9:** regenerate the `aper_p_Didymos*.ecsv` tables only after Fix 4. Applying the corrected e92 zeropoint
   to the existing 5″ apertures would introduce a 0.09–0.27 mag (0.18 peak-to-peak) seeing-correlated bias (§4).
   **Done 2026-10-30** (output in `/apophis/tlister/hera_pipe_aper_phot_35906`):
