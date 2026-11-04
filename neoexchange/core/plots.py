@@ -14,65 +14,92 @@ GNU General Public License for more details.
 
 import base64
 import copy
-from datetime import datetime, timedelta
-from glob import glob
 import io
+import itertools
 import logging
 import os
 import re
-import shutil
-import itertools
-from math import pi, floor, radians, degrees
+from datetime import datetime, timedelta
+from importlib import reload
+from math import degrees, floor, pi, radians
+
+import matplotlib.dates as mdates
+import matplotlib.pyplot as plt
 import numpy as np
 from astropy import units as u
-
-from django.http import HttpResponse
-from django.conf import settings
-from django.core.files.storage import default_storage
-import matplotlib
-import matplotlib.pyplot as plt
-
-from bokeh.io import curdoc
-from bokeh.layouts import layout, column, row
+from bokeh.core.properties import Instance, List
+from bokeh.embed import components
+from bokeh.layouts import column, row
+from bokeh.models import (
+    ColumnDataSource,
+    CrosshairTool,
+    CustomJS,
+    CustomJSHover,
+    DataRange1d,
+    HoverTool,
+    LabelSet,
+    LinearAxis,
+    Range1d,
+    TeeHead,
+    Tool,
+    Whisker,
+)
+from bokeh.models.widgets import (
+    Button,
+    DataTable,
+    Div,
+    HTMLTemplateFormatter,
+    MultiSelect,
+    NumberEditor,
+    NumberFormatter,
+    Panel,
+    Select,
+    Slider,
+    Spinner,
+    TableColumn,
+    Tabs,
+    Toggle,
+)
+from bokeh.palettes import Category20
 from bokeh.plotting import figure
-from bokeh.resources import CDN, INLINE
-from bokeh.embed import components, file_html
-from bokeh.models import HoverTool, LabelSet, CrosshairTool, Whisker, TeeHead, Range1d, CustomJS, Title, CustomJSHover,\
-    DataRange1d, Tool, ColumnDataSource, LinearAxis
-from bokeh.models.widgets import CheckboxGroup, Slider, TableColumn, DataTable, HTMLTemplateFormatter, NumberEditor,\
-    NumberFormatter, Spinner, Button, Panel, Tabs, Div, Toggle, Select, MultiSelect
-from bokeh.palettes import Category20, Category10
-from bokeh.colors import HSL
-from bokeh.core.properties import Instance, String, List
+from bokeh.resources import CDN
 from bokeh.util.compiler import TypeScript
+from django.core.files.storage import default_storage
+from django.http import HttpResponse
+from matplotlib.ticker import AutoMinorLocator
 
-from .models import Body, CatalogSources, StaticSource, Block, model_to_dict, PreviousSpectra
-from astrometrics.ephem_subs import horizons_ephem, call_compute_ephem, determine_darkness_times, get_sitepos,\
-    moon_ra_dec, target_rise_set, moonphase, dark_and_object_up, compute_dark_and_up_time, get_visibility,\
-    compute_ephem, orbital_pos_from_true_anomaly, get_planetary_elements
+import core as core
+from astrometrics import *
+from astrometrics.ephem_subs import (
+    call_compute_ephem,
+    compute_dark_and_up_time,
+    compute_ephem,
+    dark_and_object_up,
+    determine_darkness_times,
+    get_planetary_elements,
+    get_sitepos,
+    get_visibility,
+    horizons_ephem,
+    moon_ra_dec,
+    moonphase,
+    orbital_pos_from_true_anomaly,
+    target_rise_set,
+)
 from astrometrics.time_subs import jd_utc2datetime
-from photometrics.obsgeomplot import plot_ra_dec, plot_brightness, plot_helio_geo_dist, \
-    plot_uncertainty, plot_hoursup, plot_gal_long_lat
+from core.models import Block, Body, Frame, model_to_dict
 from photometrics.catalog_subs import sanitize_object_name
 from photometrics.external_codes import aperture_radius_label
-from photometrics.SA_scatter import readSources, plotScatter, plotFormat
-from photometrics.spectraplot import spectrum_plot, read_mean_tax
-import os
-from datetime import datetime, timedelta
+from photometrics.obsgeomplot import (
+    plot_brightness,
+    plot_gal_long_lat,
+    plot_helio_geo_dist,
+    plot_hoursup,
+    plot_ra_dec,
+    plot_uncertainty,
+)
+from photometrics.SA_scatter import plotFormat, plotScatter, readSources
+from photometrics.spectraplot import read_mean_tax, spectrum_plot
 
-from astrometrics import *
-from astrometrics.ephem_subs import horizons_ephem
-from core.models import SuperBlock, Block, Frame, StaticSource, User
-import core as core
-
-import numpy as np
-import matplotlib
-#matplotlib.use('TkAgg')
-import matplotlib.pyplot as plt
-import matplotlib.dates as mdates
-from matplotlib.ticker import AutoMinorLocator
-from operator import itemgetter
-from importlib import reload
 plt=reload(plt)
 
 logger = logging.getLogger(__name__)
@@ -237,7 +264,7 @@ def make_visibility_plot(request, pk, plot_type, start_date=None, site_code='-1'
 
 # def make_plot(request):
 #     import aplpy
-#
+#     from core.models import CatalogSources
 #     fits_file = 'cpt1m010-kb70-20160428-0148-e91.fits'
 #     fits_filepath = os.path.join('/tmp', 'tmp_neox_9nahRl', fits_file)
 #
@@ -1577,6 +1604,7 @@ def plot_magnitude(block, filter, photometry_table, savepath, bad_subtractions, 
             fig.savefig(filename)
     fig.clf()
     return filename
+
 
 def generalized_zeropoint_plotter(blocks_or_ref_fields, filters, colors, output_dir, individual_block_plots, make_full_night_plot):
     """Plots zeropoints against time for each filter in a block or group of blocks over the blocks' observation nights.
