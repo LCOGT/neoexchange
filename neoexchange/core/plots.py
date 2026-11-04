@@ -89,6 +89,7 @@ from astrometrics.time_subs import jd_utc2datetime
 from core.models import Block, Body, Frame, model_to_dict
 from photometrics.catalog_subs import sanitize_object_name
 from photometrics.external_codes import aperture_radius_label
+from photometrics.lightcurve_subs import bin_lightcurve
 from photometrics.obsgeomplot import (
     plot_brightness,
     plot_gal_long_lat,
@@ -1605,6 +1606,53 @@ def plot_magnitude(block, filter, photometry_table, savepath, bad_subtractions, 
     fig.clf()
     return filename
 
+
+def plot_combined_lightcurve(combined, per_band, title, savepath, ref_filter='rp', nbin=2):
+    """Plots the output of combine_simultaneous_bands() as three stacked panels: the
+    <ref_filter> band alone, every band shifted by its colour offset with the combined
+    points over them, and the combined curve binned by <nbin> epochs. <savepath> is the
+    full path of the PNG to write; it is returned."""
+
+    band_colors = {'gp': 'green', 'rp': 'red', 'ip': 'orange', 'zs': 'purple', 'zp': 'purple'}
+    t0 = combined['julian_date'].min() if len(combined) else min(min(b['julian_date']) for b in per_band.values())
+
+    def hours(jd):
+        return (np.asarray(jd) - t0) * 24.0
+
+    fig, axes = plt.subplots(3, 1, figsize=(14, 12), sharex=True)
+    ref = per_band[ref_filter]
+    ok = ~np.array(ref['flag'])
+    axes[0].errorbar(hours(ref['julian_date'][ok]), ref['mag'][ok], ref['err'][ok], fmt='o', ms=3, color='k', ecolor='0.6')
+    deltas = np.diff(ref['mag'][ok])
+    ref_p2p = 1.4826 * np.median(np.abs(deltas - np.median(deltas))) / np.sqrt(2.0) if len(deltas) > 1 else np.nan
+    axes[0].set_title(f"{ref_filter} only ({ok.sum()} frames; errors include ZP error): point-to-point scatter {ref_p2p:.3f} mag")
+
+    for obs_filter, band in per_band.items():
+        offset = combined.meta['offsets'].get(obs_filter, np.nan)
+        if not np.isfinite(offset):
+            continue
+        ok = ~np.array(band['flag'])
+        axes[1].plot(hours(band['julian_date'][ok]), band['mag'][ok] - offset, '.', ms=4, alpha=0.5,
+                     color=band_colors.get(obs_filter, 'grey'), label=f"{obs_filter} - ({offset:+.3f})")
+    axes[1].errorbar(hours(combined['julian_date']), combined['mag'], combined['sig'], fmt='o', ms=4, color='k',
+                     ecolor='0.4', label=f'{len(per_band)}-band weighted mean')
+    axes[1].legend(ncol=len(per_band) + 1, fontsize=8)
+    axes[1].set_title(f"all bands shifted to {ref_filter}, inverse-variance mean per epoch: point-to-point scatter "
+                      f"{combined.meta.get('p2p_scatter', np.nan):.3f} mag, median error {np.median(combined['sig']):.3f}")
+
+    binned = bin_lightcurve(combined, nbin=nbin)
+    axes[2].errorbar(hours(binned['julian_date']), binned['mag'], binned['sig'], fmt='o', ms=4, color='k', ecolor='0.4')
+    axes[2].set_title(f"same, binned by {nbin} epochs")
+    for ax in axes:
+        ax.invert_yaxis()
+        ax.grid(alpha=0.3)
+        ax.set_ylabel(f"{ref_filter}-equivalent mag")
+    axes[2].set_xlabel(f"hours since JD {t0:.5f}")
+    fig.suptitle(title)
+    fig.tight_layout()
+    fig.savefig(savepath, dpi=110)
+    plt.close(fig)
+    return savepath
 
 def generalized_zeropoint_plotter(blocks_or_ref_fields, filters, colors, output_dir, individual_block_plots, make_full_night_plot):
     """Plots zeropoints against time for each filter in a block or group of blocks over the blocks' observation nights.

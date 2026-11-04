@@ -5,7 +5,7 @@ from glob import glob
 from datetime import datetime, timedelta
 
 import numpy as np
-from astropy.table import Column
+from astropy.table import Column, Table
 from astropy.time import Time
 from astropy.wcs import WCS
 
@@ -246,3 +246,246 @@ class TestCreateTableFromSrcMeasure(TestCase):
                 assert_array_equal(expected_table[column], table[column])
             else:
                 assert_allclose(expected_table[column], table[column], rtol=1e-4, err_msg=f"Compare failure on column: {column}")
+
+
+def make_synthetic_aper_table(num_epochs=30, cadence=210.0, t0_jd=2461233.875):
+    """Builds a perform_aper_photometry()-style table for four simultaneous MuSCAT
+    cameras with known colour offsets and a few deliberate defects:
+      gp = rp + 0.55, ip = rp - 0.20, zs = rp - 0.15 (all within 0.1 mag of the S-type priors)
+      zs frames start 64 s after rp and drift a further 1 s per frame
+      ip frame at epoch 10 missing; gp frame at epoch 5 is a 0.5 mag outlier
+      rp frame at epoch 20 unmeasured ("" values); rp frame at epoch 25 has a negative flux
+    Returns (table, truth) with truth holding the offsets and per-band errors used."""
+
+    rng = np.random.default_rng(42)
+    offsets = {'rp': 0.0, 'gp': 0.55, 'ip': -0.20, 'zs': -0.15}
+    errors = {'rp': 0.02, 'gp': 0.03, 'ip': 0.025, 'zs': 0.06}
+    zp_sig = 0.01
+    rows = []
+    for obs_filter in ['gp', 'rp', 'ip', 'zs']:
+        camera = {'gp': 'ep06', 'rp': 'ep07', 'ip': 'ep08', 'zs': 'ep09'}[obs_filter]
+        for epoch in range(num_epochs):
+            if obs_filter == 'ip' and epoch == 10:
+                continue
+            seconds = epoch * cadence + (64.0 + epoch if obs_filter == 'zs' else 0.0)
+            jd = t0_jd + seconds / 86400.0
+            mag = 20.2 + 0.1 * np.sin(2.0 * np.pi * seconds / 8640.0) + offsets[obs_filter] + rng.normal(0, errors[obs_filter])
+            if obs_filter == 'gp' and epoch == 5:
+                mag += 0.5
+            zp = 24.8
+            flux = 10**(-0.4 * (mag - zp))
+            fname = f"/data/coj2m002-{camera}-20260712-{58 + epoch:04d}-e93.fits"
+            row = [fname, Time(jd, format='jd').iso, obs_filter, 240.25, -22.24, 700.0, 1100.0,
+                   flux, flux * errors[obs_filter] / 1.0857, 1.2, zp, zp_sig, mag, errors[obs_filter], 6.0, 1.608, 6.0, 0.268, 1.0857 / errors[obs_filter]]
+            if obs_filter == 'rp' and epoch == 20:
+                row = row[:3] + [""] * (len(row) - 3)
+            elif obs_filter == 'rp' and epoch == 25:
+                row[7] = -50.0
+                row[12] = np.nan
+            rows.append(row)
+    names = ['path to frame', 'times', 'filters', 'RA', 'DEC', 'xcenter', 'ycenter', 'aperture sum', 'aperture sum err',
+             'FWHM', 'ZP', 'ZP_sig', 'mag', 'magerr', 'aperture radius pix', 'aperture radius arcsec',
+             'ZP aperture radius pix', 'pixel scale', 'SNR']
+    # Column-wise so the "" row makes those columns strings, as perform_aper_photometry does
+    columns = [[row[i] for row in rows] for i in range(len(names))]
+    table = Table(columns, names=names)
+    return table, {'offsets': offsets, 'errors': errors, 'zp_sig': zp_sig, 'cadence': cadence}
+
+
+class TestExpectedColorOffsets(SimpleTestCase):
+
+    def test_s_type_to_rp(self):
+        offsets = expected_color_offsets('rp', 'S')
+
+        self.assertEqual(0.0, offsets['rp'])
+        self.assertAlmostEqual(0.600, offsets['gp'], 4)
+        self.assertAlmostEqual(-0.195, offsets['ip'], 4)
+        self.assertAlmostEqual(-0.141, offsets['zs'], 4)
+        self.assertEqual(offsets['zs'], offsets['zp'])
+        self.assertNotIn('B', offsets)
+
+    def test_solar_to_gp(self):
+        offsets = expected_color_offsets('gp', 'solar')
+
+        self.assertEqual(0.0, offsets['gp'])
+        self.assertAlmostEqual(-0.400, offsets['rp'], 4)
+
+    def test_unknown_taxonomy_or_filter(self):
+        self.assertEqual({}, expected_color_offsets('rp', 'Z'))
+        self.assertEqual({}, expected_color_offsets('B', 'S'))
+
+    def test_transform_Vmag_unchanged(self):
+        from photometrics.photometry_subs import transform_Vmag
+
+        self.assertAlmostEqual(20.0 - 0.275, transform_Vmag(20.0, 'r', 'S'), 6)
+        self.assertAlmostEqual(20.0 + 0.217, transform_Vmag(20.0, 'g', 'solar'), 6)
+        self.assertIsNone(transform_Vmag(20.0, 'B', 'S'))
+
+
+class TestCombineSimultaneousBands(SimpleTestCase):
+
+    def setUp(self):
+        self.table, self.truth = make_synthetic_aper_table()
+        self.combined, self.per_band, self.info = combine_simultaneous_bands(self.table)
+
+    def test_epochs_and_band_counts(self):
+        # Every rp epoch survives: the two unmeasurable rp frames are filled by the other bands
+        self.assertEqual(30, len(self.combined))
+        self.assertEqual(2, self.info['num_rows_removed'])
+        nbands = list(self.combined['nbands'])
+        self.assertEqual(26, nbands.count(4))
+        self.assertEqual(4, nbands.count(3))
+        self.assertEqual('riz', self.combined['bands'][5])      # gp outlier dropped (band order follows the table)
+        self.assertEqual('grz', self.combined['bands'][10])     # ip frame missing
+        self.assertEqual('giz', self.combined['bands'][20])     # rp frame unmeasured
+        self.assertEqual('giz', self.combined['bands'][25])     # rp frame negative flux
+        self.assertEqual({'gp': 0, 'rp': 0, 'ip': 0, 'zs': 0}, self.info['unmatched'])
+        self.assertAlmostEqual(0.5 * self.truth['cadence'], self.info['match_tolerance_s'], 3)
+        assert_array_equal(np.diff(self.combined['julian_date']) > 0, True)
+
+    def test_outlier_flagged(self):
+        gp = self.per_band['gp']
+        self.assertEqual(1, gp['flag'].sum())
+        self.assertTrue(gp['flag'][5])
+        self.assertEqual(1, self.info['counts']['gp']['flagged'])
+        self.assertEqual(29, self.info['counts']['gp']['used'])
+        for obs_filter in ['rp', 'ip', 'zs']:
+            self.assertEqual(0, self.per_band[obs_filter]['flag'].sum(), obs_filter)
+
+    def test_offsets_recovered_and_priors_checked(self):
+        for obs_filter, truth in self.truth['offsets'].items():
+            self.assertAlmostEqual(truth, self.info['offsets'][obs_filter], delta=0.03, msg=obs_filter)
+        self.assertEqual({'gp': False, 'ip': False, 'zs': False}, self.info['prior_mismatch'])
+        self.assertEqual([], self.info['warnings'])
+        self.assertAlmostEqual(0.600, self.info['priors']['gp'], 4)
+        self.assertEqual(self.info['offsets'], self.combined.meta['offsets'])
+
+    def test_prior_mismatch_flagged(self):
+        _, _, info = combine_simultaneous_bands(self.table, color_priors={'gp': 0.0, 'ip': -0.2, 'zs': -0.15})
+
+        self.assertTrue(info['prior_mismatch']['gp'])
+        self.assertFalse(info['prior_mismatch']['ip'])
+        self.assertEqual(1, len(info['warnings']))
+        self.assertIn('gp', info['warnings'][0])
+        # The fitted offset is still the one applied
+        self.assertAlmostEqual(self.info['offsets']['gp'], info['offsets']['gp'], 6)
+
+    def test_weighted_mean_and_error(self):
+        epoch = 3
+        mags, weights = [], []
+        for obs_filter in ['gp', 'rp', 'ip', 'zs']:
+            band = self.per_band[obs_filter]
+            i = np.where(band['epoch'] == epoch)[0][0]
+            self.assertAlmostEqual(np.sqrt(self.truth['errors'][obs_filter]**2 + self.truth['zp_sig']**2), band['err'][i], 6)
+            mags.append(band['mag'][i] - self.info['offsets'][obs_filter])
+            weights.append(1.0 / band['err'][i]**2)
+        mags, weights = np.array(mags), np.array(weights)
+        self.assertAlmostEqual(np.sum(weights * mags) / np.sum(weights), self.combined['mag'][epoch], 8)
+        self.assertAlmostEqual(1.0 / np.sqrt(np.sum(weights)), self.combined['sig'][epoch], 8)
+        self.assertEqual('coj2m002-ep07-20260712-0061-e93.fits', self.combined['filename'][epoch])
+        self.assertEqual('rp', self.combined['[7]'][epoch])
+        self.assertAlmostEqual(self.combined['mag'][epoch] - 24.8, self.combined['inst_mag'][epoch], 8)
+        self.assertEqual(6.0, self.combined['aprad'][epoch])
+        self.assertLess(self.combined['sig'][epoch], self.truth['errors']['rp'])
+
+    def test_tight_tolerance_drops_zs(self):
+        combined, _, info = combine_simultaneous_bands(self.table, match_tolerance=10.0 / 86400.0)
+
+        # zs is 64+ s from every rp frame: no simultaneous pairs, so no colour offset can be
+        # fitted and the band cannot be used. gp/ip still fill the two unmeasured rp epochs.
+        self.assertEqual(0, info['unmatched']['zs'])
+        self.assertEqual(0, info['counts']['zs']['used'])
+        self.assertTrue(np.isnan(info['offsets']['zs']))
+        self.assertEqual(1, len(info['warnings']))
+        self.assertIn('zs', info['warnings'][0])
+        self.assertEqual(30, len(combined))
+        self.assertNotIn('z', ''.join(combined['bands']))
+        self.assertEqual(30, info['counts']['gp']['used'] + 1)   # the outlier epoch
+
+    def test_min_bands(self):
+        combined, _, _ = combine_simultaneous_bands(self.table, min_bands=4)
+
+        self.assertEqual(26, len(combined))
+        assert_array_equal(combined['nbands'], 4)
+
+    def test_single_band_table(self):
+        rp_only = self.table[self.table['filters'] == 'rp']
+        combined, per_band, info = combine_simultaneous_bands(rp_only)
+
+        self.assertEqual(28, len(combined))
+        self.assertEqual(['rp'], info['filters'])
+        assert_array_equal(combined['nbands'], 1)
+        assert_allclose(combined['mag'], per_band['rp']['mag'])
+        assert_allclose(combined['sig'], per_band['rp']['err'])
+
+    def test_missing_reference_filter(self):
+        with self.assertRaises(ValueError):
+            combine_simultaneous_bands(self.table, ref_filter='w')
+
+
+class TestBinLightcurve(SimpleTestCase):
+
+    def test_bin_pairs(self):
+        table = Table({'julian_date': [1.0, 2.0, 3.0, 4.0, 5.0], 'mag': [20.0, 20.2, 20.4, 20.6, 20.8],
+                       'sig': [0.1, 0.1, 0.1, 0.3, 0.1], 'nbands': [4, 3, 4, 4, 2], 'bands': ['griz', 'grz', 'griz', 'griz', 'gr']})
+
+        binned = bin_lightcurve(table, nbin=2)
+
+        self.assertEqual(2, len(binned))
+        assert_allclose(binned['julian_date'], [1.5, 3.5])
+        self.assertAlmostEqual(20.1, binned['mag'][0], 8)
+        self.assertAlmostEqual((20.4 / 0.01 + 20.6 / 0.09) / (1 / 0.01 + 1 / 0.09), binned['mag'][1], 8)
+        self.assertAlmostEqual(0.1 / np.sqrt(2.0), binned['sig'][0], 8)
+        assert_array_equal(binned['nbands'], [7, 8])
+        assert_array_equal(binned['bands'], ['grizgrz', 'grizgriz'])
+
+    def test_too_short(self):
+        table = Table({'julian_date': [1.0], 'mag': [20.0], 'sig': [0.1]})
+
+        binned = bin_lightcurve(table, nbin=2)
+
+        self.assertEqual(0, len(binned))
+        self.assertEqual(['julian_date', 'mag', 'sig'], binned.colnames)
+
+
+class TestAperTableToDartTable(SimpleTestCase):
+
+    def setUp(self):
+        self.table, self.truth = make_synthetic_aper_table()
+        self.test_dir = tempfile.mkdtemp(prefix='tmp_neox_')
+
+    def tearDown(self):
+        shutil.rmtree(self.test_dir, ignore_errors=True)
+
+    def test_columns(self):
+        dart = aper_table_to_dart_table(self.table, 'rp')
+
+        self.assertEqual(28, len(dart))
+        self.assertEqual(['filename', 'julian_date', 'mag', 'sig', 'ZP', 'ZP_sig', 'inst_mag', 'in_sig', '[7]', '[8]', 'aprad'], dart.colnames)
+        self.assertEqual('coj2m002-ep07-20260712-0058-e93.fits', dart['filename'][0])
+        self.assertAlmostEqual(np.sqrt(0.02**2 + 0.01**2), dart['sig'][0], 8)
+        self.assertEqual(0.02, dart['in_sig'][0])
+        self.assertAlmostEqual(dart['mag'][0] - 24.8, dart['inst_mag'][0], 8)
+        assert_array_equal(dart['[7]'], 'rp')
+        assert_array_equal(dart['[8]'], 0)
+        assert_array_equal(np.diff(dart['julian_date']) > 0, True)
+
+    def test_round_trip_dart_file(self):
+        dart = aper_table_to_dart_table(self.table, 'ip')
+        filepath = os.path.join(self.test_dir, 'ip_dart.txt')
+
+        write_dartformat_file(dart, filepath, aprad=6.0)
+        with open(filepath) as fh:
+            lines = fh.readlines()
+
+        self.assertEqual(30, len(lines))
+        self.assertEqual('file julian_date mag sig ZP ZP_sig inst_mag inst_sig filter SExtractor_flag aprad', ' '.join(lines[0].split()))
+        fields = lines[1].split()
+        self.assertEqual('coj2m002-ep08-20260712-0058-e93.fits', fields[0])
+        self.assertEqual(f"{dart['julian_date'][0]:.7f}", fields[1])
+        self.assertEqual('ip', fields[8])
+        self.assertEqual('6.00', fields[10])
+
+        with self.assertRaises(OSError):
+            write_dartformat_file(dart, filepath, aprad=6.0)
+        write_dartformat_file(dart, filepath, aprad=6.0, overwrite=True)

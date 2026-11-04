@@ -15,14 +15,26 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 """
 
-from math import sqrt, log10, sin, cos, exp, acos, radians, degrees, erf, log
 import logging
+from math import acos, cos, degrees, erf, exp, log, log10, radians, sin, sqrt
 
 from astropy import units as u
 from astropy.constants import c, h
 from astropy.coordinates import SkyCoord
 
 logger = logging.getLogger(__name__)
+
+
+# V - PS1 passband colours by asteroid taxonomy (Veres et al. 2015, Table 2; see transform_Vmag docstring)
+ASTEROID_COLOR_TERMS = {'SOLAR' : {'g' : -0.217, 'r' : 0.183, 'i' : 0.293, 'z' : 0.311, 'Y' : 0.311, 'w' : 0.114},
+                        'MEAN'  : {'g' : -0.28 , 'r' : 0.230, 'i' : 0.390, 'z' : 0.37 , 'Y' : 0.36 , 'w' : 0.160},
+                           'S'  : {'g' : -0.325, 'r' : 0.275, 'i' : 0.470, 'z' : 0.416, 'Y' : 0.411, 'w' : 0.199},
+                           'C'  : {'g' : -0.238, 'r' : 0.194, 'i' : 0.308, 'z' : 0.320, 'Y' : 0.316, 'w' : 0.120},
+                           'Q'  : {'g' : -0.312, 'r' : 0.252, 'i' : 0.379, 'z' : 0.238, 'Y' : 0.158, 'w' : 0.156},
+                           'X'  : {'g' : -0.247, 'r' : 0.207, 'i' : 0.367, 'z' : 0.419, 'Y' : 0.450, 'w' : 0.146},
+                           'D'  : {'g' : -0.281, 'r' : 0.246, 'i' : 0.460, 'z' : 0.551, 'Y' : 0.627, 'w' : 0.191},
+                         'NEO'  : {'g' : -0.254, 'r' : 0.213, 'i' : 0.356, 'z' : 0.322, 'Y' : 0.314, 'w' : 0.148},
+                      }
 
 
 def transform_Vmag(mag_V, passband, taxonomy='Mean'):
@@ -54,18 +66,8 @@ def transform_Vmag(mag_V, passband, taxonomy='Mean'):
     with S- (50%), C- (15%), X- (10%) and Q- (10%) types dominating."
     """
 
-    mag_mapping = { 'SOLAR' : {'g' : -0.217, 'r' : 0.183, 'i' : 0.293, 'z' : 0.311, 'Y' : 0.311, 'w' : 0.114},
-                    'MEAN'  : {'g' : -0.28 , 'r' : 0.230, 'i' : 0.390, 'z' : 0.37 , 'Y' : 0.36 , 'w' : 0.160},
-                       'S'  : {'g' : -0.325, 'r' : 0.275, 'i' : 0.470, 'z' : 0.416, 'Y' : 0.411, 'w' : 0.199},
-                       'C'  : {'g' : -0.238, 'r' : 0.194, 'i' : 0.308, 'z' : 0.320, 'Y' : 0.316, 'w' : 0.120},
-                       'Q'  : {'g' : -0.312, 'r' : 0.252, 'i' : 0.379, 'z' : 0.238, 'Y' : 0.158, 'w' : 0.156},
-                       'X'  : {'g' : -0.247, 'r' : 0.207, 'i' : 0.367, 'z' : 0.419, 'Y' : 0.450, 'w' : 0.146},
-                       'D'  : {'g' : -0.281, 'r' : 0.246, 'i' : 0.460, 'z' : 0.551, 'Y' : 0.627, 'w' : 0.191},
-                     'NEO'  : {'g' : -0.254, 'r' : 0.213, 'i' : 0.356, 'z' : 0.322, 'Y' : 0.314, 'w' : 0.148},
-                  }
-
     # Lookup taxonomy to try and get V-<passband> color terms
-    color_terms = mag_mapping.get(taxonomy.upper(), None)
+    color_terms = ASTEROID_COLOR_TERMS.get(taxonomy.upper(), None)
 
     # If we got a successful taxonomy lookup, try to lookup the <passband>
     # in the color terms

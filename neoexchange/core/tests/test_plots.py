@@ -8,7 +8,7 @@ from astropy.io import fits
 from unittest import skipIf
 from datetime import datetime, timedelta
 
-from django.test import TestCase
+from django.test import SimpleTestCase, TestCase
 from django.http import HttpResponse
 from django.forms import model_to_dict # remove later
 from django.core.files.storage import default_storage
@@ -20,7 +20,9 @@ from core.models import Proposal
 from core.models.frame import Frame
 from core.models.blocks import Block, SuperBlock
 from core.models.sources import StaticSource, CatalogSources
-from core.plots import find_existing_vis_file, determine_plot_valid, make_visibility_plot, generalized_fwhm_plotter, generalized_zeropoint_plotter, plot_magnitude
+from core.plots import find_existing_vis_file, determine_plot_valid, make_visibility_plot, generalized_fwhm_plotter, generalized_zeropoint_plotter, plot_magnitude, plot_combined_lightcurve
+from photometrics.lightcurve_subs import combine_simultaneous_bands
+from photometrics.tests.test_lightcurve_subs import make_synthetic_aper_table
 
 # Disable logging during testing
 import logging
@@ -726,3 +728,22 @@ class TestObsPlotters(TestCase):
         self.assertTrue(img.shape[0]> 0, img.shape[1] > 0)
         self.assertEqual(type(img), numpy.ndarray)
         self.assertEqual(filenames, test_plot)
+
+class TestPlotCombinedLightcurve(SimpleTestCase):
+
+    def setUp(self):
+        self.test_dir = tempfile.mkdtemp(prefix='tmp_neox_')
+
+    def tearDown(self):
+        shutil.rmtree(self.test_dir, ignore_errors=True)
+
+    def test_plot_written(self):
+        table, _ = make_synthetic_aper_table()
+        combined, per_band, _ = combine_simultaneous_bands(table)
+        savepath = os.path.join(self.test_dir, 'combined.png')
+
+        filename = plot_combined_lightcurve(combined, per_band, 'synthetic 4-band test', savepath)
+
+        self.assertEqual(savepath, filename)
+        self.assertTrue(os.path.exists(savepath))
+        self.assertGreater(os.path.getsize(savepath), 10000)
