@@ -48,6 +48,7 @@ from photometrics.catalog_subs import (
     convert_value,
     fits_ldac_to_header,
     get_header,
+    increment_red_level,
     mro_ldac_catalog_mapping,
     open_fits_catalog,
     read_sextractor_apertures,
@@ -470,9 +471,12 @@ def determine_hotpants_options(ref, sci, source_dir, dest_dir, dbgOptions=False)
         logger.error("Error occurred in SWarp while aligning images.")
         return -9
 
-    # XXX replace with proper call to increment_red_level if red level present in filename
-    #output_diff_image = os.path.join(dest_dir, os.path.basename(sci).replace('.fits', '.subtracted.fits'))
-    output_diff_image = os.path.join(dest_dir, os.path.basename(sci).replace('e92.fits', 'e93.fits'))
+    # Same naming as make_subtractions() expects (e92 -> e93); a frame without a
+    # reduction level tag must not be overwritten by its own difference image.
+    output_name = increment_red_level(sci)
+    if output_name is None:
+        output_name = os.path.basename(sci).replace('.fits', '.subtracted.fits')
+    output_diff_image = os.path.join(dest_dir, output_name)
     output_noise_image = output_diff_image.replace('.fits', '.rms.fits')
 
     # Get the relevant header and data information

@@ -1407,6 +1407,19 @@ class TestDetermineHotpantsOptions(ExternalCodeUnitTest):
         self.maxDiff = None
         self.assertEqual(expected_options, options)
 
+    def test_red_level_incremented(self):
+        sci = os.path.join(self.test_dir, 'banzai_test_frame-e92.fits')
+        shutil.copy(self.test_banzai_file_COPIED, sci)
+        shutil.copy(self.test_banzai_rms_file, os.path.join(self.test_dir, 'banzai_test_frame-e92.rms.fits'))
+        expected_outim = os.path.join(self.test_dir, 'banzai_test_frame-e93.fits')
+        expected_oni = os.path.join(self.test_dir, 'banzai_test_frame-e93.rms.fits')
+
+        options = determine_hotpants_options(sci, sci, self.source_dir, self.test_dir, dbgOptions=True)
+
+        tokens = options.split()
+        self.assertEqual(expected_outim, tokens[tokens.index('-outim') + 1])
+        self.assertEqual(expected_oni, tokens[tokens.index('-oni') + 1])
+
 
 class TestDetermineMTDLINKOptions(ExternalCodeUnitTest):
 
