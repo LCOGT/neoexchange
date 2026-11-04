@@ -736,7 +736,8 @@ class TestSExtractorRunner(ExternalCodeUnitTest):
 
         # Expected value is 14 lines of header plus 2086 sources
         # LP 2022/06/30 Expected sources now 1929 after change in BACK_SIZE
-        self.assertEqual(14+1929, len(test_lines))
+        # 2026/10: 1978 after DETECT_THRESH/ANALYSIS_THRESH 3.0 -> 1.2 sigma (fe1946d0)
+        self.assertEqual(14+1978, len(test_lines))
         self.assertEqual(expected_line1, test_lines[0].rstrip())
 
         output_rms = os.path.join(self.test_dir, os.path.basename(self.test_fits_file.replace('.fits', '.rms.fits')))
@@ -747,7 +748,9 @@ class TestSExtractorRunner(ExternalCodeUnitTest):
 
         expected_status = 0
         expected_hdus = ['PRIMARY', 'LDAC_IMHEAD', 'LDAC_OBJECTS']
-        expected_row1 = (1, 106.72158852039514, 25.649854272268744, 215.6548927631294, -39.477292362087034, 2.3552754168060627e-11, 1.653809750683626e-11, 0.00213810408831188, 0.0020694796910492633, 107, 26, 5.718054717711681, 3.898199662063792, 0.21701803052330249, 2.020644, 1.8051586, 10.109293, 0.046268698, 0.04546198, 10.987773, 26001.604, 635.868, 8520.073, 138.29593, 670.50024, 3.3191917, -10.925921, 0.025971856, 498.63678, -6.374261, 78, 0.17886513, 78, 71, 56, 46, 37, 25, 15, 4, 6.396605, 0.9479728, 0, 0)
+        # First object of the 1.2 sigma catalogue (fe1946d0): a bright star at (1656, 108), not the
+        # faint source at (107, 26) that led the 3 sigma catalogue.
+        expected_row1 = (1, 1656.4035996071616, 108.35714850266788, 215.3944590157601, -39.48805815465453, 9.430936763957092e-13, 9.81298288572914e-13, 1.2018527236497327e-05, 1.0479385958668002e-05, 1656, 109, 15.626088393980808, 14.470450337140278, 0.33621999357717414, 2.162909984588623, 1.9633129835128784, 13.111555099487305, 0.0034836616832762957, 0.003219008445739746, 14.905628204345703, 1154397.125, 1100.126220703125, 938887.5, 863.4363403320312, 22920.9609375, 3.558934450149536, -15.193305969238281, 0.0011722914641723037, 490.35205078125, -5.378021240234375, 1039, 0.04348069429397583, 1039, 745, 445, 291, 187, 121, 77, 37, 6.806160926818848, 0.9896228313446045, 0, 0)
 
         status = run_sextractor(self.source_dir, self.test_dir, self.test_fits_file_COPIED, checkimage_type=['BACKGROUND_RMS'])
 
@@ -763,11 +766,12 @@ class TestSExtractorRunner(ExternalCodeUnitTest):
         for i, hdu in enumerate(hdulist):
             self.assertEqual(expected_hdus[i], hdu.name)
 
-        # Expected value is 982 lines of FITS header plus 270 sources
+        # Expected value is 982 lines of FITS header plus 1139 sources
+        # (270 before DETECT_THRESH/ANALYSIS_THRESH 3.0 -> 1.2 sigma, fe1946d0)
         self.assertEqual(982, len(hdulist['LDAC_IMHEAD'].data[0][0]))
         tbl_data = hdulist['LDAC_OBJECTS'].data
-        self.assertEqual(270, len(tbl_data))
-        assert_allclose(expected_row1, tbl_data[0], 6)
+        self.assertEqual(1139, len(tbl_data))
+        assert_allclose(expected_row1, tbl_data[0], rtol=1e-6)
         hdulist.close()
 
         output_rms = os.path.join(self.test_dir, os.path.basename(self.test_fits_file.replace('.fits', '.rms.fits')))
