@@ -9438,6 +9438,17 @@ class TestPerformAperPhotometry(TestCase):
         self.assertAlmostEqual(expected_table[column][0], row[column], precision)
         print(f'{column} OK')
 
+    def assert_table_matches_file(self, file_table, table):
+        """Compare a photometry table read back from ECSV against the in-memory one column by column.
+        (str(Table) folds wide tables to the terminal width, so a repr comparison depends on the tty.)"""
+        self.assertEqual(table.colnames, file_table.colnames)
+        self.assertEqual(len(table), len(file_table))
+        for column in table.colnames:
+            if table[column].dtype.kind == 'f':
+                np.testing.assert_allclose(file_table[column], table[column], rtol=1e-12, err_msg=column)
+            else:
+                self.assertEqual([str(v) for v in table[column]], [str(v) for v in file_table[column]], column)
+
     def expected_sums(self, radius_pix):
         """Independent pixel-aperture photometry of the third (0125) e93 frame at the interpolated
         ephemeris position, for an aperture of <radius_pix> PIXELS"""
@@ -9690,7 +9701,7 @@ class TestPerformAperPhotometry(TestCase):
         self.assertTrue(os.path.exists(photometry_file_name))
         self.assertTrue(os.path.getsize(photometry_file_name) > 0)
         self.assertEqual(expected_file_name, photometry_file_name)
-        self.assertEqual(str(photometry_file_contents), str(photometry_table))
+        self.assert_table_matches_file(photometry_file_contents, photometry_table)
 
     def test_generate_ecsv_file_post_photometry_default_ap_ignore_zp(self):
         block_date_str = f"{self.test_block.block_start}"[:-9]
@@ -9701,7 +9712,7 @@ class TestPerformAperPhotometry(TestCase):
         self.assertTrue(os.path.exists(photometry_file_name))
         self.assertTrue(os.path.getsize(photometry_file_name) > 0)
         self.assertEqual(expected_file_name, photometry_file_name)
-        self.assertEqual(str(photometry_file_contents), str(photometry_table))
+        self.assert_table_matches_file(photometry_file_contents, photometry_table)
 
     def test_generate_ecsv_file_post_photometry_manual_ap_ignore_zp(self):
         block_date_str = f"{self.test_block.block_start}"[:-9]
@@ -9712,7 +9723,7 @@ class TestPerformAperPhotometry(TestCase):
         self.assertTrue(os.path.exists(photometry_file_name))
         self.assertTrue(os.path.getsize(photometry_file_name) > 0)
         self.assertEqual(expected_file_name, photometry_file_name)
-        self.assertEqual(str(photometry_file_contents), str(photometry_table))
+        self.assert_table_matches_file(photometry_file_contents, photometry_table)
 
     def test_generate_ecsv_file_post_photometry_manual_ap_include_zp(self):
         block_date_str = f"{self.test_block.block_start}"[:-9]
@@ -9723,5 +9734,5 @@ class TestPerformAperPhotometry(TestCase):
         self.assertTrue(os.path.exists(photometry_file_name))
         self.assertTrue(os.path.getsize(photometry_file_name) > 0)
         self.assertEqual(expected_file_name, photometry_file_name)
-        self.assertEqual(str(photometry_file_contents), str(photometry_table))
+        self.assert_table_matches_file(photometry_file_contents, photometry_table)
 

@@ -5314,7 +5314,7 @@ def generate_ecsv_file_post_photometry(block, dataroot, overwrite, savepath = No
     for i in range (0, len(times)):
         stringified_times.append(f"{times[i]}")
     results_table['times'] = stringified_times
-    new_order = ['path to frame','times','filters','RA','DEC','xcenter','ycenter','aperture sum','aperture sum err','FWHM','ZP','ZP_sig','mag','magerr','aperture radius pix','aperture radius arcsec','ZP aperture radius pix','pixel scale']
+    new_order = ['path to frame','times','filters','RA','DEC','xcenter','ycenter','aperture sum','aperture sum err','FWHM','ZP','ZP_sig','mag','magerr','aperture radius pix','aperture radius arcsec','ZP aperture radius pix','pixel scale','SNR']
     results_table = results_table[new_order]
     block_date_str = f"{block.block_start}"[:-9]
     aper_rad_label = aperture_radius_label(aperture_radius_pix)
