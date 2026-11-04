@@ -25,6 +25,7 @@ from astropy.wcs import WCS
 from astropy import units as u
 from astropy.coordinates import SkyCoord
 from astropy.stats import sigma_clipped_stats
+from scipy.ndimage import maximum_filter
 from core.models import StaticSource, Block, Frame
 
 logger = logging.getLogger(__name__)
@@ -326,6 +327,68 @@ def create_rms_image(fits_file):
     weight_hdulist.close()
 
     return rms_file
+
+
+def create_hotpants_mask(fits_file, dest_dir, halfwidth):
+    """Create an input mask image for HOTPANTS (`-imi`) from the science
+    image <fits_file>: pixels at or above the saturation level
+    (`get_saturate()`) and any non-zero pixels of a BPM HDU, if present, are
+    masked and then grown by <halfwidth> pixels on every side (a square box).
+
+    HOTPANTS's substamp autosearch only checks for bad pixels inside its own
+    stamp cell, so a saturated star just outside a cell can seed a substamp on
+    its wings and wreck that region's kernel fit. Growing the mask by the
+    substamp half-width (the `-rss` value) makes every pixel within a
+    substamp of saturation ineligible as a centre, whichever cell it is in.
+
+    The mask is written to <dest_dir>/<basename>.mask.fits (non-zero = bad)
+    and its path returned; negative status codes are returned on error.
+    """
+
+    if not os.path.exists(fits_file):
+        logger.error("FITS file %s does not exist" % fits_file)
+        return -11
+    try:
+        hdulist = fits.open(fits_file)
+    except OSError as e:
+        logger.error("Unable to open FITS image %s (Reason=%s)" % (fits_file, e))
+        return -12
+
+    try:
+        sci_hdu = hdulist['SCI']
+    except KeyError:
+        sci_hdu = hdulist[0]
+    scidata = sci_hdu.data
+    sciheader = sci_hdu.header
+
+    satlev = get_saturate(sciheader)
+    mask = scidata >= satlev
+    try:
+        mask |= hdulist['BPM'].data > 0
+    except KeyError:
+        pass
+    hdulist.close()
+
+    halfwidth = int(halfwidth)
+    if halfwidth > 0:
+        mask = maximum_filter(mask.astype(np.uint8), size=2 * halfwidth + 1)
+
+    mask_file = os.path.join(dest_dir, os.path.basename(fits_file))
+    if mask_file.endswith(".fits.fz"):
+        mask_file = mask_file.replace(".fits.fz", ".mask.fits")
+    else:
+        mask_file = mask_file.replace(".fits", ".mask.fits")
+    if os.path.basename(mask_file) == os.path.basename(fits_file):
+        logger.error("%s is a FITS file, but does not end in .fits or .fits.fz" % fits_file)
+        return -15
+
+    header = fits.Header()
+    header['L1FRMTYP'] = ('MASK', 'Type of processed image')
+    header['MASKSAT'] = (satlev, 'Saturation level masked (counts)')
+    header['MASKGROW'] = (halfwidth, 'Mask grown by this many pixels per side')
+    fits.PrimaryHDU(mask.astype('int16'), header).writeto(mask_file, overwrite=True, checksum=True)
+
+    return mask_file
 
 def get_reference_name(field_ra, field_dec, site, instrument, obs_filter, obs_date=None):
     """ Create a name for a co-added reference image based on

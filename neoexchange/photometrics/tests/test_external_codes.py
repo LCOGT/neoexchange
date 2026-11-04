@@ -1076,8 +1076,9 @@ class TestHotpantsRunner(ExternalCodeUnitTest):
         subtracted_rms = os.path.join(self.test_dir, "banzai_test_frame.subtracted.rms.fits")
         aligned_rms = os.path.join(self.test_dir, "banzai_test_frame.rms_aligned_to_banzai_test_frame.rms.fits")
         rms = os.path.join(self.test_dir, "banzai_test_frame.rms.fits")
+        mask = os.path.join(self.test_dir, "banzai_test_frame.mask.fits")
 
-        expected_cmdline = f"./hotpants -inim {bkgsub} -tmplim {aligned} -outim {subtracted} -tni {aligned_rms} -ini {rms} -oni {subtracted_rms} -hki -n i -c t -v 0 -tu 57959 -iu 57959 -tl 43.892452606201175 -il -342.03351336669925 -nrx 3 -nry 3 -nsx 6.760000000000001 -nsy 6.793333333333333 -r 11.235949458513854 -rss 26.96627870043325 -fin 223.60679774997897"
+        expected_cmdline = f"./hotpants -inim {bkgsub} -tmplim {aligned} -outim {subtracted} -tni {aligned_rms} -ini {rms} -oni {subtracted_rms} -imi {mask} -hki -n i -c t -v 0 -tu 57959 -iu 57959 -tl 43.892452606201175 -il -342.03351336669925 -nrx 3 -nry 3 -nsx 6.760000000000001 -nsy 6.793333333333333 -r 11.235949458513854 -rss 26.96627870043325 -fin 223.60679774997897"
         cmdline = run_hotpants(self.test_banzai_file_COPIED, self.test_banzai_file_COPIED, self.source_dir, self.test_dir, binary='./hotpants', dbg=True, dbgOptions=True)
         self.maxDiff=None
         self.assertEqual(expected_cmdline, cmdline)
@@ -1102,8 +1103,9 @@ class TestHotpantsRunner(ExternalCodeUnitTest):
         self.assertTrue('HOTPanTS', header.get('SOFTNAME', ''))
         self.assertTrue('TEMPLATE', header.get('CONVOL00', ''))
         self.assertTrue('0.9932  ', header.get('KSUM00', ''))
-        assert_allclose(-194.2074, data[400, 400])
-        assert_allclose(17.313549, data[640, 30])
+        # Regression values for the self-subtraction with the saturation mask in place
+        assert_allclose(-193.75204, data[400, 400], rtol=1e-5)
+        assert_allclose(21.32156, data[640, 30], rtol=1e-5)
 
 
 class TestFindOrbRunner(ExternalCodeUnitTest):
@@ -1398,8 +1400,9 @@ class TestDetermineHotpantsOptions(ExternalCodeUnitTest):
         subtracted_rms = os.path.join(self.test_dir, "banzai_test_frame.subtracted.rms.fits")
         aligned_rms = os.path.join(self.test_dir, "banzai_test_frame.rms_aligned_to_banzai_test_frame.rms.fits")
         rms = os.path.join(self.test_dir, "banzai_test_frame.rms.fits")
+        mask = os.path.join(self.test_dir, "banzai_test_frame.mask.fits")
 
-        expected_options = f"-inim {bkgsub} -tmplim {aligned} -outim {subtracted} -tni {aligned_rms} -ini {rms} -oni {subtracted_rms} -hki -n i -c t -v 0 " \
+        expected_options = f"-inim {bkgsub} -tmplim {aligned} -outim {subtracted} -tni {aligned_rms} -ini {rms} -oni {subtracted_rms} -imi {mask} -hki -n i -c t -v 0 " \
                            f"-tu 57959 -iu 57959 -tl 43.892452606201175 -il -342.03351336669925 -nrx 3 -nry 3 -nsx 6.760000000000001 -nsy 6.793333333333333 -r 11.235949458513854 -rss 26.96627870043325 -fin 223.60679774997897"
 
         options = determine_hotpants_options(self.test_banzai_file_COPIED, self.test_banzai_file_COPIED, self.source_dir, self.test_dir, dbgOptions=True)

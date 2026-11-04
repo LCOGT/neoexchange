@@ -25,7 +25,7 @@ from pathlib import Path
 from astropy.io import fits
 from astropy.wcs import WCS
 from astropy.coordinates import Angle
-from numpy import array, arange
+from numpy import array, arange, zeros
 from numpy.testing import assert_allclose
 
 from django.test import TestCase
@@ -190,6 +190,102 @@ class TestCreateWeightImage(ExternalCodeUnitTest):
         assert_allclose(0.0, data[1653:1663, 458])
         # Test whether central pixel is nonzero
         assert_allclose(0.0009511118, data[int(header['NAXIS1']/2), int(header['NAXIS2']/2)])
+
+
+class TestCreateHotpantsMask(ExternalCodeUnitTest):
+    def setUp(self):
+        super().setUp()
+        self.test_banzai_file = os.path.join(self.testfits_dir, 'banzai_test_frame.fits')
+        shutil.copy(os.path.abspath(self.test_banzai_file), self.test_dir)
+        self.test_banzai_file = os.path.join(self.test_dir, os.path.basename(self.test_banzai_file))
+        self.remove = True
+
+    def make_frame(self, filename, data, bpm=None, satlev=1000.0):
+        """Write a small test frame with a SCI HDU (MAXLIN=<satlev>) and an optional BPM HDU"""
+        sci = fits.ImageHDU(data.astype('float32'), name='SCI')
+        sci.header['MAXLIN'] = satlev
+        hdus = [fits.PrimaryHDU(), sci]
+        if bpm is not None:
+            hdus.append(fits.ImageHDU(bpm.astype('uint8'), name='BPM'))
+        filepath = os.path.join(self.test_dir, filename)
+        fits.HDUList(hdus).writeto(filepath)
+        return filepath
+
+    def test_doesnotexist(self):
+        self.assertEqual(-11, create_hotpants_mask('banana.fits', self.test_dir, 5))
+
+    def test_bad_extension(self):
+        bad_file = os.path.join(self.test_dir, 'frame.banana')
+        shutil.copy(self.test_banzai_file, bad_file)
+
+        self.assertEqual(-15, create_hotpants_mask(bad_file, self.test_dir, 5))
+
+    def test_saturated_pixel_grown_by_halfwidth(self):
+        data = zeros((50, 60))
+        data[20, 30] = 1000.0
+        frame = self.make_frame('frame.fits', data)
+
+        mask_file = create_hotpants_mask(frame, self.test_dir, 3)
+
+        self.assertEqual(os.path.join(self.test_dir, 'frame.mask.fits'), mask_file)
+        mask = fits.getdata(mask_file)
+        self.assertEqual((50, 60), mask.shape)
+        self.assertEqual(7 * 7, mask.sum())
+        self.assertTrue(mask[17:24, 27:34].all())
+        self.assertEqual(0, mask[16, 30])
+        self.assertEqual(0, mask[20, 34])
+
+    def test_below_saturation_not_masked(self):
+        data = zeros((50, 60))
+        data[20, 30] = 999.0
+        frame = self.make_frame('frame.fits', data)
+
+        mask = fits.getdata(create_hotpants_mask(frame, self.test_dir, 3))
+
+        self.assertEqual(0, mask.sum())
+
+    def test_bpm_included(self):
+        data = zeros((50, 60))
+        bpm = zeros((50, 60))
+        bpm[5, 5] = 2
+        frame = self.make_frame('frame.fits', data, bpm=bpm)
+
+        mask = fits.getdata(create_hotpants_mask(frame, self.test_dir, 1))
+
+        self.assertEqual(9, mask.sum())
+        self.assertTrue(mask[4:7, 4:7].all())
+
+    def test_no_growth(self):
+        data = zeros((50, 60))
+        data[20, 30] = 2000.0
+        frame = self.make_frame('frame.fits', data)
+
+        mask = fits.getdata(create_hotpants_mask(frame, self.test_dir, 0))
+
+        self.assertEqual(1, mask.sum())
+        self.assertEqual(1, mask[20, 30])
+
+    def test_header_and_dtype(self):
+        data = zeros((50, 60))
+        frame = self.make_frame('frame.fits', data)
+
+        with fits.open(create_hotpants_mask(frame, self.test_dir, 4)) as hdul:
+            self.assertEqual('int16', hdul[0].data.dtype.name)
+            self.assertEqual('MASK', hdul[0].header['L1FRMTYP'])
+            self.assertEqual(1000.0, hdul[0].header['MASKSAT'])
+            self.assertEqual(4, hdul[0].header['MASKGROW'])
+
+    def test_banzai_frame(self):
+        mask_file = create_hotpants_mask(self.test_banzai_file, self.test_dir, 2)
+
+        self.assertEqual(os.path.join(self.test_dir, 'banzai_test_frame.mask.fits'), mask_file)
+        with fits.open(self.test_banzai_file) as hdul:
+            shape = hdul['SCI'].data.shape
+            expected_min = ((hdul['SCI'].data >= get_saturate(hdul['SCI'].header)) | (hdul['BPM'].data > 0)).sum()
+        mask = fits.getdata(mask_file)
+        self.assertEqual(shape, mask.shape)
+        self.assertGreater(expected_min, 0)
+        self.assertGreaterEqual(mask.sum(), expected_min)
 
 
 class TestCreateRMSImage(ExternalCodeUnitTest):

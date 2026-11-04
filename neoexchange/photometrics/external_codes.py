@@ -55,6 +55,7 @@ from photometrics.catalog_subs import (
     swope_ldac_catalog_mapping,
 )
 from photometrics.image_subs import (
+    create_hotpants_mask,
     create_rms_image,
     create_weight_image,
     get_fits_imagestats,
@@ -515,11 +516,21 @@ def determine_hotpants_options(ref, sci, source_dir, dest_dir, dbgOptions=False)
 
     fin = sqrt(50000.) #noise image only fillvalue (0.0e+00)
 
+    # HOTPANTS's own -iu threshold runs on the background-subtracted image and does not
+    # protect substamp selection from a saturated star just outside a stamp cell, so pass
+    # an explicit saturation/BPM mask grown by the substamp half-width (see
+    # create_hotpants_mask).
+    sci_mask = create_hotpants_mask(sci, dest_dir, rss)
+    if type(sci_mask) != str:
+        logger.error(f"Could not create HOTPANTS mask for {sci} (status={sci_mask})")
+        return -10
+
     # `-n i` normalises the difference image to the science image, so the e92 photometric
     # calibration applies to the e93 (updateFITSdia relies on this). `-n t` would put it on
     # the reference image's scale.
     options = f'-inim {sci_bkgsub} -tmplim {aligned_ref} -outim {output_diff_image} ' \
               f'-tni {aligned_rms} -ini {sci_rms} -oni {output_noise_image} ' \
+              f'-imi {sci_mask} ' \
               f'-hki -n i -c t -v 0 ' \
               f'-tu {satlev} -iu {satlev} ' \
               f'-tl {tl} -il {il} ' \
