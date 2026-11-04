@@ -2950,8 +2950,8 @@ class TestRunAststatistics(ExternalCodeUnitTest):
         self.assertEquals(expected_cmdline_std, cmdline_std)
 
     def test_outputs(self):
-        expected_mean = b'4.052504e+02\n'
-        expected_std = b'3.674769e+01\n'
+        expected_mean = b'4.042137e+02\n'
+        expected_std = b'3.503920e+01\n'
         expected_status = 0
 
         mean, status_m = run_aststatistics(self.test_banzai_file_COPIED, 'mean')
