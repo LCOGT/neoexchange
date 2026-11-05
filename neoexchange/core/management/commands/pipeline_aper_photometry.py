@@ -147,7 +147,7 @@ class Command(BaseCommand):
                 continue
             dart_path = f"{base_name}_{obs_filter}_dart.txt"
             write_dartformat_file(dart_table, dart_path, aprad=float(dart_table['aprad'][0]), overwrite=True)
-            save_dataproduct(block, dart_path, DataProduct.DART_TXT, force=options['overwrite'])
+            save_dataproduct(block.superblock, dart_path, DataProduct.DART_TXT, force=options['overwrite'])
             self.stdout.write(f"Wrote {len(dart_table)} {obs_filter} points to {dart_path}")
 
         combine = options['combine']
@@ -185,7 +185,7 @@ class Command(BaseCommand):
         combined.write(f"{combined_base}.ecsv", format="ascii.ecsv", overwrite=True)
         dart_path = f"{combined_base}_dart.txt"
         write_dartformat_file(combined, dart_path, aprad=float(combined['aprad'][0]), overwrite=True)
-        save_dataproduct(block, dart_path, DataProduct.DART_TXT, force=options['overwrite'])
+        save_dataproduct(block.superblock, dart_path, DataProduct.DART_TXT, force=options['overwrite'])
         title = f"{block.body.current_name()}, Block {block.id}, {block.site} {str(block.block_start)[:10]}: {'+'.join(filters)} combined"
         plot_path = plot_combined_lightcurve(combined, per_band, title, f"{combined_base}.png", ref_filter=options['ref_filter'])
         save_dataproduct(block, plot_path, DataProduct.PNG_LIGHTCURVE_COMBINED_UNPHASED, force=options['overwrite'])

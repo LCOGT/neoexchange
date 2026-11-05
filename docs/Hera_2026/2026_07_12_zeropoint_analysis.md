@@ -826,7 +826,8 @@ and PhotPipe (PS1→SDSS) in §2 hides a shared problem. BHTOM's CCDPhot was ass
   (Fix 7/13), drops >4σ outliers from a leave-one-out running median and takes the inverse-variance mean per epoch.
   Driven by `pipeline_aper_photometry --block N --from-table <ecsv>` (or on fresh photometry); writes per-filter
   and combined "DART format" files, a combined ECSV with the offsets in its meta, a 3-panel PNG, and registers the
-  DART/PNG files as `DataProduct`s (DART_TXT, PNG_LIGHTCURVE_COMBINED_UNPHASED) on the Block. On 35906: offsets
+  DART/PNG files as `DataProduct`s (DART_TXT on the Block's SuperBlock, matching the existing DART and ALCDEF
+  products; PNG_LIGHTCURVE_COMBINED_UNPHASED on the Block). On 35906: offsets
   g′ +0.537, i′ −0.190, z_s −0.155 (priors +0.600/−0.195/−0.141), 87 epochs (83 with all four bands; the r′-less
   epoch 0089 recovered from the other cameras), p2p 0.026 mag with the one single-band z_s epoch, 0.024 without
   (`--min-bands 2`), median error 0.022 mag vs 0.033/0.029 for r′ alone. Outputs under
