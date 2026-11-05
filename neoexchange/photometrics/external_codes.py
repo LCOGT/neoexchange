@@ -1266,7 +1266,7 @@ def run_scamp(source_dir, dest_dir, fits_catalog_path, refcatalog='GAIA-DR3.cat'
         logger.error("Could not locate 'scamp' executable in PATH")
         return -42
 
-    scamp_config_file = default_scamp_config_files()[0]
+    scamp_config_file = default_scamp_config_files(refcatalog)[0]
     options = determine_scamp_options(fits_catalog_path, external_cat_name=refcatalog, distort_degrees=distort_degrees)
 
     # SCAMP writes the output header file to the path that the FITS file is in,

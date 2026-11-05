@@ -451,7 +451,7 @@ class TestSCAMPRunner(ExternalCodeUnitTest):
         expected_status = 0
         expected_line1 = 'EQUINOX =        2000.00000000 / Mean equinox'
 
-        status = run_scamp(self.source_dir, self.test_dir, self.test_fits_catalog)
+        status = run_scamp(self.source_dir, self.test_dir, self.test_fits_catalog, refcatalog=os.path.basename(self.test_GAIADR2_catalog))
 
         self.assertEqual(expected_status, status)
         if self.debug_print: print(glob(os.path.join(self.test_dir, '*')))
@@ -465,9 +465,16 @@ class TestSCAMPRunner(ExternalCodeUnitTest):
         test_lines = test_fh.readlines()
         test_fh.close()
 
-        # Expected value is 29 lines of FITS header
-        self.assertEqual(29, len(test_lines))
-        self.assertEqual(expected_line1, test_lines[3].rstrip())
+        # The number of cards depends on the SCAMP version (29 up to 2.13, 30 from 2.15 which adds
+        # EXTNAME), so check the content rather than line count and position
+        cards = {line[:8].rstrip(): line.rstrip() for line in test_lines if line[8:10] == '= '}
+        self.assertEqual(expected_line1, cards.get('EQUINOX'))
+        for key in ['RADESYS', 'CTYPE1', 'CTYPE2', 'CRVAL1', 'CRVAL2', 'CRPIX1', 'CRPIX2', 'CD1_1', 'CD1_2', 'CD2_1', 'CD2_2']:
+            self.assertIn(key, cards)
+        self.assertEqual("CTYPE1  = 'RA---TAN'", cards['CTYPE1'][:20])
+        self.assertAlmostEqual(219.8357, float(cards['CRVAL1'].split('=')[1].split('/')[0]), 3)
+        self.assertAlmostEqual(-9.7675, float(cards['CRVAL2'].split('=')[1].split('/')[0]), 3)
+        self.assertEqual('END', test_lines[-1].rstrip())
 
         xml_file = os.path.basename(self.test_fits_catalog).replace('fits', 'xml')
         output_xml = os.path.join(self.test_dir, header_file)
