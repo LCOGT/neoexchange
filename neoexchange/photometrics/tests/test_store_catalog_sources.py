@@ -18,7 +18,7 @@ from unittest import skipIf
 from math import sqrt, log10, log, pow
 import os
 import mock
-from django.test import TestCase
+from django.test import TestCase, tag
 from django.forms.models import model_to_dict
 from astropy.io import fits
 from astropy.table import Table
@@ -118,6 +118,7 @@ class StoreCatalogSourcesTest(FITSUnitTest):
                         }
         self.test_frame, created = Frame.objects.get_or_create(**frame_params)
 
+    @tag('network')
     def test_create_catalog_sources(self):
 
         num_sources_created, num_in_table = store_catalog_sources(self.test_ldacfilename, catalog_type='FITS_LDAC', std_zeropoint_tolerance=0.1)
@@ -131,6 +132,7 @@ class StoreCatalogSourcesTest(FITSUnitTest):
         self.assertAlmostEqual(last_catsrc.obs_x, 1758.0390, 4)
         self.assertAlmostEqual(last_catsrc.obs_y, 2024.9652, 4)
 
+    @tag('network')
     def test_zeropoint_update(self):
 
         num_sources_created, num_in_table = store_catalog_sources(self.test_ldacfilename, catalog_type='FITS_LDAC', std_zeropoint_tolerance=0.1)
@@ -154,6 +156,7 @@ class StoreCatalogSourcesTest(FITSUnitTest):
         self.assertGreater(first_catsrc.obs_mag, 0.0)
         self.assertAlmostEqual(first_catsrc.err_obs_mag, sqrt(header['zeropoint_err']**2 + 0.0034573015**2), 4)
 
+    @tag('network')
     def test_duplicate_entries(self):
 
         num_sources_created, num_in_table = store_catalog_sources(self.test_ldacfilename, catalog_type='FITS_LDAC', std_zeropoint_tolerance=0.1)
@@ -178,6 +181,7 @@ class StoreCatalogSourcesTest(FITSUnitTest):
         self.assertEqual(num_sources_created, 0)
         self.assertEqual(num_in_table, 0)
 
+    @tag('network')
     def test_store_catalog_sources_frame_update_no_zeropoint(self):
 
         frame = Frame.objects.last()
@@ -218,6 +222,7 @@ class StoreCatalogSourcesTest(FITSUnitTest):
         self.assertAlmostEqual(last_frame.zeropoint_err, 0.0641, 4)
         self.assertEqual(last_frame.photometric_catalog, 'UCAC4')
 
+    @tag('network')
     def test_store_catalog_sources_update_frames_zeropoint_lt0(self):
 
         expected_num_sources_created = self.table_num_flags0_posve_ldac
@@ -239,6 +244,7 @@ class StoreCatalogSourcesTest(FITSUnitTest):
         self.assertAlmostEqual(last_frame.zeropoint_err, 0.0641, 4)
         self.assertEqual(last_frame.photometric_catalog, 'UCAC4')
 
+    @tag('network')
     def test_store_catalog_sources_update_frames_zeropoint_gt0(self):
 
         frame = Frame.objects.last()

@@ -1,4 +1,9 @@
 # Tests that fail deterministically when the network is disabled (unshare -rn), main@py3.11, 2026-09-28. Candidates for @tag('network') or mocking.
+# 2026-11-04: tagged @tag('network') on pipelines (run with `--exclude-tag network` / `--tag network`): the 22 below that
+# exist on pipelines (the TestCreateContextArea, TestDetermineTargetNameType, test_generate_e92 and
+# test_write_proc/raw_label entries are main-only) plus three pipelines-only tests found by re-running the same classes
+# offline: ZeropointUnitTest.test_get_cat_ra_dec_GAIA_DR3, TestCreateObsArea.test_banzai_didymos,
+# TestWritePDSLabel.test_write. The main-only entries still need tagging when the branches merge.
 test_banzai_not_didymos (photometrics.tests.test_pds_subs.TestCreateObsArea)
 test_cal_data_by_daydir (photometrics.tests.test_pds_subs.TestCreateContextArea)
 test_cal_data (photometrics.tests.test_pds_subs.TestCreateContextArea)

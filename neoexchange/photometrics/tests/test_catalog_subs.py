@@ -24,7 +24,7 @@ import shutil
 import stat
 
 from mock import patch
-from django.test import TestCase, SimpleTestCase
+from django.test import TestCase, SimpleTestCase, tag
 from django.forms.models import model_to_dict
 from astropy.io import fits
 from astropy.wcs import WCS
@@ -69,6 +69,7 @@ class ZeropointUnitTest(TestCase):
 
     # @patch('photometrics.catalog_subs.Vizier')
     # def test_get_cat_ra_dec(self, mock_vizier):
+    @tag('network')
     def test_get_cat_ra_dec(self):
         # test getting a single ra, dec, and rmag out of the default UCAC4 catalog
         # test_data = __file__.replace('.py', '_UCAC4.dat') #test_data_file captured with cat_table.write('test_catalog_subs_UCAC4.dat', format='csv')
@@ -112,6 +113,7 @@ class ZeropointUnitTest(TestCase):
 
     # @patch('photometrics.catalog_subs.Vizier')
     # def test_no_cat(self, mock_vizier):
+    @tag('network')
     def test_no_cat(self):
 
         expected_ra_first_source = 299.29474599999998
@@ -137,6 +139,7 @@ class ZeropointUnitTest(TestCase):
 
 #    @patch('photometrics.catalog_subs.Vizier')
 #    def test_get_cat_ra_dec_not_default(self, mock_vizier):
+    @tag('network')
     def test_get_cat_ra_dec_not_default(self):
 
         expected_ra_first_source = 299.29136599999998
@@ -162,6 +165,7 @@ class ZeropointUnitTest(TestCase):
 
 #    @patch('photometrics.catalog_subs.Vizier')
 #    def test_get_cat_diff_rmag_limit(self, mock_vizier):
+    @tag('network')
     def test_get_cat_diff_rmag_limit(self):
 
         expected_ra_last_source = 299.82885099999999
@@ -187,6 +191,7 @@ class ZeropointUnitTest(TestCase):
 
 #    @patch('photometrics.catalog_subs.Vizier')
 #    def test_get_cat_diff_row_limit(self, mock_vizier):
+    @tag('network')
     def test_get_cat_diff_row_limit(self):
 
         expected_ra_first_source = 299.29136599999998
@@ -212,6 +217,7 @@ class ZeropointUnitTest(TestCase):
 
 #    @patch('photometrics.catalog_subs.Vizier')
 #    def test_get_cat_diff_width(self, mock_vizier):
+    @tag('network')
     def test_get_cat_diff_width(self):
 
         expected_ra_last_source = 299.74110200000001
@@ -237,6 +243,7 @@ class ZeropointUnitTest(TestCase):
 
 #    @patch('photometrics.catalog_subs.Vizier')
 #    def test_get_cat_ra_dec_above_row_limit(self, mock_vizier):
+    @tag('network')
     def test_get_cat_ra_dec_above_row_limit(self):
 
         expected_ra_last_source = 267.35990700000002
@@ -312,6 +319,7 @@ class ZeropointUnitTest(TestCase):
         self.assertAlmostEqual(expected_rmag_last_source, rmag_last_source, 2)
         self.assertEqual(expected_len_cat_table, len(cat_table))
 
+    @tag('network')
     def test_get_cat_ra_dec_empty_rmag_column_UCAC4(self):
 
         expected_ra_last_source = 306.66333600
@@ -335,6 +343,7 @@ class ZeropointUnitTest(TestCase):
         self.assertAlmostEqual(expected_rmag_last_source, rmag_last_source, 2)
         self.assertEqual(expected_len_cat_table, len(cat_table))
 
+    @tag('network')
     def test_get_cat_ra_dec_GAIA_DR2(self):
 
         expected_ra_first_source = 299.84644068600
@@ -359,6 +368,7 @@ class ZeropointUnitTest(TestCase):
         self.assertEqual(expected_flags_first_source, flags_first_source)
         self.assertEqual(expected_len_cat_table, len(cat_table))
 
+    @tag('network')
     def test_get_cat_ra_dec_GAIA_DR3(self):
 
         expected_ra_first_source = 299.84644076951
@@ -780,6 +790,7 @@ class ZeropointUnitTest(TestCase):
         self.assertAlmostEqual(expected_count, count, 1)
         self.assertAlmostEqual(expected_num_in_calc, num_in_calc, 1)
 
+    @tag('network')
     def test_call_cross_match_and_zeropoint_with_PPMXL(self):
 
         expected_avg_zeropoint = 27.389039993231853 - 5.0 # Correcting for 100s exptime
@@ -805,6 +816,7 @@ class ZeropointUnitTest(TestCase):
         self.assertEqual(expected_cat_name, cat_name)
         self.assertAlmostEqual(expected_len_cross_match_table, len(cross_match_table))
 
+    @tag('network')
     def test_call_cross_match_and_zeropoint_with_UCAC4(self):
 
         expected_avg_zeropoint = 27.30760348193786 - 5.0 # Correcting for 100s exptime
@@ -830,6 +842,7 @@ class ZeropointUnitTest(TestCase):
         self.assertEqual(expected_cat_name, cat_name)
         self.assertAlmostEqual(expected_len_cross_match_table, len(cross_match_table))
 
+    @tag('network')
     def test_call_cross_match_and_zeropoint_with_GAIADR2(self):
 
         expected_avg_zeropoint = 27.368678593401157 - 5.0 # Correcting for 100s exptime
@@ -885,6 +898,7 @@ class ZeropointUnitTest(TestCase):
         self.assertEqual(expected_cat_name, cat_name)
         self.assertAlmostEqual(expected_len_cross_match_table, len(cross_match_table))
 
+    @tag('network')
     def test_call_with_diff_test_cat_UCAC4(self):
         # test the call with a different FITS catalog file and the default UCAC4 catalog
 
@@ -911,6 +925,7 @@ class ZeropointUnitTest(TestCase):
         self.assertEqual(expected_cat_name, cat_name)
         self.assertAlmostEqual(expected_len_cross_match_table, len(cross_match_table))
 
+    @tag('network')
     def test_call_with_diff_test_cat_PPMXL(self):
         # test the call with a different FITS catalog file and the default UCAC4 catalog
 
@@ -1052,6 +1067,7 @@ class TestGetReferenceCatalog(TestCase):
         with open(fname, 'a'):
             os.utime(fname, times)
 
+    @tag('network')
     def test_fetch_catalog(self):
 
         expected_num_sources = 10

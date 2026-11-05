@@ -16,7 +16,7 @@ from photometrics.pds_subs import *
 from photometrics.lightcurve_subs import read_photompipe_file, write_photompipe_file
 
 from unittest import skipIf
-from django.test import SimpleTestCase, TestCase
+from django.test import SimpleTestCase, TestCase, tag
 
 class TestPDSSchemaMappings(SimpleTestCase):
 
@@ -270,6 +270,7 @@ class TestCreateObsArea(TestCase):
 
         self.assertEquals(expect, result)
 
+    @tag('network')
     def test_banzai_not_didymos(self):
         expected = '''
             <Observation_Area>
@@ -327,6 +328,7 @@ class TestCreateObsArea(TestCase):
 
         self.compare_xml(expected, obs_area)
 
+    @tag('network')
     def test_banzai_didymos(self):
         expected = '''
             <Observation_Area>
@@ -2294,6 +2296,7 @@ class TestWritePDSLabel(TestCase):
                 print("Error removing temporary test directory", self.test_dir)
 
 
+    @tag('network')
     def test_write(self):
 
         output_xml_file = os.path.join(self.test_dir, 'test_example_label.xml')
