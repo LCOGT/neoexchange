@@ -13,20 +13,15 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 """
 
-from .base import FunctionalTest
-from selenium import webdriver
-from selenium.webdriver.common.keys import Keys
-from selenium.webdriver.support.ui import Select
-from mock import patch
-from neox.tests.mocks import MockDateTime, mock_lco_authenticate, mock_fetch_filter_list, mock_build_visibility_source
+from unittest.mock import patch
 
-from datetime import datetime
-from django.test.client import Client
-from django.urls import reverse
 from django.contrib.auth.models import User
-from core.models import Body, Proposal
+from django.urls import reverse
+
 from neox.auth_backend import update_proposal_permissions
-import time
+from neox.tests.mocks import mock_lco_authenticate
+
+from .base import FunctionalTest
 
 
 class TestAdmin(FunctionalTest):
@@ -46,11 +41,11 @@ class TestAdmin(FunctionalTest):
         self.marge.save()
         # Add Marge to the right proposal
         update_proposal_permissions(self.marge, [{'code': self.neo_proposal.code}])
-        super(TestAdmin, self).setUp()
+        super().setUp()
 
     def tearDown(self):
         self.marge.delete()
-        super(TestAdmin, self).tearDown()
+        super().tearDown()
 
     @patch('neox.auth_backend.lco_authenticate', mock_lco_authenticate)
     def login(self):
