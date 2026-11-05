@@ -418,9 +418,9 @@ def create_hotpants_mask(fits_file, dest_dir, halfwidth, bkgsub_file=None, templ
     header['MASKSAT'] = (satlev, 'Saturation level masked (counts)')
     header['MASKGROW'] = (halfwidth, 'Mask grown by this many pixels per side')
     if sci_only is not None:
-        header['MASKSCI'] = (float(sci_min), 'Science-only structure: science above this (counts)')
-        header['MASKTMPL'] = (float(template_max), 'Science-only structure: template below this (counts)')
-        header['MASKNSCI'] = (int(sci_only.sum()), 'Science-only pixels masked before growth')
+        header['MASKSCI'] = (float(sci_min), 'Sci-only mask: science above this (counts)')
+        header['MASKTMPL'] = (float(template_max), 'Sci-only mask: template below this (counts)')
+        header['MASKNSCI'] = (int(sci_only.sum()), 'Sci-only pixels masked before growth')
     fits.PrimaryHDU(mask.astype('int16'), header).writeto(mask_file, overwrite=True, checksum=True)
 
     return mask_file
