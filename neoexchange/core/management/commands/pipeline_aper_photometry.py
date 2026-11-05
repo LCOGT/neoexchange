@@ -82,6 +82,7 @@ class Command(BaseCommand):
         time_now = datetime.now().strftime('%Y-%m-%d %H:%M')
         self.stdout.write(f"==== Pipeline processing Aperture photometry {time_now} ====")
 
+        os.makedirs(options['output_dir'], exist_ok=True)
         radius_pix = options['radius_pix']
         account_zps = options['account_zps']
         if options['from_table'] is not None:
