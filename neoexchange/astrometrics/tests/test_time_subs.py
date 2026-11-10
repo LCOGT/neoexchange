@@ -21,7 +21,7 @@ from neox.tests.mocks import MockDateTime
 
 # Import module to test
 from astrometrics.time_subs import jd_utc2datetime, dttodecimalday, \
-    degreestohms, parse_neocp_date, get_semester_dates
+    degreestohms, parse_neocp_date, get_semester_dates, datetime_to_jyear_tt
 
 
 class TestJD2datetime(TestCase):
@@ -315,3 +315,32 @@ class TestGetSemesterDates(TestCase):
 
         self.assertEqual(expected_start, start)
         self.assertEqual(expected_end, end)
+
+
+class TestDatetimeToJyearTT(TestCase):
+
+    def test_J2000(self):
+        # J2000.0 = 2000 Jan 1.5 TT = 11:58:55.816 UTC
+        dt = datetime(2000, 1, 1, 11, 58, 55, 816000)
+
+        epoch = datetime_to_jyear_tt(dt)
+
+        self.assertAlmostEqual(2000.0, epoch, 9)
+
+    def test_2026_matches_astropy(self):
+        from astropy.time import Time
+        dt = datetime(2026, 7, 12, 12, 43, 0)
+        expected_epoch = Time(dt, scale='utc').tt.jyear
+
+        epoch = datetime_to_jyear_tt(dt)
+
+        self.assertAlmostEqual(expected_epoch, epoch, 9)
+
+    def test_2016_before_last_leapsecond(self):
+        # TT-UTC was 68.184s in 2016 (69.184s from 2017 Jan 1)
+        dt = datetime(2016, 1, 1, 0, 0, 0)
+        expected_epoch = 2000.0 + (57388.0 + 68.184 / 86400.0 - 51544.5) / 365.25
+
+        epoch = datetime_to_jyear_tt(dt)
+
+        self.assertAlmostEqual(expected_epoch, epoch, 9)

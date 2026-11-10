@@ -259,7 +259,7 @@ def datetime2mjd_utc(d):
 def mjd_utc2mjd_tt(mjd_utc, dbg=False):
     """Converts a MJD in UTC (MJD_UTC) to a MJD in TT (Terrestial Time) which is
     needed for any position/ephemeris-based calculations.
-    UTC->TT consists of: UTC->TAI = 10s offset + 26 leapseconds (last one 2015 Jul 1.)
+    UTC->TT consists of: UTC->TAI = 10s offset + 27 leapseconds (last one 2017 Jan 1.)
                          TAI->TT  = 32.184s fixed offset"""
 # UTC->TT offset
     tt_utc = S.sla_dtt(mjd_utc)
@@ -272,6 +272,18 @@ def mjd_utc2mjd_tt(mjd_utc, dbg=False):
         print('MJD(TT)  =  ', mjd_tt)
 
     return mjd_tt
+
+def datetime_to_jyear_tt(d):
+    """Converts a passed datetime object in UTC to a Julian epoch (e.g. 2026.5271)
+    in the TT timescale, the scale in which SOFA/ERFA define Julian epochs and
+    proper-motion intervals. Returns None if the conversion failed."""
+
+    mjd_utc = datetime2mjd_utc(d)
+    if mjd_utc is None:
+        return None
+    mjd_tt = mjd_utc2mjd_tt(mjd_utc)
+
+    return 2000.0 + (mjd_tt - 51544.5) / 365.25
 
 
 def datetime2mjd_tdb(date, obsvr_long, obsvr_lat, obsvr_hgt, dbg=False):
