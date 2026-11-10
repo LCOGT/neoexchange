@@ -31,6 +31,11 @@ from photometrics.external_codes import updateFITSWCS, updateFITScalib, get_cata
 
 logger = logging.getLogger(__name__)
 
+# Reference RMS (arcsec) above which a "good" astrometric fit is suspicious for
+# 1m0/2m0 data against Gaia (a healthy fit gives ~0.03"); the classic cause is a
+# reference catalog not at the epoch of observation
+MAX_GOOD_ASTROMETRIC_RMS = 0.1
+
 class PrepareFramePipeline(PipelineProcess):
     """
     Performs frame preparation for a FITS image.
@@ -284,6 +289,7 @@ class ScampProcessPipeline(PipelineProcess):
                         logger.error(f"Bad header for {fits_file:} ({e:})")
                         self.log(f"Bad header for {fits_file:} ({e:})")
                         return -1
+                    self.check_fit_rms(header, fits_file_output)
 
                     # # Find Block for original frame
                     block = find_block_for_frame(fits_file)
@@ -386,6 +392,21 @@ class ScampProcessPipeline(PipelineProcess):
         logger.info(f"Return status for updateFITSWCS: {status:}")
         self.log(f"Return status for updateFITSWCS: {status:}")
         return status, fits_file_output
+
+    def check_fit_rms(self, header, fits_file):
+        """Warn (module logger and pipeline log) if a good astrometric fit in the
+        parsed <header> has a reference RMS above MAX_GOOD_ASTROMETRIC_RMS.
+        Returns True if a warning was issued."""
+
+        rms = header.get('astrometric_fit_rms', None)
+        if header.get('astrometric_fit_status', None) != 0 or rms is None or rms <= MAX_GOOD_ASTROMETRIC_RMS:
+            return False
+        msg = (f"Astrometric fit RMS of {rms:.3f}\" for {os.path.basename(fits_file)} against "
+               f"{header.get('astrometric_catalog', 'unknown catalog')} exceeds {MAX_GOOD_ASTROMETRIC_RMS}\"; "
+               f"check the reference catalog epoch (WCSREPOC={header.get('astrometric_epoch', None)})")
+        logger.warning(msg)
+        self.log(msg)
+        return True
 
 class ZeropointProcessPipeline(PipelineProcess):
     """

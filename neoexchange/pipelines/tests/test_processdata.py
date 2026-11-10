@@ -156,3 +156,53 @@ class TestSExtractorProcessPipelineFailures(TestCase):
             self.pipe.run()
 
         self.assertIn("SExtractor failed on coj2m002-ep08-20260712-0109-e91.fits (status -4)", str(cm.exception))
+
+
+
+class TestScampProcessPipelineRmsWarning(TestCase):
+    """proc-astromfit warns when a nominally good fit has a reference RMS that is
+    too large for 1m0/2m0 data against Gaia (the symptom of a reference catalog
+    not at the epoch of observation)."""
+
+    def setUp(self):
+        # Imported here, not at module level: see TestSExtractorProcessPipelineFailures
+        from pipelines.processdata import ScampProcessPipeline
+        self.cls = ScampProcessPipeline
+        self.inputs = {f: self.cls.inputs[f]['default'] for f in self.cls.inputs}
+        self.inputs.update({'fits_file': '/data/20260712/coj2m002-ep07-20260712-0063-e91.fits',
+                            'datadir': '/data/Hera/20260712/'})
+        self.pipe = self.cls.create_timestamped(self.inputs)
+        self.fits_file = '/data/Hera/20260712/coj2m002-ep07-20260712-0063-e92.fits'
+        self.header = {'astrometric_fit_status': 0,
+                       'astrometric_fit_rms': 0.17,
+                       'astrometric_catalog': 'GAIA-DR3',
+                       'astrometric_epoch': None}
+
+    def test_high_rms_warns(self):
+        with self.assertLogs('pipelines.processdata', 'WARNING') as cm:
+            warned = self.pipe.check_fit_rms(self.header, self.fits_file)
+
+        self.assertTrue(warned)
+        self.assertEqual(1, len(cm.output))
+        self.assertIn('exceeds 0.1"', cm.output[0])
+        self.assertIn('RMS of 0.170" for coj2m002-ep07-20260712-0063-e92.fits against GAIA-DR3', self.pipe.logs)
+        self.assertIn('WCSREPOC=None', self.pipe.logs)
+
+    def test_good_rms_is_quiet(self):
+        self.header['astrometric_fit_rms'] = 0.03
+        self.header['astrometric_epoch'] = 2026.5271
+
+        warned = self.pipe.check_fit_rms(self.header, self.fits_file)
+
+        self.assertFalse(warned)
+        self.assertNotIn('exceeds', self.pipe.logs or '')
+
+    def test_bad_fit_is_quiet(self):
+        # A failed fit (status 5, rms None) is reported elsewhere
+        self.header['astrometric_fit_status'] = 5
+        self.header['astrometric_fit_rms'] = None
+
+        warned = self.pipe.check_fit_rms(self.header, self.fits_file)
+
+        self.assertFalse(warned)
+        self.assertNotIn('exceeds', self.pipe.logs or '')
