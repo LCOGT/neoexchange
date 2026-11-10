@@ -276,7 +276,12 @@ def mjd_utc2mjd_tt(mjd_utc, dbg=False):
 def datetime_to_jyear_tt(d):
     """Converts a passed datetime object in UTC to a Julian epoch (e.g. 2026.5271)
     in the TT timescale, the scale in which SOFA/ERFA define Julian epochs and
-    proper-motion intervals. Returns None if the conversion failed."""
+    proper-motion intervals. Returns None if the conversion failed.
+
+    Reference:
+        SLALIB `epj.for` and hence Lieske, J.H., 1979, Astron. Astrophys., 73, 282-284
+        http://adsabs.harvard.edu/abs/1979A%26A....73..282L
+"""
 
     mjd_utc = datetime2mjd_utc(d)
     if mjd_utc is None:
