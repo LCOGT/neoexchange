@@ -3851,11 +3851,13 @@ def check_catalog_and_refit(configs_dir, dest_dir, catfile, dbg=False, desired_c
         return -4, 0
 
     # If desired catalog is GAIA-DR2 or -DR3, need to grab it ourselves as SCAMP does
-    # not support it (Actually scamp>=2.13.1 would but we have 2.0.4)
+    # not support it (scamp>=2.13.1 would but we have 2.0.4) and propagate the star
+    # positions to the epoch of the observation, which no version of SCAMP does for a
+    # local catalog file
     if desired_catalog == 'GAIA-DR2' or desired_catalog == 'GAIA-DR3':
         refcat, num_ref_srcs = get_reference_catalog(dest_dir, header['field_center_ra'],
             header['field_center_dec'], header['field_width'], header['field_height'],
-            cat_name=desired_catalog)
+            cat_name=desired_catalog, epoch=header['obs_midpoint'])
         if refcat is None or num_ref_srcs is None:
             logger.error("Could not obtain reference catalog for fits frame %s" % catfile)
             return -6, num_new_frames_created

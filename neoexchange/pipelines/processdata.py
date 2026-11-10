@@ -348,7 +348,7 @@ class ScampProcessPipeline(PipelineProcess):
             rmag_limit="<=20.5"
         refcat, num_ref_srcs = get_reference_catalog(dest_dir, header['field_center_ra'],
             header['field_center_dec'], header['field_width'], header['field_height'],
-            cat_name=desired_catalog, rmag_limit=rmag_limit)
+            cat_name=desired_catalog, rmag_limit=rmag_limit, epoch=header['obs_midpoint'])
         if refcat is None or num_ref_srcs is None:
             logger.error(f"Could not obtain reference catalog for fits frame {catfile:}")
             return -6
