@@ -1944,15 +1944,24 @@ def mock_fetch_sfu(sfu_value=None):
 
 
 def mock_get_vizier_catalog_table(ra, dec, ref_width, ref_height, cat_name="GAIA-DR2", set_row_limit=10, rmag_limit="<=15.0"):
-    row_data = [(122.87969710600, -58.07853650240,    4.0395,    3.8507, 17.9948,  0.0019,     0),
-                (122.61441851900, -58.07346919930,    1.8437,    1.8947, 16.8281,  0.0009,     0)
+    # RA_ICRS/DE_ICRS are the positions at the catalog epoch (2015.5 for GAIA-DR2), RAJ2000/DEJ2000
+    # those propagated back to 2000.0 by Vizier; the proper motions are chosen to give a
+    # measurable shift when propagated to the mid-2020s
+    row_data = [(122.87969710600, -58.07853650240,    4.0395,    3.8507, 17.9948,  0.0019,     0,
+                 122.87957000000, -58.07841000000,    0.8079,    0.7701,   50.00,   -30.00,  0.10,  0.12),
+                (122.61441851900, -58.07346919930,    1.8437,    1.8947, 16.8281,  0.0009,     0,
+                 122.61444000000, -58.07345000000,    0.3687,    0.3789,  -10.00,     5.00,  0.05,  0.06)
                ]
 
     column_units = { 'RAJ2000' : u.deg, 'DEJ2000' : u.deg, 'e_RAJ2000' : u.mas, 'e_DEJ2000' : u.mas,
-                     'Gmag' : u.mag, 'e_Gmag' : u.mag, 'Dup' : ''
+                     'Gmag' : u.mag, 'e_Gmag' : u.mag, 'Dup' : '',
+                     'RA_ICRS' : u.deg, 'DE_ICRS' : u.deg, 'e_RA_ICRS' : u.mas, 'e_DE_ICRS' : u.mas,
+                     'pmRA' : u.mas / u.yr, 'pmDE' : u.mas / u.yr, 'e_pmRA' : u.mas / u.yr, 'e_pmDE' : u.mas / u.yr
                    }
-    fake_table = Table(rows=row_data, names=('RAJ2000', 'DEJ2000', 'e_RAJ2000', 'e_DEJ2000', 'Gmag', 'e_Gmag', 'Dup'),
-                       dtype=('<f8', '<f8', '<f8', '<f8', '<f8', '<f8', 'u1'))
+    fake_table = Table(rows=row_data, names=('RAJ2000', 'DEJ2000', 'e_RAJ2000', 'e_DEJ2000', 'Gmag', 'e_Gmag', 'Dup',
+                                             'RA_ICRS', 'DE_ICRS', 'e_RA_ICRS', 'e_DE_ICRS', 'pmRA', 'pmDE', 'e_pmRA', 'e_pmDE'),
+                       dtype=('<f8', '<f8', '<f8', '<f8', '<f8', '<f8', 'u1',
+                              '<f8', '<f8', '<f8', '<f8', '<f8', '<f8', '<f8', '<f8'))
     for column in fake_table.colnames:
         unit = column_units[column]
         fake_table[column].unit = unit

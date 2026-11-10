@@ -49,7 +49,7 @@ from requests.exceptions import ConnectionError, ConnectTimeout, ReadTimeout
 from scipy.stats import kurtosis, skew
 
 from astrometrics.ephem_subs import LCOGT_domes_to_site_codes, determine_darkness_times
-from astrometrics.time_subs import mjd_utc2datetime, timeit
+from astrometrics.time_subs import datetime_to_jyear_tt, mjd_utc2datetime, timeit
 from core.models import Block, CatalogSources, Frame, SourceMeasurement
 from core.utils import NeoException
 
@@ -59,6 +59,20 @@ logger = logging.getLogger(__name__)
 # Comment line in a SExtractor config naming which PHOT_APERTURES entry the zeropoint is fitted to
 # (see read_sextractor_apertures())
 ZP_APERTURE_MARKER = 'NEOX_ZP_APERTURE'
+
+# Reference epoch (Julian years) of the positions in each Gaia data release
+GAIA_CATALOG_EPOCHS = {'GAIA-DR2': 2015.5, 'GAIA-EDR3': 2016.0, 'GAIA-DR3': 2016.0}
+# Columns requested from Vizier for the Gaia catalogs: the catalog-epoch positions and
+# proper motions for propagation to the epoch of observation, and the epoch-2000.0
+# positions which cross_match() uses
+GAIA_VIZIER_COLUMNS = ['RA_ICRS', 'DE_ICRS', 'e_RA_ICRS', 'e_DE_ICRS', 'pmRA', 'pmDE', 'e_pmRA', 'e_pmDE',
+                       'RAJ2000', 'DEJ2000', 'e_RAJ2000', 'e_DEJ2000', 'Gmag', 'e_Gmag', 'Dup']
+# Error floor (mas/yr) given to a reference star without a proper motion when propagating
+MISSING_PM_ERROR_MAS_YR = 10.0
+MAS_PER_DEG = 3.6e6
+# Maximum difference (years) between the epoch of a cached reference catalog and the
+# epoch of observation for the cache to be reused (3.65 days: < 1 mas at 100 mas/yr)
+REFCAT_EPOCH_TOLERANCE = 0.01
 
 
 def reset_database_connection():
@@ -111,6 +125,7 @@ def get_vizier_catalog_table(ra, dec, set_width, set_height, cat_name="UCAC4", s
 
     # Mapping of NEOx catalog names to Vizier catalogs
     cat_mapping = { "GAIA-DR2" : "I/345/gaia2",
+                    "GAIA-EDR3" : "I/350/gaiaedr3",
                     "GAIA-DR3" : "I/355/gaiadr3",
                     "UCAC4" : "I/322A",
                     "PPMXL" : "I/317"
@@ -121,11 +136,8 @@ def get_vizier_catalog_table(ra, dec, set_width, set_height, cat_name="UCAC4", s
 
         if "UCAC4" in cat_name:
             query_service = Vizier(row_limit=set_row_limit, column_filters={"r2mag": rmag_limit, "r1mag": rmag_limit}, columns=['RAJ2000', 'DEJ2000', 'rmag', 'e_rmag'])
-        elif "GAIA-DR2" in cat_name:
-            query_service = Vizier(row_limit=set_row_limit, column_filters={"Gmag": rmag_limit, "Plx": ">0"}, columns=['RAJ2000', 'DEJ2000', 'e_RAJ2000', 'e_DEJ2000', 'Gmag', 'e_Gmag', 'Dup'])
-        elif "GAIA-DR3" in cat_name:
-            # An argument could be made for using RA_ICRS/DE_ICRS rather than RA/DEJ2000 to get ICRS positions closer to now (Epoch=2016.0)
-            query_service = Vizier(row_limit=set_row_limit, column_filters={"Gmag": rmag_limit, "Plx": ">0"}, columns=['RAJ2000', 'DEJ2000', 'e_RAJ2000', 'e_DEJ2000', 'Gmag', 'e_Gmag', 'Dup'])
+        elif cat_name in GAIA_CATALOG_EPOCHS:
+            query_service = Vizier(row_limit=set_row_limit, column_filters={"Gmag": rmag_limit, "Plx": ">0"}, columns=GAIA_VIZIER_COLUMNS)
         else:
             query_service = Vizier(row_limit=set_row_limit, column_filters={"r2mag": rmag_limit, "r1mag": rmag_limit}, columns=['RAJ2000', 'DEJ2000', 'r2mag', 'fl'])
 
@@ -155,7 +167,7 @@ def get_vizier_catalog_table(ra, dec, set_width, set_height, cat_name="UCAC4", s
         # the query; if the resulting catalog table is still empty, fill the table with zeros
         if cat_name == "UCAC4":
             rmag = 'rmag'
-        elif cat_name == "GAIA-DR2" or cat_name == 'GAIA-DR3':
+        elif cat_name in GAIA_CATALOG_EPOCHS:
             rmag = 'Gmag'
         else:
             rmag = 'r2mag'
@@ -191,10 +203,8 @@ def get_vizier_catalog_table(ra, dec, set_width, set_height, cat_name="UCAC4", s
             set_row_limit += 10000
             if "UCAC4" in cat_name:
                 query_service = Vizier(row_limit=set_row_limit, column_filters={"r2mag": rmag_limit, "r1mag": rmag_limit}, columns=['RAJ2000', 'DEJ2000', 'rmag', 'e_rmag'])
-            elif "GAIA-DR2" in cat_name:
-                query_service = Vizier(row_limit=set_row_limit, column_filters={"Gmag": rmag_limit, "Plx": ">0"}, columns=['RAJ2000', 'DEJ2000', 'e_RAJ2000', 'e_DEJ2000', 'Gmag', 'e_Gmag', 'Dup'])
-            elif "GAIA-DR3" in cat_name:
-                query_service = Vizier(row_limit=set_row_limit, column_filters={"Gmag": rmag_limit, "Plx": ">0"}, columns=['RAJ2000', 'DEJ2000', 'e_RAJ2000', 'e_DEJ2000', 'Gmag', 'e_Gmag', 'Dup'])
+            elif cat_name in GAIA_CATALOG_EPOCHS:
+                query_service = Vizier(row_limit=set_row_limit, column_filters={"Gmag": rmag_limit, "Plx": ">0"}, columns=GAIA_VIZIER_COLUMNS)
             else:
                 query_service = Vizier(row_limit=set_row_limit, column_filters={"r2mag": rmag_limit, "r1mag": rmag_limit}, columns=['RAJ2000', 'DEJ2000', 'r2mag', 'fl'])
             query_service.VIZIER_SERVER = vizier_server
@@ -397,10 +407,70 @@ def get_zeropoint(cross_match_table, std_zeropoint_tolerance):
     return avg_zeropoint, std_zeropoint, count, num_in_calc
 
 
-def write_ldac(table, output_file):
+def propagate_gaia_positions(table, epoch_jyear, cat_epoch, missing_pm_error=MISSING_PM_ERROR_MAS_YR):
+    """Propagate Gaia catalog positions from the catalog epoch <cat_epoch> to
+    <epoch_jyear> (both Julian years) with their proper motions.
+    <table> needs the Vizier columns RA_ICRS, DE_ICRS (degrees), e_RA_ICRS,
+    e_DE_ICRS (mas), pmRA (= mu_alpha * cos(delta)), pmDE, e_pmRA, e_pmDE (mas/yr),
+    Gmag and e_Gmag. The position errors are inflated by the proper motion
+    error times the interval. Stars without a proper motion are left where
+    they are with an error floor of <missing_pm_error> mas/yr times the interval.
+    A new Table with the same number of rows and columns ra, dec, e_ra, e_dec
+    (degrees), mag, e_mag is returned.
+    (Linear propagation, no parallax or radial velocity term: good to < 1 mas
+    for the intervals and proper motions of field stars)"""
+
+    dt = epoch_jyear - cat_epoch
+
+    def as_float_array(column):
+        return np.ma.filled(np.ma.asarray(column, dtype=float), np.nan)
+
+    def as_mas(column):
+        values = as_float_array(column)
+        unit = getattr(column, 'unit', None)
+        if unit is not None and u.Unit(unit) != u.mas:
+            values = (values * u.Unit(unit)).to(u.mas).value
+        return values
+
+    ra0 = as_float_array(table['RA_ICRS'])
+    dec0 = as_float_array(table['DE_ICRS'])
+    e_ra0 = as_mas(table['e_RA_ICRS'])
+    e_dec0 = as_mas(table['e_DE_ICRS'])
+    pm_ra = as_float_array(table['pmRA'])
+    pm_dec = as_float_array(table['pmDE'])
+    e_pm_ra = as_float_array(table['e_pmRA'])
+    e_pm_dec = as_float_array(table['e_pmDE'])
+
+    has_pm = np.isfinite(pm_ra) & np.isfinite(pm_dec)
+    num_missing = int(np.sum(~has_pm))
+    if num_missing > 0:
+        logger.info("%d of %d stars have no proper motion; left at epoch %.1f with a %.0f mas/yr error floor",
+                    num_missing, len(table), cat_epoch, missing_pm_error)
+    pm_ra = np.where(has_pm, pm_ra, 0.0)
+    pm_dec = np.where(has_pm, pm_dec, 0.0)
+    e_pm_ra = np.where(has_pm & np.isfinite(e_pm_ra), e_pm_ra, missing_pm_error)
+    e_pm_dec = np.where(has_pm & np.isfinite(e_pm_dec), e_pm_dec, missing_pm_error)
+
+    cos_dec = np.clip(np.cos(np.radians(dec0)), 1e-9, None)
+    ra = (ra0 + pm_ra * dt / MAS_PER_DEG / cos_dec) % 360.0
+    dec = dec0 + pm_dec * dt / MAS_PER_DEG
+    e_ra = np.sqrt(e_ra0**2 + (e_pm_ra * dt)**2) / MAS_PER_DEG
+    e_dec = np.sqrt(e_dec0**2 + (e_pm_dec * dt)**2) / MAS_PER_DEG
+
+    new_table = Table([ra, dec, e_ra, e_dec, as_float_array(table['Gmag']), as_float_array(table['e_Gmag'])],
+                      names=('ra', 'dec', 'e_ra', 'e_dec', 'mag', 'e_mag'),
+                      units=(u.deg, u.deg, u.deg, u.deg, u.mag, u.mag))
+
+    return new_table
+
+
+def write_ldac(table, output_file, obsdate):
     """
     write out a reference catalog table in new FITS_LDAC file (mainly for use in SCAMP)
-    input: <table>, an Astropy Table of data, <output_file>, filename to write out
+    input: <table>, an Astropy Table with columns ra, dec, e_ra, e_dec (all in degrees),
+               mag, e_mag (e.g. from propagate_gaia_positions()),
+           <output_file>, filename to write out,
+           <obsdate>, the epoch (Julian years) of the positions, written to the OBSDATE column
     return: number of sources written to file
     """
 
@@ -409,39 +479,39 @@ def write_ldac(table, output_file):
 
     # create header table
     hdr_col = fits.Column(name='Field Header Card', format='1680A',
-                          array=["obtained through Vizier"])
+                          array=["obtained through Vizier, positions at epoch {:.4f}".format(obsdate)])
     hdrhdu = fits.BinTableHDU.from_columns(fits.ColDefs([hdr_col]))
     hdrhdu.header['EXTNAME'] = 'LDAC_IMHEAD'
     # hdrhdu.header['TDIM1'] = ('(80, 36)') # remove?
 
     # create data table
-    colname_dict = { 'RAJ2000'  : 'XWIN_WORLD',
-                     'DEJ2000'  : 'YWIN_WORLD',
-                     'e_RAJ2000': 'ERRAWIN_WORLD',
-                     'e_DEJ2000': 'ERRBWIN_WORLD',
-                     'mag'      : 'MAG',
-                     'e_mag'    : 'MAGERR'
+    colname_dict = { 'ra'    : 'XWIN_WORLD',
+                     'dec'   : 'YWIN_WORLD',
+                     'e_ra'  : 'ERRAWIN_WORLD',
+                     'e_dec' : 'ERRBWIN_WORLD',
+                     'mag'   : 'MAG',
+                     'e_mag' : 'MAGERR'
                    }
-    format_dict = { 'RAJ2000'   : '1D',
-                    'DEJ2000'   : '1D',
-                    'e_RAJ2000' : '1E',
-                    'e_DEJ2000' : '1E',
-                    'mag'       : '1E',
-                    'e_mag'     : '1E'
+    format_dict = { 'ra'    : '1D',
+                    'dec'   : '1D',
+                    'e_ra'  : '1E',
+                    'e_dec' : '1E',
+                    'mag'   : '1E',
+                    'e_mag' : '1E'
                   }
-    disp_dict = { 'RAJ2000'   : 'F13.8',
-                  'DEJ2000'   : 'F13.8',
-                  'e_RAJ2000' : 'F13.8',
-                  'e_DEJ2000' : 'F13.8',
-                  'mag'       : 'F8.4',
-                  'e_mag'     : 'F8.5'
+    disp_dict = { 'ra'    : 'F13.8',
+                  'dec'   : 'F13.8',
+                  'e_ra'  : 'F13.8',
+                  'e_dec' : 'F13.8',
+                  'mag'   : 'F8.4',
+                  'e_mag' : 'F8.5'
                 }
-    unit_dict = { 'RAJ2000'   : 'deg',
-                  'DEJ2000'   : 'deg',
-                  'e_RAJ2000' : 'deg',
-                  'e_DEJ2000' : 'deg',
-                  'mag'       : 'mag',
-                  'e_mag'     : 'mag'
+    unit_dict = { 'ra'    : 'deg',
+                  'dec'   : 'deg',
+                  'e_ra'  : 'deg',
+                  'e_dec' : 'deg',
+                  'mag'   : 'mag',
+                  'e_mag' : 'mag'
                 }
 
     data_cols = []
@@ -458,7 +528,7 @@ def write_ldac(table, output_file):
                                  disp='F13.8',
                                  format='1D',
                                  unit='yr',
-                                 array=np.ones(len(table))*2015.5))
+                                 array=np.full(len(table), float(obsdate))))
 
     datahdu = fits.BinTableHDU.from_columns(fits.ColDefs(data_cols))
     datahdu.header['EXTNAME'] = 'LDAC_OBJECTS'
@@ -479,27 +549,61 @@ def write_ldac(table, output_file):
     return num_sources
 
 
+def parse_catfile_name(cat_file, cat_type='*.cat'):
+    """Parse the name of a reference catalog file as written by get_reference_catalog(),
+    e.g. 'GAIA-DR3_228.33+38.40_6.7500mx4.5000m_2026.5271.cat' (the epoch suffix is
+    absent on files written before the positions were propagated to the epoch of
+    observation). A dict with keys cat_name, ra, dec (degrees), width, height
+    (strings e.g. '6.7500m') and epoch (Julian years or None) is returned, or
+    None if the name does not match."""
+
+    extension = re.escape(cat_type.replace('*', ''))
+    regex = re.compile(r"([a-zA-Z0-9-]+)_(\d{0,3}\.\d*)([+-]\d*\.\d*)_(\d*\.\d*m)x(\d*\.\d*m)(?:_(\d{4}\.\d+))?" + extension + "$")
+
+    m = regex.search(os.path.basename(cat_file))
+    if m is None:
+        return None
+    epoch = float(m.group(6)) if m.group(6) is not None else None
+    name_parts = { 'cat_name' : m.group(1),
+                   'ra' : float(m.group(2)),
+                   'dec' : float(m.group(3)),
+                   'width' : m.group(4),
+                   'height' : m.group(5),
+                   'epoch' : epoch
+                 }
+    return name_parts
+
+
+def refcat_epoch_from_name(cat_file, cat_type='*.cat'):
+    """Return the epoch (Julian years) encoded in the name of reference catalog
+    <cat_file> (see parse_catfile_name()) or None if there isn't one"""
+
+    name_parts = parse_catfile_name(cat_file, cat_type)
+    if name_parts is None:
+        return None
+    return name_parts['epoch']
+
+
 def convert_catfile_to_corners(cat_file, cat_type='*.cat'):
-    regex = re.compile(r"([a-zA-Z0-9-]+)_(\d{0,3}.\d*)([+-]\d*.\d*)_(\d*.\d*)mx(\d*.\d*)m"+cat_type.replace('*',''))
     top_left = None
     bottom_right = None
 
-    m = regex.search(cat_file)
-    if m:
-        if len(m.groups()) == 5:
-            ra = float(m.group(2))
-            dec = float(m.group(3))
-            width = float(m.group(4)) / 60.0 / 2.0
-            height = float(m.group(5)) / 60.0 / 2.0
-            top_left = (ra+width, dec+height)
-            bottom_right = (ra-width, dec-height)
+    name_parts = parse_catfile_name(cat_file, cat_type)
+    if name_parts is not None:
+        width = float(name_parts['width'][:-1]) / 60.0 / 2.0
+        height = float(name_parts['height'][:-1]) / 60.0 / 2.0
+        top_left = (name_parts['ra']+width, name_parts['dec']+height)
+        bottom_right = (name_parts['ra']-width, name_parts['dec']-height)
     return top_left, bottom_right
 
 
-def existing_catalog_coverage(dest_dir, ra, dec, width, height, cat_name="GAIA-DR3", cat_type='*.cat', dbg=False):
+def existing_catalog_coverage(dest_dir, ra, dec, width, height, cat_name="GAIA-DR3", cat_type='*.cat', dbg=False, epoch=None, epoch_tolerance=REFCAT_EPOCH_TOLERANCE):
     """Search in <dest_dir> for catalogs of type [cat_name] that cover the
-    pointing specified by <ra, dec> and with area <width, height>. The first
-    match that covers the area is returned otherwise None is returned"""
+    pointing specified by <ra, dec> and with area <width, height>. If [epoch]
+    (Julian years) is given, the catalog's name must also carry an epoch within
+    [epoch_tolerance] years of it; if it is None, only catalogs without an epoch
+    in their name are considered. The last match that covers the area is
+    returned otherwise None is returned"""
 
     cat_file = None
     cat_path = os.path.join(dest_dir, '')
@@ -535,28 +639,48 @@ def existing_catalog_coverage(dest_dir, ra, dec, width, height, cat_name="GAIA-D
                 if cat_top_left is not None and cat_bottom_right is not None:
                     if cat_top_left[0] >= top_left[0] and cat_bottom_right[0] <= bottom_right[0] and\
                             cat_top_left[1] >= top_left[1] and cat_bottom_right[1] <= bottom_right[1]:
-                        cat_file = test_file
-                        if dbg:
-                            print(" Inside bounds")
+                        cat_epoch = refcat_epoch_from_name(test_file, cat_type)
+                        if epoch is None:
+                            epoch_ok = cat_epoch is None
+                        else:
+                            epoch_ok = cat_epoch is not None and abs(cat_epoch - epoch) <= epoch_tolerance
+                        if epoch_ok:
+                            cat_file = test_file
+                            if dbg:
+                                print(" Inside bounds")
+                        elif dbg:
+                            print(" Inside bounds but epoch", cat_epoch, "does not match", epoch)
                     else:
                         if dbg:
                             print("Outside bounds")
     return cat_file
 
 
-def get_reference_catalog(dest_dir, ra, dec, set_width, set_height, cat_name="GAIA-DR3", set_row_limit=10000, rmag_limit="<=18.0", dbg=False):
-    """Download and save a catalog from [cat_name] (defaults to 'GAIA-DR3') into
+def get_reference_catalog(dest_dir, ra, dec, set_width, set_height, cat_name="GAIA-DR3", set_row_limit=10000, rmag_limit="<=18.0", dbg=False, epoch=None):
+    """Download and save a Gaia catalog [cat_name] (defaults to 'GAIA-DR3') into
     the passed <dest_dir> around the passed (ra, dec) co-ordinates and width and
-    height. The catalog file will be of the form <dest_dir/<cat_name>.cat, with
-    any hyphens removed.
+    height (which are increased by 50%). The star positions are propagated with
+    their proper motions from the catalog epoch to <epoch> (the mid-time of the
+    observation as a UTC datetime, or a Julian epoch in TT as a float), which is
+    required. The catalog file will be of the form
+    <dest_dir>/<cat_name>_<ra><dec>_<width>x<height>_<epoch>.cat
+    e.g. GAIA-DR3_228.33+38.40_6.7500mx4.5000m_2026.5271.cat
     The path to the reference catalog and the number of sources written are
-    returned. If the catalog already exists, the path and '-1' will be returned.
+    returned. If a catalog that covers the area and is within
+    REFCAT_EPOCH_TOLERANCE years of <epoch> already exists, its path and '-1'
+    will be returned.
     """
 
     num_sources = None
 
+    if cat_name not in GAIA_CATALOG_EPOCHS:
+        raise ValueError("Unsupported reference catalog {} (not one of {})".format(cat_name, ', '.join(GAIA_CATALOG_EPOCHS)))
+    if epoch is None:
+        raise ValueError("An epoch is needed to propagate the {} positions to the epoch of observation".format(cat_name))
+    epoch_jyear = datetime_to_jyear_tt(epoch) if isinstance(epoch, datetime) else float(epoch)
+
     # Check for existing reference catalog
-    refcat = existing_catalog_coverage(dest_dir, ra, dec, set_width, set_height, cat_name, '*.cat', dbg)
+    refcat = existing_catalog_coverage(dest_dir, ra, dec, set_width, set_height, cat_name, '*.cat', dbg, epoch=epoch_jyear)
     if dbg:
         print("refcat=", refcat)
     if refcat is not None and os.path.exists(refcat):
@@ -579,24 +703,16 @@ def get_reference_catalog(dest_dir, ra, dec, set_width, set_height, cat_name="GA
         ref_height = set_height
     cat_table, final_cat_name = get_vizier_catalog_table(ra, dec, ref_width, ref_height, cat_name, set_row_limit, rmag_limit)
 
-    # Rewrite name of catalog to include position and size
-    refcat = "{}_{ra:.2f}{dec:+.2f}_{width}x{height}.cat".format(cat_name, ra=ra, dec=dec, width=ref_width, height=ref_height)
+    # Rewrite name of catalog to include position, size and epoch
+    refcat = "{}_{ra:.2f}{dec:+.2f}_{width}x{height}_{epoch:.4f}.cat".format(cat_name, ra=ra, dec=dec, width=ref_width, height=ref_height, epoch=epoch_jyear)
     refcat = os.path.join(dest_dir, refcat)
 
     if final_cat_name != cat_name:
         logger.warning("Did not get catalog type that was expected ({} vs {})".format(final_cat_name, cat_name))
         refcat = None
     else:
-        # Rename and standardize column names, add error units and convert to degrees
-        cat_table.rename_column('Gmag', 'mag')
-        cat_table.rename_column('e_Gmag', 'e_mag')
-        if type(cat_table['e_RAJ2000'].unit) == 'str':
-            cat_table['e_RAJ2000'] = cat_table['e_RAJ2000'] * u.mas
-        cat_table['e_RAJ2000'] = cat_table['e_RAJ2000'].to(u.deg)
-        if type(cat_table['e_DEJ2000'].unit) == 'str':
-            cat_table['e_DEJ2000'] = cat_table['e_DEJ2000'] * u.mas
-        cat_table['e_DEJ2000'] = cat_table['e_DEJ2000'].to(u.deg)
-        num_sources = write_ldac(cat_table, refcat)
+        ref_table = propagate_gaia_positions(cat_table, epoch_jyear, GAIA_CATALOG_EPOCHS[cat_name])
+        num_sources = write_ldac(ref_table, refcat, epoch_jyear)
     return refcat, num_sources
 
 

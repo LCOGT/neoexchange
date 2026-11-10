@@ -15,7 +15,7 @@ GNU General Public License for more details.
 
 from datetime import datetime, timedelta
 from unittest import skipIf, skip
-from math import sqrt, log10, log
+from math import sqrt, log10, log, cos, radians
 import os
 from glob import glob
 import tempfile
@@ -30,7 +30,7 @@ from astropy.io import fits
 from astropy.wcs import WCS
 from astropy.tests.helper import assert_quantity_allclose
 from astropy.wcs.utils import proj_plane_pixel_scales
-from astropy.table import Table, QTable
+from astropy.table import Table, QTable, MaskedColumn
 from astropy.time import Time
 from astropy.coordinates import Angle
 import astropy.units as u
@@ -1041,7 +1041,10 @@ class TestGetReferenceCatalog(TestCase):
                         'width': '4.5m',
                         'height': '3.0m',
                       }
-        self.expected_ref_catalog = os.path.join(self.temp_dir, 'GAIA-DR3_228.33+38.40_6.7500mx4.5000m.cat')
+        # Mid-time of the observation and the corresponding TT Julian epoch
+        self.epoch = datetime(2026, 7, 12, 12, 43, 0)
+        self.epoch_jyear = 2026.52712022
+        self.expected_ref_catalog = os.path.join(self.temp_dir, 'GAIA-DR3_228.33+38.40_6.7500mx4.5000m_2026.5271.cat')
 
         self.remove = True
         self.debug_print = False
@@ -1072,7 +1075,7 @@ class TestGetReferenceCatalog(TestCase):
 
         expected_num_sources = 10
 
-        refcat, num_sources = get_reference_catalog(self.temp_dir, self.header['ra'], self.header['dec'], self.header['width'], self.header['height'])
+        refcat, num_sources = get_reference_catalog(self.temp_dir, self.header['ra'], self.header['dec'], self.header['width'], self.header['height'], epoch=self.epoch)
 
         self.assertTrue(os.path.exists(self.expected_ref_catalog))
         self.assertEqual(self.expected_ref_catalog, refcat)
@@ -1083,7 +1086,7 @@ class TestGetReferenceCatalog(TestCase):
         self.touch(self.expected_ref_catalog)
         expected_num_sources = -1
 
-        refcat, num_sources = get_reference_catalog(self.temp_dir, self.header['ra'], self.header['dec'], self.header['width'], self.header['height'])
+        refcat, num_sources = get_reference_catalog(self.temp_dir, self.header['ra'], self.header['dec'], self.header['width'], self.header['height'], epoch=self.epoch)
 
         self.assertTrue(os.path.exists(self.expected_ref_catalog))
         self.assertEqual(self.expected_ref_catalog, refcat)
@@ -1092,14 +1095,14 @@ class TestGetReferenceCatalog(TestCase):
     @patch('photometrics.catalog_subs.get_vizier_catalog_table', mock_get_vizier_catalog_table)
     def test_Sinistro_SH(self):
 
-        expected_refcat = os.path.join(self.temp_dir, 'GAIA-DR2_122.50-57.75_39.7500mx39.7500m.cat')
+        expected_refcat = os.path.join(self.temp_dir, 'GAIA-DR2_122.50-57.75_39.7500mx39.7500m_2026.5271.cat')
         expected_numsrcs = 2
 
         ra = 122.5
         dec = -57.75
         frame_width = '26.5m'
         frame_height = '26.5m'
-        refcat, num_ref_srcs = get_reference_catalog(self.temp_dir, ra, dec, frame_width, frame_height, cat_name="GAIA-DR2")
+        refcat, num_ref_srcs = get_reference_catalog(self.temp_dir, ra, dec, frame_width, frame_height, cat_name="GAIA-DR2", epoch=self.epoch)
 
         self.assertEqual(expected_refcat, refcat)
         self.assertEqual(expected_numsrcs, num_ref_srcs)
@@ -1107,14 +1110,14 @@ class TestGetReferenceCatalog(TestCase):
     @patch('photometrics.catalog_subs.get_vizier_catalog_table', mock_get_vizier_catalog_table)
     def test_Sinistro_NH(self):
 
-        expected_refcat = os.path.join(self.temp_dir, 'GAIA-DR2_0.12+0.75_39.7200mx39.7200m.cat')
+        expected_refcat = os.path.join(self.temp_dir, 'GAIA-DR2_0.12+0.75_39.7200mx39.7200m_2026.5271.cat')
         expected_numsrcs = 2
 
         ra = 0.12345
         dec = 0.752
         frame_width = '26.48m'
         frame_height = '26.48m'
-        refcat, num_ref_srcs = get_reference_catalog(self.temp_dir, ra, dec, frame_width, frame_height, cat_name="GAIA-DR2")
+        refcat, num_ref_srcs = get_reference_catalog(self.temp_dir, ra, dec, frame_width, frame_height, cat_name="GAIA-DR2", epoch=self.epoch)
 
         self.assertEqual(expected_refcat, refcat)
         self.assertEqual(expected_numsrcs, num_ref_srcs)
@@ -1122,7 +1125,7 @@ class TestGetReferenceCatalog(TestCase):
     @patch('photometrics.catalog_subs.get_vizier_catalog_table', mock_get_vizier_catalog_table)
     def test_Sinistro_NH_existing(self):
 
-        expected_refcat = os.path.join(self.temp_dir, 'GAIA-DR2_10.12+0.75_39.7200mx39.7200m.cat')
+        expected_refcat = os.path.join(self.temp_dir, 'GAIA-DR2_10.12+0.75_39.7200mx39.7200m_2026.5271.cat')
         expected_numsrcs = -1
 
         self.touch(expected_refcat)
@@ -1130,7 +1133,7 @@ class TestGetReferenceCatalog(TestCase):
         dec = 0.752
         frame_width = '26.48m'
         frame_height = '26.48m'
-        refcat, num_ref_srcs = get_reference_catalog(self.temp_dir, ra, dec, frame_width, frame_height, cat_name="GAIA-DR2")
+        refcat, num_ref_srcs = get_reference_catalog(self.temp_dir, ra, dec, frame_width, frame_height, cat_name="GAIA-DR2", epoch=self.epoch)
 
         self.assertEqual(expected_refcat, refcat)
         self.assertEqual(expected_numsrcs, num_ref_srcs)
@@ -1138,7 +1141,7 @@ class TestGetReferenceCatalog(TestCase):
     @patch('photometrics.catalog_subs.get_vizier_catalog_table', mock_get_vizier_catalog_table)
     def test_Sinistro_NH_existing_RAwrap(self):
 
-        expected_refcat = os.path.join(self.temp_dir, 'GAIA-DR2_0.12+0.75_39.7200mx39.7200m.cat')
+        expected_refcat = os.path.join(self.temp_dir, 'GAIA-DR2_0.12+0.75_39.7200mx39.7200m_2026.5271.cat')
         expected_numsrcs = -1
 
         self.touch(expected_refcat)
@@ -1146,7 +1149,7 @@ class TestGetReferenceCatalog(TestCase):
         dec = 0.752
         frame_width = '26.48m'
         frame_height = '26.48m'
-        refcat, num_ref_srcs = get_reference_catalog(self.temp_dir, ra, dec, frame_width, frame_height, cat_name="GAIA-DR2")
+        refcat, num_ref_srcs = get_reference_catalog(self.temp_dir, ra, dec, frame_width, frame_height, cat_name="GAIA-DR2", epoch=self.epoch)
 
         self.assertEqual(expected_refcat, refcat)
         self.assertEqual(expected_numsrcs, num_ref_srcs)
@@ -1154,7 +1157,7 @@ class TestGetReferenceCatalog(TestCase):
     @patch('photometrics.catalog_subs.get_vizier_catalog_table', mock_get_vizier_catalog_table)
     def test_Sinistro_NH_existing_overlap(self):
 
-        expected_refcat = os.path.join(self.temp_dir, 'GAIA-DR2_0.12+0.75_39.72mx39.72m.cat')
+        expected_refcat = os.path.join(self.temp_dir, 'GAIA-DR2_0.12+0.75_39.72mx39.72m_2026.5271.cat')
         expected_numsrcs = -1
 
         self.touch(expected_refcat)
@@ -1162,10 +1165,95 @@ class TestGetReferenceCatalog(TestCase):
         dec = 0.743
         frame_width = '26.48m'
         frame_height = '26.48m'
-        refcat, num_ref_srcs = get_reference_catalog(self.temp_dir, ra, dec, frame_width, frame_height, cat_name="GAIA-DR2")
+        refcat, num_ref_srcs = get_reference_catalog(self.temp_dir, ra, dec, frame_width, frame_height, cat_name="GAIA-DR2", epoch=self.epoch)
 
         self.assertEqual(expected_refcat, refcat)
         self.assertEqual(expected_numsrcs, num_ref_srcs)
+
+    @patch('photometrics.catalog_subs.get_vizier_catalog_table', mock_get_vizier_catalog_table)
+    def test_positions_propagated_to_epoch(self):
+
+        ra = 122.5
+        dec = -57.75
+        refcat, num_ref_srcs = get_reference_catalog(self.temp_dir, ra, dec, '26.5m', '26.5m', cat_name="GAIA-DR2", epoch=self.epoch)
+
+        mock_table, mock_cat_name = mock_get_vizier_catalog_table(ra, dec, '26.5m', '26.5m')
+        dt = self.epoch_jyear - 2015.5
+        with fits.open(refcat) as hdulist:
+            self.assertEqual('LDAC_IMHEAD', hdulist[1].header['EXTNAME'])
+            self.assertEqual('LDAC_OBJECTS', hdulist[2].header['EXTNAME'])
+            ldac_table = hdulist[2].data
+            self.assertEqual(2, len(ldac_table))
+            for row, mock_row in zip(ldac_table, mock_table):
+                expected_ra = mock_row['RA_ICRS'] + mock_row['pmRA'] * dt / 3.6e6 / cos(radians(mock_row['DE_ICRS']))
+                expected_dec = mock_row['DE_ICRS'] + mock_row['pmDE'] * dt / 3.6e6
+                self.assertAlmostEqual(expected_ra, row['XWIN_WORLD'], 9)
+                self.assertAlmostEqual(expected_dec, row['YWIN_WORLD'], 9)
+                self.assertAlmostEqual(self.epoch_jyear, row['OBSDATE'], 7)
+                self.assertAlmostEqual(mock_row['Gmag'], row['MAG'], 4)
+
+    @patch('photometrics.catalog_subs.get_vizier_catalog_table', mock_get_vizier_catalog_table)
+    def test_epoch_cache_hit_same_night(self):
+
+        # Catalog from 0.001 yr (~9 hours) earlier is close enough
+        expected_refcat = os.path.join(self.temp_dir, 'GAIA-DR2_122.50-57.75_39.7500mx39.7500m_2026.5261.cat')
+        expected_numsrcs = -1
+
+        self.touch(expected_refcat)
+        refcat, num_ref_srcs = get_reference_catalog(self.temp_dir, 122.5, -57.75, '26.5m', '26.5m', cat_name="GAIA-DR2", epoch=self.epoch)
+
+        self.assertEqual(expected_refcat, refcat)
+        self.assertEqual(expected_numsrcs, num_ref_srcs)
+
+    @patch('photometrics.catalog_subs.get_vizier_catalog_table', mock_get_vizier_catalog_table)
+    def test_epoch_cache_miss_other_night(self):
+
+        old_refcat = os.path.join(self.temp_dir, 'GAIA-DR2_122.50-57.75_39.7500mx39.7500m_2026.4000.cat')
+        expected_refcat = os.path.join(self.temp_dir, 'GAIA-DR2_122.50-57.75_39.7500mx39.7500m_2026.5271.cat')
+        expected_numsrcs = 2
+
+        self.touch(old_refcat)
+        refcat, num_ref_srcs = get_reference_catalog(self.temp_dir, 122.5, -57.75, '26.5m', '26.5m', cat_name="GAIA-DR2", epoch=self.epoch)
+
+        self.assertEqual(expected_refcat, refcat)
+        self.assertEqual(expected_numsrcs, num_ref_srcs)
+        self.assertTrue(os.path.exists(old_refcat))
+        self.assertTrue(os.path.exists(expected_refcat))
+
+    @patch('photometrics.catalog_subs.get_vizier_catalog_table', mock_get_vizier_catalog_table)
+    def test_old_format_cache_ignored(self):
+
+        # Catalogs written before the positions were propagated (no epoch in the name) are not reused
+        old_refcat = os.path.join(self.temp_dir, 'GAIA-DR2_122.50-57.75_39.7500mx39.7500m.cat')
+        expected_refcat = os.path.join(self.temp_dir, 'GAIA-DR2_122.50-57.75_39.7500mx39.7500m_2026.5271.cat')
+        expected_numsrcs = 2
+
+        self.touch(old_refcat)
+        refcat, num_ref_srcs = get_reference_catalog(self.temp_dir, 122.5, -57.75, '26.5m', '26.5m', cat_name="GAIA-DR2", epoch=self.epoch)
+
+        self.assertEqual(expected_refcat, refcat)
+        self.assertEqual(expected_numsrcs, num_ref_srcs)
+        self.assertTrue(os.path.exists(old_refcat))
+
+    @patch('photometrics.catalog_subs.get_vizier_catalog_table', mock_get_vizier_catalog_table)
+    def test_epoch_as_float(self):
+
+        expected_refcat = os.path.join(self.temp_dir, 'GAIA-DR2_122.50-57.75_39.7500mx39.7500m_2026.5271.cat')
+
+        refcat, num_ref_srcs = get_reference_catalog(self.temp_dir, 122.5, -57.75, '26.5m', '26.5m', cat_name="GAIA-DR2", epoch=self.epoch_jyear)
+
+        self.assertEqual(expected_refcat, refcat)
+        self.assertEqual(2, num_ref_srcs)
+
+    def test_no_epoch_raises(self):
+
+        with self.assertRaises(ValueError):
+            get_reference_catalog(self.temp_dir, 122.5, -57.75, '26.5m', '26.5m', cat_name="GAIA-DR2")
+
+    def test_unsupported_catalog_raises(self):
+
+        with self.assertRaises(ValueError):
+            get_reference_catalog(self.temp_dir, 122.5, -57.75, '26.5m', '26.5m', cat_name="UCAC4", epoch=self.epoch)
 
 
 class TestExistingCatalogCoverage(TestCase):
@@ -1278,6 +1366,58 @@ class TestExistingCatalogCoverage(TestCase):
 
         self.assertEqual(ref_catalog, existing_catalog)
 
+    def test_epoch_hit(self):
+        ref_catalog = os.path.join(self.temp_dir, 'GAIA-DR3_228.25+38.40_6.7500mx4.5000m_2026.5250.cat')
+        self.touch(ref_catalog)
+
+        existing_catalog = existing_catalog_coverage(self.temp_dir, self.header['ra'], self.header['dec'], self.header['width'], self.header['height'], epoch=2026.52)
+
+        self.assertEqual(ref_catalog, existing_catalog)
+
+    def test_epoch_miss(self):
+        ref_catalog = os.path.join(self.temp_dir, 'GAIA-DR3_228.25+38.40_6.7500mx4.5000m_2026.4000.cat')
+        self.touch(ref_catalog)
+
+        existing_catalog = existing_catalog_coverage(self.temp_dir, self.header['ra'], self.header['dec'], self.header['width'], self.header['height'], epoch=2026.52)
+
+        self.assertIsNone(existing_catalog)
+
+    def test_epoch_tolerance(self):
+        ref_catalog = os.path.join(self.temp_dir, 'GAIA-DR3_228.25+38.40_6.7500mx4.5000m_2026.5000.cat')
+        self.touch(ref_catalog)
+
+        existing_catalog = existing_catalog_coverage(self.temp_dir, self.header['ra'], self.header['dec'], self.header['width'], self.header['height'], epoch=2026.52, epoch_tolerance=0.05)
+        self.assertEqual(ref_catalog, existing_catalog)
+
+        existing_catalog = existing_catalog_coverage(self.temp_dir, self.header['ra'], self.header['dec'], self.header['width'], self.header['height'], epoch=2026.52, epoch_tolerance=0.01)
+        self.assertIsNone(existing_catalog)
+
+    def test_epoch_ignores_old_format(self):
+        self.touch(self.expected_ref_catalog)
+
+        existing_catalog = existing_catalog_coverage(self.temp_dir, self.header['ra'], self.header['dec'], self.header['width'], self.header['height'], epoch=2026.52)
+
+        self.assertIsNone(existing_catalog)
+
+    def test_no_epoch_ignores_new_format(self):
+        ref_catalog = os.path.join(self.temp_dir, 'GAIA-DR3_228.25+38.40_6.7500mx4.5000m_2026.5250.cat')
+        self.touch(ref_catalog)
+
+        existing_catalog = existing_catalog_coverage(self.temp_dir, self.header['ra'], self.header['dec'], self.header['width'], self.header['height'])
+
+        self.assertIsNone(existing_catalog)
+
+    def test_mixed_formats(self):
+        new_catalog = os.path.join(self.temp_dir, 'GAIA-DR3_228.25+38.40_6.7500mx4.5000m_2026.5250.cat')
+        self.touch(self.expected_ref_catalog)
+        self.touch(new_catalog)
+
+        existing_catalog = existing_catalog_coverage(self.temp_dir, self.header['ra'], self.header['dec'], self.header['width'], self.header['height'])
+        self.assertEqual(self.expected_ref_catalog, existing_catalog)
+
+        existing_catalog = existing_catalog_coverage(self.temp_dir, self.header['ra'], self.header['dec'], self.header['width'], self.header['height'], epoch=2026.52)
+        self.assertEqual(new_catalog, existing_catalog)
+
 
 class TestConvertCatfileToCorners(TestCase):
 
@@ -1308,6 +1448,17 @@ class TestConvertCatfileToCorners(TestCase):
         expected_br = (327.996475, -38.570535)
 
         cat_file = 'GAIA-DR3_328.25-38.40_30.4230mx20.4642m.cat'
+
+        top_left, bottom_right = convert_catfile_to_corners(cat_file)
+
+        self.assertEqual(expected_tl, top_left)
+        self.assertEqual(expected_br, bottom_right)
+
+    def test_nopath_epoch(self):
+        expected_tl = (328.503525, -38.229465)
+        expected_br = (327.996475, -38.570535)
+
+        cat_file = 'GAIA-DR3_328.25-38.40_30.4230mx20.4642m_2026.5271.cat'
 
         top_left, bottom_right = convert_catfile_to_corners(cat_file)
 
@@ -1346,6 +1497,181 @@ class TestConvertCatfileToCorners(TestCase):
 
         self.assertEqual(expected_tl, top_left)
         self.assertEqual(expected_br, bottom_right)
+
+
+class TestParseCatfileName(SimpleTestCase):
+
+    def test_with_epoch(self):
+        expected_parts = { 'cat_name' : 'GAIA-DR3', 'ra' : 228.33, 'dec' : 38.4,
+                           'width' : '6.7500m', 'height' : '4.5000m', 'epoch' : 2026.5271 }
+
+        name_parts = parse_catfile_name('GAIA-DR3_228.33+38.40_6.7500mx4.5000m_2026.5271.cat')
+
+        self.assertEqual(expected_parts, name_parts)
+
+    def test_without_epoch(self):
+        expected_parts = { 'cat_name' : 'GAIA-DR2', 'ra' : 0.12, 'dec' : 0.75,
+                           'width' : '39.72m', 'height' : '39.72m', 'epoch' : None }
+
+        name_parts = parse_catfile_name('GAIA-DR2_0.12+0.75_39.72mx39.72m.cat')
+
+        self.assertEqual(expected_parts, name_parts)
+
+    def test_with_path(self):
+        expected_parts = { 'cat_name' : 'GAIA-DR3', 'ra' : 120.55, 'dec' : -59.0,
+                           'width' : '30.0000m', 'height' : '30.0000m', 'epoch' : 2026.5271 }
+
+        name_parts = parse_catfile_name(os.path.join('/tmp', 'tmp_neox_1.23+4.56', 'GAIA-DR3_120.55-59.00_30.0000mx30.0000m_2026.5271.cat'))
+
+        self.assertEqual(expected_parts, name_parts)
+
+    def test_other_type(self):
+        expected_parts = { 'cat_name' : 'GAIA-DR3', 'ra' : 228.33, 'dec' : 38.4,
+                           'width' : '6.7500m', 'height' : '4.5000m', 'epoch' : None }
+
+        name_parts = parse_catfile_name('GAIA-DR3_228.33+38.40_6.7500mx4.5000m.db', '*.db')
+
+        self.assertEqual(expected_parts, name_parts)
+
+    def test_no_match(self):
+        self.assertIsNone(parse_catfile_name('GAIA-DR2.cat'))
+        self.assertIsNone(parse_catfile_name('GAIA-DR3_228.33+38.40_6.7500mx4.5000m.db'))
+
+    def test_epoch_from_name(self):
+        self.assertEqual(2026.5271, refcat_epoch_from_name('GAIA-DR3_228.33+38.40_6.7500mx4.5000m_2026.5271.cat'))
+        self.assertIsNone(refcat_epoch_from_name('GAIA-DR3_228.33+38.40_6.7500mx4.5000m.cat'))
+        self.assertIsNone(refcat_epoch_from_name('GAIA-DR2.cat'))
+
+
+class TestPropagateGaiaPositions(SimpleTestCase):
+
+    def make_table(self, rows):
+        names = ('RA_ICRS', 'DE_ICRS', 'e_RA_ICRS', 'e_DE_ICRS', 'pmRA', 'pmDE', 'e_pmRA', 'e_pmDE', 'Gmag', 'e_Gmag')
+        units = (u.deg, u.deg, u.mas, u.mas, u.mas / u.yr, u.mas / u.yr, u.mas / u.yr, u.mas / u.yr, u.mag, u.mag)
+        table = Table(rows=rows, names=names, dtype=['<f8'] * len(names))
+        for name, unit in zip(names, units):
+            table[name].unit = unit
+        return table
+
+    def test_known_shift(self):
+        # 360 mas/yr for 10 years = 3600 mas = 0.001 deg; RA shift is divided by cos(60) = 0.5
+        table = self.make_table([(100.0, 60.0, 1.0, 1.0, 360.0, -360.0, 0.3, 0.4, 15.5, 0.01)])
+
+        new_table = propagate_gaia_positions(table, 2026.0, 2016.0)
+
+        self.assertEqual(['ra', 'dec', 'e_ra', 'e_dec', 'mag', 'e_mag'], new_table.colnames)
+        self.assertEqual(1, len(new_table))
+        self.assertAlmostEqual(100.002, new_table['ra'][0], 10)
+        self.assertAlmostEqual(59.999, new_table['dec'][0], 10)
+        self.assertAlmostEqual(sqrt(1.0**2 + 3.0**2) / 3.6e6, new_table['e_ra'][0], 15)
+        self.assertAlmostEqual(sqrt(1.0**2 + 4.0**2) / 3.6e6, new_table['e_dec'][0], 15)
+        self.assertEqual(15.5, new_table['mag'][0])
+        self.assertEqual(0.01, new_table['e_mag'][0])
+        self.assertEqual(u.deg, new_table['ra'].unit)
+        self.assertEqual(u.deg, new_table['e_dec'].unit)
+
+    def test_zero_interval(self):
+        table = self.make_table([(100.0, 60.0, 1.0, 2.0, 360.0, -360.0, 0.3, 0.4, 15.5, 0.01)])
+
+        new_table = propagate_gaia_positions(table, 2016.0, 2016.0)
+
+        self.assertEqual(100.0, new_table['ra'][0])
+        self.assertEqual(60.0, new_table['dec'][0])
+        self.assertAlmostEqual(1.0 / 3.6e6, new_table['e_ra'][0], 15)
+        self.assertAlmostEqual(2.0 / 3.6e6, new_table['e_dec'][0], 15)
+
+    def test_missing_proper_motion(self):
+        table = self.make_table([(100.0, 60.0, 1.0, 1.0, 360.0, -360.0, 0.3, 0.4, 15.5, 0.01),
+                                 (101.0, 61.0, 1.0, 1.0,   0.0,    0.0, 0.0, 0.0, 16.5, 0.02)])
+        table['pmRA'] = MaskedColumn(table['pmRA'], mask=[False, True])
+        table['pmDE'] = MaskedColumn(table['pmDE'], mask=[False, True])
+        table['e_pmRA'] = MaskedColumn(table['e_pmRA'], mask=[False, True])
+        table['e_pmDE'] = MaskedColumn(table['e_pmDE'], mask=[False, True])
+
+        new_table = propagate_gaia_positions(table, 2026.0, 2016.0)
+
+        self.assertEqual(2, len(new_table))
+        self.assertAlmostEqual(100.002, new_table['ra'][0], 10)
+        self.assertEqual(101.0, new_table['ra'][1])
+        self.assertEqual(61.0, new_table['dec'][1])
+        # 10 mas/yr floor for 10 years = 100 mas
+        self.assertAlmostEqual(sqrt(1.0**2 + 100.0**2) / 3.6e6, new_table['e_ra'][1], 15)
+        self.assertAlmostEqual(sqrt(1.0**2 + 100.0**2) / 3.6e6, new_table['e_dec'][1], 15)
+
+    def test_ra_wrap(self):
+        # 3600 mas/yr for 1 year at the equator = 0.001 deg across RA=360
+        table = self.make_table([(359.9995, 0.0, 1.0, 1.0, 3600.0, 0.0, 0.1, 0.1, 15.5, 0.01)])
+
+        new_table = propagate_gaia_positions(table, 2017.0, 2016.0)
+
+        self.assertAlmostEqual(0.0005, new_table['ra'][0], 10)
+
+    def test_errors_in_arcsec_converted(self):
+        table = self.make_table([(100.0, 0.0, 0.001, 0.002, 0.0, 0.0, 0.0, 0.0, 15.5, 0.01)])
+        table['e_RA_ICRS'].unit = u.arcsec
+        table['e_DE_ICRS'].unit = u.arcsec
+
+        new_table = propagate_gaia_positions(table, 2016.0, 2016.0)
+
+        self.assertAlmostEqual(1.0 / 3.6e6, new_table['e_ra'][0], 15)
+        self.assertAlmostEqual(2.0 / 3.6e6, new_table['e_dec'][0], 15)
+
+    def test_matches_astropy(self):
+        # Compare the linear propagation with the rigorous (ERFA pmsafe) one over 10.5 years: a typical
+        # field star (row 3) agrees to < 1 microarcsec, a 500 mas/yr high proper motion star at dec=+60
+        # (row 1) to 0.13 mas from the second order terms
+        import warnings
+        from astropy.coordinates import SkyCoord
+        from erfa import ErfaWarning
+        table = self.make_table([(100.0, 60.0, 1.0, 1.0, 360.0, -360.0, 0.3, 0.4, 15.5, 0.01),
+                                 (250.0, -45.0, 1.0, 1.0, -120.0, 80.0, 0.3, 0.4, 15.5, 0.01),
+                                 (240.24, -22.24, 1.0, 1.0, -5.0, 8.0, 0.3, 0.4, 15.5, 0.01)])
+
+        new_table = propagate_gaia_positions(table, 2026.5, 2016.0)
+
+        start = SkyCoord(ra=table['RA_ICRS'], dec=table['DE_ICRS'], pm_ra_cosdec=table['pmRA'], pm_dec=table['pmDE'],
+                         obstime=Time(2016.0, format='jyear', scale='tt'), frame='icrs')
+        with warnings.catch_warnings():
+            warnings.simplefilter('ignore', ErfaWarning)
+            expected = start.apply_space_motion(new_obstime=Time(2026.5, format='jyear', scale='tt'))
+        new_coords = SkyCoord(ra=new_table['ra'], dec=new_table['dec'], frame='icrs')
+        separations = expected.separation(new_coords).to(u.mas).value
+        self.assertTrue((separations < 0.2).all(), separations)
+        self.assertLess(separations[2], 0.001)
+
+
+class TestWriteLDAC(SimpleTestCase):
+
+    def setUp(self):
+        self.temp_dir = tempfile.mkdtemp(prefix='tmp_neox_')
+        self.table = Table([[100.002, 250.0], [59.999, -45.0], [1.0e-6, 2.0e-6], [1.5e-6, 2.5e-6], [15.5, 16.5], [0.01, 0.02]],
+                           names=('ra', 'dec', 'e_ra', 'e_dec', 'mag', 'e_mag'),
+                           units=(u.deg, u.deg, u.deg, u.deg, u.mag, u.mag))
+
+    def tearDown(self):
+        shutil.rmtree(self.temp_dir, ignore_errors=True)
+
+    def test_columns_and_epoch(self):
+        output_file = os.path.join(self.temp_dir, 'GAIA-DR3_test.cat')
+
+        num_sources = write_ldac(self.table, output_file, 2026.5271)
+
+        self.assertEqual(2, num_sources)
+        with fits.open(output_file) as hdulist:
+            self.assertEqual(3, len(hdulist))
+            self.assertEqual('LDAC_IMHEAD', hdulist[1].header['EXTNAME'])
+            self.assertIn('epoch 2026.5271', hdulist[1].data['Field Header Card'][0])
+            self.assertEqual('LDAC_OBJECTS', hdulist[2].header['EXTNAME'])
+            self.assertEqual(['XWIN_WORLD', 'YWIN_WORLD', 'ERRAWIN_WORLD', 'ERRBWIN_WORLD', 'MAG', 'MAGERR', 'OBSDATE'],
+                             hdulist[2].columns.names)
+            self.assertEqual('deg', hdulist[2].columns['XWIN_WORLD'].unit)
+            self.assertEqual('yr', hdulist[2].columns['OBSDATE'].unit)
+            data = hdulist[2].data
+            assert_allclose([100.002, 250.0], data['XWIN_WORLD'])
+            assert_allclose([59.999, -45.0], data['YWIN_WORLD'])
+            assert_allclose([1.0e-6, 2.0e-6], data['ERRAWIN_WORLD'], rtol=1e-6)
+            assert_allclose([15.5, 16.5], data['MAG'])
+            assert_allclose([2026.5271, 2026.5271], data['OBSDATE'])
 
 
 class FITSUnitTest(TestCase):
