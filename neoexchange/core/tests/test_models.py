@@ -1764,6 +1764,39 @@ class TestFrame(TestCase):
         self.assertEqual(' ', frame.quality)
         self.assertEqual(None, frame.extrainfo)
 
+    def test_astrometric_epoch_default_null(self):
+        params = {  'sitecode'      : 'K93',
+                    'instrument'    : 'kb75',
+                    'filter'        : 'w',
+                    'filename'      : 'cpt1m010-kb75-20150713-0420-e92.fits',
+                    'exptime'       : 40.0,
+                    'midpoint'      : '2015-07-13 21:09:51',
+                    'block'         : self.test_block,
+                    'frametype'     : Frame.NEOX_RED_FRAMETYPE,
+                    'astrometric_catalog' : 'GAIA-DR3',
+                 }
+        frame = Frame.objects.create(**params)
+
+        self.assertIsNone(frame.astrometric_epoch)
+
+    def test_astrometric_epoch_stored(self):
+        params = {  'sitecode'      : 'K93',
+                    'instrument'    : 'kb75',
+                    'filter'        : 'w',
+                    'filename'      : 'cpt1m010-kb75-20150713-0420-e92.fits',
+                    'exptime'       : 40.0,
+                    'midpoint'      : '2015-07-13 21:09:51',
+                    'block'         : self.test_block,
+                    'frametype'     : Frame.NEOX_RED_FRAMETYPE,
+                    'astrometric_catalog' : 'GAIA-DR3',
+                    'astrometric_epoch' : 2026.5271,
+                 }
+        frame = Frame.objects.create(**params)
+
+        frame.refresh_from_db()
+        self.assertEqual(2026.5271, frame.astrometric_epoch)
+        self.assertEqual(1, Frame.objects.filter(astrometric_epoch__gt=2026.0).count())
+
     def test_create_LCOGT_W86_r_stack(self):
         params = {  'sitecode'      : 'W86',
                     'instrument'    : 'fl03',

@@ -152,6 +152,10 @@ def create_frame(params, block=None, frameid=None):
     # Update catalogue information if we have it
     if params.get('astrometric_catalog', None):
         frame.astrometric_catalog = params.get('astrometric_catalog')
+    # Parsed header dicts carry 'astrometric_epoch', raw FITS headers the WCSREPOC keyword
+    astrometric_epoch = params.get('astrometric_epoch', params.get('WCSREPOC', None))
+    if astrometric_epoch is not None:
+        frame.astrometric_epoch = float(astrometric_epoch)
     if params.get('photometric_catalog', None):
         frame.photometric_catalog = params.get('photometric_catalog')
     if params.get('L1FWHM', None):

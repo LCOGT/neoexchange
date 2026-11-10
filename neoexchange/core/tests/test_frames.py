@@ -324,6 +324,40 @@ class TestFrameParamsFromHeader(TestCase):
             if key != 'wcs':
                 self.assertEqual(expected_params[key], frame_params[key], "Comparison failed on " + key)
 
+    def test_create_frame_astrometric_epoch(self):
+        header_params = { 'SITEID'   : 'elp',
+                          'ENCID'    : 'aqwa',
+                          'TELID'    : '0m4a',
+                          'DATE_OBS' : '2015-04-20T16:00:04.409',
+                          'EXPTIME'  : 20.0,
+                          'INSTRUME' : 'kb92',
+                          'FILTER'   : 'w',
+                          'OBSTYPE'  : 'EXPOSE',
+                          'ORIGNAME' : 'elp0m411-kb92-20150420-0236-e00',
+                          'GROUPID'  : 'N999r0q_V38-20150420',
+                          'RLEVEL'   : 91,
+                          'L1FWHM'   : 1.42,
+                          'UTSTOP'   : '16:00:24.412'
+                        }
+
+        frame = create_frame(header_params, self.test_block)
+        self.assertIsNone(frame.astrometric_epoch)
+
+        header_params['ORIGNAME'] = 'elp0m411-kb92-20150420-0237-e00'
+        header_params['DATE_OBS'] = '2015-04-20T16:01:04.409'
+        header_params['UTSTOP'] = '16:01:24.412'
+        header_params['WCSREPOC'] = 2015.3015
+        frame = create_frame(header_params, self.test_block)
+        self.assertEqual(2015.3015, frame.astrometric_epoch)
+
+        # Parsed-header form takes precedence over the raw keyword
+        header_params['ORIGNAME'] = 'elp0m411-kb92-20150420-0238-e00'
+        header_params['DATE_OBS'] = '2015-04-20T16:02:04.409'
+        header_params['UTSTOP'] = '16:02:24.412'
+        header_params['astrometric_epoch'] = 2015.3016
+        frame = create_frame(header_params, self.test_block)
+        self.assertEqual(2015.3016, frame.astrometric_epoch)
+
     def test_expose_red_bad_rlevel(self):
         expected_params = {  'midpoint' : datetime(2015, 4, 20, 16, 00, 14, int(0.409*1e6)),
                              'sitecode' : 'V38',

@@ -2197,6 +2197,7 @@ def update_frame_zeropoint(header, ast_cat_name, phot_cat_name, frame_filepath, 
         frame.rms_of_fit = header['astrometric_fit_rms']
         frame.nstars_in_fit = header['astrometric_fit_nstars']
         frame.astrometric_catalog = header.get('astrometric_catalog', ast_cat_name)
+        frame.astrometric_epoch = header.get('astrometric_epoch', frame.astrometric_epoch)
         frame.photometric_catalog = header.get('photometric_catalog', phot_cat_name)
         frame.save()
     except Frame.MultipleObjectsReturned:
@@ -2235,6 +2236,7 @@ def update_frame_zeropoint(header, ast_cat_name, phot_cat_name, frame_filepath, 
                                     'nstars_in_fit' : header['astrometric_fit_nstars'],
                                     'wcs' : header['wcs'],
                                     'astrometric_catalog' : ast_cat_name,
+                                    'astrometric_epoch' : header.get('astrometric_epoch'),
                                     'photometric_catalog' : phot_cat_name
                                 }
 

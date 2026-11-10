@@ -6016,6 +6016,42 @@ class TestCheckCatalogAndRefitNew(TestCase):
 
         num_new_frames = make_new_catalog_entry(new_ldac_catalog, header, self.test_block)
 
+    def test_make_new_catalog_entry_astrometric_epoch(self):
+        # Parsed header as produced by get_catalog_header() for an e92 frame fitted
+        # against a reference catalog propagated to the epoch of observation
+        header = { 'site_code' : 'K92',
+                   'instrument' : 'kb76',
+                   'filter' : 'w',
+                   'exptime' : 100.0,
+                   'obs_midpoint' : datetime(2016, 6, 6, 22, 48, 14),
+                   'zeropoint' : -99,
+                   'zeropoint_err' : -99,
+                   'zeropoint_src' : 'BANZAI',
+                   'fwhm' : 2.11,
+                   'astrometric_catalog' : 'GAIA-DR3',
+                   'astrometric_fit_rms' : 0.03,
+                   'astrometric_fit_nstars' : 250,
+                   'astrometric_epoch' : 2016.4320,
+                 }
+        new_ldac_catalog = os.path.join(self.temp_dir, 'cpt1m013-kb76-20160606-0396-e92_ldac.fits')
+
+        num_new_frames = make_new_catalog_entry(new_ldac_catalog, header, self.test_block)
+
+        self.assertEqual(1, num_new_frames)
+        frame = Frame.objects.get(filename=os.path.basename(new_ldac_catalog))
+        self.assertEqual('GAIA-DR3', frame.astrometric_catalog)
+        self.assertEqual(2016.4320, frame.astrometric_epoch)
+
+        # Header without an epoch (frame fitted before propagation) leaves the field null
+        del header['astrometric_epoch']
+        other_ldac_catalog = os.path.join(self.temp_dir, 'cpt1m013-kb76-20160606-0397-e92_ldac.fits')
+
+        num_new_frames = make_new_catalog_entry(other_ldac_catalog, header, self.test_block)
+
+        self.assertEqual(1, num_new_frames)
+        frame = Frame.objects.get(filename=os.path.basename(other_ldac_catalog))
+        self.assertIsNone(frame.astrometric_epoch)
+
     def test_make_new_catalog_entry_multiple_frames(self):
 
         frame_params_2 = {  'sitecode': 'K92',

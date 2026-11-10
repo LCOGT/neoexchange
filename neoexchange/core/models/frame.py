@@ -138,6 +138,8 @@ class Frame(models.Model):
     frameid     = models.IntegerField('Archive ID', null=True, blank=True)
     wcs         = WCSField('WCS info', blank=True, null=True, editable=False)
     astrometric_catalog = models.CharField('Astrometric catalog used', max_length=40, default=' ')
+    astrometric_epoch = models.FloatField('Epoch of astrometric reference catalog (Julian yr, TT)', null=True, blank=True,
+                                          help_text='null = fitted before the catalog positions were propagated to the epoch of observation')
     photometric_catalog = models.CharField('Photometric catalog used', max_length=40, default=' ')
 
     def get_x_size(self):
