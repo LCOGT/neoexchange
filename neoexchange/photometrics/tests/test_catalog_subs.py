@@ -2264,6 +2264,13 @@ class TestConvertValues(FITSUnitTest):
 
         self.assertEqual(expected_value, value)
 
+    def test_astrometric_epoch(self):
+
+        self.assertEqual(2026.5271, convert_value('astrometric_epoch', 2026.5271))
+        self.assertEqual(2026.5271, convert_value('astrometric_epoch', '2026.5271'))
+        self.assertIsNone(convert_value('astrometric_epoch', 'UNKNOWN'))
+        self.assertIsNone(convert_value('astrometric_epoch', None))
+
     def test_no_conversion(self):
 
         expected_value = 100.0
@@ -2571,6 +2578,19 @@ class FITSReadHeader(FITSUnitTest):
         frame_header = get_catalog_header(header, "BANZAI")
 
         self.compare_headers(expected_params, frame_header)
+
+    def test_banzai_header_astrometric_epoch(self):
+
+        header, table, cattype = open_fits_catalog(self.test_banzaifilename)
+        self.assertEqual("BANZAI", cattype)
+
+        # No WCSREPOC keyword (frame fitted before proper motion propagation): no key
+        frame_header = get_catalog_header(header, "BANZAI")
+        self.assertNotIn('astrometric_epoch', frame_header)
+
+        header['WCSREPOC'] = (2026.5271, 'Epoch of astrom ref catalog (Julian yr, TT)')
+        frame_header = get_catalog_header(header, "BANZAI")
+        self.assertEqual(2026.5271, frame_header['astrometric_epoch'])
 
     def test_banzai_header_gaiadr2_devversion(self):
         obs_date = datetime.strptime('2016-06-06T22:48:14', '%Y-%m-%dT%H:%M:%S')

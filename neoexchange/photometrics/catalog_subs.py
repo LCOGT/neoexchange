@@ -762,6 +762,7 @@ def oracdr_catalog_mapping():
                     'astrometric_fit_status' : 'WCSERR',
                     'astrometric_fit_nstars' : 'WCSMATCH',
                     'astrometric_catalog'    : 'WCCATTYP',
+                    'astrometric_epoch'      : '<WCSREPOC>',
                     'gain'          : 'GAIN',
                     'saturation'    : 'SATURATE'
                   }
@@ -814,6 +815,7 @@ def fitsldac_catalog_mapping():
                     'astrometric_fit_status' : 'WCSERR',
                     'astrometric_fit_nstars' : '<WCSMATCH>',
                     'astrometric_catalog'    : '<WCCATTYP>',
+                    'astrometric_epoch'      : '<WCSREPOC>',
                     'reduction_level'        : '<RLEVEL>',
                     'aperture_radius_pixels' : 'SEXAPED1',
                     'aperture_radius_arcsec' : '<SEXAPED1>'
@@ -881,6 +883,7 @@ def banzai_catalog_mapping():
                     'astrometric_fit_status' : 'WCSERR',
                     'astrometric_fit_nstars' : '<WCSMATCH>',
                     'astrometric_catalog'    : '<WCCATTYP>',
+                    'astrometric_epoch'      : '<WCSREPOC>',
                     'photometric_catalog'    : '<L1PHTCAT>',
                     'reduction_level'        : 'RLEVEL',
                     'gain'          : 'GAIN',
@@ -936,6 +939,7 @@ def banzai_ldac_catalog_mapping():
                     'astrometric_fit_status' : 'WCSERR',
                     'astrometric_fit_nstars' : '<WCSMATCH>',
                     'astrometric_catalog'    : '<WCCATTYP>',
+                    'astrometric_epoch'      : '<WCSREPOC>',
                     'photometric_catalog'    : '<L1PHTCAT>',
                     'reduction_level'        : 'RLEVEL',
                     'aperture_radius_pixels' : 'SEXAPED1',
@@ -991,6 +995,7 @@ def photpipe_ldac_catalog_mapping():
                     'astrometric_fit_status' : '<ASTIRMSx>',
                     'astrometric_fit_nstars' : '<WCSMATCH>',
                     'astrometric_catalog'    : 'REGCAT',
+                    'astrometric_epoch'      : '<WCSREPOC>',
                     'reduction_level'        : 'RLEVEL',
                     'aperture_radius_pixels' : 'SEXAPED1',
                     'aperture_radius_arcsec' : '<SEXAPED1>'
@@ -1068,6 +1073,7 @@ def swope_ldac_catalog_mapping(fixed_values_map={}):
                     'astrometric_fit_status' : '<WCSERR>',
                     'astrometric_fit_nstars' : '<WCSMATCH>',
                     'astrometric_catalog'    : '<WCCATTYP>',
+                    'astrometric_epoch'      : '<WCSREPOC>',
                     'photometric_catalog'    : '<L1PHTCAT>',
                     'reduction_level'        : '<RLEVEL>',
                     'aperture_radius_pixels' : '<SEXAPED1>',
@@ -1148,6 +1154,7 @@ def mro_ldac_catalog_mapping(fixed_values_map={}):
                     'astrometric_fit_status' : '<WCSERR>',
                     'astrometric_fit_nstars' : '<WCSMATCH>',
                     'astrometric_catalog'    : '<WCCATTYP>',
+                    'astrometric_epoch'      : '<WCSREPOC>',
                     'photometric_catalog'    : '<L1PHTCAT>',
                     'reduction_level'        : '<RLEVEL>',
                     'aperture_radius_pixels' : '<SEXAPED1>',
@@ -1216,6 +1223,7 @@ def hotpants_catalog_mapping():
                     'astrometric_fit_status' : 'WCSERR',
                     'astrometric_fit_nstars' : '<WCSMATCH>',
                     'astrometric_catalog'    : '<WCCATTYP>',
+                    'astrometric_epoch'      : '<WCSREPOC>',
                     'photometric_catalog'    : '<L1PHTCAT>',
                     'reduction_level'        : 'RLEVEL',
                     'gain'          : 'GAIN',
@@ -1481,6 +1489,11 @@ def convert_value(keyword, value):
                 newvalue = (float(ra_rms) + float(dec_rms)) / 2.0
             except TypeError:
                 pass
+    elif keyword == 'astrometric_epoch':
+        try:
+            newvalue = float(value)
+        except (TypeError, ValueError):
+            newvalue = None
     elif keyword == 'astrometric_catalog':
         if '@' in value:
             newvalue = value.split('@')[0]

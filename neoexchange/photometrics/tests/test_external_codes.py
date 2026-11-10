@@ -410,6 +410,14 @@ class TestSCAMPRunner(ExternalCodeUnitTest):
 
         self.assertEqual(expected_options, options)
 
+    def test_scamp_options_epoch_refcat(self):
+
+        expected_options = '-ASTREF_CATALOG FILE -ASTREFCAT_NAME GAIA-DR3_240.24-22.24_20.4726mx20.4726m_2026.5271.cat -POSANGLE_MAXERR 1 -MATCH_FLIPPED N -XML_NAME foo_2m0.xml'
+
+        options = determine_scamp_options('foo_2m0.ldac', external_cat_name='/tmp/foo/GAIA-DR3_240.24-22.24_20.4726mx20.4726m_2026.5271.cat')
+
+        self.assertEqual(expected_options, options)
+
     def test_scamp_options_1m0_distortion(self):
 
         expected_options = '-ASTREF_CATALOG FILE -ASTREFCAT_NAME GAIA-DR3.cat -DISTORT_DEGREES 3 -PROJECTION_TYPE TPV -XML_NAME test1m0-fa##-date.xml'
@@ -1787,6 +1795,34 @@ class TestUpdateFITSWCS(TestCase):
                 else:
                     self.assertNotEqual(expected_pv_comment, new_header.comments[key])
 
+    def test_update_FITS_WCS_no_refcat_epoch(self):
+
+        # Reference catalog without an epoch in its name: no WCSREPOC keyword
+        status, new_header = updateFITSWCS(self.test_banzai_file, self.test_externscamp_TPV_headfile, self.test_externcat_TPV_xml, self.banzai_file_output)
+
+        self.assertEqual(status, 0)
+        self.assertNotIn('WCSREPOC', new_header)
+
+    def test_update_FITS_WCS_refcat_epoch(self):
+
+        xml_file = os.path.join(self.test_dir, 'scamp_epoch.xml')
+        with open(self.test_externcat_TPV_xml, 'r') as fp:
+            xml_text = fp.read()
+        xml_text = xml_text.replace('GAIA-DR2_228.33+38.40_43.3488mx29.0321m.cat', 'GAIA-DR3_228.33+38.40_43.3488mx29.0321m_2026.5271.cat')
+        with open(xml_file, 'w') as fp:
+            fp.write(xml_text)
+
+        status, new_header = updateFITSWCS(self.test_banzai_file, self.test_externscamp_TPV_headfile, xml_file, self.banzai_file_output)
+
+        self.assertEqual(status, 0)
+        self.assertEqual('GAIA-DR3_228.33+38.40_43.3488mx29.0321m_2026.5271.cat', new_header['WCSRFCAT'])
+        self.assertEqual('GAIA-DR3@CDS', new_header['WCCATTYP'])
+        self.assertEqual(2026.5271, new_header['WCSREPOC'])
+        self.assertEqual('Epoch of astrom ref catalog (Julian yr, TT)', new_header.comments['WCSREPOC'])
+        # Check the keyword made it into the file on disk as well
+        with fits.open(self.banzai_file_output) as hdulist:
+            self.assertEqual(2026.5271, hdulist[0].header['WCSREPOC'])
+
 
 class TestUpdateFITScalib(TestCase):
 
@@ -2041,6 +2077,7 @@ class TestGetSCAMPXMLInfo(SimpleTestCase):
         expected_results = { 'num_refstars' : 606,
                              'num_match'    : 64,
                              'wcs_refcat'   : '<Vizier/aserver.cgi?ucac4@cds>',
+                             'wcs_refcat_epoch' : None,
                              'wcs_cattype'  : 'UCAC4@CDS',
                              'wcs_imagecat' : 'ldac_test_catalog.fits',
                              'pixel_scale'  : 0.389669,
@@ -2062,6 +2099,7 @@ class TestGetSCAMPXMLInfo(SimpleTestCase):
         expected_results = { 'num_refstars' : 280,
                              'num_match'    : 106,
                              'wcs_refcat'   : 'GAIA-DR2.cat',
+                             'wcs_refcat_epoch' : None,
                              'wcs_cattype'  : 'GAIA-DR2@CDS',
                              'wcs_imagecat' : 'tfn0m414-kb99-20180529-0202-e91_ldac.fits',
                              'pixel_scale'  : 1.13853,
@@ -2083,6 +2121,7 @@ class TestGetSCAMPXMLInfo(SimpleTestCase):
         expected_results = { 'num_refstars' : 280,
                              'num_match'    : 103,
                              'wcs_refcat'   : 'GAIA-DR2_228.33+38.40_43.3488mx29.0321m.cat',
+                             'wcs_refcat_epoch' : None,
                              'wcs_cattype'  : 'GAIA-DR2@CDS',
                              'wcs_imagecat' : 'tfn0m414-kb99-20180529-0202-e91_ldac.fits',
                              'pixel_scale'  : 1.13853,
@@ -2091,6 +2130,38 @@ class TestGetSCAMPXMLInfo(SimpleTestCase):
                            }
 
         results = get_scamp_xml_info(self.test_externcat_tpv_xml)
+
+        self.assertEqual(len(expected_results), len(results))
+        for key in expected_results.keys():
+            if key == 'pixel_scale' or 'contrast' in key:
+                self.assertAlmostEqual(expected_results[key], results[key], 5)
+            else:
+                self.assertEqual(expected_results[key], results[key], "Failure on " + key)
+
+    def test_read_extern_cat_epoch(self):
+
+        # Reference catalog file name with the epoch the positions were propagated to
+        test_dir = tempfile.mkdtemp(prefix='tmp_neox_')
+        xml_file = os.path.join(test_dir, 'scamp_epoch.xml')
+        with open(self.test_externcat_tpv_xml, 'r') as fp:
+            xml_text = fp.read()
+        xml_text = xml_text.replace('GAIA-DR2_228.33+38.40_43.3488mx29.0321m.cat', 'GAIA-DR3_228.33+38.40_43.3488mx29.0321m_2026.5271.cat')
+        with open(xml_file, 'w') as fp:
+            fp.write(xml_text)
+
+        expected_results = { 'num_refstars' : 280,
+                             'num_match'    : 103,
+                             'wcs_refcat'   : 'GAIA-DR3_228.33+38.40_43.3488mx29.0321m_2026.5271.cat',
+                             'wcs_refcat_epoch' : 2026.5271,
+                             'wcs_cattype'  : 'GAIA-DR3@CDS',
+                             'wcs_imagecat' : 'tfn0m414-kb99-20180529-0202-e91_ldac.fits',
+                             'pixel_scale'  : 1.13853,
+                             'as_contrast'  : 20.1186,
+                             'xy_contrast'  : 10.2858
+                           }
+
+        results = get_scamp_xml_info(xml_file)
+        shutil.rmtree(test_dir, ignore_errors=True)
 
         self.assertEqual(len(expected_results), len(results))
         for key in expected_results.keys():

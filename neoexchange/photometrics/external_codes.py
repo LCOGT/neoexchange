@@ -52,6 +52,7 @@ from photometrics.catalog_subs import (
     mro_ldac_catalog_mapping,
     open_fits_catalog,
     read_sextractor_apertures,
+    refcat_epoch_from_name,
     swope_ldac_catalog_mapping,
 )
 from photometrics.image_subs import (
@@ -1446,6 +1447,8 @@ def get_scamp_xml_info(scamp_xml_file):
         if type(reference_catalog) == bytes:
             reference_catalog = reference_catalog.decode("utf-8")
         wcs_refcat_name = reference_catalog
+        # Epoch the catalog positions were propagated to (None for older files without it in the name)
+        wcs_refcat_epoch = refcat_epoch_from_name(wcs_refcat_name)
         if '_' in reference_catalog:
             # If it's new format catalog file with position and size, strip
             # these out.
@@ -1453,6 +1456,7 @@ def get_scamp_xml_info(scamp_xml_file):
         reference_catalog = reference_catalog.replace('.cat', '')
     else:
         wcs_refcat_name = "<Vizier/aserver.cgi?%s@cds>" % reference_catalog.lower()
+        wcs_refcat_epoch = None
     wcs_imagecat_name = fields_table.array['Catalog_Name'].data[0]
     if type(wcs_imagecat_name) == bytes:
         wcs_imagecat_name = wcs_imagecat_name.decode("utf-8")
@@ -1466,6 +1470,7 @@ def get_scamp_xml_info(scamp_xml_file):
     info = { 'num_match'    : fgroups_table.array['AstromNDets_Reference'].data[0],
              'num_refstars' : fields_table.array['NDetect'].data[0],
              'wcs_refcat'   : wcs_refcat_name,
+             'wcs_refcat_epoch' : wcs_refcat_epoch,
              'wcs_cattype'  : "%s@CDS" % reference_catalog.upper(),
              'wcs_imagecat' : wcs_imagecat_name,
              'pixel_scale'  : fields_table.array['Pixel_Scale'].data[0].mean(),
@@ -1581,6 +1586,7 @@ def updateFITSWCS(fits_file, scamp_file, scamp_xml_file, fits_file_output):
     wcsnref = scamp_info['num_refstars']
     wcsmatch = scamp_info['num_match']
     wccattyp = scamp_info['wcs_cattype']
+    wcsrepoc = scamp_info['wcs_refcat_epoch']
     secpix = round(scamp_info['pixel_scale'], 6)
 
     # header keywords we have
@@ -1622,6 +1628,8 @@ def updateFITSWCS(fits_file, scamp_file, scamp_xml_file, fits_file_output):
     header['WCSMATCH'] = (wcsmatch, 'Stars in image matched against ref catalog')
     header['WCCATTYP'] = (wccattyp, 'Reference catalog used')
     header['WCSRDRES'] = (str(str(astrrms1)+'/'+str(astrrms2)), '[arcsec] WCS fitting residuals (x/y)')
+    if wcsrepoc is not None:
+        header['WCSREPOC'] = (round(wcsrepoc, 4), 'Epoch of astrom ref catalog (Julian yr, TT)')
     if good_fit:
         header['WCSERR'] = 0
         status = 0
