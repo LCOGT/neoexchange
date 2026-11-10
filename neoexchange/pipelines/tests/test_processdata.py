@@ -179,12 +179,13 @@ class TestScampProcessPipelineRmsWarning(TestCase):
                        'astrometric_epoch': None}
 
     def test_high_rms_warns(self):
-        with self.assertLogs('pipelines.processdata', 'WARNING') as cm:
+        # Patch the module logger rather than assertLogs(): other test modules disable logging
+        with patch('pipelines.processdata.logger') as mock_logger:
             warned = self.pipe.check_fit_rms(self.header, self.fits_file)
 
         self.assertTrue(warned)
-        self.assertEqual(1, len(cm.output))
-        self.assertIn('exceeds 0.1"', cm.output[0])
+        mock_logger.warning.assert_called_once()
+        self.assertIn('exceeds 0.1"', mock_logger.warning.call_args[0][0])
         self.assertIn('RMS of 0.170" for coj2m002-ep07-20260712-0063-e92.fits against GAIA-DR3', self.pipe.logs)
         self.assertIn('WCSREPOC=None', self.pipe.logs)
 
