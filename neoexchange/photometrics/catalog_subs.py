@@ -2188,6 +2188,7 @@ def update_frame_zeropoint(header, ast_cat_name, phot_cat_name, frame_filepath, 
         frame = Frame.objects.get(**frame_query)
         logger.info(f"update_frame_zeropoint: Updating existing Frame {frame_filename}")
         frame.fwhm = header.get('fwhm', frame.fwhm)
+        frame.wcs = header.get('wcs', frame.wcs)
         frame.zeropoint = header['zeropoint']
         frame.zeropoint_err = header['zeropoint_err']
         frame.zeropoint_src = header['zeropoint_src']
