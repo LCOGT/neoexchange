@@ -1,14 +1,14 @@
 import argparse
 import os
+import time
 from collections import Counter
 from datetime import datetime
 
 from django.core.management.base import BaseCommand, CommandError
 from dramatiq import pipeline
-from dramatiq.results import ResultMissing, ResultTimeout
 
 from core.models import PipelineProcess
-from core.models.async_process import ASYNC_STATUS_CREATED
+from core.models.async_process import ASYNC_STATUS_CREATED, ASYNC_TERMINAL_STATES
 from core.tasks import run_pipeline
 from core.views import determine_images_and_catalogs
 
@@ -111,7 +111,6 @@ class Command(BaseCommand):
             if not fits_files:
                 raise CommandError(f"Specific filename {options['filename']} not found in directory")
             print(f"Filtered down to {len(fits_files)} FITS files")
-        runners = []
         processes = []
         for fits_filepath in fits_files:
             # fits_filepath is the full path including the dataroot and obs_date e.g. /apophis/eng/rocks/20220731/cpt1m010-fa16-20220731-0146-e91.fits
@@ -167,16 +166,30 @@ class Command(BaseCommand):
                 pipe = pipeline_cls.create_timestamped(inputs)
                 processes.append((fits_file, step['name'], pipe.pk))
                 pipes.append(run_pipeline.message_with_options(args=[pipe.pk, step['name']], pipe_ignore=True))
-            runners.append(pipeline(pipes).run())
+            pipeline(pipes).run()
         self.stdout.write("Waiting for pipelines to complete")
-        timeout = 180_000*len(fits_files)
-        for runner in runners:
-            try:
-                runner.get_result(block=True, timeout=timeout)
-            except (ResultMissing, ResultTimeout) as e:
-                self.stderr.write(f"Gave up waiting for pipelines to complete ({e.__class__.__name__})")
-                break
+        self.wait_for_processes(processes, timeout=180*len(fits_files))
         self.summarize(processes)
+
+    def wait_for_processes(self, processes, timeout, poll_interval=10):
+        """Poll the PipelineProcess rows in <processes> (a list of (fits_file, step name, pk)
+        tuples) until every one is in a terminal status or <timeout> seconds have passed.
+        The dramatiq results backend is deliberately not used: its results expire after
+        `result_ttl` (60 s in settings), long before a sequential wait over many runners
+        gets to them, so `get_result()` would block for the whole timeout.
+        Returns the number of steps that had not finished."""
+
+        pks = [pk for _, _, pk in processes]
+        deadline = time.monotonic() + timeout
+        while True:
+            remaining = PipelineProcess.objects.filter(pk__in=pks).exclude(status__in=ASYNC_TERMINAL_STATES).count()
+            if remaining == 0:
+                return 0
+            if time.monotonic() >= deadline:
+                self.stderr.write(f"Gave up waiting for pipelines to complete after {timeout} s "
+                                  f"({remaining} of {len(pks)} steps not finished)")
+                return remaining
+            time.sleep(poll_interval)
 
     def summarize(self, processes):
         """Write a per-step tally of the final status of the PipelineProcesses
