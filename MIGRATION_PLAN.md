@@ -14,9 +14,9 @@ Effort (one person): prep ½–1 d · merge + resolution 2–4 d · dependencies
 
 ## 0.1 Status and how to resume
 
-*Last updated 2026-10-09.* Analysis complete; plan under review. This file and `docs/migration/` are committed on `pipelines` (77ecc148). The apophis2 recovery (Q18) is merged into `pipelines` (9d1f2cfa) and pushed. No work towards the `main` merge itself has started. Resume notes also live in the Serena project memories `migration-pipelines-to-main` and `neoexchange-environments-and-hosts` (`.serena/memories/`), and `CLAUDE.md` points here.
+*Last updated 2026-11-15.* Analysis complete; plan under review. This file and `docs/migration/` are committed on `pipelines` (77ecc148). The apophis2 recovery (Q18) is merged into `pipelines` (9d1f2cfa) and pushed. No work towards the `main` merge itself has started. Resume notes also live in the Serena project memories `migration-pipelines-to-main` and `neoexchange-environments-and-hosts` (`.serena/memories/`), and `CLAUDE.md` points here.
 
-- Answered so far: Q1–Q4, Q15, Q16, Q18, Q20 (§4). Open: Q5–Q14, Q17, Q19.
+- Answered so far: Q1–Q4, Q15, Q16, Q18, Q20 (§4). Open: Q5–Q14, Q17, Q19. Q9 (calviacat pin) became a build blocker on 2026-11-12: upstream `main` now requires numpy ≥2 (§1.4).
 - Before Phase 1 can start honestly: (1) ~~commit the recovered apophis2 code~~ done 2026-10-09 (Phase 0 step 0; non-blocking leftovers listed there); (2) decisions Q6 (`issue-626` sequencing), Q7 (18 pipelines-only failing tests), Q8 (`backfill_blocks.py`), Q19 (FLOYDS cron).
 - Scratch state from the analysis session — detached worktrees `wt-merge` (trial merge left in progress), `wt-main`, `wt-pipelines`; venvs `venv311_asis`, `venv311_astropy7`; full test logs — lived under `/tmp/claude-*/scratchpad` and may be gone. `git worktree prune` removes stale entries. Recreate the trial merge with `git worktree add --detach <dir> origin/main && git -C <dir> merge --no-commit --no-ff pipelines`.
 - Re-review checklist (numbers in §1 are from 2026-09-28 and drift as `origin/main` moves): `git fetch && git rev-list --left-right --count origin/main...pipelines`; `git merge-tree --write-tree origin/main pipelines | grep ^CONFLICT`; re-run `docs/migration/tools/run_tests_nonet_warn.sh` on both branches (network off, ~6 min each) and compare with `docs/migration/failing-tests-*.txt`.
@@ -68,12 +68,13 @@ Effort (one person): prep ½–1 d · merge + resolution 2–4 d · dependencies
 - bokeh 2.3.0 / Jinja2 2.11.3 / MarkupSafe 1.1.1 work on 3.11 (production 3.17.x runs them); bokeh 2.3.0 uses no `distutils`/`pkg_resources`. Dependabot PR #669 (bokeh 3.8.2) is CONFLICTING and would break `core/plots.py` wholesale (31 uses of `plot_width`/`Panel`/`circle`…); bokeh 2.4.3 accepts Jinja2 3 and would let the Jinja2/MarkupSafe pins go.
 - photutils on pipelines is only `photutils.aperture` + `photutils.centroids`; 1.11.0 works with numpy 1.26.4; 2.3.0 needs numpy ≥1.25/astropy ≥5.3/py ≥3.11; 3.0 needs numpy ≥2. main has no photutils imports at all, yet its image carries photutils 2.3.0 — **main's `requirements.txt` ≠ what its working image/venv contain**.
 - `nose` is required by both but imported nowhere (and broken on py ≥3.10); `fits2image` was removed on main (PR #673) and is unused on pipelines.
+- **calviacat upstream has moved to numpy 2 (found 2026-11-12).** `mkelley/calviacat` `main` declares `requires-python >=3.11`, `numpy>=2`, `astropy>=6.1` since `528906d` (2026-10-08, heading for 2.0.0). The `talister/calviacat` fork (`main`, `fix_gaiadr3_init`, `fix_gaiadr3_init-ps1-objid`) still declares Python ≥3.8, `astropy>=4.3`, numpy unpinned; that is what `neocode39_psfphot_venv` runs (1.3.3.dev3, editable from `~/git/calviacat`). So the pipelines `requirements.txt` line `git+https://github.com/mkelley/calviacat.git@main` can no longer be satisfied on Python 3.9, nor alongside the merge target's `numpy==1.26.4`/`astropy<6.0` (from the declared metadata; the install itself was not re-run). Whether upstream 2.x code actually needs numpy 2, or only declares it, is unchecked. Seen in practice on 2026-11-11: an editable install of the upstream `offline-refcat2` branch into the main dev venv (`neocode311_venv`) pulled numpy 1.26.4 → 2.4.6 and astropy 5.3.4 → 8.0.2 and broke it. Hazard: both venvs' editable installs point at the one `~/git/calviacat` checkout, so checking out an upstream-based branch there silently changes what the pipelines venv imports, with no dependency check.
 - Python 3.9 reached EOL Oct 2025; 3.11 EOL Oct 2027. Django 4.2's extended support ended April 2026 (no security fixes now); Django 5.2 LTS is supported to April 2028 and needs Python ≥3.10 and **PostgreSQL ≥14**.
 
 ### 1.5 Migrations
 
-- Both branches: `makemigrations --check` clean. Disjoint chains after 0064 — main: `0065_blockobserver → 0067_merge → 0068_alter_proposal_code → 0069_alter_block_site`; pipelines: `0065_asyncprocess_pipelineprocess → 0066 → 0067 (Frame.color/color_err/color_used/zeropoint_src) → 0068_merge → 0069 (SourceMeasurement.aperture_size/snr) → 0070 → 0071_merge → 0072 → 0073 (Block.site/telclass choices, SuperBlock.tracking_number index) → 0074`. `0065_auto_20221012_1840` and `0066_exportedblock` are byte-identical on both.
-- After the merge: `0075_merge_…` is mandatory; both sides altered `Block.site` choices so expect choices-only `AlterField`s too (no DDL on Postgres). All pipelines-side schema changes are additive/nullable → the migrated DB stays usable by the previous image (rollback-safe).
+- Both branches: `makemigrations --check` clean. Disjoint chains after 0064 — main: `0065_blockobserver → 0067_merge → 0068_alter_proposal_code → 0069_alter_block_site`; pipelines: `0065_asyncprocess_pipelineprocess → 0066 → 0067 (Frame.color/color_err/color_used/zeropoint_src) → 0068_merge → 0069 (SourceMeasurement.aperture_size/snr) → 0070 → 0071_merge → 0072 → 0073 (Block.site/telclass choices, SuperBlock.tracking_number index) → 0074 → 0075_frame_astrometric_epoch (nullable `Frame.astrometric_epoch`, 2026-11-10)`. `0065_auto_20221012_1840` and `0066_exportedblock` are byte-identical on both.
+- After the merge: `0076_merge_…` is mandatory; both sides altered `Block.site` choices so expect choices-only `AlterField`s too (no DDL on Postgres). All pipelines-side schema changes are additive/nullable → the migrated DB stays usable by the previous image (rollback-safe).
 - **Production DB (prod namespace) has only main's chain; the pipelines chain was only ever applied to the separate dev DB (a 2022 snapshot).** Migrations are applied by the helm chart at deploy.
 
 ### 1.6 Container and binaries (`docs/migration/rocky9-package-availability.txt`)
@@ -130,7 +131,7 @@ Effort (one person): prep ½–1 d · merge + resolution 2–4 d · dependencies
 | `neox/tests/base.py` | main's (`from numpy import ndarray, long` fails on numpy ≥1.24; main fixed it in `ffe2c474`) |
 | `README.md` | concatenate histories under a 3.18.0 heading |
 
-Then `ruff check --select F,E9`, `manage.py check`, `manage.py makemigrations` (expect `0075_merge_*` + choices-only `AlterField`s), commit.
+Then `ruff check --select F,E9`, `manage.py check`, `manage.py makemigrations` (expect `0076_merge_*` + choices-only `AlterField`s), commit.
 
 Verification A: fresh Python 3.11 venv from the merged `requirements.txt`; run `core astrometrics photometrics` with the network disabled (`docs/migration/tools/run_tests_nonet_warn.sh`); target = main's no-network baseline (37 → the 33 network tests + binary-version ones) with every residual failure classified. Verification B (only if A shows unexplained failures): same tree in a Python 3.9 venv (`neocode39-astropy53_venv` is nearly that environment) to separate merge effects from interpreter/deps. Verification C: `neox/tests` Selenium run.
 
@@ -152,7 +153,7 @@ Verification A: fresh Python 3.11 venv from the merged `requirements.txt`; run `
 | bokeh / Jinja2 / MarkupSafe | 2.3.0 / <3.0 / <2.0 | same | **keep** | works; 2.4.3 later |
 | pyslalib | unpinned | `pySLALIB` | **>=1.0.10** | meson build |
 | gunicorn[gevent] | ~=20.1 | ~=23.0 | main's | |
-| calviacat / mastcasjobs | git `@main`/`@master` | – | pin to **commit SHAs**; decide fork (Q9) | moving targets |
+| calviacat / mastcasjobs | git `@main`/`@master` | – | pin to **commit SHAs**; for calviacat a `talister` fork SHA (e.g. `572f9f1`) or an upstream SHA before `528906d` (Q9) | moving targets; upstream calviacat `main` now requires py ≥3.11, numpy ≥2, astropy ≥6.1 (§1.4), so `@main` conflicts with the numpy/astropy rows above |
 | nose, fits2image | present | nose | **drop** | unused |
 | django-cors-headers, tenacity | – | present | keep | |
 | requirements-trippy.txt | present | – | **local only**, not in the image (decided) | torch is glibc-2.28-only anyway |
@@ -179,7 +180,7 @@ Until a broker exists, the merged web app still works: `core/tasks.py` `send_tas
 
 ### Phase 4 — Release (1–2 days)
 
-- Refresh the dev DB from a **fresh prod snapshot**, deploy the merged image to `dev`, let the chart run `migrate` → dress rehearsal of the prod migration (`0065_asyncprocess…0074` + `0075_merge`) on real data; click through the pipelines UI.
+- Refresh the dev DB from a **fresh prod snapshot**, deploy the merged image to `dev`, let the chart run `migrate` → dress rehearsal of the prod migration (`0065_asyncprocess…0075` + `0076_merge`) on real data; click through the pipelines UI.
 - Tag 3.18.0; deploy to `prod`; smoke: schedule/submit flow, target + block pages (bokeh), MPC/ADES downloads, crons, pipelines pages. Rollback = previous chart revision (migrations are additive).
 - Fast-forward `pipelines` to `main` (or delete it); re-merge `stacking`; land `issue-626` if not already.
 
@@ -206,7 +207,7 @@ Until a broker exists, the merged web app still works: `core/tasks.py` `send_tas
 | Q6 | `issue-626_PDS_liens` before or after the big merge | open (recommend before, if near-ready) |
 | Q7 | Must the 18 pipelines-only failing tests be green pre-merge? | open |
 | Q8 | Revert `backfill_blocks.py` `== -1`? | open |
-| Q9 | Canonical `calviacat` (mkelley main vs talister fork SHA) | open |
+| Q9 | Canonical `calviacat` (mkelley main vs talister fork SHA) | open — **now blocks building any venv/image from the merged `requirements.txt`** (2026-11-12, §1.4): upstream `main` requires numpy ≥2 / astropy ≥6.1 / py ≥3.11. Route 1 (recommended for the merge): pin to a fork SHA (e.g. `572f9f1`) or an upstream SHA before `528906d`; Phase 2 stays as written. Route 2: follow upstream 2.x, which pulls numpy 2 (§5.3) and astropy ≥6.1 (Phase 2b) into the merge and probably moves `photutils==1.11.0` (its numpy 2 support unchecked). Move to upstream 2.x after Phase 2b + numpy 2; until then the fork's Gaia DR3/PS1 fixes stay on the 1.3.x line (the PS1 fix is on both: `7f79b75` upstream-based, `572f9f1` fork) |
 | Q10 | Tag/mock the 33 network tests | **done on pipelines 2026-11-04** for the 22 that exist there + 3 pipelines-only ones (`@tag('network')`; `--exclude-tag network`); the 11 main-only PDS entries remain for the merge (list and status in `docs/migration/network-dependent-tests.txt`) |
 | Q11 | Django 5.2 timing | open (recommend the PR right after the merge is deployed) |
 | Q12 | Jenkins test stage / staging namespace | open |
