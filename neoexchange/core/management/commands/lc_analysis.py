@@ -16,29 +16,22 @@ Prepare LC to be analysed with DAMIT
 """
 
 import os
-from glob import glob
-from datetime import datetime, timedelta, time
-from math import floor, log10
-import numpy as np
+from datetime import datetime, timedelta
+from math import log10
 
-from django.core.management.base import BaseCommand, CommandError
-from django.core.files.storage import default_storage
-from django.db.models import Q
-from django.conf import settings
-
-import matplotlib.pyplot as plt
-from matplotlib.dates import HourLocator, DateFormatter
-from astropy.stats import LombScargle
 import astropy.units as u
-from astropy.time import Time
+import numpy as np
+from django.conf import settings
+from django.core.management.base import BaseCommand, CommandError
+from django.db.models import Q
 
-from core.views import import_alcdef
-from core.models import Body, model_to_dict, DataProduct
-from core.utils import search, save_dataproduct
-from astrometrics.time_subs import jd_utc2datetime, datetime2mjd_utc
 from astrometrics.ephem_subs import compute_ephem
+from astrometrics.time_subs import datetime2mjd_utc, jd_utc2datetime
+from core.models import Body, DataProduct, model_to_dict
+from core.utils import save_dataproduct
+from core.views import import_alcdef
 from photometrics.catalog_subs import sanitize_object_name
-from photometrics.external_codes import run_damit_periodscan, run_damit
+from photometrics.external_codes import run_damit, run_damit_periodscan
 
 
 class Command(BaseCommand):
@@ -151,7 +144,7 @@ class Command(BaseCommand):
         step_size = epoch_length.total_seconds() / 500
         epoch_list = [start_date + timedelta(seconds=step_size*x) for x in range(round(total_steps))]
         rel_intensity = 1.0
-        epoch_file.write(f"1\n")
+        epoch_file.write("1\n")
         epoch_file.write(f"{len(epoch_list)} 0\n")
         mag_list = []
         ltt_list = []
@@ -187,15 +180,15 @@ class Command(BaseCommand):
                 ps_input_file.write(line)
         else:
             ps_input_file.write(f"{pmin} {pmax} 0.8	period start - end - interval coeff.\n")
-            ps_input_file.write(f"0.1			convexity weight\n")
-            ps_input_file.write(f"6 6			degree and order of spherical harmonics\n")
-            ps_input_file.write(f"8			no. of rows\n")
-            ps_input_file.write(f"0.5	0		scattering parameters\n")
-            ps_input_file.write(f"0.1	0\n")
-            ps_input_file.write(f"-0.5	0\n")
-            ps_input_file.write(f"0.1	0\n")
-            ps_input_file.write(f"50	  		iteration stop condition\n")
-            ps_input_file.write(f"10			minimum number of iterations (only if the above value < 1)\n")
+            ps_input_file.write("0.1			convexity weight\n")
+            ps_input_file.write("6 6			degree and order of spherical harmonics\n")
+            ps_input_file.write("8			no. of rows\n")
+            ps_input_file.write("0.5	0		scattering parameters\n")
+            ps_input_file.write("0.1	0\n")
+            ps_input_file.write("-0.5	0\n")
+            ps_input_file.write("0.1	0\n")
+            ps_input_file.write("50	  		iteration stop condition\n")
+            ps_input_file.write("10			minimum number of iterations (only if the above value < 1)\n")
         ps_input_file.close()
         return ps_input_filename
 
@@ -221,19 +214,19 @@ class Command(BaseCommand):
             for line in lines:
                 cinv_input_file.write(line)
         else:
-            cinv_input_file.write(f"220		1	inital lambda [deg] (0/1 - fixed/free)\n")
-            cinv_input_file.write(f"0		1	initial beta [deg] (0/1 - fixed/free)\n")
+            cinv_input_file.write("220		1	inital lambda [deg] (0/1 - fixed/free)\n")
+            cinv_input_file.write("0		1	initial beta [deg] (0/1 - fixed/free)\n")
             cinv_input_file.write(f"{period}		1	inital period [hours] (0/1 - fixed/free)\n")
-            cinv_input_file.write(f"0			zero time [JD]\n")
-            cinv_input_file.write(f"0			initial rotation angle [deg]\n")
-            cinv_input_file.write(f"1.0			convexity regularization\n")
-            cinv_input_file.write(f"6 6			degree and order of spherical harmonics expansion\n")
-            cinv_input_file.write(f"8			number of rows\n")
-            cinv_input_file.write(f"0.5		0	phase funct. param. 'a' (0/1 - fixed/free)\n")
-            cinv_input_file.write(f"0.1		0	phase funct. param. 'd' (0/1 - fixed/free)\n")
-            cinv_input_file.write(f"-0.5		0	phase funct. param. 'k' (0/1 - fixed/free)\n")
-            cinv_input_file.write(f"0.1		0	Lambert coefficient 'c' (0/1 - fixed/free)\n")
-            cinv_input_file.write(f"50			iteration stop condition\n")
+            cinv_input_file.write("0			zero time [JD]\n")
+            cinv_input_file.write("0			initial rotation angle [deg]\n")
+            cinv_input_file.write("1.0			convexity regularization\n")
+            cinv_input_file.write("6 6			degree and order of spherical harmonics expansion\n")
+            cinv_input_file.write("8			number of rows\n")
+            cinv_input_file.write("0.5		0	phase funct. param. 'a' (0/1 - fixed/free)\n")
+            cinv_input_file.write("0.1		0	phase funct. param. 'd' (0/1 - fixed/free)\n")
+            cinv_input_file.write("-0.5		0	phase funct. param. 'k' (0/1 - fixed/free)\n")
+            cinv_input_file.write("0.1		0	Lambert coefficient 'c' (0/1 - fixed/free)\n")
+            cinv_input_file.write("50			iteration stop condition\n")
         cinv_input_file.close()
 
         base_conjgrad_name = obj_name + '_conjgrad_inv.in'
@@ -410,11 +403,11 @@ class Command(BaseCommand):
 
             # Calculate polygon faces for shape
             mink_face_file = open(mink_faces_filename, 'w+')
-            minkowski_retcode_or_cmdline = run_damit('minkowski', conjinv_outareas_filename, f"", write_out=mink_face_file)
+            minkowski_retcode_or_cmdline = run_damit('minkowski', conjinv_outareas_filename, "", write_out=mink_face_file)
             mink_face_file.close()
             # Convert faces into triangles
             shape_model_file = open(shape_model_filename, 'w+')
-            stanrdtri_retcode_or_cmdline = run_damit('standardtri', mink_faces_filename, f"", write_out=shape_model_file)
+            stanrdtri_retcode_or_cmdline = run_damit('standardtri', mink_faces_filename, "", write_out=shape_model_file)
             shape_model_file.close()
 
             # Create Data Products
